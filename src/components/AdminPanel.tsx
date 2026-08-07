@@ -18,6 +18,9 @@ type AdminDonor = {
   bloodIssue: string;
   avgRating: number | null;
   ratingCount: number;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  verified: boolean;
 };
 
 type ContactRequest = {
@@ -47,6 +50,7 @@ export function AdminPanel() {
   const [stats, setStats] = useState({
     totalDonors: 0,
     availableNow: 0,
+    verifiedDonors: 0,
     totalRequests: 0,
   });
   const [tab, setTab] = useState<"donors" | "settings">("donors");
@@ -113,8 +117,12 @@ export function AdminPanel() {
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -123,6 +131,16 @@ export function AdminPanel() {
       }
       await loadData();
       await loadSettings();
+      const me = await fetch("/api/admin/me", { credentials: "include" });
+      const meData = await me.json();
+      if (!me.ok || !meData.admin) {
+        setError(
+          "Login ok, but session cookie failed. Clear site data and try again on https://bloodlinkbd.up.railway.app",
+        );
+        setAuthed(false);
+        return;
+      }
+      setAuthed(true);
     } catch {
       setError(t.errorGeneric);
     } finally {
@@ -285,6 +303,9 @@ export function AdminPanel() {
               {t.availableNow}: <strong>{stats.availableNow}</strong>
             </span>
             <span>
+              {t.verifiedDonors}: <strong>{stats.verifiedDonors}</strong>
+            </span>
+            <span>
               {t.adminRequests}: <strong>{stats.totalRequests}</strong>
             </span>
           </div>
@@ -302,10 +323,13 @@ export function AdminPanel() {
                   <div className="text-sm">
                     <p className="font-semibold">
                       {d.name} · {d.bloodGroup} ·{" "}
-                      {d.gender === "female" ? t.female : t.male}
+                      {d.gender === "female" ? t.female : t.male} ·{" "}
+                      {d.verified ? t.verifiedId : t.notVerified}
                     </p>
                     <p>
-                      {d.phone} · {d.email}
+                      {d.phone}
+                      {d.phoneVerified ? ` (${t.verified})` : ""} · {d.email}
+                      {d.emailVerified ? ` (${t.verified})` : ""}
                     </p>
                     <p>
                       {d.area}, {d.district} ·{" "}

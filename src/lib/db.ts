@@ -25,6 +25,7 @@ const dbPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.json");
 const tmpPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.tmp.json");
 
 let writeQueue: Promise<void> = Promise.resolve();
+let adminEnvSynced = false;
 
 function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
   const gender: Gender = raw.gender === "female" ? "female" : "male";
@@ -41,6 +42,13 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
     area: raw.area ?? "",
     lastDonationDate,
     bloodIssue: raw.bloodIssue ?? "",
+    emailVerified: Boolean(raw.emailVerified),
+    phoneVerified: Boolean(raw.phoneVerified),
+    pendingEmailCodeHash: raw.pendingEmailCodeHash ?? null,
+    pendingPhoneCodeHash: raw.pendingPhoneCodeHash ?? null,
+    pendingResetCodeHash: raw.pendingResetCodeHash ?? null,
+    pendingResetChannel: raw.pendingResetChannel ?? null,
+    pendingResetExpiresAt: raw.pendingResetExpiresAt ?? null,
     available: isDonorAvailable(gender, lastDonationDate),
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
@@ -64,6 +72,34 @@ async function defaultAdmin(): Promise<AdminSettings> {
   };
 }
 
+async function syncAdminFromEnv(admin: AdminSettings): Promise<{
+  admin: AdminSettings;
+  changed: boolean;
+}> {
+  if (adminEnvSynced) return { admin, changed: false };
+
+  let next = { ...admin };
+  let changed = false;
+
+  const envUser = process.env.ADMIN_USERNAME?.trim();
+  if (envUser && envUser !== next.username) {
+    next.username = envUser;
+    changed = true;
+  }
+
+  const envPassword = process.env.ADMIN_PASSWORD;
+  if (envPassword && envPassword.length >= 8) {
+    const matches = await bcrypt.compare(envPassword, next.passwordHash);
+    if (!matches) {
+      next.passwordHash = await bcrypt.hash(envPassword, 12);
+      changed = true;
+    }
+  }
+
+  adminEnvSynced = true;
+  return { admin: next, changed };
+}
+
 async function ensureDb(): Promise<DatabaseShape> {
   await mkdir(dataDir, { recursive: true });
   try {
@@ -74,7 +110,7 @@ async function ensureDb(): Promise<DatabaseShape> {
       !parsed.ratings ||
       !parsed.posts ||
       !parsed.notifications;
-    const admin = parsed.admin?.passwordHash
+    const baseAdmin = parsed.admin?.passwordHash
       ? {
           ...(await defaultAdmin()),
           ...parsed.admin,
@@ -82,6 +118,7 @@ async function ensureDb(): Promise<DatabaseShape> {
           privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
         }
       : await defaultAdmin();
+    const synced = await syncAdminFromEnv(baseAdmin);
     const db: DatabaseShape = {
       donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
       contactRequests: parsed.contactRequests ?? [],
@@ -90,9 +127,9 @@ async function ensureDb(): Promise<DatabaseShape> {
         normalizePost(p as Partial<BloodPost> & { id: string }),
       ),
       notifications: parsed.notifications ?? [],
-      admin,
+      admin: synced.admin,
     };
-    if (needsMigrate) await persist(db);
+    if (needsMigrate || synced.changed) await persist(db);
     return db;
   } catch {
     const empty: DatabaseShape = {
@@ -146,6 +183,12 @@ export async function findDonorByEmail(email: string): Promise<Donor | null> {
   return donor ? normalizeDonor(donor) : null;
 }
 
+export async function findDonorByPhone(phone: string): Promise<Donor | null> {
+  const db = await ensureDb();
+  const donor = db.donors.find((d) => d.phone === phone);
+  return donor ? normalizeDonor(donor) : null;
+}
+
 export async function findDonorById(id: string): Promise<Donor | null> {
   const db = await ensureDb();
   const donor = db.donors.find((d) => d.id === id);
@@ -182,15 +225,33 @@ export async function updateDonor(
       | "area"
       | "lastDonationDate"
       | "bloodIssue"
+      | "passwordHash"
+      | "emailVerified"
+      | "phoneVerified"
+      | "pendingEmailCodeHash"
+      | "pendingPhoneCodeHash"
+      | "pendingResetCodeHash"
+      | "pendingResetChannel"
+      | "pendingResetExpiresAt"
     >
   >,
 ): Promise<Donor | null> {
   return withWrite(async (db) => {
     const index = db.donors.findIndex((d) => d.id === id);
     if (index === -1) return null;
+    const current = db.donors[index];
+    const nextPhone = patch.phone ?? current.phone;
+    const phoneChanged = Boolean(patch.phone && patch.phone !== current.phone);
     const merged = normalizeDonor({
-      ...db.donors[index],
+      ...current,
       ...patch,
+      phone: nextPhone,
+      phoneVerified: phoneChanged
+        ? false
+        : (patch.phoneVerified ?? current.phoneVerified),
+      pendingPhoneCodeHash: phoneChanged
+        ? null
+        : (patch.pendingPhoneCodeHash ?? current.pendingPhoneCodeHash),
       updatedAt: new Date().toISOString(),
     });
     db.donors[index] = merged;

@@ -122,6 +122,43 @@ export const adminVerifyCodeSchema = z.object({
   code: z.string().trim().min(4).max(10),
 });
 
+export const donorVerifySendSchema = z.object({
+  channel: z.enum(["email", "phone"]),
+});
+
+export const donorVerifyConfirmSchema = z.object({
+  channel: z.enum(["email", "phone"]),
+  code: z.string().trim().min(4).max(10),
+});
+
+export const forgotPasswordSchema = z
+  .object({
+    email: z.string().trim().email().optional().or(z.literal("")),
+    phone: z
+      .string()
+      .trim()
+      .optional()
+      .refine((v) => !v || isValidBdPhone(v), "Valid BD phone required"),
+  })
+  .refine((data) => Boolean(data.email || data.phone), {
+    message: "Email or phone required",
+  });
+
+export const resetPasswordSchema = z
+  .object({
+    email: z.string().trim().email().optional().or(z.literal("")),
+    phone: z
+      .string()
+      .trim()
+      .optional()
+      .refine((v) => !v || isValidBdPhone(v), "Valid BD phone required"),
+    code: z.string().trim().min(4).max(10),
+    newPassword: z.string().min(8).max(72),
+  })
+  .refine((data) => Boolean(data.email || data.phone), {
+    message: "Email or phone required",
+  });
+
 export function normalizeRegisterInput(data: z.infer<typeof registerSchema>) {
   return {
     ...data,

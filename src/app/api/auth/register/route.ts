@@ -35,6 +35,13 @@ export async function POST(request: Request) {
       area: data.area,
       lastDonationDate: data.lastDonationDate,
       bloodIssue: data.bloodIssue,
+      emailVerified: false,
+      phoneVerified: false,
+      pendingEmailCodeHash: null,
+      pendingPhoneCodeHash: null,
+      pendingResetCodeHash: null,
+      pendingResetChannel: null,
+      pendingResetExpiresAt: null,
     });
 
     await createSession(donor.id);
