@@ -1,8 +1,11 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
+
+const DB_URL_FILE = "/tmp/bloodlink_database_url";
+const DB_FLAG_FILE = "/tmp/bloodlink_db_flag";
 
 /**
- * Next.js can replace process.env.* at build time. On Railway the real
- * DATABASE_URL only exists at container runtime, so we read it indirectly.
+ * Next.js can strip process.env at build/bundle time.
+ * Docker entrypoint writes the real Railway DATABASE_URL to a temp file.
  */
 function readProcEnviron(): Record<string, string> {
   try {
@@ -22,7 +25,6 @@ function readProcEnviron(): Record<string, string> {
 
 function readProcessEnv(name: string): string {
   try {
-    // Prevent static inlining of process.env.NAME
     const env = new Function("return process.env")() as NodeJS.ProcessEnv;
     return (env?.[name] || "").trim();
   } catch {
@@ -30,14 +32,36 @@ function readProcessEnv(name: string): string {
   }
 }
 
+function readFileEnv(): string {
+  try {
+    if (!existsSync(DB_URL_FILE)) return "";
+    return readFileSync(DB_URL_FILE, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
 export function runtimeEnv(name: string): string {
+  const fromFile =
+    name === "DATABASE_URL" ||
+    name === "DATABASE_PRIVATE_URL" ||
+    name === "POSTGRES_URL" ||
+    name === "POSTGRES_PRIVATE_URL"
+      ? readFileEnv()
+      : "";
+  if (fromFile) return fromFile;
+
   const fromProcess = readProcessEnv(name);
   if (fromProcess) return fromProcess;
+
   const fromProc = readProcEnviron()[name];
   return (fromProc || "").trim();
 }
 
 export function runtimeDbUrl(): string {
+  const fromFile = readFileEnv();
+  if (fromFile) return fromFile;
+
   const keys = [
     "DATABASE_URL",
     "DATABASE_PRIVATE_URL",
@@ -53,6 +77,7 @@ export function runtimeDbUrl(): string {
 
 export function runtimeDbEnvKeys(): string[] {
   const names = new Set<string>();
+  if (readFileEnv()) names.add("DATABASE_URL(file)");
   try {
     const env = new Function("return process.env")() as NodeJS.ProcessEnv;
     for (const key of Object.keys(env || {})) {
@@ -65,4 +90,14 @@ export function runtimeDbEnvKeys(): string[] {
     if (/database|postgres|^pg/i.test(key)) names.add(key);
   }
   return [...names].sort();
+}
+
+export function runtimeDbFlag(): "1" | "0" | "missing" {
+  try {
+    if (!existsSync(DB_FLAG_FILE)) return "missing";
+    const value = readFileSync(DB_FLAG_FILE, "utf8").trim();
+    return value === "1" ? "1" : "0";
+  } catch {
+    return "missing";
+  }
 }

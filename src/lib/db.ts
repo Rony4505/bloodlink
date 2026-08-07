@@ -17,6 +17,7 @@ import {
   postgresHealth,
   saveDbToPostgres,
 } from "./pg-store";
+import { runtimeDbFlag } from "./runtime-env";
 import type {
   AdminSettings,
   AppNotification,
@@ -271,10 +272,12 @@ export async function getStorageHealth() {
     error = err instanceof Error ? err.message : "Unknown storage error";
   }
 
+  const entrypointFlag = runtimeDbFlag();
   return {
     ok: readable,
     backend: usingPostgres ? "postgres" : "file",
     databaseUrlSet: usingPostgres,
+    entrypointDbFlag: entrypointFlag,
     dbEnvKeys: listDbEnvKeys(),
     dataDir,
     dbPath,
@@ -284,7 +287,9 @@ export async function getStorageHealth() {
     donorCount,
     persistentHint: usingPostgres
       ? "Postgres is active — donor data survives website redeploys"
-      : "File storage only — DATABASE_URL is not reaching the running container. Re-add it on bloodlink Variables and Deploy.",
+      : entrypointFlag === "0"
+        ? "Railway is not injecting DATABASE_URL into bloodlink. Paste the Postgres URL as a bloodlink service variable (not Shared), then Deploy."
+        : "File storage only — DATABASE_URL is not available to the app yet. Redeploy bloodlink after setting DATABASE_URL.",
     error,
   };
 }
