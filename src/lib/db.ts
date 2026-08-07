@@ -25,6 +25,7 @@ const dbPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.json");
 const tmpPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.tmp.json");
 
 let writeQueue: Promise<void> = Promise.resolve();
+let adminEnvSynced = false;
 
 function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
   const gender: Gender = raw.gender === "female" ? "female" : "male";
@@ -71,6 +72,34 @@ async function defaultAdmin(): Promise<AdminSettings> {
   };
 }
 
+async function syncAdminFromEnv(admin: AdminSettings): Promise<{
+  admin: AdminSettings;
+  changed: boolean;
+}> {
+  if (adminEnvSynced) return { admin, changed: false };
+
+  let next = { ...admin };
+  let changed = false;
+
+  const envUser = process.env.ADMIN_USERNAME?.trim();
+  if (envUser && envUser !== next.username) {
+    next.username = envUser;
+    changed = true;
+  }
+
+  const envPassword = process.env.ADMIN_PASSWORD;
+  if (envPassword && envPassword.length >= 8) {
+    const matches = await bcrypt.compare(envPassword, next.passwordHash);
+    if (!matches) {
+      next.passwordHash = await bcrypt.hash(envPassword, 12);
+      changed = true;
+    }
+  }
+
+  adminEnvSynced = true;
+  return { admin: next, changed };
+}
+
 async function ensureDb(): Promise<DatabaseShape> {
   await mkdir(dataDir, { recursive: true });
   try {
@@ -81,7 +110,7 @@ async function ensureDb(): Promise<DatabaseShape> {
       !parsed.ratings ||
       !parsed.posts ||
       !parsed.notifications;
-    const admin = parsed.admin?.passwordHash
+    const baseAdmin = parsed.admin?.passwordHash
       ? {
           ...(await defaultAdmin()),
           ...parsed.admin,
@@ -89,6 +118,7 @@ async function ensureDb(): Promise<DatabaseShape> {
           privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
         }
       : await defaultAdmin();
+    const synced = await syncAdminFromEnv(baseAdmin);
     const db: DatabaseShape = {
       donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
       contactRequests: parsed.contactRequests ?? [],
@@ -97,9 +127,9 @@ async function ensureDb(): Promise<DatabaseShape> {
         normalizePost(p as Partial<BloodPost> & { id: string }),
       ),
       notifications: parsed.notifications ?? [],
-      admin,
+      admin: synced.admin,
     };
-    if (needsMigrate) await persist(db);
+    if (needsMigrate || synced.changed) await persist(db);
     return db;
   } catch {
     const empty: DatabaseShape = {

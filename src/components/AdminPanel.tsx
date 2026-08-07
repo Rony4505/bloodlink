@@ -117,8 +117,12 @@ export function AdminPanel() {
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -127,6 +131,16 @@ export function AdminPanel() {
       }
       await loadData();
       await loadSettings();
+      const me = await fetch("/api/admin/me", { credentials: "include" });
+      const meData = await me.json();
+      if (!me.ok || !meData.admin) {
+        setError(
+          "Login ok, but session cookie failed. Clear site data and try again on https://bloodlinkbd.up.railway.app",
+        );
+        setAuthed(false);
+        return;
+      }
+      setAuthed(true);
     } catch {
       setError(t.errorGeneric);
     } finally {
