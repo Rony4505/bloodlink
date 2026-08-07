@@ -10,6 +10,12 @@ import {
   dailyReminderTexts,
   withBilingual,
 } from "./notification-text";
+import {
+  hasDatabaseUrl,
+  loadDbFromPostgres,
+  postgresHealth,
+  saveDbToPostgres,
+} from "./pg-store";
 import type {
   AdminSettings,
   AppNotification,
@@ -148,13 +154,49 @@ async function createEmptyDb(): Promise<DatabaseShape> {
   };
 }
 
-async function ensureDb(): Promise<DatabaseShape> {
-  await mkdir(dataDir, { recursive: true });
+async function hydrateParsed(
+  raw: Partial<DatabaseShape>,
+): Promise<{ db: DatabaseShape; needsMigrate: boolean }> {
+  const { admin, needsMigrate } = await resolveAdmin(raw);
+  return { db: shapeFromParsed(raw, admin), needsMigrate };
+}
 
+async function ensureDb(): Promise<DatabaseShape> {
   if (!loggedStoragePath) {
     loggedStoragePath = true;
-    console.info(`[bloodlink] Storage path: ${dbPath}`);
+    console.info(
+      `[bloodlink] Storage backend: ${hasDatabaseUrl() ? "postgres" : "file"} (${hasDatabaseUrl() ? "DATABASE_URL" : dbPath})`,
+    );
   }
+
+  if (hasDatabaseUrl()) {
+    try {
+      const raw = await loadDbFromPostgres();
+      if (raw) {
+        const hydrated = await hydrateParsed(raw);
+        if (hydrated.needsMigrate) await persist(hydrated.db);
+        return hydrated.db;
+      }
+
+      // One-time migrate from local/volume file if Postgres is empty.
+      const fromFile = await loadDbFromFile(dbPath);
+      if (fromFile) {
+        console.info("[bloodlink] Migrating file database into Postgres");
+        await persist(fromFile.db);
+        return fromFile.db;
+      }
+
+      const empty = await createEmptyDb();
+      await persist(empty);
+      console.info("[bloodlink] Created new empty Postgres database");
+      return empty;
+    } catch (err) {
+      console.error("[bloodlink] Postgres storage failed:", err);
+      throw err;
+    }
+  }
+
+  await mkdir(dataDir, { recursive: true });
 
   const primary = await loadDbFromFile(dbPath);
   if (primary) {
@@ -172,7 +214,6 @@ async function ensureDb(): Promise<DatabaseShape> {
   const mainExists = await fileExists(dbPath);
   const bakExists = await fileExists(bakPath);
   if (mainExists || bakExists) {
-    // Never overwrite a damaged existing file with an empty database.
     throw new Error(
       `[bloodlink] Database file exists but could not be read. Refusing to wipe. Path: ${dbPath}`,
     );
@@ -185,6 +226,11 @@ async function ensureDb(): Promise<DatabaseShape> {
 }
 
 async function persist(db: DatabaseShape): Promise<void> {
+  if (hasDatabaseUrl()) {
+    await saveDbToPostgres(db);
+    return;
+  }
+
   await mkdir(dataDir, { recursive: true });
   if (await fileExists(dbPath)) {
     try {
@@ -198,12 +244,24 @@ async function persist(db: DatabaseShape): Promise<void> {
 }
 
 export async function getStorageHealth() {
-  await mkdir(dataDir, { recursive: true });
-  const mainExists = await fileExists(dbPath);
-  const bakExists = await fileExists(bakPath);
   let donorCount = 0;
   let readable = false;
   let error: string | null = null;
+  const usingPostgres = hasDatabaseUrl();
+  let mainExists = false;
+  let bakExists = false;
+  let pgOk: boolean | null = null;
+
+  if (usingPostgres) {
+    const health = await postgresHealth();
+    pgOk = health.ok;
+    if (!health.ok) error = health.error;
+  } else {
+    await mkdir(dataDir, { recursive: true });
+    mainExists = await fileExists(dbPath);
+    bakExists = await fileExists(bakPath);
+  }
+
   try {
     const db = await ensureDb();
     donorCount = db.donors.length;
@@ -211,17 +269,19 @@ export async function getStorageHealth() {
   } catch (err) {
     error = err instanceof Error ? err.message : "Unknown storage error";
   }
+
   return {
     ok: readable,
+    backend: usingPostgres ? "postgres" : "file",
     dataDir,
     dbPath,
     mainExists,
     bakExists,
+    postgresOk: pgOk,
     donorCount,
-    persistentHint:
-      dataDir === "/app/data" || dataDir.startsWith("/data")
-        ? "Using container data path — keep a Railway volume mounted here"
-        : "Custom DATA_DIR — ensure this path is on a Railway volume",
+    persistentHint: usingPostgres
+      ? "Postgres is active — donor data survives website redeploys"
+      : "File storage only — add Railway Postgres and DATABASE_URL or data can reset on deploy",
     error,
   };
 }

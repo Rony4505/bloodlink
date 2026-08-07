@@ -1,44 +1,39 @@
 # BloodLink — Online deploy guide
 
-BloodLink stores data in `bloodlink.json` on disk (`DATA_DIR`, default `/app/data` in Docker).
-Website code deploys must **never** wipe that folder — only a Railway **Volume** keeps it safe.
+Donor data must live in **Railway Postgres**. File/volume storage alone can reset when the website redeploys.
 
-## Recommended: Railway (Docker + Volume)
+## Railway setup (required for permanent data)
 
-1. Create account: https://railway.app
-2. Push this project to GitHub, then Railway → New Project → Deploy from GitHub `bloodlink`
-3. **Add a Volume** (required or every deploy can lose donors):
-   - Create → **Volume**
-   - Attach to the `bloodlink` service
-   - Mount path must be exactly: `/app/data`
-   - Do **not** delete or recreate this volume later
-4. Set environment variables:
-   - `AUTH_SECRET` = long random string (32+ chars)
-   - `ADMIN_USERNAME` = your admin username
-   - `ADMIN_PASSWORD` = strong password
-   - `DATA_DIR` = `/app/data` (optional; already set in Docker)
-5. Deploy, then open: `https://YOUR-DOMAIN/api/health`
-   - `storage.dbPath` should be `/app/data/bloodlink.json`
-   - `storage.donorCount` should stay the same after later deploys
-6. Owner panel: `https://YOUR-DOMAIN/owner-hq-7f3m`
+1. Open your BloodLink project on https://railway.app
+2. On the canvas click **`+ Create`**
+3. Choose **Database** → **PostgreSQL**
+4. After Postgres appears, open the **bloodlink** web service → **Variables**
+5. Click **Add variable** → **Add reference** (or connect database)
+   - Make sure `DATABASE_URL` is present on the **bloodlink** service
+   - Railway usually adds it automatically when you link Postgres
+6. Redeploy the **bloodlink** service
+7. Open `https://YOUR-DOMAIN/api/health`
+   - `"backend": "postgres"` must appear
+   - Then register a donor and note `donorCount`
+   - Redeploy again — `donorCount` should stay the same
 
-### If donors disappear after a deploy
+Optional: keep the volume at `/app/data` as a backup, but **Postgres is what keeps data safe**.
 
-1. Confirm the volume still exists and mount path is `/app/data`
-2. Open `/api/health` — if `donorCount` is `0` and volume is new/empty, old data cannot be recovered
-3. Never remove the volume when changing website code — only redeploy the service
+### Other env vars
 
-## Alternative: Render
+- `AUTH_SECRET` = long random string (32+ chars)
+- `ADMIN_USERNAME` = your admin username
+- `ADMIN_PASSWORD` = strong password
 
-1. https://render.com → New Web Service → connect GitHub repo
-2. Build: `npm install && npm run build`
-3. Start: `npm run start`
-4. Add a persistent disk at the same path as `DATA_DIR` (e.g. `/app/data`)
-5. Same env vars as above
+Owner panel: `https://YOUR-DOMAIN/owner-hq-7f3m`
+
+## Local development
+
+Without `DATABASE_URL`, the app uses `data/bloodlink.json` on disk.
 
 ## Before going public
 
 - Change admin password
-- Set a new strong `AUTH_SECRET`
-- Test register / search / blood request / admin login
-- Confirm `/api/health` after a test redeploy still shows the same `donorCount`
+- Set a strong `AUTH_SECRET`
+- Confirm `/api/health` shows `"backend": "postgres"`
+- Test register → redeploy → donor still exists
