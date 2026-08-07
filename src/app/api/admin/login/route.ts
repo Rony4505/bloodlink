@@ -23,7 +23,17 @@ export async function POST(request: Request) {
 
     await createAdminSession();
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("AUTH_SECRET")) {
+      return NextResponse.json(
+        {
+          error:
+            "AUTH_SECRET is missing on the server. Set AUTH_SECRET (16+ chars) in Railway Variables, then redeploy.",
+        },
+        { status: 500 },
+      );
+    }
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
