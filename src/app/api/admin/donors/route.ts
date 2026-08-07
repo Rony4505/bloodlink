@@ -3,7 +3,7 @@ import {
   getNextEligibleDate,
   isDonorAvailable,
 } from "@/lib/availability";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { isAdminAuthenticated, isDonorVerified } from "@/lib/auth";
 import {
   deleteDonor,
   getRatingStats,
@@ -27,6 +27,8 @@ export async function GET() {
   for (const d of donors) {
     const available = isDonorAvailable(d.gender, d.lastDonationDate);
     const stats = await getRatingStats(d.id);
+    const emailVerified = Boolean(d.emailVerified);
+    const phoneVerified = Boolean(d.phoneVerified);
     mapped.push({
       id: d.id,
       name: d.name,
@@ -42,6 +44,9 @@ export async function GET() {
       bloodIssue: d.bloodIssue || "",
       avgRating: stats.avg,
       ratingCount: stats.count,
+      emailVerified,
+      phoneVerified,
+      verified: isDonorVerified(d),
       createdAt: d.createdAt,
     });
   }
@@ -60,6 +65,7 @@ export async function GET() {
       donorBloodGroup: donor?.bloodGroup || "—",
       donorDistrict: donor?.district || "—",
       donorArea: donor?.area || "—",
+      donorVerified: donor ? isDonorVerified(donor) : false,
     };
   });
 
@@ -70,6 +76,7 @@ export async function GET() {
     stats: {
       totalDonors: mapped.length,
       availableNow: mapped.filter((d) => d.available).length,
+      verifiedDonors: mapped.filter((d) => d.verified).length,
       totalRequests: requests.length,
       totalPosts: posts.length,
     },

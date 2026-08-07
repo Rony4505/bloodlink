@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { PublicDonor } from "@/lib/types";
 
@@ -48,6 +49,12 @@ export function HomeDonors() {
                   <span className="rounded-md bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
                     {d.bloodGroup}
                   </span>
+                  <VerifiedBadge
+                    verified={d.verified}
+                    emailVerified={d.emailVerified}
+                    phoneVerified={d.phoneVerified}
+                    compact
+                  />
                 </div>
                 <p className="mt-2 text-sm">
                   {d.area}, {d.district}

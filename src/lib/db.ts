@@ -41,6 +41,13 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
     area: raw.area ?? "",
     lastDonationDate,
     bloodIssue: raw.bloodIssue ?? "",
+    emailVerified: Boolean(raw.emailVerified),
+    phoneVerified: Boolean(raw.phoneVerified),
+    pendingEmailCodeHash: raw.pendingEmailCodeHash ?? null,
+    pendingPhoneCodeHash: raw.pendingPhoneCodeHash ?? null,
+    pendingResetCodeHash: raw.pendingResetCodeHash ?? null,
+    pendingResetChannel: raw.pendingResetChannel ?? null,
+    pendingResetExpiresAt: raw.pendingResetExpiresAt ?? null,
     available: isDonorAvailable(gender, lastDonationDate),
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
@@ -146,6 +153,12 @@ export async function findDonorByEmail(email: string): Promise<Donor | null> {
   return donor ? normalizeDonor(donor) : null;
 }
 
+export async function findDonorByPhone(phone: string): Promise<Donor | null> {
+  const db = await ensureDb();
+  const donor = db.donors.find((d) => d.phone === phone);
+  return donor ? normalizeDonor(donor) : null;
+}
+
 export async function findDonorById(id: string): Promise<Donor | null> {
   const db = await ensureDb();
   const donor = db.donors.find((d) => d.id === id);
@@ -182,15 +195,33 @@ export async function updateDonor(
       | "area"
       | "lastDonationDate"
       | "bloodIssue"
+      | "passwordHash"
+      | "emailVerified"
+      | "phoneVerified"
+      | "pendingEmailCodeHash"
+      | "pendingPhoneCodeHash"
+      | "pendingResetCodeHash"
+      | "pendingResetChannel"
+      | "pendingResetExpiresAt"
     >
   >,
 ): Promise<Donor | null> {
   return withWrite(async (db) => {
     const index = db.donors.findIndex((d) => d.id === id);
     if (index === -1) return null;
+    const current = db.donors[index];
+    const nextPhone = patch.phone ?? current.phone;
+    const phoneChanged = Boolean(patch.phone && patch.phone !== current.phone);
     const merged = normalizeDonor({
-      ...db.donors[index],
+      ...current,
       ...patch,
+      phone: nextPhone,
+      phoneVerified: phoneChanged
+        ? false
+        : (patch.phoneVerified ?? current.phoneVerified),
+      pendingPhoneCodeHash: phoneChanged
+        ? null
+        : (patch.pendingPhoneCodeHash ?? current.pendingPhoneCodeHash),
       updatedAt: new Date().toISOString(),
     });
     db.donors[index] = merged;

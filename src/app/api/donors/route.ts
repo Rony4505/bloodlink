@@ -3,6 +3,7 @@ import {
   getNextEligibleDate,
   isDonorAvailable,
 } from "@/lib/availability";
+import { isDonorVerified } from "@/lib/auth";
 import { getRatingStats, listDonors } from "@/lib/db";
 import { maskPhone } from "@/lib/privacy";
 import type { PublicDonor } from "@/lib/types";
@@ -31,6 +32,8 @@ export async function GET(request: Request) {
     for (const d of donors) {
       const available = isDonorAvailable(d.gender, d.lastDonationDate);
       const stats = await getRatingStats(d.id);
+      const emailVerified = Boolean(d.emailVerified);
+      const phoneVerified = Boolean(d.phoneVerified);
       results.push({
         id: d.id,
         name: d.name,
@@ -45,6 +48,9 @@ export async function GET(request: Request) {
         bloodIssue: d.bloodIssue || "",
         avgRating: stats.avg,
         ratingCount: stats.count,
+        emailVerified,
+        phoneVerified,
+        verified: isDonorVerified(d),
       });
     }
 
@@ -56,7 +62,11 @@ export async function GET(request: Request) {
         parsed.data.district ? d.district === parsed.data.district : true,
       )
       .filter((d) => (availableOnly ? d.available : true))
-      .sort((a, b) => Number(b.available) - Number(a.available));
+      .sort(
+        (a, b) =>
+          Number(b.verified) - Number(a.verified) ||
+          Number(b.available) - Number(a.available),
+      );
 
     return NextResponse.json({ donors: filtered });
   } catch {
