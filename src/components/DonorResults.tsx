@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ContactModal } from "@/components/ContactModal";
 import { RatingModal } from "@/components/RatingModal";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -10,6 +10,16 @@ export function DonorResults({ donors }: { donors: PublicDonor[] }) {
   const { t } = useLocale();
   const [active, setActive] = useState<PublicDonor | null>(null);
   const [ratingFor, setRatingFor] = useState<PublicDonor | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.donor?.id) setMyId(data.donor.id);
+      })
+      .catch(() => undefined);
+  }, []);
 
   if (!donors.length) {
     return (
@@ -88,13 +98,19 @@ export function DonorResults({ donors }: { donors: PublicDonor[] }) {
                 >
                   {t.getContact}
                 </button>
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => setRatingFor(donor)}
-                >
-                  {t.rateDonor}
-                </button>
+                {myId === donor.id ? (
+                  <p className="text-center text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    {t.cannotRateSelf}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setRatingFor(donor)}
+                  >
+                    {t.rateDonor}
+                  </button>
+                )}
               </div>
             </div>
           </li>

@@ -34,6 +34,19 @@ type ContactRequest = {
   donorArea: string;
 };
 
+type ContactChangeRequest = {
+  id: string;
+  donorId: string;
+  donorName: string;
+  currentEmail: string;
+  currentPhone: string;
+  requestedEmail: string | null;
+  requestedPhone: string | null;
+  note: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+};
+
 export function AdminPanel() {
   const { t } = useLocale();
   const [checking, setChecking] = useState(true);
@@ -44,6 +57,9 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [donors, setDonors] = useState<AdminDonor[]>([]);
   const [requests, setRequests] = useState<ContactRequest[]>([]);
+  const [changeRequests, setChangeRequests] = useState<ContactChangeRequest[]>(
+    [],
+  );
   const [stats, setStats] = useState({
     totalDonors: 0,
     availableNow: 0,
@@ -77,6 +93,26 @@ export function AdminPanel() {
     setRequests(data.contactRequests);
     setStats(data.stats);
     setAuthed(true);
+
+    const changeRes = await fetch("/api/admin/contact-changes");
+    if (changeRes.ok) {
+      const changeData = await changeRes.json();
+      setChangeRequests(changeData.requests || []);
+    }
+  }
+
+  async function decideChange(id: string, decision: "approved" | "rejected") {
+    const res = await fetch("/api/admin/contact-changes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, decision }),
+    });
+    if (res.ok) {
+      await loadData();
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    window.alert(data.error || t.errorGeneric);
   }
 
   async function loadSettings() {
@@ -328,6 +364,60 @@ export function AdminPanel() {
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="rounded-2xl bg-white/80 p-5">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+              {t.adminContactChanges}
+            </h2>
+            {!changeRequests.length ? (
+              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                {t.noChangeRequests}
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {changeRequests.map((r) => (
+                  <li
+                    key={r.id}
+                    className="border-b border-[var(--line)] pb-3 text-sm"
+                  >
+                    <p className="font-semibold">
+                      {r.donorName} · {r.status}
+                    </p>
+                    <p className="mt-1">
+                      {t.email}: {r.currentEmail}
+                      {r.requestedEmail ? ` → ${r.requestedEmail}` : ""}
+                    </p>
+                    <p className="mt-1">
+                      {t.phone}: {r.currentPhone}
+                      {r.requestedPhone ? ` → ${r.requestedPhone}` : ""}
+                    </p>
+                    {r.note ? <p className="mt-1">{r.note}</p> : null}
+                    <p className="mt-1 text-xs opacity-70">
+                      {new Date(r.createdAt).toLocaleString()}
+                    </p>
+                    {r.status === "pending" ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => decideChange(r.id, "approved")}
+                        >
+                          {t.accept}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost text-[var(--blood)]"
+                          onClick={() => decideChange(r.id, "rejected")}
+                        >
+                          {t.reject}
+                        </button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="rounded-2xl bg-white/80 p-5">

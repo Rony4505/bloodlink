@@ -156,6 +156,23 @@ export const dictionaries = {
     dailyReminderTitle: "BloodLink reminder",
     dailyReminderBody:
       "If you donated blood, update your last donation date now.",
+    lockedFields: "Locked profile details",
+    editableFields: "You can update these",
+    contactLockedHint:
+      "Email and phone are locked. To change them, send a request for owner approval and also email the owner.",
+    requestContactChange: "Request email / phone change",
+    newEmail: "New email (optional)",
+    newPhone: "New phone (optional)",
+    changeReason: "Why do you need this change?",
+    submitChangeRequest: "Send request to owner",
+    emailOwner: "Email owner",
+    pendingChangeRequest: "Your change request is waiting for owner approval.",
+    cannotRateSelf: "You cannot rate your own profile",
+    accept: "Approve",
+    reject: "Decline",
+    adminContactChanges: "Email / phone change requests",
+    noChangeRequests: "No contact change requests.",
+    ownerContact: "Owner contact",
   },
   bn: {
     brand: "BloodLink",
@@ -313,6 +330,23 @@ export const dictionaries = {
     dailyReminderTitle: "BloodLink রিমাইন্ডার",
     dailyReminderBody:
       "যদি রক্ত দিয়ে থাকেন, এখনই শেষ রক্তদানের তারিখ আপডেট করুন।",
+    lockedFields: "লক করা প্রোফাইল তথ্য",
+    editableFields: "এগুলো আপডেট করতে পারবেন",
+    contactLockedHint:
+      "ইমেইল ও ফোন লক করা। বদলাতে চাইলে ওনারের অনুমোদনের জন্য অনুরোধ পাঠান এবং ওনারকে ইমেইল করুন।",
+    requestContactChange: "ইমেইল / ফোন পরিবর্তনের অনুরোধ",
+    newEmail: "নতুন ইমেইল (ঐচ্ছিক)",
+    newPhone: "নতুন ফোন (ঐচ্ছিক)",
+    changeReason: "কেন পরিবর্তন দরকার?",
+    submitChangeRequest: "ওনারকে অনুরোধ পাঠান",
+    emailOwner: "ওনারকে ইমেইল করুন",
+    pendingChangeRequest: "আপনার অনুরোধ ওনারের অনুমোদনের অপেক্ষায় আছে।",
+    cannotRateSelf: "নিজের প্রোফাইলে রেটিং দেওয়া যাবে না",
+    accept: "অনুমোদন",
+    reject: "প্রত্যাখ্যান",
+    adminContactChanges: "ইমেইল / ফোন পরিবর্তনের অনুরোধ",
+    noChangeRequests: "কোনো পরিবর্তনের অনুরোধ নেই।",
+    ownerContact: "ওনারের যোগাযোগ",
   },
 } as const;
 

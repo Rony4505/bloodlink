@@ -5,11 +5,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { localizeNotification } from "@/lib/notification-text";
 
 type Note = {
   id: string;
   title: string;
   body: string;
+  titleEn?: string;
+  bodyEn?: string;
+  titleBn?: string;
+  bodyBn?: string;
   href: string;
   postId?: string | null;
   type: string;
@@ -18,7 +23,7 @@ type Note = {
 };
 
 export default function NotificationsPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
   const [items, setItems] = useState<Note[]>([]);
 
@@ -84,28 +89,33 @@ export default function NotificationsPage() {
           </p>
         ) : (
           <ul className="space-y-3">
-            {items.map((n) => (
-              <li key={n.id}>
-                <button
-                  type="button"
-                  onClick={() => openNote(n)}
-                  className={`w-full rounded-xl px-4 py-3 text-left ${
-                    n.read
-                      ? "bg-[color-mix(in_oklab,var(--sand)_25%,white)]"
-                      : "bg-[color-mix(in_oklab,var(--sage)_12%,white)]"
-                  }`}
-                >
-                  <p className="font-semibold">{n.title}</p>
-                  <p className="mt-1 text-sm">{n.body}</p>
-                  <p className="mt-2 text-xs font-semibold text-[var(--blood-deep)]">
-                    {n.type === "blood_request" ? t.viewDetails : n.href}
-                  </p>
-                  <p className="mt-1 text-xs opacity-70">
-                    {new Date(n.createdAt).toLocaleString()}
-                  </p>
-                </button>
-              </li>
-            ))}
+            {items.map((n) => {
+              const text = localizeNotification(n, locale);
+              return (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => openNote(n)}
+                    className={`w-full rounded-xl px-4 py-3 text-left ${
+                      n.read
+                        ? "bg-[color-mix(in_oklab,var(--sand)_25%,white)]"
+                        : "bg-[color-mix(in_oklab,var(--sage)_12%,white)]"
+                    }`}
+                  >
+                    <p className="font-semibold">{text.title}</p>
+                    <p className="mt-1 text-sm">{text.body}</p>
+                    <p className="mt-2 text-xs font-semibold text-[var(--blood-deep)]">
+                      {n.type === "blood_request" ? t.viewDetails : n.href}
+                    </p>
+                    <p className="mt-1 text-xs opacity-70">
+                      {new Date(n.createdAt).toLocaleString(
+                        locale === "bn" ? "bn-BD" : "en-BD",
+                      )}
+                    </p>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
         <Link href="/dashboard" className="btn-ghost mt-4 inline-flex">

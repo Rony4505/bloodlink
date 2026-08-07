@@ -4,10 +4,17 @@ import path from "path";
 import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
 import { DEFAULT_PRIVACY_BN, DEFAULT_PRIVACY_EN } from "./defaults";
+import {
+  bloodRequestTexts,
+  contactChangeResultTexts,
+  dailyReminderTexts,
+  withBilingual,
+} from "./notification-text";
 import type {
   AdminSettings,
   AppNotification,
   BloodPost,
+  ContactChangeRequest,
   ContactRequest,
   DatabaseShape,
   Donor,
@@ -79,6 +86,7 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
   return {
     donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
     contactRequests: parsed.contactRequests ?? [],
+    contactChangeRequests: parsed.contactChangeRequests ?? [],
     ratings: parsed.ratings ?? [],
     posts: (parsed.posts ?? []).map((p) =>
       normalizePost(p as Partial<BloodPost> & { id: string }),
@@ -96,7 +104,8 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
     !parsed.admin ||
     !parsed.ratings ||
     !parsed.posts ||
-    !parsed.notifications;
+    !parsed.notifications ||
+    !parsed.contactChangeRequests;
   const admin = parsed.admin?.passwordHash
     ? {
         ...(await defaultAdmin()),
@@ -131,6 +140,7 @@ async function createEmptyDb(): Promise<DatabaseShape> {
   return {
     donors: [],
     contactRequests: [],
+    contactChangeRequests: [],
     ratings: [],
     posts: [],
     notifications: [],
@@ -277,6 +287,7 @@ export async function updateDonor(
     Pick<
       Donor,
       | "name"
+      | "email"
       | "phone"
       | "gender"
       | "bloodGroup"
@@ -306,6 +317,9 @@ export async function deleteDonor(id: string): Promise<boolean> {
     const before = db.donors.length;
     db.donors = db.donors.filter((d) => d.id !== id);
     db.contactRequests = db.contactRequests.filter((r) => r.donorId !== id);
+    db.contactChangeRequests = db.contactChangeRequests.filter(
+      (r) => r.donorId !== id,
+    );
     db.ratings = db.ratings.filter((r) => r.donorId !== id);
     db.notifications = db.notifications.filter((n) => n.userId !== id);
     if (db.donors.length === before) return false;
@@ -419,14 +433,12 @@ export async function createPost(
     });
     db.posts.push(post);
 
-    const title = `Blood needed: ${post.bloodGroup}`;
-    const body = `${post.patientName} needs ${post.unitsNeeded} bag(s) of ${post.bloodGroup} at ${post.hospital}, ${post.area}, ${post.district}. Needed by ${post.neededBy}.`;
+    const texts = withBilingual(bloodRequestTexts(post));
     for (const donor of db.donors) {
       db.notifications.push({
         id: randomUUID(),
         userId: donor.id,
-        title,
-        body,
+        ...texts,
         type: "blood_request",
         href: `/requests/${post.id}`,
         postId: post.id,
@@ -487,11 +499,11 @@ export async function createDailyRemindersIfNeeded(
           n.createdAt.startsWith(todayKey),
       );
       if (already) continue;
+      const texts = withBilingual(dailyReminderTexts());
       db.notifications.push({
         id: randomUUID(),
         userId: donor.id,
-        title: "Update your donation status",
-        body: "If you donated blood, please update your last donation date now so seekers get accurate availability.",
+        ...texts,
         type: "daily_update",
         href: "/dashboard",
         read: false,
@@ -501,6 +513,111 @@ export async function createDailyRemindersIfNeeded(
     }
     if (created) await persist(db);
     return created;
+  });
+}
+
+export async function listContactChangeRequests(): Promise<ContactChangeRequest[]> {
+  const db = await ensureDb();
+  return [...db.contactChangeRequests].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+export async function getPendingContactChange(
+  donorId: string,
+): Promise<ContactChangeRequest | null> {
+  const db = await ensureDb();
+  return (
+    db.contactChangeRequests.find(
+      (r) => r.donorId === donorId && r.status === "pending",
+    ) || null
+  );
+}
+
+export async function createContactChangeRequest(input: {
+  donorId: string;
+  currentEmail: string;
+  currentPhone: string;
+  requestedEmail: string | null;
+  requestedPhone: string | null;
+  note: string;
+}): Promise<ContactChangeRequest> {
+  return withWrite(async (db) => {
+    const existing = db.contactChangeRequests.find(
+      (r) => r.donorId === input.donorId && r.status === "pending",
+    );
+    if (existing) {
+      throw new Error("PENDING_EXISTS");
+    }
+    if (input.requestedEmail) {
+      const taken = db.donors.some(
+        (d) =>
+          d.id !== input.donorId &&
+          d.email.toLowerCase() === input.requestedEmail!.toLowerCase(),
+      );
+      if (taken) throw new Error("EMAIL_TAKEN");
+    }
+    const request: ContactChangeRequest = {
+      id: randomUUID(),
+      donorId: input.donorId,
+      currentEmail: input.currentEmail,
+      currentPhone: input.currentPhone,
+      requestedEmail: input.requestedEmail,
+      requestedPhone: input.requestedPhone,
+      note: input.note,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+    };
+    db.contactChangeRequests.push(request);
+    await persist(db);
+    return request;
+  });
+}
+
+export async function resolveContactChangeRequest(
+  id: string,
+  decision: "approved" | "rejected",
+): Promise<ContactChangeRequest | null> {
+  return withWrite(async (db) => {
+    const request = db.contactChangeRequests.find((r) => r.id === id);
+    if (!request || request.status !== "pending") return null;
+
+    request.status = decision;
+    request.resolvedAt = new Date().toISOString();
+
+    if (decision === "approved") {
+      const index = db.donors.findIndex((d) => d.id === request.donorId);
+      if (index === -1) return null;
+      if (request.requestedEmail) {
+        const taken = db.donors.some(
+          (d) =>
+            d.id !== request.donorId &&
+            d.email.toLowerCase() === request.requestedEmail!.toLowerCase(),
+        );
+        if (taken) throw new Error("EMAIL_TAKEN");
+      }
+      db.donors[index] = normalizeDonor({
+        ...db.donors[index],
+        email: request.requestedEmail || db.donors[index].email,
+        phone: request.requestedPhone || db.donors[index].phone,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    const texts = withBilingual(contactChangeResultTexts(decision === "approved"));
+    db.notifications.push({
+      id: randomUUID(),
+      userId: request.donorId,
+      ...texts,
+      type: "contact_change",
+      href: "/dashboard",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    await persist(db);
+    return request;
   });
 }
 

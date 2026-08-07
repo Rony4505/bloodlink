@@ -35,21 +35,37 @@ export const adminLoginSchema = z.object({
 });
 
 export const updateDonorSchema = z.object({
-  name: z.string().trim().min(2).max(80).optional(),
-  phone: z
-    .string()
-    .trim()
-    .refine(isValidBdPhone, "Valid Bangladesh mobile required")
-    .optional(),
-  gender: genderSchema.optional(),
-  bloodGroup: bloodGroupSchema.optional(),
-  district: districtSchema.optional(),
-  area: z.string().trim().min(2).max(80).optional(),
   lastDonationDate: z
     .union([z.string().date(), z.literal(""), z.null()])
     .optional(),
   bloodIssue: z.string().trim().max(300).optional(),
 });
+
+export const contactChangeSchema = z
+  .object({
+    requestedEmail: z
+      .union([z.string().trim().email().max(120), z.literal(""), z.null()])
+      .optional(),
+    requestedPhone: z
+      .union([
+        z
+          .string()
+          .trim()
+          .refine(isValidBdPhone, "Valid Bangladesh mobile required"),
+        z.literal(""),
+        z.null(),
+      ])
+      .optional(),
+    note: z.string().trim().max(300).optional().default(""),
+  })
+  .refine(
+    (data) =>
+      Boolean(
+        (data.requestedEmail && data.requestedEmail.length > 0) ||
+          (data.requestedPhone && data.requestedPhone.length > 0),
+      ),
+    { message: "Provide a new email and/or phone" },
+  );
 
 export const searchSchema = z.object({
   bloodGroup: bloodGroupSchema.optional(),

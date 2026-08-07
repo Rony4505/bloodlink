@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentDonor, toSafeDonor } from "@/lib/auth";
 import { updateDonor } from "@/lib/db";
-import { normalizePhone } from "@/lib/privacy";
 import { updateDonorSchema } from "@/lib/validations";
 
 export async function PATCH(request: Request) {
@@ -22,12 +21,6 @@ export async function PATCH(request: Request) {
 
     const data = parsed.data;
     const updated = await updateDonor(current.id, {
-      name: data.name,
-      phone: data.phone ? normalizePhone(data.phone) : undefined,
-      gender: data.gender,
-      bloodGroup: data.bloodGroup,
-      district: data.district,
-      area: data.area,
       bloodIssue: data.bloodIssue,
       lastDonationDate:
         data.lastDonationDate === "" || data.lastDonationDate === null

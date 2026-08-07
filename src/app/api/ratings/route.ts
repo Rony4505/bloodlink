@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentDonor } from "@/lib/auth";
 import { createRating, findDonorById, listRatingsForDonor } from "@/lib/db";
 import { normalizePhone } from "@/lib/privacy";
 import { ratingSchema } from "@/lib/validations";
@@ -33,10 +34,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Donor not found" }, { status: 404 });
     }
 
+    const current = await getCurrentDonor();
+    const seekerPhone = normalizePhone(parsed.data.seekerPhone);
+    if (current?.id === donor.id || seekerPhone === donor.phone) {
+      return NextResponse.json(
+        { error: "You cannot rate your own donor profile" },
+        { status: 403 },
+      );
+    }
+
     const rating = await createRating({
       donorId: parsed.data.donorId,
       seekerName: parsed.data.seekerName,
-      seekerPhone: normalizePhone(parsed.data.seekerPhone),
+      seekerPhone,
       stars: parsed.data.stars,
       comment: parsed.data.comment || "",
     });

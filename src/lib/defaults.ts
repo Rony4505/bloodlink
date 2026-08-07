@@ -1,3 +1,6 @@
+export const OWNER_EMAIL = "rjrony4505@gmail.com";
+export const OWNER_PHONE = "+8801711934505";
+
 export const DEFAULT_PRIVACY_BN = `BloodLink কী করে
 
 BloodLink বাংলাদেশের মানুষকে প্রয়োজনীয় রক্তদাতা খুঁজে পেতে সাহায্য করে। এখানে আপনি ব্লাড গ্রুপ ও জেলা অনুযায়ী ডোনার সার্চ করতে পারেন, ডোনার হিসেবে রেজিস্টার করতে পারেন, এবং জরুরি রক্তের চাহিদার পোস্ট করতে পারেন।

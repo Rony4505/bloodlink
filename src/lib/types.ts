@@ -60,11 +60,32 @@ export type AppNotification = {
   userId: string;
   title: string;
   body: string;
-  type: "blood_request" | "daily_update" | "system";
+  titleEn?: string;
+  bodyEn?: string;
+  titleBn?: string;
+  bodyBn?: string;
+  type:
+    | "blood_request"
+    | "daily_update"
+    | "system"
+    | "contact_change";
   href: string;
   postId?: string | null;
   read: boolean;
   createdAt: string;
+};
+
+export type ContactChangeRequest = {
+  id: string;
+  donorId: string;
+  currentEmail: string;
+  currentPhone: string;
+  requestedEmail: string | null;
+  requestedPhone: string | null;
+  note: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  resolvedAt: string | null;
 };
 
 export type AdminSettings = {
@@ -83,6 +104,7 @@ export type AdminSettings = {
 export type DatabaseShape = {
   donors: Donor[];
   contactRequests: ContactRequest[];
+  contactChangeRequests: ContactChangeRequest[];
   ratings: Rating[];
   posts: BloodPost[];
   notifications: AppNotification[];
