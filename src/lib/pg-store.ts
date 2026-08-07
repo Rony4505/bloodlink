@@ -4,20 +4,27 @@ import type { DatabaseShape } from "./types";
 let pool: Pool | null = null;
 let tableReady: Promise<void> | null = null;
 
+/** Read at runtime (avoid build-time env inlining). */
+export function getDatabaseUrl(): string {
+  const env = process.env;
+  const value = env["DATABASE_URL"] || env["database_url"] || "";
+  return value.trim();
+}
+
 export function hasDatabaseUrl(): boolean {
-  return Boolean(process.env.DATABASE_URL?.trim());
+  return getDatabaseUrl().length > 0;
 }
 
 function getPool(): Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = getDatabaseUrl();
     if (!connectionString) {
       throw new Error("DATABASE_URL is not set");
     }
     pool = new Pool({
       connectionString,
       ssl:
-        process.env.PGSSL === "false"
+        process.env["PGSSL"] === "false"
           ? undefined
           : { rejectUnauthorized: false },
       max: 5,

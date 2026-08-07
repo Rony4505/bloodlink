@@ -273,6 +273,7 @@ export async function getStorageHealth() {
   return {
     ok: readable,
     backend: usingPostgres ? "postgres" : "file",
+    databaseUrlSet: usingPostgres,
     dataDir,
     dbPath,
     mainExists,
@@ -281,7 +282,7 @@ export async function getStorageHealth() {
     donorCount,
     persistentHint: usingPostgres
       ? "Postgres is active — donor data survives website redeploys"
-      : "File storage only — add Railway Postgres and DATABASE_URL or data can reset on deploy",
+      : "File storage only — DATABASE_URL missing on bloodlink service, or redeploy after adding it",
     error,
   };
 }
