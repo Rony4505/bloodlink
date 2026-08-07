@@ -1,34 +1,20 @@
 import { Pool } from "pg";
+import { runtimeDbEnvKeys, runtimeDbUrl } from "./runtime-env";
 import type { DatabaseShape } from "./types";
 
 let pool: Pool | null = null;
 let tableReady: Promise<void> | null = null;
 
-/** Read at runtime (avoid build-time env inlining). */
 export function getDatabaseUrl(): string {
-  const env = process.env;
-  const candidates = [
-    env["DATABASE_URL"],
-    env["DATABASE_PRIVATE_URL"],
-    env["POSTGRES_URL"],
-    env["POSTGRES_PRIVATE_URL"],
-    env["database_url"],
-  ];
-  for (const value of candidates) {
-    if (value && value.trim()) return value.trim();
-  }
-  return "";
+  return runtimeDbUrl();
 }
 
 export function hasDatabaseUrl(): boolean {
   return getDatabaseUrl().length > 0;
 }
 
-/** Env key names only — never values — for Railway debugging. */
 export function listDbEnvKeys(): string[] {
-  return Object.keys(process.env)
-    .filter((key) => /database|postgres|^pg/i.test(key))
-    .sort();
+  return runtimeDbEnvKeys();
 }
 
 function getPool(): Pool {
@@ -39,10 +25,7 @@ function getPool(): Pool {
     }
     pool = new Pool({
       connectionString,
-      ssl:
-        process.env["PGSSL"] === "false"
-          ? undefined
-          : { rejectUnauthorized: false },
+      ssl: { rejectUnauthorized: false },
       max: 5,
     });
   }
