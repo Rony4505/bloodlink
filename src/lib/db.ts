@@ -12,6 +12,7 @@ import {
 } from "./notification-text";
 import {
   hasDatabaseUrl,
+  listDbEnvKeys,
   loadDbFromPostgres,
   postgresHealth,
   saveDbToPostgres,
@@ -274,6 +275,7 @@ export async function getStorageHealth() {
     ok: readable,
     backend: usingPostgres ? "postgres" : "file",
     databaseUrlSet: usingPostgres,
+    dbEnvKeys: listDbEnvKeys(),
     dataDir,
     dbPath,
     mainExists,
@@ -282,7 +284,7 @@ export async function getStorageHealth() {
     donorCount,
     persistentHint: usingPostgres
       ? "Postgres is active — donor data survives website redeploys"
-      : "File storage only — DATABASE_URL missing on bloodlink service, or redeploy after adding it",
+      : "File storage only — DATABASE_URL is not reaching the running container. Re-add it on bloodlink Variables and Deploy.",
     error,
   };
 }

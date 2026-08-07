@@ -29,4 +29,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node -e \"const e=process.env; console.log('[bloodlink] db url present:', Boolean((e.DATABASE_URL||e.DATABASE_PRIVATE_URL||'').trim()));\" && node server.js"]
