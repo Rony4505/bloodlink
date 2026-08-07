@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
+import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
 const display = Syne({
@@ -15,10 +16,47 @@ const body = Noto_Sans_Bengali({
   weight: ["400", "500", "600", "700"],
 });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  title: "BloodLink | Blood donors across Bangladesh",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "BloodLink BD | Bangladesh Blood Donor Finder",
+    template: "%s | BloodLink BD",
+  },
   description:
-    "Free humanitarian platform to find blood donors by location across Bangladesh. Secure, bilingual, and non-commercial.",
+    "BloodLink BD helps people in Bangladesh find blood donors by blood group and location. Post urgent needs, check availability, and connect securely.",
+  keywords: [
+    "BloodLink",
+    "BloodLink BD",
+    "blood donor Bangladesh",
+    "blood donation",
+    "রক্তদাতা",
+    "রক্তদান",
+    "bloodlinkbd.com",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "bn_BD",
+    url: siteUrl,
+    siteName: "BloodLink BD",
+    title: "BloodLink BD | Bangladesh Blood Donor Finder",
+    description:
+      "Find blood donors across Bangladesh by blood group and location.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BloodLink BD | Bangladesh Blood Donor Finder",
+    description:
+      "Find blood donors across Bangladesh by blood group and location.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
