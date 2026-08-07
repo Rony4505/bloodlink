@@ -63,6 +63,14 @@ export function LoginForm() {
         {loading ? t.loading : t.login}
       </button>
       <p className="text-center text-sm">
+        <Link
+          href="/forgot-password"
+          className="font-semibold text-[var(--blood-deep)] underline"
+        >
+          {t.forgotPassword}
+        </Link>
+      </p>
+      <p className="text-center text-sm">
         {t.noAccount}{" "}
         <Link href="/register" className="font-semibold text-[var(--blood-deep)] underline">
           {t.becomeDonor}

@@ -2,6 +2,8 @@ export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
 
 export type Gender = "male" | "female";
 
+export type VerifyChannel = "email" | "phone";
+
 export type Donor = {
   id: string;
   name: string;
@@ -15,6 +17,13 @@ export type Donor = {
   available: boolean;
   lastDonationDate: string | null;
   bloodIssue: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  pendingEmailCodeHash: string | null;
+  pendingPhoneCodeHash: string | null;
+  pendingResetCodeHash: string | null;
+  pendingResetChannel: VerifyChannel | null;
+  pendingResetExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -103,4 +112,7 @@ export type PublicDonor = {
   bloodIssue: string;
   avgRating: number | null;
   ratingCount: number;
+  verified: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
 };

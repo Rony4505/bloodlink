@@ -18,6 +18,9 @@ type AdminDonor = {
   bloodIssue: string;
   avgRating: number | null;
   ratingCount: number;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  verified: boolean;
 };
 
 type ContactRequest = {
@@ -47,6 +50,7 @@ export function AdminPanel() {
   const [stats, setStats] = useState({
     totalDonors: 0,
     availableNow: 0,
+    verifiedDonors: 0,
     totalRequests: 0,
   });
   const [tab, setTab] = useState<"donors" | "settings">("donors");
@@ -285,6 +289,9 @@ export function AdminPanel() {
               {t.availableNow}: <strong>{stats.availableNow}</strong>
             </span>
             <span>
+              {t.verifiedDonors}: <strong>{stats.verifiedDonors}</strong>
+            </span>
+            <span>
               {t.adminRequests}: <strong>{stats.totalRequests}</strong>
             </span>
           </div>
@@ -302,10 +309,13 @@ export function AdminPanel() {
                   <div className="text-sm">
                     <p className="font-semibold">
                       {d.name} · {d.bloodGroup} ·{" "}
-                      {d.gender === "female" ? t.female : t.male}
+                      {d.gender === "female" ? t.female : t.male} ·{" "}
+                      {d.verified ? t.verifiedId : t.notVerified}
                     </p>
                     <p>
-                      {d.phone} · {d.email}
+                      {d.phone}
+                      {d.phoneVerified ? ` (${t.verified})` : ""} · {d.email}
+                      {d.emailVerified ? ` (${t.verified})` : ""}
                     </p>
                     <p>
                       {d.area}, {d.district} ·{" "}

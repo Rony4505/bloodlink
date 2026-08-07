@@ -127,6 +127,14 @@ export function hashCode(code: string): string {
     .digest("hex");
 }
 
+export function makeCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+export function isDonorVerified(donor: Pick<Donor, "emailVerified" | "phoneVerified">): boolean {
+  return Boolean(donor.emailVerified || donor.phoneVerified);
+}
+
 export async function toSafeDonor(donor: Donor) {
   const available = isDonorAvailable(donor.gender, donor.lastDonationDate);
   const stats = await getRatingStats(donor.id);
@@ -146,6 +154,9 @@ export async function toSafeDonor(donor: Donor) {
     bloodIssue: donor.bloodIssue || "",
     avgRating: stats.avg,
     ratingCount: stats.count,
+    emailVerified: Boolean(donor.emailVerified),
+    phoneVerified: Boolean(donor.phoneVerified),
+    verified: isDonorVerified(donor),
     createdAt: donor.createdAt,
     updatedAt: donor.updatedAt,
   };

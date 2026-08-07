@@ -3,6 +3,7 @@ import {
   hashCode,
   hashPassword,
   isAdminAuthenticated,
+  makeCode,
   verifyPassword,
 } from "@/lib/auth";
 import { getAdminSettings, updateAdminSettings } from "@/lib/db";
@@ -12,10 +13,6 @@ import {
   adminVerifyCodeSchema,
   adminVerifySetupSchema,
 } from "@/lib/validations";
-
-function makeCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
 
 export async function GET() {
   const ok = await isAdminAuthenticated();
@@ -89,13 +86,12 @@ export async function PATCH(request: Request) {
     await updateAdminSettings({
       verifyEmail: email,
       verifyPhone: phone,
-      emailVerified: email ? false : false,
-      phoneVerified: phone ? false : false,
+      emailVerified: false,
+      phoneVerified: false,
       pendingEmailCodeHash: emailCode ? hashCode(emailCode) : null,
       pendingPhoneCodeHash: phoneCode ? hashCode(phoneCode) : null,
     });
 
-    // Local/dev delivery: return codes once so owner can verify without SMS/SMTP yet
     return NextResponse.json({
       ok: true,
       emailCode: emailCode || undefined,
