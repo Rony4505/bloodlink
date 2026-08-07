@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { mkdir, readFile, rename, writeFile } from "fs/promises";
+import { access, copyFile, mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
 import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
@@ -22,9 +22,20 @@ const dataDir = configuredDataDir
     : path.join(process.cwd(), configuredDataDir)
   : path.join(process.cwd(), "data");
 const dbPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.json");
+const bakPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.bak.json");
 const tmpPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.tmp.json");
 
 let writeQueue: Promise<void> = Promise.resolve();
+let loggedStoragePath = false;
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
   const gender: Gender = raw.gender === "female" ? "female" : "male";
@@ -64,54 +75,145 @@ async function defaultAdmin(): Promise<AdminSettings> {
   };
 }
 
+function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): DatabaseShape {
+  return {
+    donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
+    contactRequests: parsed.contactRequests ?? [],
+    ratings: parsed.ratings ?? [],
+    posts: (parsed.posts ?? []).map((p) =>
+      normalizePost(p as Partial<BloodPost> & { id: string }),
+    ),
+    notifications: parsed.notifications ?? [],
+    admin,
+  };
+}
+
+async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
+  admin: AdminSettings;
+  needsMigrate: boolean;
+}> {
+  const needsMigrate =
+    !parsed.admin ||
+    !parsed.ratings ||
+    !parsed.posts ||
+    !parsed.notifications;
+  const admin = parsed.admin?.passwordHash
+    ? {
+        ...(await defaultAdmin()),
+        ...parsed.admin,
+        privacyBn: parsed.admin.privacyBn || DEFAULT_PRIVACY_BN,
+        privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
+      }
+    : await defaultAdmin();
+  return { admin, needsMigrate };
+}
+
+async function loadDbFromFile(
+  filePath: string,
+): Promise<{ db: DatabaseShape; needsMigrate: boolean } | null> {
+  try {
+    const file = await readFile(filePath, "utf8");
+    if (!file.trim()) return null;
+    const parsed = JSON.parse(file) as Partial<DatabaseShape>;
+    if (!parsed || typeof parsed !== "object") return null;
+    const { admin, needsMigrate } = await resolveAdmin(parsed);
+    return { db: shapeFromParsed(parsed, admin), needsMigrate };
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code !== "ENOENT") {
+      console.error(`[bloodlink] Failed reading ${filePath}:`, err);
+    }
+    return null;
+  }
+}
+
+async function createEmptyDb(): Promise<DatabaseShape> {
+  return {
+    donors: [],
+    contactRequests: [],
+    ratings: [],
+    posts: [],
+    notifications: [],
+    admin: await defaultAdmin(),
+  };
+}
+
 async function ensureDb(): Promise<DatabaseShape> {
   await mkdir(dataDir, { recursive: true });
-  try {
-    const file = await readFile(dbPath, "utf8");
-    const parsed = JSON.parse(file) as Partial<DatabaseShape>;
-    const needsMigrate =
-      !parsed.admin ||
-      !parsed.ratings ||
-      !parsed.posts ||
-      !parsed.notifications;
-    const admin = parsed.admin?.passwordHash
-      ? {
-          ...(await defaultAdmin()),
-          ...parsed.admin,
-          privacyBn: parsed.admin.privacyBn || DEFAULT_PRIVACY_BN,
-          privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
-        }
-      : await defaultAdmin();
-    const db: DatabaseShape = {
-      donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
-      contactRequests: parsed.contactRequests ?? [],
-      ratings: parsed.ratings ?? [],
-      posts: (parsed.posts ?? []).map((p) =>
-        normalizePost(p as Partial<BloodPost> & { id: string }),
-      ),
-      notifications: parsed.notifications ?? [],
-      admin,
-    };
-    if (needsMigrate) await persist(db);
-    return db;
-  } catch {
-    const empty: DatabaseShape = {
-      donors: [],
-      contactRequests: [],
-      ratings: [],
-      posts: [],
-      notifications: [],
-      admin: await defaultAdmin(),
-    };
-    await writeFile(dbPath, JSON.stringify(empty, null, 2), "utf8");
-    return empty;
+
+  if (!loggedStoragePath) {
+    loggedStoragePath = true;
+    console.info(`[bloodlink] Storage path: ${dbPath}`);
   }
+
+  const primary = await loadDbFromFile(dbPath);
+  if (primary) {
+    if (primary.needsMigrate) await persist(primary.db);
+    return primary.db;
+  }
+
+  const backup = await loadDbFromFile(bakPath);
+  if (backup) {
+    console.warn("[bloodlink] Primary DB missing/corrupt — restored from backup");
+    await persist(backup.db);
+    return backup.db;
+  }
+
+  const mainExists = await fileExists(dbPath);
+  const bakExists = await fileExists(bakPath);
+  if (mainExists || bakExists) {
+    // Never overwrite a damaged existing file with an empty database.
+    throw new Error(
+      `[bloodlink] Database file exists but could not be read. Refusing to wipe. Path: ${dbPath}`,
+    );
+  }
+
+  const empty = await createEmptyDb();
+  await persist(empty);
+  console.info("[bloodlink] Created new empty database");
+  return empty;
 }
 
 async function persist(db: DatabaseShape): Promise<void> {
   await mkdir(dataDir, { recursive: true });
+  if (await fileExists(dbPath)) {
+    try {
+      await copyFile(dbPath, bakPath);
+    } catch (err) {
+      console.error("[bloodlink] Backup copy failed:", err);
+    }
+  }
   await writeFile(tmpPath, JSON.stringify(db, null, 2), "utf8");
   await rename(tmpPath, dbPath);
+}
+
+export async function getStorageHealth() {
+  await mkdir(dataDir, { recursive: true });
+  const mainExists = await fileExists(dbPath);
+  const bakExists = await fileExists(bakPath);
+  let donorCount = 0;
+  let readable = false;
+  let error: string | null = null;
+  try {
+    const db = await ensureDb();
+    donorCount = db.donors.length;
+    readable = true;
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Unknown storage error";
+  }
+  return {
+    ok: readable,
+    dataDir,
+    dbPath,
+    mainExists,
+    bakExists,
+    donorCount,
+    persistentHint:
+      dataDir === "/app/data" || dataDir.startsWith("/data")
+        ? "Using container data path — keep a Railway volume mounted here"
+        : "Custom DATA_DIR — ensure this path is on a Railway volume",
+    error,
+  };
 }
 
 function withWrite<T>(fn: (db: DatabaseShape) => Promise<T> | T): Promise<T> {
