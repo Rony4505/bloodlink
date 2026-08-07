@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DailyReminder } from "@/components/DailyReminder";
@@ -34,9 +35,19 @@ export function HomePage() {
         <div className="hero-drift pointer-events-none absolute right-0 top-40 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-2xl" />
         <Header />
         <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-16 pt-28 md:justify-center md:px-8 md:pb-24">
-          <p className="animate-rise font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight drop-shadow md:text-7xl">
-            {t.brand}
-          </p>
+          <div className="animate-rise flex items-center gap-4 md:gap-5">
+            <Image
+              src="/bloodlink-logo.png"
+              alt="BloodLink"
+              width={88}
+              height={88}
+              priority
+              className="h-16 w-16 rounded-full bg-white/95 object-cover shadow-lg md:h-[88px] md:w-[88px]"
+            />
+            <p className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight drop-shadow md:text-7xl">
+              {t.brand}
+            </p>
+          </div>
           <h1 className="animate-rise-delay mt-4 max-w-2xl text-2xl font-medium leading-snug md:text-3xl">
             {t.tagline}
           </h1>

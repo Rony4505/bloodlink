@@ -38,6 +38,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  icons: {
+    icon: "/bloodlink-logo.png",
+    apple: "/bloodlink-logo.png",
+  },
   openGraph: {
     type: "website",
     locale: "bn_BD",
@@ -46,12 +50,21 @@ export const metadata: Metadata = {
     title: "BloodLink BD | Bangladesh Blood Donor Finder",
     description:
       "Find blood donors across Bangladesh by blood group and location.",
+    images: [
+      {
+        url: "/bloodlink-logo.png",
+        width: 512,
+        height: 512,
+        alt: "BloodLink BD logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "BloodLink BD | Bangladesh Blood Donor Finder",
     description:
       "Find blood donors across Bangladesh by blood group and location.",
+    images: ["/bloodlink-logo.png"],
   },
   robots: {
     index: true,

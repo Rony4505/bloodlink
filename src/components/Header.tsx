@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -31,12 +32,7 @@ export function Header() {
   return (
     <header className="absolute inset-x-0 top-0 z-20">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
-        <Link
-          href="/"
-          className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-white drop-shadow-sm md:text-[1.7rem]"
-        >
-          {t.brand}
-        </Link>
+        <BrandMark variant="light" size="md" />
         <nav className="flex items-center gap-2 text-sm text-white md:gap-3">
           <Link
             href="/find"
