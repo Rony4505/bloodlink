@@ -189,9 +189,9 @@ export const dictionaries = {
     storageSetup: "Permanent data storage",
     storageSetupBody:
       "Paste the Postgres DATABASE_URL from Railway once. Donor data will stay even after website edits/deploys.",
-    storageUrlLabel: "Postgres DATABASE_URL",
+    storageUrlLabel: "Postgres DATABASE_PUBLIC_URL",
     storageUrlHint:
-      "Railway → Postgres → Variables → copy DATABASE_PUBLIC_URL (proxy.rlwy.net). Avoid railway.internal.",
+      "Railway → your Postgres service → Variables → copy DATABASE_PUBLIC_URL only. Host must contain proxy.rlwy.net — never railway.internal.",
     storageSave: "Save & connect Postgres",
     storageReady: "Postgres connected — donor data is protected",
     storageNotReady: "Postgres not connected yet — data can reset on deploy",
@@ -421,9 +421,9 @@ export const dictionaries = {
     storageSetup: "স্থায়ী ডেটা স্টোরেজ",
     storageSetupBody:
       "Railway Postgres-এর DATABASE_URL একবার পেস্ট করুন। এরপর ওয়েবসাইট এডিট/ডিপ্লয় করলেও ডোনার ডেটা থাকবে।",
-    storageUrlLabel: "Postgres DATABASE_URL",
+    storageUrlLabel: "Postgres DATABASE_PUBLIC_URL",
     storageUrlHint:
-      "Railway → Postgres → Variables → DATABASE_PUBLIC_URL কপি করুন (proxy.rlwy.net)। railway.internal এড়িয়ে চলুন।",
+      "Railway → Postgres সার্ভিস → Variables → শুধু DATABASE_PUBLIC_URL কপি করুন। হোস্টে proxy.rlwy.net থাকতে হবে — railway.internal নয়।",
     storageSave: "সেভ ও Postgres কানেক্ট",
     storageReady: "Postgres কানেক্টেড — ডোনার ডেটা সুরক্ষিত",
     storageNotReady: "Postgres এখনো কানেক্ট হয়নি — ডিপ্লয়ে ডেটা রিসেট হতে পারে",

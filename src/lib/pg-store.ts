@@ -1,8 +1,13 @@
 import { Pool } from "pg";
-import { runtimeDbEnvKeys, runtimeDbUrl } from "./runtime-env";
+import {
+  databaseUrlHost,
+  runtimeDbEnvKeys,
+  runtimeDbUrl,
+} from "./runtime-env";
 import type { DatabaseShape } from "./types";
 
 let pool: Pool | null = null;
+let poolUrl: string | null = null;
 let tableReady: Promise<void> | null = null;
 
 export function getDatabaseUrl(): string {
@@ -18,6 +23,7 @@ export async function resetPgPool(): Promise<void> {
     }
   }
   pool = null;
+  poolUrl = null;
   tableReady = null;
 }
 
@@ -30,16 +36,23 @@ export function listDbEnvKeys(): string[] {
 }
 
 function getPool(): Pool {
-  if (!pool) {
-    const connectionString = getDatabaseUrl();
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is not set");
+  const connectionString = getDatabaseUrl();
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not set");
+  }
+  if (!pool || poolUrl !== connectionString) {
+    if (pool) {
+      void pool.end().catch(() => undefined);
     }
     pool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
       max: 5,
+      connectionTimeoutMillis: 12_000,
+      idleTimeoutMillis: 10_000,
     });
+    poolUrl = connectionString;
+    tableReady = null;
   }
   return pool;
 }
@@ -90,15 +103,29 @@ export async function saveDbToPostgres(db: DatabaseShape): Promise<void> {
 export async function postgresHealth(): Promise<{
   ok: boolean;
   error: string | null;
+  host: string;
 }> {
+  const url = getDatabaseUrl();
+  const host = databaseUrlHost(url);
+  if (!url) {
+    return { ok: false, error: "DATABASE_URL is not set", host: "" };
+  }
   try {
     await ensureTable();
     await getPool().query("SELECT 1");
-    return { ok: true, error: null };
+    return { ok: true, error: null, host };
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Postgres error",
-    };
+    const message = err instanceof Error ? err.message : "Postgres error";
+    let help = message;
+    if (/ENOTFOUND|getaddrinfo/i.test(message)) {
+      help = `${message}. Host "${host}" was not found — paste DATABASE_PUBLIC_URL (proxy.rlwy.net), not railway.internal.`;
+    } else if (/ECONNREFUSED|timeout|Connection terminated/i.test(message)) {
+      help = `${message}. Could not reach "${host}". Check the public Postgres URL and that the DB service is running.`;
+    } else if (/password|authentication|SASL/i.test(message)) {
+      help = `${message}. Wrong password in the URL — copy DATABASE_PUBLIC_URL again from Railway Postgres → Variables.`;
+    } else if (/SSL|TLS|self-signed/i.test(message)) {
+      help = `${message}. SSL problem talking to "${host}". Re-copy DATABASE_PUBLIC_URL and try again.`;
+    }
+    return { ok: false, error: help, host };
   }
 }

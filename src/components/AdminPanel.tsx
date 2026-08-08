@@ -85,6 +85,7 @@ export function AdminPanel() {
   const [databaseUrl, setDatabaseUrl] = useState("");
   const [storageReady, setStorageReady] = useState(false);
   const [storageBackend, setStorageBackend] = useState("file");
+  const [storageHost, setStorageHost] = useState("");
   const [storageSaving, setStorageSaving] = useState(false);
   const [platformOptions, setPlatformOptions] = useState({
     hospitalAccess: { enabled: false, notes: "" },
@@ -282,6 +283,10 @@ export function AdminPanel() {
     const data = await res.json();
     setStorageReady(Boolean(data.databaseReady));
     setStorageBackend(data.storage?.backend || "file");
+    setStorageHost(data.activeHost || "");
+    if (!data.databaseReady && data.storage?.error) {
+      setSettingsMsg(data.storage.error);
+    }
   }
 
   async function saveStorage(e: React.FormEvent) {
@@ -295,18 +300,22 @@ export function AdminPanel() {
         body: JSON.stringify({ databaseUrl }),
       });
       const data = await res.json();
+      setStorageHost(data.activeHost || "");
+      setStorageBackend(data.storage?.backend || "file");
       if (!res.ok) {
         setSettingsMsg(data.error || t.errorGeneric);
         setStorageReady(false);
-        setStorageBackend(data.storage?.backend || "file");
         return;
       }
       const ready = Boolean(data.databaseReady);
       setStorageReady(ready);
-      setStorageBackend(data.storage?.backend || (ready ? "postgres" : "file"));
       if (ready) {
         setDatabaseUrl("");
-        setSettingsMsg(t.storageReady);
+        setSettingsMsg(
+          data.activeHost
+            ? `${t.storageReady} (${data.activeHost})`
+            : t.storageReady,
+        );
         await loadData();
       } else {
         setSettingsMsg(data.error || t.storageNotReady);
@@ -686,6 +695,7 @@ export function AdminPanel() {
               {storageReady ? t.storageReady : t.storageNotReady}
               {" · "}
               backend: {storageBackend}
+              {storageHost ? ` · host: ${storageHost}` : ""}
             </p>
             <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
               {t.storageVolumeTip}
@@ -695,9 +705,10 @@ export function AdminPanel() {
                 <span className="mb-1 block font-medium">{t.storageUrlLabel}</span>
                 <input
                   className="field"
-                  type="password"
+                  type="text"
                   autoComplete="off"
-                  placeholder="postgresql://..."
+                  spellCheck={false}
+                  placeholder="postgresql://...@proxy.rlwy.net:....../railway"
                   value={databaseUrl}
                   onChange={(e) => setDatabaseUrl(e.target.value)}
                   required

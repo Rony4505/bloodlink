@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { getStorageHealth, listDonors } from "@/lib/db";
 import {
-  hasDatabaseUrl,
+  getDatabaseUrl,
   postgresHealth,
   resetPgPool,
 } from "@/lib/pg-store";
 import {
+  databaseUrlHost,
   hasSavedDatabaseUrl,
   isPrivateRailwayUrl,
+  normalizeDatabaseUrl,
   saveDatabaseUrl,
 } from "@/lib/runtime-env";
 
@@ -23,10 +25,12 @@ export async function GET() {
   }
 
   const storage = await getStorageHealth();
+  const active = getDatabaseUrl();
   return NextResponse.json({
     storage,
     savedUrlOnVolume: hasSavedDatabaseUrl(),
-    databaseReady: hasDatabaseUrl() && storage.backend === "postgres",
+    databaseReady: storage.backend === "postgres" && storage.postgresOk === true,
+    activeHost: databaseUrlHost(active),
   });
 }
 
@@ -38,7 +42,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const databaseUrl = String(body.databaseUrl || "").trim();
+    const databaseUrl = normalizeDatabaseUrl(String(body.databaseUrl || ""));
     if (!looksLikePostgresUrl(databaseUrl)) {
       return NextResponse.json(
         {
@@ -53,13 +57,26 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "This is a private Railway URL (railway.internal). Paste DATABASE_PUBLIC_URL instead — it looks like proxy.rlwy.net.",
+            "This is a private Railway URL (railway.internal). Open Railway → Postgres → Variables → copy DATABASE_PUBLIC_URL (host looks like proxy.rlwy.net).",
         },
         { status: 400 },
       );
     }
 
-    saveDatabaseUrl(databaseUrl);
+    try {
+      saveDatabaseUrl(databaseUrl);
+    } catch (err) {
+      return NextResponse.json(
+        {
+          error:
+            err instanceof Error
+              ? err.message
+              : "Could not save DATABASE_URL to disk",
+        },
+        { status: 500 },
+      );
+    }
+
     await resetPgPool();
 
     const health = await postgresHealth();
@@ -68,14 +85,17 @@ export async function POST(request: Request) {
         {
           error:
             health.error ||
-            "Could not connect to Postgres. Use DATABASE_PUBLIC_URL (proxy.rlwy.net), not railway.internal.",
+            "Could not connect to Postgres. Use DATABASE_PUBLIC_URL (proxy.rlwy.net).",
+          activeHost: health.host,
           storage: await getStorageHealth(),
+          savedUrlOnVolume: hasSavedDatabaseUrl(),
+          databaseReady: false,
         },
         { status: 400 },
       );
     }
 
-    // Touch ensureDb via listDonors so file→Postgres migrate can run.
+    // Migrate file → Postgres when needed.
     const donors = await listDonors();
     const storage = await getStorageHealth();
     const ready = storage.backend === "postgres" && storage.postgresOk === true;
@@ -84,18 +104,19 @@ export async function POST(request: Request) {
       ok: ready,
       donorCount: donors.length,
       storage,
-      savedUrlOnVolume: true,
+      savedUrlOnVolume: hasSavedDatabaseUrl(),
       databaseReady: ready,
+      activeHost: health.host,
       error: ready
         ? null
         : storage.error ||
-          storage.persistentHint ||
-          "Saved, but Postgres is not active yet. Check the URL and try again.",
+          "Connected once, but storage backend is not postgres yet. Try Save again.",
     });
   } catch (err) {
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : "Storage setup failed",
+        databaseReady: false,
       },
       { status: 500 },
     );

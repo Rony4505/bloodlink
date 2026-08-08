@@ -4,6 +4,9 @@ import path from "path";
 const TMP_URL_FILE = "/tmp/bloodlink_database_url";
 const DB_FLAG_FILE = "/tmp/bloodlink_db_flag";
 
+/** In-process override so the same request that saves a URL can connect immediately. */
+let urlOverride: string | null = null;
+
 function dataDir(): string {
   const configured = process.env["DATA_DIR"];
   if (configured && configured.trim()) {
@@ -46,7 +49,7 @@ function readProcessEnv(name: string): string {
 function readUrlFile(filePath: string): string {
   try {
     if (!existsSync(filePath)) return "";
-    return readFileSync(filePath, "utf8").trim();
+    return readFileSync(filePath, "utf8").trim().replace(/\r?\n/g, "");
   } catch {
     return "";
   }
@@ -64,27 +67,73 @@ function firstEnvUrl(keys: string[]): string {
   return "";
 }
 
+export function isPrivateRailwayUrl(url: string): boolean {
+  return /railway\.internal/i.test(url);
+}
+
+export function normalizeDatabaseUrl(raw: string): string {
+  let url = raw.trim().replace(/^["']+|["']+$/g, "").replace(/\r?\n/g, "");
+  if (!url) return "";
+  // Public Railway proxy and most hosted Postgres require TLS.
+  if (
+    !/[?&]sslmode=/i.test(url) &&
+    !isPrivateRailwayUrl(url) &&
+    /rlwy\.net|railway\.app|supabase\.co|neon\.tech|amazonaws\.com/i.test(url)
+  ) {
+    url += (url.includes("?") ? "&" : "?") + "sslmode=require";
+  }
+  return url;
+}
+
+export function databaseUrlHost(url: string): string {
+  try {
+    const u = new URL(url.replace(/^postgres(ql)?:/i, "http:"));
+    return u.hostname || "";
+  } catch {
+    return "";
+  }
+}
+
 export function saveDatabaseUrl(url: string): void {
-  const trimmed = url.trim();
+  const trimmed = normalizeDatabaseUrl(url);
+  if (!trimmed) {
+    throw new Error("Empty database URL");
+  }
+
+  urlOverride = trimmed;
   mkdirSync(dataDir(), { recursive: true });
-  writeFileSync(persistUrlPath(), trimmed, "utf8");
+
+  let persisted = false;
+  try {
+    writeFileSync(persistUrlPath(), trimmed, "utf8");
+    persisted = readUrlFile(persistUrlPath()) === trimmed;
+  } catch (err) {
+    console.error("[bloodlink] could not write volume database URL:", err);
+  }
+
   try {
     writeFileSync(TMP_URL_FILE, trimmed, "utf8");
     writeFileSync(DB_FLAG_FILE, "1", "utf8");
-  } catch {
-    // /tmp may be unavailable in some local environments
+  } catch (err) {
+    console.error("[bloodlink] could not write tmp database URL:", err);
   }
-  // Make the current Node process use the owner-pasted URL immediately
-  // (Railway may still inject a private *.railway.internal DATABASE_URL).
+
   try {
     process.env.DATABASE_URL = trimmed;
     process.env.DATABASE_PUBLIC_URL = trimmed;
   } catch {
     // ignore
   }
+
+  if (!persisted && !readUrlFile(TMP_URL_FILE)) {
+    throw new Error(
+      "Could not save DATABASE_URL to disk. Mount a Railway Volume at /app/data and try again.",
+    );
+  }
 }
 
 export function clearSavedDatabaseUrl(): void {
+  urlOverride = null;
   try {
     if (existsSync(persistUrlPath())) unlinkSync(persistUrlPath());
   } catch {
@@ -98,8 +147,22 @@ export function clearSavedDatabaseUrl(): void {
   }
 }
 
+/** Only wipe private/broken internal URLs — never delete a public owner paste. */
+export function clearBrokenPrivateDatabaseUrl(): void {
+  const active = runtimeDbUrl();
+  if (!active || !isPrivateRailwayUrl(active)) return;
+  clearSavedDatabaseUrl();
+  try {
+    if (isPrivateRailwayUrl(process.env.DATABASE_URL || "")) {
+      delete process.env.DATABASE_URL;
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function hasSavedDatabaseUrl(): boolean {
-  return readSavedUrl().length > 0;
+  return readSavedUrl().length > 0 || Boolean(urlOverride);
 }
 
 export function runtimeEnv(name: string): string {
@@ -113,7 +176,8 @@ export function runtimeEnv(name: string): string {
     name === "DATABASE_URL" ||
     name === "DATABASE_PRIVATE_URL" ||
     name === "POSTGRES_URL" ||
-    name === "POSTGRES_PRIVATE_URL"
+    name === "POSTGRES_PRIVATE_URL" ||
+    name === "DATABASE_PUBLIC_URL"
   ) {
     return readSavedUrl();
   }
@@ -121,9 +185,11 @@ export function runtimeEnv(name: string): string {
 }
 
 export function runtimeDbUrl(): string {
-  // Owner-pasted URL in Settings always wins over Railway's injected private URL.
+  if (urlOverride) return urlOverride;
+
+  // Owner-pasted URL always wins over Railway-injected private URL.
   const saved = readSavedUrl();
-  if (saved) return saved;
+  if (saved) return normalizeDatabaseUrl(saved);
 
   const envCandidates = [
     "DATABASE_PUBLIC_URL",
@@ -133,7 +199,8 @@ export function runtimeDbUrl(): string {
     "POSTGRES_PRIVATE_URL",
   ]
     .map((key) => firstEnvUrl([key]))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(normalizeDatabaseUrl);
 
   const publicish = envCandidates.find((u) => !isPrivateRailwayUrl(u));
   if (publicish) return publicish;
@@ -142,6 +209,7 @@ export function runtimeDbUrl(): string {
 
 export function runtimeDbEnvKeys(): string[] {
   const names = new Set<string>();
+  if (urlOverride) names.add("DATABASE_URL(memory)");
   if (readUrlFile(persistUrlPath())) names.add("DATABASE_URL(volume)");
   if (readUrlFile(TMP_URL_FILE)) names.add("DATABASE_URL(tmp)");
   try {
@@ -167,8 +235,4 @@ export function runtimeDbFlag(): "1" | "0" | "missing" {
   } catch {
     return "missing";
   }
-}
-
-export function isPrivateRailwayUrl(url: string): boolean {
-  return /railway\.internal/i.test(url);
 }
