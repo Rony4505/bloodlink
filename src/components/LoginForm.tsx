@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 export function LoginForm() {
@@ -48,16 +49,14 @@ export function LoginForm() {
           required
         />
       </label>
-      <label className="block text-sm">
-        <span className="mb-1 block font-medium">{t.password}</span>
-        <input
-          className="field"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </label>
+      <PasswordField
+        id="login-password"
+        label={t.password}
+        value={password}
+        onChange={setPassword}
+        required
+        autoComplete="current-password"
+      />
       {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
       <button type="submit" className="btn-primary w-full" disabled={loading}>
         {loading ? t.loading : t.login}

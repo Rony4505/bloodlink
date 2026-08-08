@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import {
   hashCode,
@@ -33,6 +34,7 @@ export async function GET() {
     privacyBn: admin.privacyBn,
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
+    banners: admin.banners || [],
   });
 }
 
@@ -141,6 +143,30 @@ export async function PATCH(request: Request) {
     }
     await updateAdminSettings({ platformOptions: parsed.data });
     return NextResponse.json({ ok: true, platformOptions: parsed.data });
+  }
+
+  if (action === "banners") {
+    const banners = Array.isArray(body.banners) ? body.banners : [];
+    const cleaned = banners
+      .map(
+        (b: {
+          id?: string;
+          title?: string;
+          imageUrl?: string;
+          linkUrl?: string;
+          enabled?: boolean;
+        }) => ({
+          id: String(b.id || randomUUID()),
+          title: String(b.title || "").trim(),
+          imageUrl: String(b.imageUrl || "").trim(),
+          linkUrl: String(b.linkUrl || "").trim(),
+          enabled: Boolean(b.enabled),
+        }),
+      )
+      .filter((b: { title: string }) => b.title.length > 0)
+      .slice(0, 20);
+    await updateAdminSettings({ banners: cleaned });
+    return NextResponse.json({ ok: true, banners: cleaned });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
 import { BLOOD_GROUPS, DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
@@ -69,28 +70,29 @@ export function RegisterForm() {
               ["name", t.name],
               ["email", t.email],
               ["phone", t.phone],
-              ["password", t.password],
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="block text-sm">
               <span className="mb-1 block font-medium">{label}</span>
               <input
                 className="field"
-                type={
-                  key === "password" ? "password" : key === "email" ? "email" : "text"
-                }
+                type={key === "email" ? "email" : "text"}
                 value={form[key]}
                 onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 placeholder={key === "phone" ? "01XXXXXXXXX" : undefined}
                 required
               />
-              {key === "password" ? (
-                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                  {t.passwordHint}
-                </span>
-              ) : null}
             </label>
           ))}
+          <PasswordField
+            id="register-password"
+            label={t.password}
+            value={form.password}
+            onChange={(value) => setForm((f) => ({ ...f, password: value }))}
+            required
+            autoComplete="new-password"
+            hint={t.passwordHint}
+          />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-medium">{t.gender}</span>

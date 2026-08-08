@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
 import { HomeDonors } from "@/components/HomeDonors";
+import { OrgBanners } from "@/components/OrgBanners";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -69,6 +70,7 @@ export function HomePage() {
       </section>
 
       <HomeDonors />
+      <OrgBanners />
 
       <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-20 md:px-8">
         <div className="mx-auto max-w-6xl">

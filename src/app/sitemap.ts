@@ -8,6 +8,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     "",
     "/find",
+    "/ambulance",
+    "/org",
     "/register",
     "/login",
     "/requests",

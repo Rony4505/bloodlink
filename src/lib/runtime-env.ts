@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 
 const TMP_URL_FILE = "/tmp/bloodlink_database_url";
@@ -18,10 +18,6 @@ function persistUrlPath(): string {
   return path.join(dataDir(), ".database_url");
 }
 
-/**
- * Next.js can strip process.env at build/bundle time.
- * We also support owner-saved URL on the data volume.
- */
 function readProcEnviron(): Record<string, string> {
   try {
     const raw = readFileSync("/proc/self/environ", "utf8");
@@ -60,6 +56,14 @@ function readSavedUrl(): string {
   return readUrlFile(persistUrlPath()) || readUrlFile(TMP_URL_FILE);
 }
 
+function firstEnvUrl(keys: string[]): string {
+  for (const key of keys) {
+    const value = readProcessEnv(key) || readProcEnviron()[key] || "";
+    if (value.trim()) return value.trim();
+  }
+  return "";
+}
+
 export function saveDatabaseUrl(url: string): void {
   const trimmed = url.trim();
   mkdirSync(dataDir(), { recursive: true });
@@ -72,42 +76,53 @@ export function saveDatabaseUrl(url: string): void {
   }
 }
 
+export function clearSavedDatabaseUrl(): void {
+  try {
+    if (existsSync(persistUrlPath())) unlinkSync(persistUrlPath());
+  } catch {
+    // ignore
+  }
+  try {
+    if (existsSync(TMP_URL_FILE)) unlinkSync(TMP_URL_FILE);
+    writeFileSync(DB_FLAG_FILE, "0", "utf8");
+  } catch {
+    // ignore
+  }
+}
+
 export function hasSavedDatabaseUrl(): boolean {
   return readSavedUrl().length > 0;
 }
 
 export function runtimeEnv(name: string): string {
-  const fromSaved =
-    name === "DATABASE_URL" ||
-    name === "DATABASE_PRIVATE_URL" ||
-    name === "POSTGRES_URL" ||
-    name === "POSTGRES_PRIVATE_URL"
-      ? readSavedUrl()
-      : "";
-  if (fromSaved) return fromSaved;
-
   const fromProcess = readProcessEnv(name);
   if (fromProcess) return fromProcess;
 
   const fromProc = readProcEnviron()[name];
-  return (fromProc || "").trim();
+  if (fromProc) return fromProc.trim();
+
+  if (
+    name === "DATABASE_URL" ||
+    name === "DATABASE_PRIVATE_URL" ||
+    name === "POSTGRES_URL" ||
+    name === "POSTGRES_PRIVATE_URL"
+  ) {
+    return readSavedUrl();
+  }
+  return "";
 }
 
 export function runtimeDbUrl(): string {
-  const fromSaved = readSavedUrl();
-  if (fromSaved) return fromSaved;
-
-  const keys = [
+  // Prefer live Railway/env injection over a previously pasted private URL.
+  const fromEnv = firstEnvUrl([
+    "DATABASE_PUBLIC_URL",
     "DATABASE_URL",
-    "DATABASE_PRIVATE_URL",
     "POSTGRES_URL",
+    "DATABASE_PRIVATE_URL",
     "POSTGRES_PRIVATE_URL",
-  ];
-  for (const key of keys) {
-    const value = readProcessEnv(key) || readProcEnviron()[key] || "";
-    if (value.trim()) return value.trim();
-  }
-  return "";
+  ]);
+  if (fromEnv) return fromEnv;
+  return readSavedUrl();
 }
 
 export function runtimeDbEnvKeys(): string[] {
@@ -129,7 +144,7 @@ export function runtimeDbEnvKeys(): string[] {
 }
 
 export function runtimeDbFlag(): "1" | "0" | "missing" {
-  if (readSavedUrl()) return "1";
+  if (runtimeDbUrl()) return "1";
   try {
     if (!existsSync(DB_FLAG_FILE)) return "missing";
     const value = readFileSync(DB_FLAG_FILE, "utf8").trim();
@@ -137,4 +152,8 @@ export function runtimeDbFlag(): "1" | "0" | "missing" {
   } catch {
     return "missing";
   }
+}
+
+export function isPrivateRailwayUrl(url: string): boolean {
+  return /railway\.internal/i.test(url);
 }

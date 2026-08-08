@@ -191,7 +191,7 @@ export const dictionaries = {
       "Paste the Postgres DATABASE_URL from Railway once. Donor data will stay even after website edits/deploys.",
     storageUrlLabel: "Postgres DATABASE_URL",
     storageUrlHint:
-      "Railway → Postgres → Variables → copy DATABASE_URL (starts with postgresql://)",
+      "Railway → Postgres → Variables → copy DATABASE_PUBLIC_URL (proxy.rlwy.net). Avoid railway.internal.",
     storageSave: "Save & connect Postgres",
     storageReady: "Postgres connected — donor data is protected",
     storageNotReady: "Postgres not connected yet — data can reset on deploy",
@@ -212,6 +212,26 @@ export const dictionaries = {
     featureEnabled: "Enabled (ready to build/use)",
     featureDisabled: "Kept for later",
     featureNotes: "Owner notes",
+    ambulance: "Ambulance",
+    ambulanceTitle: "Ambulance service",
+    ambulanceSubtitle:
+      "Find government and non-government ambulance contacts across Bangladesh’s 64 districts.",
+    government: "Government",
+    nonGovernment: "Non-government",
+    nationwide: "Nationwide",
+    donorsNearYou: "Donors near you",
+    detectingLocation: "Detecting your area…",
+    printPdf: "Print / PDF",
+    orgBanners: "Organization banners",
+    orgBannersHint:
+      "Add only partner organization banners for advertising. Show title, image URL, and link.",
+    bannerTitle: "Organization name",
+    bannerImage: "Banner image URL",
+    bannerLink: "Website / link",
+    addBanner: "Add banner",
+    orgPortal: "Hospital / Organization find",
+    orgPortalSubtitle:
+      "Hospitals and humanitarian organizations can search donors quickly without full owner access.",
   },
   bn: {
     brand: "BloodLink",
@@ -404,7 +424,7 @@ export const dictionaries = {
       "Railway Postgres-এর DATABASE_URL একবার পেস্ট করুন। এরপর ওয়েবসাইট এডিট/ডিপ্লয় করলেও ডোনার ডেটা থাকবে।",
     storageUrlLabel: "Postgres DATABASE_URL",
     storageUrlHint:
-      "Railway → Postgres → Variables → DATABASE_URL কপি করুন (postgresql:// দিয়ে শুরু)",
+      "Railway → Postgres → Variables → DATABASE_PUBLIC_URL কপি করুন (proxy.rlwy.net)। railway.internal এড়িয়ে চলুন।",
     storageSave: "সেভ ও Postgres কানেক্ট",
     storageReady: "Postgres কানেক্টেড — ডোনার ডেটা সুরক্ষিত",
     storageNotReady: "Postgres এখনো কানেক্ট হয়নি — ডিপ্লয়ে ডেটা রিসেট হতে পারে",
@@ -425,6 +445,26 @@ export const dictionaries = {
     featureEnabled: "চালু (প্রস্তুত)",
     featureDisabled: "পরে রাখা",
     featureNotes: "ওনারের নোট",
+    ambulance: "অ্যাম্বুলেন্স",
+    ambulanceTitle: "অ্যাম্বুলেন্স সেবা",
+    ambulanceSubtitle:
+      "বাংলাদেশের ৬৪ জেলার সরকারি ও বেসরকারি অ্যাম্বুলেন্স যোগাযোগ খুঁজুন।",
+    government: "সরকারি",
+    nonGovernment: "বেসরকারি",
+    nationwide: "সারাদেশ",
+    donorsNearYou: "আপনার কাছাকাছি ডোনার",
+    detectingLocation: "আপনার এলাকা খোঁজা হচ্ছে…",
+    printPdf: "প্রিন্ট / PDF",
+    orgBanners: "সংস্থার ব্যানার",
+    orgBannersHint:
+      "শুধু পার্টনার মানবিক সংস্থার ব্যানার যোগ করুন — নাম, ইমেজ URL ও লিংক।",
+    bannerTitle: "সংস্থার নাম",
+    bannerImage: "ব্যানার ইমেজ URL",
+    bannerLink: "ওয়েবসাইট / লিংক",
+    addBanner: "ব্যানার যোগ",
+    orgPortal: "হাসপাতাল / সংস্থা সার্চ",
+    orgPortalSubtitle:
+      "হাসপাতাল ও মানবিক সংস্থা পূর্ণ ওনার অ্যাক্সেস ছাড়াই দ্রুত ডোনার খুঁজতে পারবে।",
   },
 } as const;
 

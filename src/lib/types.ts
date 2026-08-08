@@ -99,6 +99,14 @@ export type PlatformOptions = {
   futureServices: PlatformFeatureOption;
 };
 
+export type OrgBanner = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  enabled: boolean;
+};
+
 export type AdminSettings = {
   username: string;
   passwordHash: string;
@@ -111,6 +119,7 @@ export type AdminSettings = {
   privacyBn: string;
   privacyEn: string;
   platformOptions: PlatformOptions;
+  banners: OrgBanner[];
 };
 
 export type DatabaseShape = {

@@ -182,3 +182,26 @@ a {
 .btn-ghost:hover {
   background: color-mix(in oklab, var(--sand) 55%, white);
 }
+
+@media print {
+  header,
+  nav,
+  .btn-primary,
+  .btn-ghost,
+  .btn-secondary,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print\:shadow-none,
+  section,
+  ul,
+  li {
+    break-inside: avoid;
+  }
+}

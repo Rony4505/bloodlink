@@ -17,7 +17,7 @@ import {
   postgresHealth,
   saveDbToPostgres,
 } from "./pg-store";
-import { runtimeDbFlag } from "./runtime-env";
+import { clearSavedDatabaseUrl, runtimeDbFlag } from "./runtime-env";
 import type {
   AdminSettings,
   AppNotification,
@@ -37,6 +37,23 @@ function defaultPlatformOptions(): PlatformOptions {
     orgAds: { enabled: false, notes: "" },
     futureServices: { enabled: false, notes: "" },
   };
+}
+
+function normalizeBanners(raw: unknown): import("./types").OrgBanner[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      const b = item as Partial<import("./types").OrgBanner>;
+      if (!b?.id || !b.title) return null;
+      return {
+        id: String(b.id),
+        title: String(b.title),
+        imageUrl: String(b.imageUrl || ""),
+        linkUrl: String(b.linkUrl || ""),
+        enabled: Boolean(b.enabled),
+      };
+    })
+    .filter(Boolean) as import("./types").OrgBanner[];
 }
 
 function normalizePlatformOptions(
@@ -117,6 +134,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     privacyBn: DEFAULT_PRIVACY_BN,
     privacyEn: DEFAULT_PRIVACY_EN,
     platformOptions: defaultPlatformOptions(),
+    banners: [],
   };
 }
 
@@ -144,7 +162,8 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
     !parsed.posts ||
     !parsed.notifications ||
     !parsed.contactChangeRequests ||
-    !parsed.admin?.platformOptions;
+    !parsed.admin?.platformOptions ||
+    !Array.isArray(parsed.admin?.banners);
   const admin = parsed.admin?.passwordHash
     ? {
         ...(await defaultAdmin()),
@@ -152,6 +171,7 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         privacyBn: parsed.admin.privacyBn || DEFAULT_PRIVACY_BN,
         privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
         platformOptions: normalizePlatformOptions(parsed.admin.platformOptions),
+        banners: normalizeBanners(parsed.admin.banners),
       }
     : await defaultAdmin();
   return { admin, needsMigrate };
@@ -225,8 +245,15 @@ async function ensureDb(): Promise<DatabaseShape> {
       console.info("[bloodlink] Created new empty Postgres database");
       return empty;
     } catch (err) {
-      console.error("[bloodlink] Postgres storage failed:", err);
-      throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        "[bloodlink] Postgres storage failed — falling back to file storage:",
+        err,
+      );
+      if (/ENOTFOUND|ECONNREFUSED|railway\.internal/i.test(message)) {
+        clearSavedDatabaseUrl();
+      }
+      // Keep the site online even if a bad/private DATABASE_URL was saved.
     }
   }
 
@@ -234,14 +261,14 @@ async function ensureDb(): Promise<DatabaseShape> {
 
   const primary = await loadDbFromFile(dbPath);
   if (primary) {
-    if (primary.needsMigrate) await persist(primary.db);
+    if (primary.needsMigrate) await persistToFile(primary.db);
     return primary.db;
   }
 
   const backup = await loadDbFromFile(bakPath);
   if (backup) {
     console.warn("[bloodlink] Primary DB missing/corrupt — restored from backup");
-    await persist(backup.db);
+    await persistToFile(backup.db);
     return backup.db;
   }
 
@@ -254,17 +281,12 @@ async function ensureDb(): Promise<DatabaseShape> {
   }
 
   const empty = await createEmptyDb();
-  await persist(empty);
+  await persistToFile(empty);
   console.info("[bloodlink] Created new empty database");
   return empty;
 }
 
-async function persist(db: DatabaseShape): Promise<void> {
-  if (hasDatabaseUrl()) {
-    await saveDbToPostgres(db);
-    return;
-  }
-
+async function persistToFile(db: DatabaseShape): Promise<void> {
   await mkdir(dataDir, { recursive: true });
   if (await fileExists(dbPath)) {
     try {
@@ -277,6 +299,28 @@ async function persist(db: DatabaseShape): Promise<void> {
   await rename(tmpPath, dbPath);
 }
 
+async function persist(db: DatabaseShape): Promise<void> {
+  if (hasDatabaseUrl()) {
+    try {
+      await saveDbToPostgres(db);
+      // Mirror to disk when possible so redeploy/fallback keeps data.
+      try {
+        await persistToFile(db);
+      } catch {
+        // ignore mirror failures
+      }
+      return;
+    } catch (err) {
+      console.error(
+        "[bloodlink] Postgres persist failed — writing file fallback:",
+        err,
+      );
+    }
+  }
+
+  await persistToFile(db);
+}
+
 export async function getStorageHealth() {
   let donorCount = 0;
   let readable = false;
@@ -286,14 +330,16 @@ export async function getStorageHealth() {
   let bakExists = false;
   let pgOk: boolean | null = null;
 
+  await mkdir(dataDir, { recursive: true });
+  mainExists = await fileExists(dbPath);
+  bakExists = await fileExists(bakPath);
+
   if (usingPostgres) {
     const health = await postgresHealth();
     pgOk = health.ok;
-    if (!health.ok) error = health.error;
-  } else {
-    await mkdir(dataDir, { recursive: true });
-    mainExists = await fileExists(dbPath);
-    bakExists = await fileExists(bakPath);
+    if (!health.ok) {
+      error = health.error;
+    }
   }
 
   try {
@@ -305,9 +351,11 @@ export async function getStorageHealth() {
   }
 
   const entrypointFlag = runtimeDbFlag();
+  const backend =
+    usingPostgres && pgOk ? "postgres" : usingPostgres ? "file-fallback" : "file";
   return {
     ok: readable,
-    backend: usingPostgres ? "postgres" : "file",
+    backend,
     databaseUrlSet: usingPostgres,
     entrypointDbFlag: entrypointFlag,
     dbEnvKeys: listDbEnvKeys(),
@@ -317,11 +365,12 @@ export async function getStorageHealth() {
     bakExists,
     postgresOk: pgOk,
     donorCount,
-    persistentHint: usingPostgres
-      ? "Postgres is active — donor data survives website redeploys"
-      : entrypointFlag === "0"
-        ? "Railway is not injecting DATABASE_URL into bloodlink. Paste the Postgres URL as a bloodlink service variable (not Shared), then Deploy."
-        : "File storage only — DATABASE_URL is not available to the app yet. Redeploy bloodlink after setting DATABASE_URL.",
+    persistentHint:
+      backend === "postgres"
+        ? "Postgres is active — donor data survives website redeploys"
+        : backend === "file-fallback"
+          ? "Postgres URL failed (often railway.internal). Paste DATABASE_PUBLIC_URL (proxy.rlwy.net) in Owner Settings → Storage."
+          : "File storage only — add a Railway Volume at /app/data and/or paste DATABASE_PUBLIC_URL in Owner Settings.",
     error,
   };
 }

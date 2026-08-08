@@ -23,6 +23,12 @@ export function SiteFooter() {
           <Link href="/privacy" className="underline-offset-4 hover:underline">
             {t.privacy}
           </Link>
+          <Link href="/ambulance" className="underline-offset-4 hover:underline">
+            {t.ambulance}
+          </Link>
+          <Link href="/org" className="underline-offset-4 hover:underline">
+            {t.orgPortal}
+          </Link>
           <Link href="/requests" className="underline-offset-4 hover:underline">
             {t.requestBlood}
           </Link>

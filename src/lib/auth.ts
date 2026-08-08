@@ -3,7 +3,12 @@ import { createHash } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getNextEligibleDate, isDonorAvailable } from "./availability";
-import { findDonorById, getAdminSettings, getRatingStats } from "./db";
+import {
+  findDonorById,
+  getAdminSettings,
+  getRatingStats,
+  updateAdminSettings,
+} from "./db";
 import type { Donor } from "./types";
 
 const DONOR_COOKIE = "bloodlink_session";
@@ -75,10 +80,28 @@ export async function verifyAdminLogin(
   password: string,
 ): Promise<boolean> {
   const admin = await getAdminSettings();
-  if (username.trim().toLowerCase() !== admin.username.toLowerCase()) {
-    return false;
+  const inputUser = username.trim().toLowerCase();
+  const envUser = (process.env.ADMIN_USERNAME || "rony").trim().toLowerCase();
+  const envPass = process.env.ADMIN_PASSWORD || "";
+
+  if (inputUser === admin.username.toLowerCase()) {
+    if (await verifyPassword(password, admin.passwordHash)) return true;
   }
-  return verifyPassword(password, admin.passwordHash);
+
+  // Recover login when env password is correct but stored hash is stale/broken.
+  if (
+    envPass &&
+    password === envPass &&
+    (inputUser === envUser || inputUser === admin.username.toLowerCase())
+  ) {
+    await updateAdminSettings({
+      username: process.env.ADMIN_USERNAME || admin.username || "rony",
+      passwordHash: await hashPassword(envPass),
+    });
+    return true;
+  }
+
+  return false;
 }
 
 export async function createAdminSession(): Promise<void> {

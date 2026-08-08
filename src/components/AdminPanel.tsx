@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 type AdminDonor = {
@@ -90,6 +91,14 @@ export function AdminPanel() {
     orgAds: { enabled: false, notes: "" },
     futureServices: { enabled: false, notes: "" },
   });
+  const [banners, setBanners] = useState<
+    { id: string; title: string; imageUrl: string; linkUrl: string; enabled: boolean }[]
+  >([]);
+  const [bannerDraft, setBannerDraft] = useState({
+    title: "",
+    imageUrl: "",
+    linkUrl: "",
+  });
 
   async function loadData() {
     const res = await fetch("/api/admin/donors");
@@ -151,6 +160,105 @@ export function AdminPanel() {
         },
       });
     }
+    setBanners(Array.isArray(data.banners) ? data.banners : []);
+  }
+
+  async function saveBanners(
+    next: {
+      id: string;
+      title: string;
+      imageUrl: string;
+      linkUrl: string;
+      enabled: boolean;
+    }[],
+  ) {
+    setSettingsMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "banners", banners: next }),
+    });
+    if (!res.ok) {
+      setSettingsMsg(t.errorGeneric);
+      return;
+    }
+    const data = await res.json();
+    setBanners(data.banners || next);
+    setSettingsMsg(t.saved);
+  }
+
+  async function addBanner(e: React.FormEvent) {
+    e.preventDefault();
+    const title = bannerDraft.title.trim();
+    if (!title) return;
+    const next = [
+      ...banners,
+      {
+        id: crypto.randomUUID(),
+        title,
+        imageUrl: bannerDraft.imageUrl.trim(),
+        linkUrl: bannerDraft.linkUrl.trim(),
+        enabled: true,
+      },
+    ];
+    setBannerDraft({ title: "", imageUrl: "", linkUrl: "" });
+    setBanners(next);
+    await saveBanners(next);
+  }
+
+  function printDonors() {
+    const escapeHtml = (value: string) =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    const rows = donors
+      .map(
+        (d, i) =>
+          `<tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml(d.name)}</td>
+            <td>${escapeHtml(d.bloodGroup)}</td>
+            <td>${escapeHtml(d.gender)}</td>
+            <td>${escapeHtml(d.phone)}</td>
+            <td>${escapeHtml(d.email)}</td>
+            <td>${escapeHtml(d.district)}</td>
+            <td>${escapeHtml(d.area)}</td>
+            <td>${d.available ? "Yes" : "No"}</td>
+            <td>${escapeHtml(d.lastDonationDate || "-")}</td>
+          </tr>`,
+      )
+      .join("");
+    const html = `<!doctype html>
+<html><head><meta charset="utf-8" /><title>BloodLink Donors</title>
+<style>
+  body{font-family:Arial,sans-serif;padding:24px;color:#111}
+  h1{margin:0 0 4px;font-size:20px}
+  p{margin:0 0 16px;font-size:12px;color:#444}
+  table{border-collapse:collapse;width:100%;font-size:11px}
+  th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:#f3f3f3}
+  @media print{button{display:none}}
+</style></head><body>
+  <h1>BloodLink — Donor registry</h1>
+  <p>Generated ${new Date().toLocaleString()} · Total ${donors.length} · For authorized government use</p>
+  <table>
+    <thead><tr>
+      <th>#</th><th>Name</th><th>Blood</th><th>Gender</th><th>Phone</th>
+      <th>Email</th><th>District</th><th>Area</th><th>Available</th><th>Last donation</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <script>window.onload=()=>window.print()</script>
+</body></html>`;
+    const win = window.open("", "_blank");
+    if (!win) {
+      window.alert(t.errorGeneric);
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
   }
 
   async function savePlatformOptions(e: React.FormEvent) {
@@ -346,16 +454,14 @@ export function AdminPanel() {
             required
           />
         </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">{t.adminPassword}</span>
-          <input
-            className="field"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
+        <PasswordField
+          id="admin-login-password"
+          label={t.adminPassword}
+          value={password}
+          onChange={setPassword}
+          required
+          autoComplete="current-password"
+        />
         {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
         <button type="submit" className="btn-primary w-full" disabled={loading}>
           {loading ? t.loading : t.adminLogin}
@@ -390,7 +496,7 @@ export function AdminPanel() {
 
       {tab === "donors" ? (
         <>
-          <div className="flex flex-wrap gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
             <span>
               {t.totalDonors}: <strong>{stats.totalDonors}</strong>
             </span>
@@ -400,9 +506,16 @@ export function AdminPanel() {
             <span>
               {t.adminRequests}: <strong>{stats.totalRequests}</strong>
             </span>
+            <button
+              type="button"
+              className="btn-ghost ml-auto"
+              onClick={printDonors}
+            >
+              {t.printPdf}
+            </button>
           </div>
 
-          <section className="rounded-2xl bg-white/80 p-5">
+          <section className="rounded-2xl bg-white/80 p-5 print:shadow-none">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.adminDonors}
             </h2>
@@ -634,6 +747,84 @@ export function AdminPanel() {
 
           <section className="space-y-3 rounded-2xl bg-white/80 p-5">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+              {t.orgBanners}
+            </h2>
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              {t.orgBannersHint}
+            </p>
+            <form onSubmit={addBanner} className="grid gap-3 md:grid-cols-3">
+              <input
+                className="field"
+                placeholder={t.bannerTitle}
+                value={bannerDraft.title}
+                onChange={(e) =>
+                  setBannerDraft((d) => ({ ...d, title: e.target.value }))
+                }
+                required
+              />
+              <input
+                className="field"
+                placeholder={t.bannerImage}
+                value={bannerDraft.imageUrl}
+                onChange={(e) =>
+                  setBannerDraft((d) => ({ ...d, imageUrl: e.target.value }))
+                }
+              />
+              <input
+                className="field"
+                placeholder={t.bannerLink}
+                value={bannerDraft.linkUrl}
+                onChange={(e) =>
+                  setBannerDraft((d) => ({ ...d, linkUrl: e.target.value }))
+                }
+              />
+              <button type="submit" className="btn-primary md:col-span-3">
+                {t.addBanner}
+              </button>
+            </form>
+            <ul className="space-y-2">
+              {banners.map((b) => (
+                <li
+                  key={b.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                >
+                  <span className="font-medium">{b.title}</span>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={b.enabled}
+                        onChange={(e) => {
+                          const next = banners.map((x) =>
+                            x.id === b.id
+                              ? { ...x, enabled: e.target.checked }
+                              : x,
+                          );
+                          setBanners(next);
+                          void saveBanners(next);
+                        }}
+                      />
+                      {b.enabled ? t.featureEnabled : t.featureDisabled}
+                    </label>
+                    <button
+                      type="button"
+                      className="btn-ghost text-[var(--blood)]"
+                      onClick={() => {
+                        const next = banners.filter((x) => x.id !== b.id);
+                        setBanners(next);
+                        void saveBanners(next);
+                      }}
+                    >
+                      {t.delete}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.adminPrivacy}
             </h2>
             <label className="block text-sm">
@@ -665,13 +856,13 @@ export function AdminPanel() {
               {t.adminUsername}: <strong>{settingsUser}</strong>
             </p>
             <form onSubmit={saveCredentials} className="mt-3 space-y-3">
-              <input
-                className="field"
-                type="password"
-                placeholder={t.currentPassword}
+              <PasswordField
+                id="admin-current-password"
+                label={t.currentPassword}
                 value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
+                onChange={setCurrentPassword}
                 required
+                autoComplete="current-password"
               />
               <input
                 className="field"
@@ -679,12 +870,12 @@ export function AdminPanel() {
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
               />
-              <input
-                className="field"
-                type="password"
-                placeholder={t.newPassword}
+              <PasswordField
+                id="admin-new-password"
+                label={t.newPassword}
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={setNewPassword}
+                autoComplete="new-password"
               />
               <button type="submit" className="btn-primary">
                 {t.saveChanges}

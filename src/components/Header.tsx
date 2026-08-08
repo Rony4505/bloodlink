@@ -41,6 +41,18 @@ export function Header() {
             {t.findDonors}
           </Link>
           <Link
+            href="/ambulance"
+            className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 sm:inline"
+          >
+            {t.ambulance}
+          </Link>
+          <Link
+            href="/org"
+            className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 md:inline"
+          >
+            {t.orgPortal}
+          </Link>
+          <Link
             href="/requests"
             className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 md:inline"
           >
