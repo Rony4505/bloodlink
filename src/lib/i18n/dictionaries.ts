@@ -222,16 +222,15 @@ export const dictionaries = {
     donorsNearYou: "Donors near you",
     detectingLocation: "Detecting your area…",
     printPdf: "Print / PDF",
-    orgBanners: "Organization banners",
+    orgBanners: "Business / Hospital / NGO banners",
     orgBannersHint:
-      "Add only partner organization banners for advertising. Show title, image URL, and link.",
-    bannerTitle: "Organization name",
-    bannerImage: "Banner image URL",
+      "Add partner Business, Hospital, or NGO banners for advertising. Upload an image from your phone/computer, or paste an image URL.",
+    bannerTitle: "Business / Hospital / NGO name",
+    bannerImage: "Banner image URL (optional if you upload)",
+    bannerUpload: "Upload image from computer / phone",
+    bannerUploading: "Uploading image…",
     bannerLink: "Website / link",
     addBanner: "Add banner",
-    orgPortal: "Hospital / Organization find",
-    orgPortalSubtitle:
-      "Hospitals and humanitarian organizations can search donors quickly without full owner access.",
   },
   bn: {
     brand: "BloodLink",
@@ -455,16 +454,15 @@ export const dictionaries = {
     donorsNearYou: "আপনার কাছাকাছি ডোনার",
     detectingLocation: "আপনার এলাকা খোঁজা হচ্ছে…",
     printPdf: "প্রিন্ট / PDF",
-    orgBanners: "সংস্থার ব্যানার",
+    orgBanners: "Business / Hospital / NGO ব্যানার",
     orgBannersHint:
-      "শুধু পার্টনার মানবিক সংস্থার ব্যানার যোগ করুন — নাম, ইমেজ URL ও লিংক।",
-    bannerTitle: "সংস্থার নাম",
-    bannerImage: "ব্যানার ইমেজ URL",
+      "পার্টনার Business, Hospital বা NGO ব্যানার যোগ করুন। ফোন/কম্পিউটার থেকে ইমেজ আপলোড করুন, অথবা ইমেজ URL দিন।",
+    bannerTitle: "Business / Hospital / NGO name",
+    bannerImage: "ব্যানার ইমেজ URL (আপলোড করলে লাগবে না)",
+    bannerUpload: "কম্পিউটার / ফোন থেকে ইমেজ আপলোড",
+    bannerUploading: "ইমেজ আপলোড হচ্ছে…",
     bannerLink: "ওয়েবসাইট / লিংক",
     addBanner: "ব্যানার যোগ",
-    orgPortal: "হাসপাতাল / সংস্থা সার্চ",
-    orgPortalSubtitle:
-      "হাসপাতাল ও মানবিক সংস্থা পূর্ণ ওনার অ্যাক্সেস ছাড়াই দ্রুত ডোনার খুঁজতে পারবে।",
   },
 } as const;
 

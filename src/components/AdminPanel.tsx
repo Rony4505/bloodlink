@@ -99,6 +99,7 @@ export function AdminPanel() {
     imageUrl: "",
     linkUrl: "",
   });
+  const [bannerUploading, setBannerUploading] = useState(false);
 
   async function loadData() {
     const res = await fetch("/api/admin/donors");
@@ -297,17 +298,48 @@ export function AdminPanel() {
       if (!res.ok) {
         setSettingsMsg(data.error || t.errorGeneric);
         setStorageReady(false);
+        setStorageBackend(data.storage?.backend || "file");
         return;
       }
-      setStorageReady(Boolean(data.databaseReady));
-      setStorageBackend(data.storage?.backend || "postgres");
-      setDatabaseUrl("");
-      setSettingsMsg(t.storageReady);
-      await loadData();
+      const ready = Boolean(data.databaseReady);
+      setStorageReady(ready);
+      setStorageBackend(data.storage?.backend || (ready ? "postgres" : "file"));
+      if (ready) {
+        setDatabaseUrl("");
+        setSettingsMsg(t.storageReady);
+        await loadData();
+      } else {
+        setSettingsMsg(data.error || t.storageNotReady);
+      }
     } catch {
       setSettingsMsg(t.errorGeneric);
     } finally {
       setStorageSaving(false);
+    }
+  }
+
+  async function uploadBannerImage(file: File | null) {
+    if (!file) return;
+    setBannerUploading(true);
+    setSettingsMsg("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSettingsMsg(data.error || t.errorGeneric);
+        return;
+      }
+      setBannerDraft((d) => ({ ...d, imageUrl: data.url || "" }));
+      setSettingsMsg(t.saved);
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setBannerUploading(false);
     }
   }
 
@@ -754,7 +786,7 @@ export function AdminPanel() {
             </p>
             <form onSubmit={addBanner} className="grid gap-3 md:grid-cols-3">
               <input
-                className="field"
+                className="field md:col-span-3"
                 placeholder={t.bannerTitle}
                 value={bannerDraft.title}
                 onChange={(e) =>
@@ -762,6 +794,23 @@ export function AdminPanel() {
                 }
                 required
               />
+              <label className="block text-sm md:col-span-3">
+                <span className="mb-1 block font-medium">{t.bannerUpload}</span>
+                <input
+                  className="field"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={bannerUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    void uploadBannerImage(file);
+                    e.target.value = "";
+                  }}
+                />
+                {bannerUploading ? (
+                  <span className="mt-1 block text-xs">{t.bannerUploading}</span>
+                ) : null}
+              </label>
               <input
                 className="field"
                 placeholder={t.bannerImage}
@@ -771,13 +820,21 @@ export function AdminPanel() {
                 }
               />
               <input
-                className="field"
+                className="field md:col-span-2"
                 placeholder={t.bannerLink}
                 value={bannerDraft.linkUrl}
                 onChange={(e) =>
                   setBannerDraft((d) => ({ ...d, linkUrl: e.target.value }))
                 }
               />
+              {bannerDraft.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bannerDraft.imageUrl}
+                  alt=""
+                  className="h-16 max-w-[220px] object-contain md:col-span-3"
+                />
+              ) : null}
               <button type="submit" className="btn-primary md:col-span-3">
                 {t.addBanner}
               </button>

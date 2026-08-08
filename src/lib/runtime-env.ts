@@ -74,6 +74,14 @@ export function saveDatabaseUrl(url: string): void {
   } catch {
     // /tmp may be unavailable in some local environments
   }
+  // Make the current Node process use the owner-pasted URL immediately
+  // (Railway may still inject a private *.railway.internal DATABASE_URL).
+  try {
+    process.env.DATABASE_URL = trimmed;
+    process.env.DATABASE_PUBLIC_URL = trimmed;
+  } catch {
+    // ignore
+  }
 }
 
 export function clearSavedDatabaseUrl(): void {
@@ -113,16 +121,23 @@ export function runtimeEnv(name: string): string {
 }
 
 export function runtimeDbUrl(): string {
-  // Prefer live Railway/env injection over a previously pasted private URL.
-  const fromEnv = firstEnvUrl([
+  // Owner-pasted URL in Settings always wins over Railway's injected private URL.
+  const saved = readSavedUrl();
+  if (saved) return saved;
+
+  const envCandidates = [
     "DATABASE_PUBLIC_URL",
     "DATABASE_URL",
     "POSTGRES_URL",
     "DATABASE_PRIVATE_URL",
     "POSTGRES_PRIVATE_URL",
-  ]);
-  if (fromEnv) return fromEnv;
-  return readSavedUrl();
+  ]
+    .map((key) => firstEnvUrl([key]))
+    .filter(Boolean);
+
+  const publicish = envCandidates.find((u) => !isPrivateRailwayUrl(u));
+  if (publicish) return publicish;
+  return envCandidates[0] || "";
 }
 
 export function runtimeDbEnvKeys(): string[] {

@@ -17,7 +17,12 @@ import {
   postgresHealth,
   saveDbToPostgres,
 } from "./pg-store";
-import { clearSavedDatabaseUrl, runtimeDbFlag } from "./runtime-env";
+import {
+  clearSavedDatabaseUrl,
+  isPrivateRailwayUrl,
+  runtimeDbFlag,
+  runtimeDbUrl,
+} from "./runtime-env";
 import type {
   AdminSettings,
   AppNotification,
@@ -250,7 +255,12 @@ async function ensureDb(): Promise<DatabaseShape> {
         "[bloodlink] Postgres storage failed — falling back to file storage:",
         err,
       );
-      if (/ENOTFOUND|ECONNREFUSED|railway\.internal/i.test(message)) {
+      // Only clear a pasted URL when that same URL is what failed.
+      const activeUrl = runtimeDbUrl();
+      if (
+        /ENOTFOUND|ECONNREFUSED|railway\.internal/i.test(message) &&
+        (isPrivateRailwayUrl(activeUrl) || /ENOTFOUND|ECONNREFUSED/i.test(message))
+      ) {
         clearSavedDatabaseUrl();
       }
       // Keep the site online even if a bad/private DATABASE_URL was saved.
