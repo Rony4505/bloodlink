@@ -74,11 +74,22 @@ export function isPrivateRailwayUrl(url: string): boolean {
 export function normalizeDatabaseUrl(raw: string): string {
   let url = raw.trim().replace(/^["']+|["']+$/g, "").replace(/\r?\n/g, "");
   if (!url) return "";
-  // Public Railway proxy and most hosted Postgres require TLS.
+
+  // Railway Postgres (public proxy + private) uses a self-signed cert.
+  // sslmode=require still verifies the chain and fails with:
+  // "self-signed certificate in certificate chain".
+  if (/rlwy\.net|railway\.internal|railway\.app/i.test(url)) {
+    url = url
+      .replace(/([?&])sslmode=[^&]*/gi, "$1")
+      .replace(/[?&]$/, "")
+      .replace(/\?&/, "?");
+    url += (url.includes("?") ? "&" : "?") + "sslmode=no-verify";
+    return url;
+  }
+
   if (
     !/[?&]sslmode=/i.test(url) &&
-    !isPrivateRailwayUrl(url) &&
-    /rlwy\.net|railway\.app|supabase\.co|neon\.tech|amazonaws\.com/i.test(url)
+    /supabase\.co|neon\.tech|amazonaws\.com/i.test(url)
   ) {
     url += (url.includes("?") ? "&" : "?") + "sslmode=require";
   }

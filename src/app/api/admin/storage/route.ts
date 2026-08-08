@@ -53,15 +53,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (isPrivateRailwayUrl(databaseUrl)) {
-      return NextResponse.json(
-        {
-          error:
-            "This is a private Railway URL (railway.internal). Open Railway → Postgres → Variables → copy DATABASE_PUBLIC_URL (host looks like proxy.rlwy.net).",
-        },
-        { status: 400 },
-      );
-    }
+    // Private railway.internal is OK when BloodLink and Postgres share a Railway project.
+    // Public proxy URLs also work (with sslmode=no-verify for Railway's self-signed cert).
 
     try {
       saveDatabaseUrl(databaseUrl);

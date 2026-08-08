@@ -44,11 +44,12 @@ function getPool(): Pool {
     if (pool) {
       void pool.end().catch(() => undefined);
     }
+    // Force no cert verification — Railway TCP proxy / postgres-ssl use self-signed certs.
     pool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
       max: 5,
-      connectionTimeoutMillis: 12_000,
+      connectionTimeoutMillis: 15_000,
       idleTimeoutMillis: 10_000,
     });
     poolUrl = connectionString;
@@ -124,7 +125,7 @@ export async function postgresHealth(): Promise<{
     } else if (/password|authentication|SASL/i.test(message)) {
       help = `${message}. Wrong password in the URL — copy DATABASE_PUBLIC_URL again from Railway Postgres → Variables.`;
     } else if (/SSL|TLS|self-signed/i.test(message)) {
-      help = `${message}. SSL problem talking to "${host}". Re-copy DATABASE_PUBLIC_URL and try again.`;
+      help = `${message}. Railway uses a self-signed DB certificate — redeploy the latest BloodLink build, then Save the URL again.`;
     }
     return { ok: false, error: help, host };
   }
