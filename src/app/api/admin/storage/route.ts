@@ -9,7 +9,6 @@ import {
 import {
   databaseUrlHost,
   hasSavedDatabaseUrl,
-  isPrivateRailwayUrl,
   normalizeDatabaseUrl,
   saveDatabaseUrl,
 } from "@/lib/runtime-env";
