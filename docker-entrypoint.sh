@@ -23,7 +23,12 @@ else
   rm -f "$FLAG_FILE"
   printf '0' > "$FLAG_META"
   echo "[bloodlink] db url present: false"
-  echo "[bloodlink] hint: set DATABASE_URL on the bloodlink service Variables, then redeploy"
+  echo "[bloodlink] CRITICAL: without DATABASE_URL, website edits/redeploys erase donor data"
+  echo "[bloodlink] hint: Railway → bloodlink Variables → Add Reference → Postgres DATABASE_URL → Deploy"
+fi
+
+if [ -n "${RAILWAY_VOLUME_MOUNT_PATH:-}" ]; then
+  echo "[bloodlink] volume mount: ${RAILWAY_VOLUME_MOUNT_PATH}"
 fi
 
 exec node server.js

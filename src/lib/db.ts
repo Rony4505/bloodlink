@@ -17,7 +17,12 @@ import {
   postgresHealth,
   saveDbToPostgres,
 } from "./pg-store";
-import { runtimeDbFlag } from "./runtime-env";
+import {
+  isRailwayRuntime,
+  runtimeDbFlag,
+  runtimeEnv,
+  runtimeVolumeMountPath,
+} from "./runtime-env";
 import type {
   AdminSettings,
   AppNotification,
@@ -30,18 +35,41 @@ import type {
   Rating,
 } from "./types";
 
-const configuredDataDir = process.env.DATA_DIR;
-const dataDir = configuredDataDir
-  ? path.isAbsolute(configuredDataDir)
-    ? configuredDataDir
-    : path.join(process.cwd(), configuredDataDir)
-  : path.join(process.cwd(), "data");
+export const STORAGE_NOT_DURABLE = "STORAGE_NOT_DURABLE";
+
+function resolveDataDir(): string {
+  // Prefer an attached Railway volume — it survives redeploys; /app/data alone does not.
+  const volume = runtimeVolumeMountPath();
+  if (volume) {
+    return path.isAbsolute(volume)
+      ? volume
+      : path.join(/* turbopackIgnore: true */ process.cwd(), volume);
+  }
+
+  const configuredDataDir = runtimeEnv("DATA_DIR") || process.env.DATA_DIR || "";
+  if (configuredDataDir) {
+    return path.isAbsolute(configuredDataDir)
+      ? configuredDataDir
+      : path.join(/* turbopackIgnore: true */ process.cwd(), configuredDataDir);
+  }
+  return path.join(/* turbopackIgnore: true */ process.cwd(), "data");
+}
+
+const dataDir = resolveDataDir();
 const dbPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.json");
 const bakPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.bak.json");
 const tmpPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.tmp.json");
 
 let writeQueue: Promise<void> = Promise.resolve();
 let loggedStoragePath = false;
+
+/** Durable enough that redeploying the website will not erase donors. */
+export function storageIsDurable(): boolean {
+  if (hasDatabaseUrl()) return true;
+  if (runtimeVolumeMountPath()) return true;
+  // Local/dev file storage is fine; Railway ephemeral disk is not.
+  return !isRailwayRuntime();
+}
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -163,35 +191,72 @@ async function hydrateParsed(
   return { db: shapeFromParsed(raw, admin), needsMigrate };
 }
 
-async function ensureDb(): Promise<DatabaseShape> {
+type PersistOptions = { allowEmptyDonors?: boolean; createIfMissing?: boolean };
+
+/** Load existing store without creating/seeding an empty database. */
+async function loadExistingDb(): Promise<DatabaseShape | null> {
+  if (hasDatabaseUrl()) {
+    const raw = await loadDbFromPostgres();
+    if (raw) {
+      const hydrated = await hydrateParsed(raw);
+      return hydrated.db;
+    }
+    const fromFile = await loadDbFromFile(dbPath);
+    return fromFile?.db ?? null;
+  }
+
+  await mkdir(dataDir, { recursive: true });
+  const primary = await loadDbFromFile(dbPath);
+  if (primary) return primary.db;
+  const backup = await loadDbFromFile(bakPath);
+  return backup?.db ?? null;
+}
+
+async function ensureDb(options: { createIfMissing?: boolean } = {}): Promise<DatabaseShape> {
+  const createIfMissing = options.createIfMissing ?? false;
+
   if (!loggedStoragePath) {
     loggedStoragePath = true;
+    const durable = storageIsDurable();
     console.info(
-      `[bloodlink] Storage backend: ${hasDatabaseUrl() ? "postgres" : "file"} (${hasDatabaseUrl() ? "DATABASE_URL" : dbPath})`,
+      `[bloodlink] Storage backend: ${hasDatabaseUrl() ? "postgres" : "file"} (${hasDatabaseUrl() ? "DATABASE_URL" : dbPath}) durable=${durable}`,
     );
+    if (!durable) {
+      console.error(
+        "[bloodlink] WARNING: storage is NOT durable. Website redeploys will erase donors. Link Railway Postgres (DATABASE_URL) or attach a volume.",
+      );
+    }
   }
 
   if (hasDatabaseUrl()) {
     try {
       const raw = await loadDbFromPostgres();
       if (raw) {
+        // Apply in-memory migrations only — do not persist on the read path
+        // (avoids racing with writes and seeding empty overwrites).
         const hydrated = await hydrateParsed(raw);
-        if (hydrated.needsMigrate) await persist(hydrated.db);
         return hydrated.db;
       }
 
-      // One-time migrate from local/volume file if Postgres is empty.
+      // One-time migrate from local/volume file if Postgres row is missing.
+      // Only persist during write flows so health/read paths cannot race.
       const fromFile = await loadDbFromFile(dbPath);
       if (fromFile) {
-        console.info("[bloodlink] Migrating file database into Postgres");
-        await persist(fromFile.db);
+        if (createIfMissing) {
+          console.info("[bloodlink] Migrating file database into Postgres");
+          await persist(fromFile.db);
+        }
         return fromFile.db;
       }
 
-      const empty = await createEmptyDb();
-      await persist(empty);
-      console.info("[bloodlink] Created new empty Postgres database");
-      return empty;
+      if (!createIfMissing) {
+        return createEmptyDb();
+      }
+
+      // Return in-memory empty only — first mutation persists real data.
+      // Avoids seeding an empty Postgres row that later blocks file migration.
+      console.info("[bloodlink] Initializing new empty Postgres database in memory");
+      return createEmptyDb();
     } catch (err) {
       console.error("[bloodlink] Postgres storage failed:", err);
       throw err;
@@ -202,7 +267,6 @@ async function ensureDb(): Promise<DatabaseShape> {
 
   const primary = await loadDbFromFile(dbPath);
   if (primary) {
-    if (primary.needsMigrate) await persist(primary.db);
     return primary.db;
   }
 
@@ -221,19 +285,35 @@ async function ensureDb(): Promise<DatabaseShape> {
     );
   }
 
-  const empty = await createEmptyDb();
-  await persist(empty);
-  console.info("[bloodlink] Created new empty database");
-  return empty;
+  if (!createIfMissing) {
+    return createEmptyDb();
+  }
+
+  console.info("[bloodlink] Initializing new empty file database in memory");
+  return createEmptyDb();
 }
 
-async function persist(db: DatabaseShape): Promise<void> {
+async function persist(
+  db: DatabaseShape,
+  options: PersistOptions = {},
+): Promise<void> {
   if (hasDatabaseUrl()) {
-    await saveDbToPostgres(db);
+    await saveDbToPostgres(db, { allowEmptyDonors: options.allowEmptyDonors });
     return;
   }
 
   await mkdir(dataDir, { recursive: true });
+
+  if (!options.allowEmptyDonors && db.donors.length === 0) {
+    const existing =
+      (await loadDbFromFile(dbPath)) || (await loadDbFromFile(bakPath));
+    if (existing && existing.db.donors.length > 0) {
+      throw new Error(
+        `[bloodlink] Refusing to overwrite file store with empty donor list (${existing.db.donors.length} donors kept)`,
+      );
+    }
+  }
+
   if (await fileExists(dbPath)) {
     try {
       await copyFile(dbPath, bakPath);
@@ -250,6 +330,8 @@ export async function getStorageHealth() {
   let readable = false;
   let error: string | null = null;
   const usingPostgres = hasDatabaseUrl();
+  const volumeMount = runtimeVolumeMountPath();
+  const durable = storageIsDurable();
   let mainExists = false;
   let bakExists = false;
   let pgOk: boolean | null = null;
@@ -265,19 +347,41 @@ export async function getStorageHealth() {
   }
 
   try {
-    const db = await ensureDb();
-    donorCount = db.donors.length;
+    // Never seed/persist an empty DB from health checks — that can wipe donors.
+    const db = await loadExistingDb();
+    donorCount = db?.donors.length ?? 0;
     readable = true;
   } catch (err) {
     error = err instanceof Error ? err.message : "Unknown storage error";
   }
 
   const entrypointFlag = runtimeDbFlag();
+  const onRailway = isRailwayRuntime();
+
+  let persistentHint: string;
+  if (usingPostgres) {
+    persistentHint =
+      "Postgres is active — donor data survives website edits/redeploys";
+  } else if (volumeMount) {
+    persistentHint =
+      "Railway volume is mounted for file storage. Prefer linking Postgres (DATABASE_URL) for the safest setup.";
+  } else if (onRailway || entrypointFlag === "0") {
+    persistentHint =
+      "CRITICAL: Railway has no DATABASE_URL on bloodlink. Editing/redeploying the website wipes all donors. Create Postgres → Add Variable Reference DATABASE_URL on bloodlink → Deploy.";
+  } else {
+    persistentHint =
+      "File storage only. Set DATABASE_URL for production so donor data survives deploys.";
+  }
+
   return {
-    ok: readable,
+    ok: readable && (pgOk ?? true),
+    durable,
     backend: usingPostgres ? "postgres" : "file",
     databaseUrlSet: usingPostgres,
     entrypointDbFlag: entrypointFlag,
+    volumeMounted: Boolean(volumeMount),
+    volumeMountPath: volumeMount || null,
+    onRailway,
     dbEnvKeys: listDbEnvKeys(),
     dataDir,
     dbPath,
@@ -285,18 +389,15 @@ export async function getStorageHealth() {
     bakExists,
     postgresOk: pgOk,
     donorCount,
-    persistentHint: usingPostgres
-      ? "Postgres is active — donor data survives website redeploys"
-      : entrypointFlag === "0"
-        ? "Railway is not injecting DATABASE_URL into bloodlink. Paste the Postgres URL as a bloodlink service variable (not Shared), then Deploy."
-        : "File storage only — DATABASE_URL is not available to the app yet. Redeploy bloodlink after setting DATABASE_URL.",
+    persistentHint,
     error,
   };
 }
 
 function withWrite<T>(fn: (db: DatabaseShape) => Promise<T> | T): Promise<T> {
   const run = writeQueue.then(async () => {
-    const db = await ensureDb();
+    // Only mutations may create/seed a brand-new empty store.
+    const db = await ensureDb({ createIfMissing: true });
     return fn(db);
   });
   writeQueue = run.then(
@@ -304,6 +405,12 @@ function withWrite<T>(fn: (db: DatabaseShape) => Promise<T> | T): Promise<T> {
     () => undefined,
   );
   return run;
+}
+
+function assertDurableStorage(): void {
+  if (!storageIsDurable()) {
+    throw new Error(STORAGE_NOT_DURABLE);
+  }
 }
 
 export async function listDonors(): Promise<Donor[]> {
@@ -335,6 +442,7 @@ export async function findDonorById(id: string): Promise<Donor | null> {
 export async function createDonor(
   input: Omit<Donor, "id" | "createdAt" | "updatedAt" | "available">,
 ): Promise<Donor> {
+  assertDurableStorage();
   return withWrite(async (db) => {
     const now = new Date().toISOString();
     const donor = normalizeDonor({
@@ -391,7 +499,8 @@ export async function deleteDonor(id: string): Promise<boolean> {
     db.ratings = db.ratings.filter((r) => r.donorId !== id);
     db.notifications = db.notifications.filter((n) => n.userId !== id);
     if (db.donors.length === before) return false;
-    await persist(db);
+    // Allow persisting zero donors when the last donor was intentionally deleted.
+    await persist(db, { allowEmptyDonors: true });
     return true;
   });
 }

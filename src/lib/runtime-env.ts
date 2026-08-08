@@ -101,3 +101,18 @@ export function runtimeDbFlag(): "1" | "0" | "missing" {
     return "missing";
   }
 }
+
+/** True when the process is running inside a Railway service. */
+export function isRailwayRuntime(): boolean {
+  return Boolean(
+    runtimeEnv("RAILWAY_ENVIRONMENT") ||
+      runtimeEnv("RAILWAY_PROJECT_ID") ||
+      runtimeEnv("RAILWAY_SERVICE_ID") ||
+      runtimeEnv("RAILWAY_STATIC_URL"),
+  );
+}
+
+/** Absolute mount path of a Railway volume, if attached. */
+export function runtimeVolumeMountPath(): string {
+  return runtimeEnv("RAILWAY_VOLUME_MOUNT_PATH");
+}
