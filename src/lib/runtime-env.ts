@@ -1,11 +1,26 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import path from "path";
 
-const DB_URL_FILE = "/tmp/bloodlink_database_url";
+const TMP_URL_FILE = "/tmp/bloodlink_database_url";
 const DB_FLAG_FILE = "/tmp/bloodlink_db_flag";
+
+function dataDir(): string {
+  const configured = process.env["DATA_DIR"];
+  if (configured && configured.trim()) {
+    return path.isAbsolute(configured)
+      ? configured
+      : path.join(process.cwd(), configured);
+  }
+  return path.join(process.cwd(), "data");
+}
+
+function persistUrlPath(): string {
+  return path.join(dataDir(), ".database_url");
+}
 
 /**
  * Next.js can strip process.env at build/bundle time.
- * Docker entrypoint writes the real Railway DATABASE_URL to a temp file.
+ * We also support owner-saved URL on the data volume.
  */
 function readProcEnviron(): Record<string, string> {
   try {
@@ -32,24 +47,44 @@ function readProcessEnv(name: string): string {
   }
 }
 
-function readFileEnv(): string {
+function readUrlFile(filePath: string): string {
   try {
-    if (!existsSync(DB_URL_FILE)) return "";
-    return readFileSync(DB_URL_FILE, "utf8").trim();
+    if (!existsSync(filePath)) return "";
+    return readFileSync(filePath, "utf8").trim();
   } catch {
     return "";
   }
 }
 
+function readSavedUrl(): string {
+  return readUrlFile(persistUrlPath()) || readUrlFile(TMP_URL_FILE);
+}
+
+export function saveDatabaseUrl(url: string): void {
+  const trimmed = url.trim();
+  mkdirSync(dataDir(), { recursive: true });
+  writeFileSync(persistUrlPath(), trimmed, "utf8");
+  try {
+    writeFileSync(TMP_URL_FILE, trimmed, "utf8");
+    writeFileSync(DB_FLAG_FILE, "1", "utf8");
+  } catch {
+    // /tmp may be unavailable in some local environments
+  }
+}
+
+export function hasSavedDatabaseUrl(): boolean {
+  return readSavedUrl().length > 0;
+}
+
 export function runtimeEnv(name: string): string {
-  const fromFile =
+  const fromSaved =
     name === "DATABASE_URL" ||
     name === "DATABASE_PRIVATE_URL" ||
     name === "POSTGRES_URL" ||
     name === "POSTGRES_PRIVATE_URL"
-      ? readFileEnv()
+      ? readSavedUrl()
       : "";
-  if (fromFile) return fromFile;
+  if (fromSaved) return fromSaved;
 
   const fromProcess = readProcessEnv(name);
   if (fromProcess) return fromProcess;
@@ -59,8 +94,8 @@ export function runtimeEnv(name: string): string {
 }
 
 export function runtimeDbUrl(): string {
-  const fromFile = readFileEnv();
-  if (fromFile) return fromFile;
+  const fromSaved = readSavedUrl();
+  if (fromSaved) return fromSaved;
 
   const keys = [
     "DATABASE_URL",
@@ -69,15 +104,16 @@ export function runtimeDbUrl(): string {
     "POSTGRES_PRIVATE_URL",
   ];
   for (const key of keys) {
-    const value = runtimeEnv(key);
-    if (value) return value;
+    const value = readProcessEnv(key) || readProcEnviron()[key] || "";
+    if (value.trim()) return value.trim();
   }
   return "";
 }
 
 export function runtimeDbEnvKeys(): string[] {
   const names = new Set<string>();
-  if (readFileEnv()) names.add("DATABASE_URL(file)");
+  if (readUrlFile(persistUrlPath())) names.add("DATABASE_URL(volume)");
+  if (readUrlFile(TMP_URL_FILE)) names.add("DATABASE_URL(tmp)");
   try {
     const env = new Function("return process.env")() as NodeJS.ProcessEnv;
     for (const key of Object.keys(env || {})) {
@@ -93,6 +129,7 @@ export function runtimeDbEnvKeys(): string[] {
 }
 
 export function runtimeDbFlag(): "1" | "0" | "missing" {
+  if (readSavedUrl()) return "1";
   try {
     if (!existsSync(DB_FLAG_FILE)) return "missing";
     const value = readFileSync(DB_FLAG_FILE, "utf8").trim();

@@ -81,6 +81,15 @@ export function AdminPanel() {
   const [phoneCode, setPhoneCode] = useState("");
   const [tempCodes, setTempCodes] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
+  const [databaseUrl, setDatabaseUrl] = useState("");
+  const [storageReady, setStorageReady] = useState(false);
+  const [storageBackend, setStorageBackend] = useState("file");
+  const [storageSaving, setStorageSaving] = useState(false);
+  const [platformOptions, setPlatformOptions] = useState({
+    hospitalAccess: { enabled: false, notes: "" },
+    orgAds: { enabled: false, notes: "" },
+    futureServices: { enabled: false, notes: "" },
+  });
 
   async function loadData() {
     const res = await fetch("/api/admin/donors");
@@ -126,6 +135,72 @@ export function AdminPanel() {
     setVerifyPhone(data.verifyPhone || "");
     setEmailVerified(Boolean(data.emailVerified));
     setPhoneVerified(Boolean(data.phoneVerified));
+    if (data.platformOptions) {
+      setPlatformOptions({
+        hospitalAccess: {
+          enabled: Boolean(data.platformOptions.hospitalAccess?.enabled),
+          notes: data.platformOptions.hospitalAccess?.notes || "",
+        },
+        orgAds: {
+          enabled: Boolean(data.platformOptions.orgAds?.enabled),
+          notes: data.platformOptions.orgAds?.notes || "",
+        },
+        futureServices: {
+          enabled: Boolean(data.platformOptions.futureServices?.enabled),
+          notes: data.platformOptions.futureServices?.notes || "",
+        },
+      });
+    }
+  }
+
+  async function savePlatformOptions(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "platform-options",
+        platformOptions,
+      }),
+    });
+    setSettingsMsg(res.ok ? t.saved : t.errorGeneric);
+  }
+
+  async function loadStorage() {
+    const res = await fetch("/api/admin/storage");
+    if (!res.ok) return;
+    const data = await res.json();
+    setStorageReady(Boolean(data.databaseReady));
+    setStorageBackend(data.storage?.backend || "file");
+  }
+
+  async function saveStorage(e: React.FormEvent) {
+    e.preventDefault();
+    setStorageSaving(true);
+    setSettingsMsg("");
+    try {
+      const res = await fetch("/api/admin/storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ databaseUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSettingsMsg(data.error || t.errorGeneric);
+        setStorageReady(false);
+        return;
+      }
+      setStorageReady(Boolean(data.databaseReady));
+      setStorageBackend(data.storage?.backend || "postgres");
+      setDatabaseUrl("");
+      setSettingsMsg(t.storageReady);
+      await loadData();
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setStorageSaving(false);
+    }
   }
 
   useEffect(() => {
@@ -137,6 +212,7 @@ export function AdminPanel() {
         }
         await loadData();
         await loadSettings();
+        await loadStorage();
       })
       .catch(() => setAuthed(false))
       .finally(() => setChecking(false));
@@ -159,6 +235,7 @@ export function AdminPanel() {
       }
       await loadData();
       await loadSettings();
+      await loadStorage();
     } catch {
       setError(t.errorGeneric);
     } finally {
@@ -447,6 +524,114 @@ export function AdminPanel() {
         </>
       ) : (
         <div className="space-y-6">
+          <section className="space-y-3 rounded-2xl border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_50%,#f3ebe4_100%)] p-5">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
+              {t.storageSetup}
+            </h2>
+            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+              {t.storageSetupBody}
+            </p>
+            <p
+              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                storageReady
+                  ? "bg-[color-mix(in_oklab,var(--sage)_14%,white)] text-[var(--sage)]"
+                  : "bg-[color-mix(in_oklab,var(--blood)_12%,white)] text-[var(--blood-deep)]"
+              }`}
+            >
+              {storageReady ? t.storageReady : t.storageNotReady}
+              {" · "}
+              backend: {storageBackend}
+            </p>
+            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+              {t.storageVolumeTip}
+            </p>
+            <form onSubmit={saveStorage} className="space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">{t.storageUrlLabel}</span>
+                <input
+                  className="field"
+                  type="password"
+                  autoComplete="off"
+                  placeholder="postgresql://..."
+                  value={databaseUrl}
+                  onChange={(e) => setDatabaseUrl(e.target.value)}
+                  required
+                />
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  {t.storageUrlHint}
+                </span>
+              </label>
+              <button
+                type="submit"
+                className="inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3 font-semibold text-white transition hover:bg-[#265a42] disabled:opacity-55"
+                disabled={storageSaving}
+              >
+                {storageSaving ? t.loading : t.storageSave}
+              </button>
+            </form>
+          </section>
+
+          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+              {t.futureFeatures}
+            </h2>
+            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              {t.futureFeaturesBody}
+            </p>
+            <form onSubmit={savePlatformOptions} className="mt-2 space-y-5">
+              {(
+                [
+                  ["hospitalAccess", t.hospitalAccess, t.hospitalAccessHint],
+                  ["orgAds", t.orgAds, t.orgAdsHint],
+                  ["futureServices", t.futureServices, t.futureServicesHint],
+                ] as const
+              ).map(([key, title, hint]) => (
+                <div
+                  key={key}
+                  className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold">{title}</p>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={platformOptions[key].enabled}
+                        onChange={(e) =>
+                          setPlatformOptions((prev) => ({
+                            ...prev,
+                            [key]: { ...prev[key], enabled: e.target.checked },
+                          }))
+                        }
+                      />
+                      {platformOptions[key].enabled
+                        ? t.featureEnabled
+                        : t.featureDisabled}
+                    </label>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                    {hint}
+                  </p>
+                  <label className="mt-3 block text-sm">
+                    <span className="mb-1 block font-medium">{t.featureNotes}</span>
+                    <textarea
+                      className="field min-h-16"
+                      value={platformOptions[key].notes}
+                      onChange={(e) =>
+                        setPlatformOptions((prev) => ({
+                          ...prev,
+                          [key]: { ...prev[key], notes: e.target.value },
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              ))}
+              <button type="submit" className="btn-primary">
+                {t.saveChanges}
+              </button>
+            </form>
+          </section>
+
           <section className="space-y-3 rounded-2xl bg-white/80 p-5">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.adminPrivacy}

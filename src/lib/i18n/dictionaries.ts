@@ -19,12 +19,25 @@ export const dictionaries = {
     howItWorks: "How it works",
     how1Title: "Search by need",
     how1Body: "Choose blood group and district to see nearby donors.",
-    how2Title: "Auto availability",
+    how2Title: "Availability",
     how2Body:
-      "After the last donation date, men become eligible again in 90 days and women in 120 days.",
+      "Availability: Male donors are eligible 90 days after donation, and female donors after 120 days.",
     how3Title: "Contact securely",
     how3Body:
       "Phone numbers stay masked until you share your details for a verified request.",
+    bloodSafetyTitle: "Blood safety — what everyone should do",
+    bloodSafetyIntro:
+      "Safe blood protects both the donor and the patient. Follow these simple steps before and after donation.",
+    bloodSafety1:
+      "Donate only when you are healthy — no fever, infection, or recent major illness.",
+    bloodSafety2:
+      "Never hide medical history. Tell the truth about medicines, recent travel, and past donations.",
+    bloodSafety3:
+      "Eat a light meal and drink enough water before donation; rest afterward and avoid heavy work the same day.",
+    bloodSafety4:
+      "Use blood only through proper hospital channels. Do not pressure anyone to donate unsafely.",
+    bloodSafety5:
+      "After donation, watch for dizziness or unusual bleeding and seek medical help if needed.",
     recentDonors: "Registered donors",
     recentDonorsSub: "People who joined BloodLink and can help when available.",
     viewAll: "View all donors",
@@ -173,6 +186,32 @@ export const dictionaries = {
     adminContactChanges: "Email / phone change requests",
     noChangeRequests: "No contact change requests.",
     ownerContact: "Owner contact",
+    storageSetup: "Permanent data storage",
+    storageSetupBody:
+      "Paste the Postgres DATABASE_URL from Railway once. Donor data will stay even after website edits/deploys.",
+    storageUrlLabel: "Postgres DATABASE_URL",
+    storageUrlHint:
+      "Railway → Postgres → Variables → copy DATABASE_URL (starts with postgresql://)",
+    storageSave: "Save & connect Postgres",
+    storageReady: "Postgres connected — donor data is protected",
+    storageNotReady: "Postgres not connected yet — data can reset on deploy",
+    storageVolumeTip:
+      "Also keep a Volume on bloodlink mounted at /app/data so this saved URL survives redeploys.",
+    futureFeatures: "Future platform options",
+    futureFeaturesBody:
+      "Turn these on when you are ready. They stay in Settings until you launch each service.",
+    hospitalAccess: "Hospital access (limited)",
+    hospitalAccessHint:
+      "Hospitals can log in later to manage donors with limited permission — not full owner control.",
+    orgAds: "Humanitarian organization ads",
+    orgAdsHint:
+      "Show ads/sponsorship slots for social organizations so BloodLink can earn income.",
+    futureServices: "Other future services",
+    futureServicesHint:
+      "Reserve space for new paid or free services you may run later from this panel.",
+    featureEnabled: "Enabled (ready to build/use)",
+    featureDisabled: "Kept for later",
+    featureNotes: "Owner notes",
   },
   bn: {
     brand: "BloodLink",
@@ -192,12 +231,25 @@ export const dictionaries = {
     howItWorks: "কীভাবে কাজ করে",
     how1Title: "প্রয়োজন অনুযায়ী খুঁজুন",
     how1Body: "ব্লাড গ্রুপ ও জেলা বেছে কাছাকাছি ডোনার দেখুন।",
-    how2Title: "অটো অ্যাভেইলেবিলিটি",
+    how2Title: "অ্যাভেইলেবিলিটি",
     how2Body:
-      "শেষ রক্তদানের পর পুরুষ ডোনার ৯০ দিনে এবং মহিলা ডোনার ১২০ দিনে আবার উপযুক্ত হন।",
+      "Availability: পুরুষ রক্তদানের ৯০ দিন ও মহিলা ১২০ দিন পর উপযুক্ত।",
     how3Title: "নিরাপদে যোগাযোগ",
     how3Body:
       "আপনার তথ্য দিয়ে অনুরোধ না করা পর্যন্ত ফোন নম্বর মাস্ক থাকবে।",
+    bloodSafetyTitle: "রক্ত সুরক্ষা — একজন মানুষের করণীয়",
+    bloodSafetyIntro:
+      "নিরাপদ রক্তদান দাতা ও রোগী দুজনকেই রক্ষা করে। দানের আগে ও পরে এই সহজ নিয়মগুলো মানুন।",
+    bloodSafety1:
+      "সুস্থ থাকলেই রক্ত দিন — জ্বর, সংক্রমণ বা সাম্প্রতিক গুরুতর অসুখ থাকলে দান করবেন না।",
+    bloodSafety2:
+      "চিকিৎসা ইতিহাস লুকাবেন না। ওষুধ, সাম্প্রতিক ভ্রমণ ও আগের রক্তদানের সত্য তথ্য দিন।",
+    bloodSafety3:
+      "দানের আগে হালকা খাবার ও পর্যাপ্ত পানি নিন; পরে বিশ্রাম নিন এবং সেদিন ভারী কাজ এড়িয়ে চলুন।",
+    bloodSafety4:
+      "হাসপাতালের সঠিক প্রক্রিয়ায় রক্ত ব্যবহার করুন। কাউকে অনিরাপদভাবে দানে চাপ দেবেন না।",
+    bloodSafety5:
+      "দানের পর মাথা ঘোরা বা অস্বাভাবিক রক্তপাত হলে দ্রুত চিকিৎসকের পরামর্শ নিন।",
     recentDonors: "রেজিস্টার্ড ডোনার",
     recentDonorsSub: "যারা BloodLink-এ যোগ দিয়েছেন এবং প্রয়োজনে সাহায্য করতে পারেন।",
     viewAll: "সব ডোনার দেখুন",
@@ -347,6 +399,32 @@ export const dictionaries = {
     adminContactChanges: "ইমেইল / ফোন পরিবর্তনের অনুরোধ",
     noChangeRequests: "কোনো পরিবর্তনের অনুরোধ নেই।",
     ownerContact: "ওনারের যোগাযোগ",
+    storageSetup: "স্থায়ী ডেটা স্টোরেজ",
+    storageSetupBody:
+      "Railway Postgres-এর DATABASE_URL একবার পেস্ট করুন। এরপর ওয়েবসাইট এডিট/ডিপ্লয় করলেও ডোনার ডেটা থাকবে।",
+    storageUrlLabel: "Postgres DATABASE_URL",
+    storageUrlHint:
+      "Railway → Postgres → Variables → DATABASE_URL কপি করুন (postgresql:// দিয়ে শুরু)",
+    storageSave: "সেভ ও Postgres কানেক্ট",
+    storageReady: "Postgres কানেক্টেড — ডোনার ডেটা সুরক্ষিত",
+    storageNotReady: "Postgres এখনো কানেক্ট হয়নি — ডিপ্লয়ে ডেটা রিসেট হতে পারে",
+    storageVolumeTip:
+      "bloodlink সার্ভিসে Volume রাখুন, mount path: /app/data — তাহলে সেভ করা URL redeploy-এও থাকবে।",
+    futureFeatures: "ভবিষ্যৎ প্ল্যাটফর্ম অপশন",
+    futureFeaturesBody:
+      "প্রস্তুত হলে চালু করুন। প্রতিটি সার্ভিস লঞ্চের আগে Settings-এ সংরক্ষিত থাকবে।",
+    hospitalAccess: "হাসপাতাল অ্যাক্সেস (সীমিত)",
+    hospitalAccessHint:
+      "ভবিষ্যতে হাসপাতাল লগইন করে সীমিত অনুমতিতে ডোনার ম্যানেজ করতে পারবে — পূর্ণ ওনার কন্ট্রোল নয়।",
+    orgAds: "মানবিক সংস্থার বিজ্ঞাপন",
+    orgAdsHint:
+      "সামাজিক/মানবিক সংস্থার অ্যাড বা স্পন্সর স্লট দেখিয়ে BloodLink আয় করতে পারবে।",
+    futureServices: "অন্যান্য ভবিষ্যৎ সার্ভিস",
+    futureServicesHint:
+      "পরে যে পেইড বা ফ্রি সার্ভিস চালাবেন, তার জন্য জায়গা Settings-এ রাখা থাকবে।",
+    featureEnabled: "চালু (প্রস্তুত)",
+    featureDisabled: "পরে রাখা",
+    featureNotes: "ওনারের নোট",
   },
 } as const;
 

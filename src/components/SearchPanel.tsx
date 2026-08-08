@@ -53,9 +53,6 @@ export function SearchPanel() {
 
   return (
     <div className="space-y-6">
-      <p className="rounded-2xl bg-white/70 px-4 py-3 text-sm text-[color-mix(in_oklab,var(--ink)_72%,white)]">
-        {t.waitRule}
-      </p>
       <form
         className="grid gap-3 rounded-2xl bg-white/75 p-5 md:grid-cols-4"
         onSubmit={(e) => {

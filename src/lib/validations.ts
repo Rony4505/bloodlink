@@ -138,6 +138,17 @@ export const adminVerifyCodeSchema = z.object({
   code: z.string().trim().min(4).max(10),
 });
 
+const platformFeatureSchema = z.object({
+  enabled: z.boolean(),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export const platformOptionsSchema = z.object({
+  hospitalAccess: platformFeatureSchema,
+  orgAds: platformFeatureSchema,
+  futureServices: platformFeatureSchema,
+});
+
 export function normalizeRegisterInput(data: z.infer<typeof registerSchema>) {
   return {
     ...data,

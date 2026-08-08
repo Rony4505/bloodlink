@@ -60,10 +60,6 @@ export function RegisterForm() {
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-5 rounded-2xl bg-white/80 p-6">
-        <p className="rounded-xl bg-[color-mix(in_oklab,var(--sand)_55%,white)] px-3 py-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_75%,white)]">
-          {t.waitRule}
-        </p>
-
         <section className="space-y-3">
           <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
             {t.personalInfo}

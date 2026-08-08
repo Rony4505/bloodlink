@@ -11,6 +11,7 @@ import {
   adminCredentialsSchema,
   adminVerifyCodeSchema,
   adminVerifySetupSchema,
+  platformOptionsSchema,
 } from "@/lib/validations";
 
 function makeCode() {
@@ -31,6 +32,7 @@ export async function GET() {
     phoneVerified: admin.phoneVerified,
     privacyBn: admin.privacyBn,
     privacyEn: admin.privacyEn,
+    platformOptions: admin.platformOptions,
   });
 }
 
@@ -130,6 +132,15 @@ export async function PATCH(request: Request) {
       pendingPhoneCodeHash: null,
     });
     return NextResponse.json({ ok: true, phoneVerified: true });
+  }
+
+  if (action === "platform-options") {
+    const parsed = platformOptionsSchema.safeParse(body.platformOptions);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid platform options" }, { status: 400 });
+    }
+    await updateAdminSettings({ platformOptions: parsed.data });
+    return NextResponse.json({ ok: true, platformOptions: parsed.data });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

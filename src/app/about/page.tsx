@@ -8,8 +8,7 @@ export default function AboutPage() {
   return (
     <PageShell title={t.aboutTitle} subtitle={t.aboutBody}>
       <div className="rounded-2xl bg-white/80 p-6 leading-relaxed md:p-8">
-        <p className="text-[color-mix(in_oklab,var(--ink)_78%,white)]">{t.waitRule}</p>
-        <div className="mt-8 space-y-3 border-t border-[var(--line)] pt-6">
+        <div className="space-y-3">
           <p>
             <span className="font-semibold">{t.createdBy}:</span>{" "}
             <span className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">

@@ -88,6 +88,17 @@ export type ContactChangeRequest = {
   resolvedAt: string | null;
 };
 
+export type PlatformFeatureOption = {
+  enabled: boolean;
+  notes: string;
+};
+
+export type PlatformOptions = {
+  hospitalAccess: PlatformFeatureOption;
+  orgAds: PlatformFeatureOption;
+  futureServices: PlatformFeatureOption;
+};
+
 export type AdminSettings = {
   username: string;
   passwordHash: string;
@@ -99,6 +110,7 @@ export type AdminSettings = {
   pendingPhoneCodeHash: string | null;
   privacyBn: string;
   privacyEn: string;
+  platformOptions: PlatformOptions;
 };
 
 export type DatabaseShape = {

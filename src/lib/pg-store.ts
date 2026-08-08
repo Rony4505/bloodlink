@@ -9,6 +9,18 @@ export function getDatabaseUrl(): string {
   return runtimeDbUrl();
 }
 
+export async function resetPgPool(): Promise<void> {
+  if (pool) {
+    try {
+      await pool.end();
+    } catch {
+      // ignore
+    }
+  }
+  pool = null;
+  tableReady = null;
+}
+
 export function hasDatabaseUrl(): boolean {
   return getDatabaseUrl().length > 0;
 }

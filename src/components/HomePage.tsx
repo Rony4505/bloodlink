@@ -94,6 +94,24 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className="border-t border-[var(--line)] bg-white px-5 py-20 md:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--blood-deep)] md:text-4xl">
+            {t.bloodSafetyTitle}
+          </h2>
+          <p className="mt-4 max-w-3xl text-base leading-relaxed text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+            {t.bloodSafetyIntro}
+          </p>
+          <ol className="mt-8 max-w-3xl list-decimal space-y-4 pl-5 text-base leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+            <li>{t.bloodSafety1}</li>
+            <li>{t.bloodSafety2}</li>
+            <li>{t.bloodSafety3}</li>
+            <li>{t.bloodSafety4}</li>
+            <li>{t.bloodSafety5}</li>
+          </ol>
+        </div>
+      </section>
+
       <section
         id="about"
         className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_28%,white)] px-5 py-20 md:px-8"

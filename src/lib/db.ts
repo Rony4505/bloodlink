@@ -27,8 +27,37 @@ import type {
   DatabaseShape,
   Donor,
   Gender,
+  PlatformOptions,
   Rating,
 } from "./types";
+
+function defaultPlatformOptions(): PlatformOptions {
+  return {
+    hospitalAccess: { enabled: false, notes: "" },
+    orgAds: { enabled: false, notes: "" },
+    futureServices: { enabled: false, notes: "" },
+  };
+}
+
+function normalizePlatformOptions(
+  raw?: Partial<PlatformOptions> | null,
+): PlatformOptions {
+  const base = defaultPlatformOptions();
+  return {
+    hospitalAccess: {
+      enabled: Boolean(raw?.hospitalAccess?.enabled),
+      notes: raw?.hospitalAccess?.notes?.trim() || "",
+    },
+    orgAds: {
+      enabled: Boolean(raw?.orgAds?.enabled),
+      notes: raw?.orgAds?.notes?.trim() || "",
+    },
+    futureServices: {
+      enabled: Boolean(raw?.futureServices?.enabled),
+      notes: raw?.futureServices?.notes?.trim() || "",
+    },
+  };
+}
 
 const configuredDataDir = process.env.DATA_DIR;
 const dataDir = configuredDataDir
@@ -87,6 +116,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     pendingPhoneCodeHash: null,
     privacyBn: DEFAULT_PRIVACY_BN,
     privacyEn: DEFAULT_PRIVACY_EN,
+    platformOptions: defaultPlatformOptions(),
   };
 }
 
@@ -113,13 +143,15 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
     !parsed.ratings ||
     !parsed.posts ||
     !parsed.notifications ||
-    !parsed.contactChangeRequests;
+    !parsed.contactChangeRequests ||
+    !parsed.admin?.platformOptions;
   const admin = parsed.admin?.passwordHash
     ? {
         ...(await defaultAdmin()),
         ...parsed.admin,
         privacyBn: parsed.admin.privacyBn || DEFAULT_PRIVACY_BN,
         privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
+        platformOptions: normalizePlatformOptions(parsed.admin.platformOptions),
       }
     : await defaultAdmin();
   return { admin, needsMigrate };

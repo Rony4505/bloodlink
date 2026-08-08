@@ -326,9 +326,6 @@ export function DashboardClient() {
           <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
             {t.editableFields}
           </h3>
-          <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-            {t.waitRule}
-          </p>
           <label className="block text-sm">
             <span className="mb-1 block font-medium">{t.lastDonation}</span>
             <input
