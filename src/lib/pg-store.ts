@@ -61,18 +61,34 @@ export async function loadDbFromPostgres(): Promise<DatabaseShape | null> {
   return row.data;
 }
 
-export async function saveDbToPostgres(db: DatabaseShape): Promise<void> {
+export async function saveDbToPostgres(
+  db: DatabaseShape,
+  options: { allowEmptyDonors?: boolean } = {},
+): Promise<void> {
   await ensureTable();
-  await getPool().query(
+  const result = await getPool().query(
     `
       INSERT INTO bloodlink_store (id, data, updated_at)
       VALUES (1, $1::jsonb, NOW())
       ON CONFLICT (id) DO UPDATE
       SET data = EXCLUDED.data,
           updated_at = NOW()
+      WHERE $2::boolean = true
+         OR COALESCE(jsonb_array_length(bloodlink_store.data->'donors'), 0) = 0
+         OR COALESCE(jsonb_array_length(EXCLUDED.data->'donors'), 0) > 0
     `,
-    [JSON.stringify(db)],
+    [JSON.stringify(db), Boolean(options.allowEmptyDonors)],
   );
+  // When the WHERE clause blocks an empty overwrite, UPDATE affects 0 rows.
+  if (
+    !options.allowEmptyDonors &&
+    (db.donors?.length ?? 0) === 0 &&
+    result.rowCount === 0
+  ) {
+    throw new Error(
+      "[bloodlink] Refusing to overwrite Postgres store with empty donor list",
+    );
+  }
 }
 
 export async function postgresHealth(): Promise<{

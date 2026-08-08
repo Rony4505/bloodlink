@@ -81,6 +81,26 @@ export function AdminPanel() {
   const [phoneCode, setPhoneCode] = useState("");
   const [tempCodes, setTempCodes] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
+  const [storageWarning, setStorageWarning] = useState("");
+
+  async function loadStorageHealth() {
+    try {
+      const res = await fetch("/api/health", { cache: "no-store" });
+      const data = await res.json();
+      const storage = data?.storage;
+      if (!storage) return;
+      if (storage.durable === false || storage.backend === "file") {
+        setStorageWarning(
+          storage.persistentHint ||
+            "Storage is not durable. Link Railway Postgres (DATABASE_URL) or donor data will disappear when the website is edited/redeployed.",
+        );
+      } else {
+        setStorageWarning("");
+      }
+    } catch {
+      // ignore health fetch failures in the admin UI
+    }
+  }
 
   async function loadData() {
     const res = await fetch("/api/admin/donors");
@@ -129,6 +149,7 @@ export function AdminPanel() {
   }
 
   useEffect(() => {
+    void loadStorageHealth();
     fetch("/api/admin/me")
       .then(async (res) => {
         if (!res.ok) {
@@ -137,6 +158,7 @@ export function AdminPanel() {
         }
         await loadData();
         await loadSettings();
+        await loadStorageHealth();
       })
       .catch(() => setAuthed(false))
       .finally(() => setChecking(false));
@@ -256,9 +278,16 @@ export function AdminPanel() {
 
   if (!authed) {
     return (
+      <div className="mx-auto max-w-md space-y-4">
+        {storageWarning ? (
+          <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <p className="font-semibold">User data can be erased</p>
+            <p className="mt-1">{storageWarning}</p>
+          </div>
+        ) : null}
       <form
         onSubmit={login}
-        className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+        className="space-y-3 rounded-2xl bg-white/80 p-6"
       >
         <label className="block text-sm">
           <span className="mb-1 block font-medium">{t.adminUsername}</span>
@@ -284,11 +313,28 @@ export function AdminPanel() {
           {loading ? t.loading : t.adminLogin}
         </button>
       </form>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {storageWarning ? (
+        <div className="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-800">
+          <p className="font-semibold">
+            Website edit/redeploy will erase donor data
+          </p>
+          <p className="mt-1">{storageWarning}</p>
+          <p className="mt-2">
+            Railway → Create PostgreSQL → bloodlink Variables → Add Reference →
+            DATABASE_URL → Deploy. Then check{" "}
+            <a className="underline" href="/api/health" target="_blank" rel="noreferrer">
+              /api/health
+            </a>{" "}
+            for <code>backend: postgres</code>.
+          </p>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 px-5 py-4">
         <div className="flex flex-wrap gap-2">
           <button
