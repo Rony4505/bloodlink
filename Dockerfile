@@ -9,8 +9,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # NEXT_PUBLIC_* must be present at build time for Next.js.
-ARG NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+# Force the live custom domain so sitemap/robots never bake .com / railway.app.
+ENV NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
 RUN npm run build \
   && mkdir -p .next/standalone/node_modules \
   && cp -R node_modules/pg .next/standalone/node_modules/ \
