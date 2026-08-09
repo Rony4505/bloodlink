@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     "blood donation",
     "রক্তদাতা",
     "রক্তদান",
-    "bloodlinkbd.com",
+    "bloodlinkbd.org",
   ],
   alternates: {
     canonical: "/",

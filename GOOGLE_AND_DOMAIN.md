@@ -1,12 +1,12 @@
-# bloodlinkbd.com + Google setup
+# bloodlinkbd.org + Google setup
 
 ## A) Connect domain on Railway
 
-1. Buy `bloodlinkbd.com` (Namecheap / GoDaddy / Spaceship / Cloudflare Registrar)
+1. Buy `bloodlinkbd.org` (Namecheap / GoDaddy / Spaceship / Cloudflare Registrar)
 2. Railway project → **Settings → Networking → Custom Domain**
 3. Add:
-   - `bloodlinkbd.com`
-   - `www.bloodlinkbd.com`
+   - `bloodlinkbd.org`
+   - `www.bloodlinkbd.org`
 4. Railway will show DNS records. In your domain DNS panel add them, usually:
    - `CNAME` for `www` → Railway target
    - `@` / root as Railway instructs (CNAME flattening or ALIAS/A record)
@@ -15,7 +15,7 @@
 Also add Railway variable:
 
 ```text
-NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.com
+NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
 ```
 
 Then redeploy.
@@ -25,14 +25,16 @@ Then redeploy.
 Google-এ সাথে সাথে আসবে না। সাধারণত কয়েক দিন লাগে।
 
 1. Open [Google Search Console](https://search.google.com/search-console)
-2. Add property → URL prefix → `https://bloodlinkbd.com`
-3. Verify ownership (DNS TXT record is easiest)
+2. **Add property** → **URL prefix** → `https://bloodlinkbd.org`
+3. Verify ownership — easiest: **DNS record** (TXT) in Namecheap Advanced DNS
 4. After verified:
-   - Sitemaps → submit `https://bloodlinkbd.com/sitemap.xml`
-   - URL Inspection → `https://bloodlinkbd.com` → Request indexing
+   - Left menu → **Sitemaps** → submit `https://bloodlinkbd.org/sitemap.xml`
+   - **URL Inspection** → `https://bloodlinkbd.org` → **Request indexing**
    - Also request `/find`, `/requests`, `/about`
+
+Optional: also add a **Domain** property for `bloodlinkbd.org` (covers http/https and www).
 
 Helpful links after go-live:
 
-- `https://bloodlinkbd.com/robots.txt`
-- `https://bloodlinkbd.com/sitemap.xml`
+- `https://bloodlinkbd.org/robots.txt`
+- `https://bloodlinkbd.org/sitemap.xml`
