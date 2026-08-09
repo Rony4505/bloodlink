@@ -141,7 +141,7 @@ export const dictionaries = {
     availableNow: "Available now",
     requestsTitle: "Blood need posts",
     requestsSubtitle:
-      "Fill the form carefully. Account holders get a notification with full details.",
+      "Fill the form carefully. Account holders get a notification with full details. Posts are removed automatically after 7 days.",
     postNeed: "Publish post",
     message: "Details / situation",
     posterName: "Contact person name",
@@ -405,7 +405,7 @@ export const dictionaries = {
     availableNow: "এখন অ্যাভেইলেবল",
     requestsTitle: "রক্তের প্রয়োজন পোস্ট",
     requestsSubtitle:
-      "ফর্মটি সঠিকভাবে পূরণ করুন। অ্যাকাউন্টধারীরা পূর্ণ ডিটেইলসহ নোটিফিকেশন পাবেন।",
+      "ফর্মটি সঠিকভাবে পূরণ করুন। অ্যাকাউন্টধারীরা পূর্ণ ডিটেইলসহ নোটিফিকেশন পাবেন। পোস্ট ৭ দিন পর অটো ডিলিট হবে।",
     postNeed: "পোস্ট করুন",
     message: "বিস্তারিত / পরিস্থিতি",
     posterName: "যোগাযোগকারীর নাম",

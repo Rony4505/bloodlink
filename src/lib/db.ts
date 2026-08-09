@@ -581,6 +581,9 @@ export async function createRating(
   });
 }
 
+/** Blood-need posts auto-expire this long after creation. */
+const POST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
 function normalizePost(raw: Partial<BloodPost> & { id: string }): BloodPost {
   return {
     id: raw.id,
@@ -599,25 +602,60 @@ function normalizePost(raw: Partial<BloodPost> & { id: string }): BloodPost {
   };
 }
 
+function isPostExpired(post: BloodPost, now = Date.now()): boolean {
+  const created = new Date(post.createdAt).getTime();
+  if (!Number.isFinite(created)) return true;
+  return now - created >= POST_MAX_AGE_MS;
+}
+
+/** Remove posts older than 7 days (and related notifications). Returns how many were removed. */
+function purgeExpiredPostsInDb(db: DatabaseShape, now = Date.now()): number {
+  const expiredIds = new Set(
+    db.posts
+      .filter((p) => isPostExpired(normalizePost(p), now))
+      .map((p) => p.id),
+  );
+  if (expiredIds.size === 0) return 0;
+  db.posts = db.posts.filter((p) => !expiredIds.has(p.id));
+  db.notifications = db.notifications.filter(
+    (n) => !(n.postId && expiredIds.has(n.postId)),
+  );
+  return expiredIds.size;
+}
+
+async function purgeExpiredPosts(): Promise<void> {
+  await withWrite(async (db) => {
+    const removed = purgeExpiredPostsInDb(db);
+    if (removed > 0) await persist(db);
+  });
+}
+
 export async function listPosts(): Promise<BloodPost[]> {
+  await purgeExpiredPosts();
   const db = await ensureDb();
   return db.posts
     .map((p) => normalizePost(p))
+    .filter((p) => !isPostExpired(p))
     .sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 }
 
 export async function findPostById(id: string): Promise<BloodPost | null> {
+  await purgeExpiredPosts();
   const db = await ensureDb();
   const post = db.posts.find((p) => p.id === id);
-  return post ? normalizePost(post) : null;
+  if (!post) return null;
+  const normalized = normalizePost(post);
+  if (isPostExpired(normalized)) return null;
+  return normalized;
 }
 
 export async function createPost(
   input: Omit<BloodPost, "id" | "createdAt">,
 ): Promise<BloodPost> {
   return withWrite(async (db) => {
+    purgeExpiredPostsInDb(db);
     const post = normalizePost({
       ...input,
       id: randomUUID(),
