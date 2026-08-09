@@ -89,6 +89,22 @@ export async function loadDbFromPostgres(): Promise<DatabaseShape | null> {
 
 export async function saveDbToPostgres(db: DatabaseShape): Promise<void> {
   await ensureTable();
+  const existing = await getPool().query<{
+    donor_count: number;
+  }>(
+    `SELECT COALESCE(jsonb_array_length(data->'donors'), 0)::int AS donor_count
+     FROM bloodlink_store WHERE id = 1`,
+  );
+  const existingCount = existing.rows[0]?.donor_count ?? 0;
+  const nextCount = Array.isArray(db.donors) ? db.donors.length : 0;
+
+  // Never replace a populated donor registry with an empty one.
+  if (existingCount > 0 && nextCount === 0) {
+    throw new Error(
+      `[bloodlink] Refusing to overwrite Postgres donors (${existingCount}) with empty data`,
+    );
+  }
+
   await getPool().query(
     `
       INSERT INTO bloodlink_store (id, data, updated_at)

@@ -229,18 +229,49 @@ async function ensureDb(): Promise<DatabaseShape> {
   if (hasDatabaseUrl()) {
     try {
       const raw = await loadDbFromPostgres();
+      const fromFile =
+        (await loadDbFromFile(dbPath)) || (await loadDbFromFile(bakPath));
+
       if (raw) {
         const hydrated = await hydrateParsed(raw);
+        // If disk still has a richer donor set (common after a bad empty seed),
+        // merge those donors back into Postgres instead of keeping the wipe.
+        if (
+          fromFile &&
+          fromFile.db.donors.length > hydrated.db.donors.length
+        ) {
+          const byId = new Map(
+            hydrated.db.donors.map((d) => [d.id, d] as const),
+          );
+          for (const donor of fromFile.db.donors) {
+            if (!byId.has(donor.id)) byId.set(donor.id, donor);
+          }
+          hydrated.db.donors = [...byId.values()];
+          console.warn(
+            `[bloodlink] Restored donors from file into Postgres (${hydrated.db.donors.length} total)`,
+          );
+          await persist(hydrated.db);
+          return hydrated.db;
+        }
         if (hydrated.needsMigrate) await persist(hydrated.db);
         return hydrated.db;
       }
 
       // One-time migrate from local/volume file if Postgres is empty.
-      const fromFile = await loadDbFromFile(dbPath);
       if (fromFile) {
         console.info("[bloodlink] Migrating file database into Postgres");
         await persist(fromFile.db);
         return fromFile.db;
+      }
+
+      // Do not auto-seed an empty Postgres row unless both primary + backup
+      // files are confirmed missing — avoids wiping on a late volume mount.
+      const mainExists = await fileExists(dbPath);
+      const bakExists = await fileExists(bakPath);
+      if (mainExists || bakExists) {
+        throw new Error(
+          "[bloodlink] Postgres empty but DB files exist and could not be read — refusing empty seed",
+        );
       }
 
       const empty = await createEmptyDb();
@@ -293,6 +324,14 @@ async function ensureDb(): Promise<DatabaseShape> {
 async function persistToFile(db: DatabaseShape): Promise<void> {
   await mkdir(dataDir, { recursive: true });
   if (await fileExists(dbPath)) {
+    const existing = await loadDbFromFile(dbPath);
+    const existingCount = existing?.db.donors.length ?? 0;
+    const nextCount = db.donors.length;
+    if (existingCount > 0 && nextCount === 0) {
+      throw new Error(
+        `[bloodlink] Refusing to overwrite file donors (${existingCount}) with empty data`,
+      );
+    }
     try {
       await copyFile(dbPath, bakPath);
     } catch (err) {
@@ -795,4 +834,36 @@ export async function getPrivacyContent(): Promise<{
 }> {
   const admin = await getAdminSettings();
   return { bn: admin.privacyBn, en: admin.privacyEn };
+}
+
+/** Admin recovery: import a bloodlink.json / store backup blob. */
+export async function restoreDatabaseFromBackup(
+  raw: unknown,
+): Promise<{ donorCount: number }> {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Backup must be a JSON object");
+  }
+  const parsed = raw as Partial<DatabaseShape>;
+  if (!Array.isArray(parsed.donors)) {
+    throw new Error("Backup missing donors array");
+  }
+
+  const hydrated = await hydrateParsed(parsed);
+  const current = await ensureDb();
+  if (
+    hydrated.db.donors.length < current.donors.length &&
+    current.donors.length > 0
+  ) {
+    throw new Error(
+      `Backup has fewer donors (${hydrated.db.donors.length}) than live data (${current.donors.length}). Refusing restore.`,
+    );
+  }
+
+  // Keep current admin login if backup admin is incomplete.
+  if (!hydrated.db.admin?.passwordHash) {
+    hydrated.db.admin = current.admin;
+  }
+
+  await persist(hydrated.db);
+  return { donorCount: hydrated.db.donors.length };
 }

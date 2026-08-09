@@ -17,7 +17,18 @@ Donor data must live in **Railway Postgres**. File/volume storage alone can rese
    - Then register a donor and note `donorCount`
    - Redeploy again — `donorCount` should stay the same
 
-Optional: keep the volume at `/app/data` as a backup, but **Postgres is what keeps data safe**.
+Also keep a Volume on the **bloodlink** service:
+
+- Mount path: `/app/data`
+
+Postgres is the source of truth; the volume is a mirror/backup so file fallback can recover donors.
+
+**Important:** After every redeploy check `https://bloodlinkbd.org/api/health`
+
+- `"backend": "postgres"`
+- `"donorCount"` must not drop to `0`
+
+If donors were lost and you still have an old `bloodlink.json` backup, ask an admin to restore it via `POST /api/admin/restore`.
 
 ### Other env vars
 
