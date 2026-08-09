@@ -12,13 +12,17 @@
    - `@` / root as Railway instructs (CNAME flattening or ALIAS/A record)
 5. Wait for SSL to become active (can take a few minutes to a few hours)
 
-Also add Railway variable:
+Also add Railway variable on the **bloodlink** service:
 
 ```text
 NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
 ```
 
-Then redeploy.
+Important:
+- Name must be exact: `NEXT_PUBLIC_SITE_URL` (no spaces)
+- After saving, open **Deployments → Redeploy** (full rebuild)
+- Confirm at `https://bloodlinkbd.org/robots.txt` that Host/Sitemap show `.org`
+
 
 ## B) Show site on Google
 
