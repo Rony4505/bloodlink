@@ -13,7 +13,7 @@ export default function AmbulancePage() {
   const items = useMemo(() => listAmbulances(district || undefined), [district]);
 
   return (
-    <PageShell title={t.ambulanceTitle} subtitle={t.ambulanceSubtitle}>
+    <PageShell title={t.ambulanceTitle} subtitle={t.ambulanceSubtitle} bannerPage="ambulance">
       <div className="space-y-5 rounded-2xl bg-white/80 p-5 md:p-6">
         <label className="block max-w-md text-sm">
           <span className="mb-1 block font-medium">{t.district}</span>

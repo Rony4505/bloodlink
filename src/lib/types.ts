@@ -99,12 +99,42 @@ export type PlatformOptions = {
   futureServices: PlatformFeatureOption;
 };
 
+export type BannerSize = "sm" | "md" | "lg" | "leaderboard" | "square";
+
+export type BannerPage =
+  | "home"
+  | "find"
+  | "requests"
+  | "about"
+  | "ambulance"
+  | "all";
+
+export type BannerPlacement = "after-hero" | "mid-content" | "before-footer";
+
 export type OrgBanner = {
   id: string;
   title: string;
   imageUrl: string;
   linkUrl: string;
   enabled: boolean;
+  size: BannerSize;
+  pages: BannerPage[];
+  placement: BannerPlacement;
+};
+
+/** Empty string fields fall back to i18n dictionary defaults. */
+export type SiteAppearance = {
+  logoUrl: string;
+  heroBackgroundUrl: string;
+  brand: string;
+  taglineEn: string;
+  taglineBn: string;
+  heroSupportEn: string;
+  heroSupportBn: string;
+  aboutTitleEn: string;
+  aboutTitleBn: string;
+  aboutBodyEn: string;
+  aboutBodyBn: string;
 };
 
 export type AdminSettings = {
@@ -120,6 +150,7 @@ export type AdminSettings = {
   privacyEn: string;
   platformOptions: PlatformOptions;
   banners: OrgBanner[];
+  siteAppearance: SiteAppearance;
 };
 
 export type DatabaseShape = {

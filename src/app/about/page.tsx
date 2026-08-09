@@ -6,7 +6,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 export default function AboutPage() {
   const { t } = useLocale();
   return (
-    <PageShell title={t.aboutTitle} subtitle={t.aboutBody}>
+    <PageShell title={t.aboutTitle} subtitle={t.aboutBody} bannerPage="about">
       <div className="rounded-2xl bg-white/80 p-6 leading-relaxed md:p-8">
         <div className="space-y-3">
           <p>

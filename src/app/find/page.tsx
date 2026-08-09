@@ -7,7 +7,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 export default function FindPage() {
   const { t } = useLocale();
   return (
-    <PageShell title={t.searchTitle} subtitle={t.searchSubtitle}>
+    <PageShell title={t.searchTitle} subtitle={t.searchSubtitle} bannerPage="find">
       <SearchPanel />
     </PageShell>
   );

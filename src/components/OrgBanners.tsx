@@ -1,36 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BANNER_SIZE_CLASS } from "@/lib/site-cms";
+import type { BannerPage, BannerPlacement, BannerSize, OrgBanner } from "@/lib/types";
 
-type Banner = {
-  id: string;
-  title: string;
-  imageUrl: string;
-  linkUrl: string;
+type Props = {
+  page: BannerPage;
+  placement: BannerPlacement;
 };
 
-export function OrgBanners() {
-  const [banners, setBanners] = useState<Banner[]>([]);
+export function OrgBanners({ page, placement }: Props) {
+  const [banners, setBanners] = useState<OrgBanner[]>([]);
 
   useEffect(() => {
-    fetch("/api/banners")
+    const params = new URLSearchParams({ page, placement });
+    fetch(`/api/banners?${params}`)
       .then((r) => r.json())
       .then((data) => setBanners(data.banners || []))
       .catch(() => setBanners([]));
-  }, []);
+  }, [page, placement]);
 
   if (!banners.length) return null;
 
   return (
-    <section className="border-t border-[var(--line)] bg-white px-5 py-10 md:px-8">
+    <section className="border-t border-[var(--line)] bg-white px-5 py-8 md:px-8">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-4">
         {banners.map((b) => {
+          const size = (b.size || "md") as BannerSize;
+          const sizeClass = BANNER_SIZE_CLASS[size] || BANNER_SIZE_CLASS.md;
           const inner = b.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={b.imageUrl}
               alt={b.title}
-              className="h-16 max-w-[220px] object-contain"
+              className={`${sizeClass} object-contain`}
             />
           ) : (
             <span className="px-4 py-3 text-sm font-semibold">{b.title}</span>

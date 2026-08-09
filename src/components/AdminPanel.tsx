@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
+import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
+import { defaultSiteAppearance } from "@/lib/site-cms";
 import { useLocale } from "@/lib/i18n/locale-context";
+import type {
+  BannerPage,
+  BannerPlacement,
+  BannerSize,
+  OrgBanner,
+  SiteAppearance,
+} from "@/lib/types";
 
 type AdminDonor = {
   id: string;
@@ -50,6 +59,7 @@ type ContactChangeRequest = {
 
 export function AdminPanel() {
   const { t } = useLocale();
+  const { reload: reloadAppearance } = useSiteAppearance();
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
   const [username, setUsername] = useState("");
@@ -92,15 +102,22 @@ export function AdminPanel() {
     orgAds: { enabled: false, notes: "" },
     futureServices: { enabled: false, notes: "" },
   });
-  const [banners, setBanners] = useState<
-    { id: string; title: string; imageUrl: string; linkUrl: string; enabled: boolean }[]
-  >([]);
+  const [banners, setBanners] = useState<OrgBanner[]>([]);
   const [bannerDraft, setBannerDraft] = useState({
     title: "",
     imageUrl: "",
     linkUrl: "",
+    size: "md" as BannerSize,
+    page: "home" as BannerPage,
+    placement: "mid-content" as BannerPlacement,
   });
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [siteAppearance, setSiteAppearance] = useState<SiteAppearance>(
+    defaultSiteAppearance(),
+  );
+  const [appearanceUploading, setAppearanceUploading] = useState<
+    "logo" | "hero" | null
+  >(null);
 
   async function loadData() {
     const res = await fetch("/api/admin/donors");
@@ -163,17 +180,15 @@ export function AdminPanel() {
       });
     }
     setBanners(Array.isArray(data.banners) ? data.banners : []);
+    if (data.siteAppearance) {
+      setSiteAppearance({
+        ...defaultSiteAppearance(),
+        ...data.siteAppearance,
+      });
+    }
   }
 
-  async function saveBanners(
-    next: {
-      id: string;
-      title: string;
-      imageUrl: string;
-      linkUrl: string;
-      enabled: boolean;
-    }[],
-  ) {
+  async function saveBanners(next: OrgBanner[]) {
     setSettingsMsg("");
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
@@ -193,7 +208,7 @@ export function AdminPanel() {
     e.preventDefault();
     const title = bannerDraft.title.trim();
     if (!title) return;
-    const next = [
+    const next: OrgBanner[] = [
       ...banners,
       {
         id: crypto.randomUUID(),
@@ -201,11 +216,73 @@ export function AdminPanel() {
         imageUrl: bannerDraft.imageUrl.trim(),
         linkUrl: bannerDraft.linkUrl.trim(),
         enabled: true,
+        size: bannerDraft.size,
+        pages: [bannerDraft.page],
+        placement: bannerDraft.placement,
       },
     ];
-    setBannerDraft({ title: "", imageUrl: "", linkUrl: "" });
+    setBannerDraft({
+      title: "",
+      imageUrl: "",
+      linkUrl: "",
+      size: "md",
+      page: "home",
+      placement: "mid-content",
+    });
     setBanners(next);
     await saveBanners(next);
+  }
+
+  async function saveSiteAppearance(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "site-appearance",
+        siteAppearance,
+      }),
+    });
+    if (!res.ok) {
+      setSettingsMsg(t.errorGeneric);
+      return;
+    }
+    const data = await res.json();
+    if (data.siteAppearance) setSiteAppearance(data.siteAppearance);
+    setSettingsMsg(t.saved);
+    reloadAppearance();
+  }
+
+  async function uploadAppearanceImage(
+    file: File | null,
+    field: "logoUrl" | "heroBackgroundUrl",
+  ) {
+    if (!file) return;
+    setAppearanceUploading(field === "logoUrl" ? "logo" : "hero");
+    setSettingsMsg("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSettingsMsg(data.error || t.errorGeneric);
+        return;
+      }
+      setSiteAppearance((prev) => ({
+        ...prev,
+        [field]: data.url || "",
+      }));
+      setSettingsMsg(t.saved);
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setAppearanceUploading(null);
+    }
   }
 
   function printDonors() {
@@ -790,6 +867,163 @@ export function AdminPanel() {
 
           <section className="space-y-3 rounded-2xl bg-white/80 p-5">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+              {t.siteAppearance}
+            </h2>
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              {t.siteAppearanceHint}
+            </p>
+            <form onSubmit={saveSiteAppearance} className="grid gap-3 md:grid-cols-2">
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-1 block font-medium">{t.logoUpload}</span>
+                <input
+                  className="field"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={appearanceUploading === "logo"}
+                  onChange={(e) => {
+                    void uploadAppearanceImage(
+                      e.target.files?.[0] || null,
+                      "logoUrl",
+                    );
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <input
+                className="field md:col-span-2"
+                placeholder={t.logoUrl}
+                value={siteAppearance.logoUrl}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({ ...s, logoUrl: e.target.value }))
+                }
+              />
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-1 block font-medium">
+                  {t.heroBackgroundUpload}
+                </span>
+                <input
+                  className="field"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={appearanceUploading === "hero"}
+                  onChange={(e) => {
+                    void uploadAppearanceImage(
+                      e.target.files?.[0] || null,
+                      "heroBackgroundUrl",
+                    );
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <input
+                className="field md:col-span-2"
+                placeholder={t.heroBackgroundUrl}
+                value={siteAppearance.heroBackgroundUrl}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    heroBackgroundUrl: e.target.value,
+                  }))
+                }
+              />
+              <input
+                className="field md:col-span-2"
+                placeholder={t.brandName}
+                value={siteAppearance.brand}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({ ...s, brand: e.target.value }))
+                }
+              />
+              <input
+                className="field"
+                placeholder={t.taglineEnLabel}
+                value={siteAppearance.taglineEn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({ ...s, taglineEn: e.target.value }))
+                }
+              />
+              <input
+                className="field"
+                placeholder={t.taglineBnLabel}
+                value={siteAppearance.taglineBn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({ ...s, taglineBn: e.target.value }))
+                }
+              />
+              <textarea
+                className="field min-h-20"
+                placeholder={t.heroSupportEnLabel}
+                value={siteAppearance.heroSupportEn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    heroSupportEn: e.target.value,
+                  }))
+                }
+              />
+              <textarea
+                className="field min-h-20"
+                placeholder={t.heroSupportBnLabel}
+                value={siteAppearance.heroSupportBn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    heroSupportBn: e.target.value,
+                  }))
+                }
+              />
+              <input
+                className="field"
+                placeholder={t.aboutTitleEnLabel}
+                value={siteAppearance.aboutTitleEn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    aboutTitleEn: e.target.value,
+                  }))
+                }
+              />
+              <input
+                className="field"
+                placeholder={t.aboutTitleBnLabel}
+                value={siteAppearance.aboutTitleBn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    aboutTitleBn: e.target.value,
+                  }))
+                }
+              />
+              <textarea
+                className="field min-h-24"
+                placeholder={t.aboutBodyEnLabel}
+                value={siteAppearance.aboutBodyEn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    aboutBodyEn: e.target.value,
+                  }))
+                }
+              />
+              <textarea
+                className="field min-h-24"
+                placeholder={t.aboutBodyBnLabel}
+                value={siteAppearance.aboutBodyBn}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    aboutBodyBn: e.target.value,
+                  }))
+                }
+              />
+              <button type="submit" className="btn-primary md:col-span-2">
+                {t.saveAppearance}
+              </button>
+            </form>
+          </section>
+
+          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.orgBanners}
             </h2>
             <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
@@ -838,6 +1072,62 @@ export function AdminPanel() {
                   setBannerDraft((d) => ({ ...d, linkUrl: e.target.value }))
                 }
               />
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">{t.bannerSize}</span>
+                <select
+                  className="field"
+                  value={bannerDraft.size}
+                  onChange={(e) =>
+                    setBannerDraft((d) => ({
+                      ...d,
+                      size: e.target.value as BannerSize,
+                    }))
+                  }
+                >
+                  <option value="sm">{t.bannerSizeSm}</option>
+                  <option value="md">{t.bannerSizeMd}</option>
+                  <option value="lg">{t.bannerSizeLg}</option>
+                  <option value="leaderboard">{t.bannerSizeLeaderboard}</option>
+                  <option value="square">{t.bannerSizeSquare}</option>
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">{t.bannerPage}</span>
+                <select
+                  className="field"
+                  value={bannerDraft.page}
+                  onChange={(e) =>
+                    setBannerDraft((d) => ({
+                      ...d,
+                      page: e.target.value as BannerPage,
+                    }))
+                  }
+                >
+                  <option value="home">{t.bannerPageHome}</option>
+                  <option value="find">{t.bannerPageFind}</option>
+                  <option value="requests">{t.bannerPageRequests}</option>
+                  <option value="about">{t.bannerPageAbout}</option>
+                  <option value="ambulance">{t.bannerPageAmbulance}</option>
+                  <option value="all">{t.bannerPageAll}</option>
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">{t.bannerPlacement}</span>
+                <select
+                  className="field"
+                  value={bannerDraft.placement}
+                  onChange={(e) =>
+                    setBannerDraft((d) => ({
+                      ...d,
+                      placement: e.target.value as BannerPlacement,
+                    }))
+                  }
+                >
+                  <option value="after-hero">{t.bannerPlaceAfterHero}</option>
+                  <option value="mid-content">{t.bannerPlaceMid}</option>
+                  <option value="before-footer">{t.bannerPlaceFooter}</option>
+                </select>
+              </label>
               {bannerDraft.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -856,7 +1146,12 @@ export function AdminPanel() {
                   key={b.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
                 >
-                  <span className="font-medium">{b.title}</span>
+                  <div>
+                    <span className="font-medium">{b.title}</span>
+                    <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      {b.size} · {(b.pages || []).join(", ")} · {b.placement}
+                    </p>
+                  </div>
                   <div className="flex gap-2">
                     <label className="flex items-center gap-1 text-xs">
                       <input

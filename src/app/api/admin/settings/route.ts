@@ -8,12 +8,14 @@ import {
 } from "@/lib/auth";
 import { getAdminSettings, updateAdminSettings } from "@/lib/db";
 import { normalizePhone } from "@/lib/privacy";
+import { normalizeBanner, normalizeSiteAppearance } from "@/lib/site-cms";
 import {
   adminCredentialsSchema,
   adminVerifyCodeSchema,
   adminVerifySetupSchema,
   platformOptionsSchema,
 } from "@/lib/validations";
+import type { OrgBanner } from "@/lib/types";
 
 function makeCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -35,6 +37,7 @@ export async function GET() {
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
     banners: admin.banners || [],
+    siteAppearance: normalizeSiteAppearance(admin.siteAppearance),
   });
 }
 
@@ -148,14 +151,9 @@ export async function PATCH(request: Request) {
   if (action === "banners") {
     const banners = Array.isArray(body.banners) ? body.banners : [];
     const cleaned = banners
-      .map(
-        (b: {
-          id?: string;
-          title?: string;
-          imageUrl?: string;
-          linkUrl?: string;
-          enabled?: boolean;
-        }) => ({
+      .map((b: Partial<OrgBanner>) =>
+        normalizeBanner({
+          ...b,
           id: String(b.id || randomUUID()),
           title: String(b.title || "").trim(),
           imageUrl: String(b.imageUrl || "").trim(),
@@ -163,10 +161,16 @@ export async function PATCH(request: Request) {
           enabled: Boolean(b.enabled),
         }),
       )
-      .filter((b: { title: string }) => b.title.length > 0)
-      .slice(0, 20);
-    await updateAdminSettings({ banners: cleaned });
-    return NextResponse.json({ ok: true, banners: cleaned });
+      .filter(Boolean) as OrgBanner[];
+    const limited = cleaned.slice(0, 20);
+    await updateAdminSettings({ banners: limited });
+    return NextResponse.json({ ok: true, banners: limited });
+  }
+
+  if (action === "site-appearance") {
+    const appearance = normalizeSiteAppearance(body.siteAppearance);
+    await updateAdminSettings({ siteAppearance: appearance });
+    return NextResponse.json({ ok: true, siteAppearance: appearance });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

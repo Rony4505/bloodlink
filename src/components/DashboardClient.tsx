@@ -167,7 +167,7 @@ export function DashboardClient() {
         reqPhone ? `Requested phone: ${reqPhone}` : "",
         changeNote ? `Note: ${changeNote}` : "",
         "",
-        "Please review this in the BloodLink owner panel.",
+        "Please review this in the BloodLink admin panel.",
       ]
         .filter(Boolean)
         .join("\n"),

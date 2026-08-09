@@ -26,17 +26,17 @@ export function contactChangeResultTexts(approved: boolean) {
     return {
       titleEn: "Contact change approved",
       titleBn: "যোগাযোগ তথ্য পরিবর্তন অনুমোদিত",
-      bodyEn: "The owner approved your email/phone change request. Your profile is updated.",
+      bodyEn: "The admin approved your email/phone change request. Your profile is updated.",
       bodyBn:
-        "ওনার আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ অনুমোদন করেছেন। আপনার প্রোফাইল আপডেট হয়েছে।",
+        "অ্যাডমিন আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ অনুমোদন করেছেন। আপনার প্রোফাইল আপডেট হয়েছে।",
     };
   }
   return {
     titleEn: "Contact change declined",
     titleBn: "যোগাযোগ তথ্য পরিবর্তন প্রত্যাখ্যাত",
-    bodyEn: "The owner declined your email/phone change request. Contact the owner if you need help.",
+    bodyEn: "The admin declined your email/phone change request. Contact the admin if you need help.",
     bodyBn:
-      "ওনার আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ প্রত্যাখ্যান করেছেন। সাহায্য লাগলে ওনারের সাথে যোগাযোগ করুন।",
+      "অ্যাডমিন আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ প্রত্যাখ্যান করেছেন। সাহায্য লাগলে অ্যাডমিনের সাথে যোগাযোগ করুন।",
   };
 }
 

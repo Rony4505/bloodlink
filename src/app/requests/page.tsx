@@ -78,7 +78,7 @@ export default function RequestsPage() {
   }
 
   return (
-    <PageShell title={t.requestsTitle} subtitle={t.requestsSubtitle}>
+    <PageShell title={t.requestsTitle} subtitle={t.requestsSubtitle} bannerPage="requests">
       <div className="grid gap-6 lg:grid-cols-2">
         <form onSubmit={submit} className="space-y-3 rounded-2xl bg-white/80 p-6">
           <p className="rounded-xl bg-[color-mix(in_oklab,var(--sand)_50%,white)] px-3 py-2 text-xs leading-relaxed">

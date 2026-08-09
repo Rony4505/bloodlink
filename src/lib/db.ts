@@ -21,6 +21,11 @@ import {
   clearBrokenPrivateDatabaseUrl,
   runtimeDbFlag,
 } from "./runtime-env";
+import {
+  defaultSiteAppearance,
+  normalizeBanner,
+  normalizeSiteAppearance,
+} from "./site-cms";
 import type {
   AdminSettings,
   AppNotification,
@@ -45,17 +50,9 @@ function defaultPlatformOptions(): PlatformOptions {
 function normalizeBanners(raw: unknown): import("./types").OrgBanner[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((item) => {
-      const b = item as Partial<import("./types").OrgBanner>;
-      if (!b?.id || !b.title) return null;
-      return {
-        id: String(b.id),
-        title: String(b.title),
-        imageUrl: String(b.imageUrl || ""),
-        linkUrl: String(b.linkUrl || ""),
-        enabled: Boolean(b.enabled),
-      };
-    })
+    .map((item) =>
+      normalizeBanner(item as Partial<import("./types").OrgBanner>),
+    )
     .filter(Boolean) as import("./types").OrgBanner[];
 }
 
@@ -138,6 +135,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     privacyEn: DEFAULT_PRIVACY_EN,
     platformOptions: defaultPlatformOptions(),
     banners: [],
+    siteAppearance: defaultSiteAppearance(),
   };
 }
 
@@ -166,7 +164,8 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
     !parsed.notifications ||
     !parsed.contactChangeRequests ||
     !parsed.admin?.platformOptions ||
-    !Array.isArray(parsed.admin?.banners);
+    !Array.isArray(parsed.admin?.banners) ||
+    !parsed.admin?.siteAppearance;
   const admin = parsed.admin?.passwordHash
     ? {
         ...(await defaultAdmin()),
@@ -175,6 +174,7 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
         platformOptions: normalizePlatformOptions(parsed.admin.platformOptions),
         banners: normalizeBanners(parsed.admin.banners),
+        siteAppearance: normalizeSiteAppearance(parsed.admin.siteAppearance),
       }
     : await defaultAdmin();
   return { admin, needsMigrate };
