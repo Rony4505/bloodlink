@@ -35,6 +35,9 @@ export function SiteFooter() {
           <Link href="/about" className="underline-offset-4 hover:underline">
             {t.about}
           </Link>
+          <Link href="/warnings" className="underline-offset-4 hover:underline">
+            {t.warningsNav}
+          </Link>
           <Link href="/privacy" className="underline-offset-4 hover:underline">
             {t.privacy}
           </Link>

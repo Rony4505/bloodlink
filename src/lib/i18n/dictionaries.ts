@@ -131,6 +131,9 @@ export const dictionaries = {
       "Always contact donors yourself and verify details carefully. If anyone is cheated or harmed through personal contact, BloodLink BD management is not responsible.",
     aboutWarning2:
       "Do not use this platform for financial deals, advance payments, or money-related crime. BloodLink BD is only for blood donation connection—any financial fraud or illegal money transaction is strictly against our purpose, and management is not liable for such acts.",
+    warningsNav: "Warnings",
+    warningsSubtitle:
+      "Please read these points carefully before contacting any donor or using BloodLink BD.",
     admin: "Admin",
     adminTitle: "Admin panel",
     adminSubtitle: "Manage donors, posts, privacy, and account security.",
@@ -414,6 +417,9 @@ export const dictionaries = {
       "রক্তদাতার সাথে নিজে যোগাযোগ করুন এবং তথ্য যাচাই করে নিন। ব্যক্তিগত যোগাযোগের মাধ্যমে কেউ প্রতারিত হলে বা ক্ষতিগ্রস্ত হলে BloodLink BD কর্তৃপক্ষ দায়ী নয়।",
     aboutWarning2:
       "এই প্ল্যাটফর্ম অর্থিক লেনদেন, অগ্রিম টাকা আদান-প্রদান বা অর্থসংক্রান্ত কোনো অপরাধমূলক কাজে ব্যবহার করবেন না। BloodLink BD শুধু রক্তদানের সংযোগের জন্য—যেকোনো আর্থিক প্রতারণা বা অবৈধ অর্থিক লেনদেনের দায় কর্তৃপক্ষ গ্রহণ করে না।",
+    warningsNav: "সতর্কবার্তা",
+    warningsSubtitle:
+      "কোনো রক্তদাতার সাথে যোগাযোগ বা BloodLink BD ব্যবহারের আগে এই পয়েন্টগুলো ভালোভাবে পড়ুন।",
     admin: "অ্যাডমিন",
     adminTitle: "অ্যাডমিন প্যানেল",
     adminSubtitle: "ডোনার, পোস্ট, প্রাইভেসি ও অ্যাকাউন্ট সিকিউরিটি ম্যানেজ করুন।",

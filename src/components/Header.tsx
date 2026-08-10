@@ -58,6 +58,12 @@ export function Header() {
           >
             {t.about}
           </Link>
+          <Link
+            href="/warnings"
+            className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 lg:inline"
+          >
+            {t.warningsNav}
+          </Link>
           {isAdmin ? (
             <Link
               href="/owner-hq-7f3m"

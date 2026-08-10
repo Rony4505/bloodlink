@@ -8,6 +8,7 @@ import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
 import { HomeDonors } from "@/components/HomeDonors";
 import { OrgBanners } from "@/components/OrgBanners";
+import { SafetyWarnings } from "@/components/SafetyWarnings";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -140,6 +141,15 @@ export function HomePage() {
       >
         <div className="mx-auto max-w-6xl">
           <AboutContent compact />
+        </div>
+      </section>
+
+      <section
+        id="warnings"
+        className="border-t border-[var(--line)] bg-white px-5 py-16 md:px-8"
+      >
+        <div className="mx-auto max-w-6xl">
+          <SafetyWarnings />
         </div>
       </section>
 
