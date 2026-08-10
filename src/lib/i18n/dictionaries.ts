@@ -285,6 +285,11 @@ export const dictionaries = {
     aboutBodyBnLabel: "About body (Bangla)",
     founderPhotoUpload: "Upload founder photo",
     founderPhotoUrl: "Founder photo URL",
+    uploadImageHint:
+      "Use JPG/PNG under 8 MB. iPhone HEIC will fail — export as JPG first. Upload auto-saves.",
+    uploadSaved: "Photo uploaded and saved",
+    uploadSavedLocalFail: "Photo uploaded but save failed — tap Save homepage & branding",
+    uploadFailed: "Upload failed. Try a JPG/PNG under 8 MB.",
     saveAppearance: "Save homepage & branding",
   },
   bn: {
@@ -572,6 +577,11 @@ export const dictionaries = {
     aboutBodyBnLabel: "অ্যাবাউট বিবরণ (বাংলা)",
     founderPhotoUpload: "প্রতিষ্ঠাতার ছবি আপলোড",
     founderPhotoUrl: "প্রতিষ্ঠাতার ছবির URL",
+    uploadImageHint:
+      "JPG/PNG দিন, ৮ MB-এর নিচে। iPhone HEIC কাজ করবে না — আগে JPG করে নিন। আপলোড অটো-সেভ হয়।",
+    uploadSaved: "ছবি আপলোড ও সেভ হয়েছে",
+    uploadSavedLocalFail: "ছবি আপলোড হয়েছে কিন্তু সেভ হয়নি — Save homepage & branding চাপুন",
+    uploadFailed: "আপলোড হয়নি। JPG/PNG (৮ MB-এর কম) দিয়ে আবার চেষ্টা করুন।",
     saveAppearance: "হোমপেজ ও ব্র্যান্ডিং সেভ",
   },
 } as const;
