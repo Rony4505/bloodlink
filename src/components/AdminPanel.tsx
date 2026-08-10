@@ -116,7 +116,7 @@ export function AdminPanel() {
     defaultSiteAppearance(),
   );
   const [appearanceUploading, setAppearanceUploading] = useState<
-    "logo" | "hero" | null
+    "logo" | "hero" | "founder" | null
   >(null);
 
   async function loadData() {
@@ -256,10 +256,12 @@ export function AdminPanel() {
 
   async function uploadAppearanceImage(
     file: File | null,
-    field: "logoUrl" | "heroBackgroundUrl",
+    field: "logoUrl" | "heroBackgroundUrl" | "founderPhotoUrl",
   ) {
     if (!file) return;
-    setAppearanceUploading(field === "logoUrl" ? "logo" : "hero");
+    setAppearanceUploading(
+      field === "logoUrl" ? "logo" : field === "heroBackgroundUrl" ? "hero" : "founder",
+    );
     setSettingsMsg("");
     try {
       const form = new FormData();
@@ -1013,6 +1015,33 @@ export function AdminPanel() {
                   setSiteAppearance((s) => ({
                     ...s,
                     aboutBodyBn: e.target.value,
+                  }))
+                }
+              />
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-1 block font-medium">{t.founderPhotoUpload}</span>
+                <input
+                  className="field"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={appearanceUploading === "founder"}
+                  onChange={(e) => {
+                    void uploadAppearanceImage(
+                      e.target.files?.[0] || null,
+                      "founderPhotoUrl",
+                    );
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <input
+                className="field md:col-span-2"
+                placeholder={t.founderPhotoUrl}
+                value={siteAppearance.founderPhotoUrl}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    founderPhotoUrl: e.target.value,
                   }))
                 }
               />

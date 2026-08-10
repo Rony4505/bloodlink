@@ -15,6 +15,21 @@ export function SiteFooter() {
             {t.createdBy}:{" "}
             <span className="font-semibold text-[var(--ink)]">{t.creatorName}</span>
           </p>
+          <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+            <a
+              href={`mailto:${t.creatorEmail}`}
+              className="underline-offset-4 hover:underline"
+            >
+              {t.creatorEmail}
+            </a>
+            {" · "}
+            <a
+              href="tel:+8801711934505"
+              className="underline-offset-4 hover:underline"
+            >
+              {t.creatorPhone}
+            </a>
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <Link href="/about" className="underline-offset-4 hover:underline">

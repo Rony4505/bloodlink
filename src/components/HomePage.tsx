@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AboutContent } from "@/components/AboutContent";
 import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
 import { HomeDonors } from "@/components/HomeDonors";
@@ -17,8 +18,6 @@ export function HomePage() {
     brand,
     tagline,
     heroSupport,
-    aboutTitle,
-    aboutBody,
     logoUrl,
     heroBackgroundUrl,
   } = useSiteAppearance();
@@ -140,26 +139,7 @@ export function HomePage() {
         className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_28%,white)] px-5 py-20 md:px-8"
       >
         <div className="mx-auto max-w-6xl">
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--blood-deep)] md:text-4xl">
-            {aboutTitle}
-          </h2>
-          <p className="mt-5 max-w-3xl text-base leading-relaxed text-[color-mix(in_oklab,var(--ink)_75%,white)]">
-            {aboutBody}
-          </p>
-          <div className="mt-8 space-y-2 text-sm md:text-base">
-            <p>
-              <span className="font-semibold">{t.createdBy}:</span> {t.creatorName}
-            </p>
-            <p>
-              <span className="font-semibold">{t.contactNumber}:</span>{" "}
-              <a
-                href="tel:+8801711934505"
-                className="text-[var(--blood-deep)] underline-offset-4 hover:underline"
-              >
-                {t.creatorPhone}
-              </a>
-            </p>
-          </div>
+          <AboutContent compact />
         </div>
       </section>
 

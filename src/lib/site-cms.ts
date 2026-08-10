@@ -55,6 +55,7 @@ export function defaultSiteAppearance(): SiteAppearance {
     aboutTitleBn: "",
     aboutBodyEn: "",
     aboutBodyBn: "",
+    founderPhotoUrl: "",
   };
 }
 
@@ -75,6 +76,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
     aboutTitleBn: String(raw.aboutTitleBn || "").trim(),
     aboutBodyEn: String(raw.aboutBodyEn || "").trim(),
     aboutBodyBn: String(raw.aboutBodyBn || "").trim(),
+    founderPhotoUrl: String(raw.founderPhotoUrl || "").trim(),
   };
 }
 
