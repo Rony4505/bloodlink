@@ -135,6 +135,8 @@ export type SiteAppearance = {
   aboutTitleBn: string;
   aboutBodyEn: string;
   aboutBodyBn: string;
+  /** Optional portrait of the founder shown on About. */
+  founderPhotoUrl: string;
 };
 
 export type AdminSettings = {
