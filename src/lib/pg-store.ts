@@ -69,6 +69,14 @@ async function ensureTable(): Promise<void> {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
       `);
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS bloodlink_uploads (
+          name TEXT PRIMARY KEY,
+          content_type TEXT NOT NULL,
+          data BYTEA NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
     })().catch((err) => {
       tableReady = null;
       throw err;
@@ -144,5 +152,55 @@ export async function postgresHealth(): Promise<{
       help = `${message}. Railway uses a self-signed DB certificate — redeploy the latest BloodLink build, then Save the URL again.`;
     }
     return { ok: false, error: help, host };
+  }
+}
+
+export async function saveUploadToPostgres(
+  name: string,
+  contentType: string,
+  data: Buffer,
+): Promise<boolean> {
+  if (!hasDatabaseUrl()) return false;
+  try {
+    await ensureTable();
+    await getPool().query(
+      `
+        INSERT INTO bloodlink_uploads (name, content_type, data, created_at)
+        VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (name) DO UPDATE
+        SET content_type = EXCLUDED.content_type,
+            data = EXCLUDED.data,
+            created_at = NOW()
+      `,
+      [name, contentType, data],
+    );
+    return true;
+  } catch (err) {
+    console.error("[bloodlink] upload postgres save failed", err);
+    return false;
+  }
+}
+
+export async function loadUploadFromPostgres(
+  name: string,
+): Promise<{ contentType: string; data: Buffer } | null> {
+  if (!hasDatabaseUrl()) return null;
+  try {
+    await ensureTable();
+    const result = await getPool().query<{
+      content_type: string;
+      data: Buffer;
+    }>("SELECT content_type, data FROM bloodlink_uploads WHERE name = $1", [
+      name,
+    ]);
+    const row = result.rows[0];
+    if (!row) return null;
+    const buf = Buffer.isBuffer(row.data)
+      ? row.data
+      : Buffer.from(row.data as unknown as ArrayBuffer);
+    return { contentType: row.content_type, data: buf };
+  } catch (err) {
+    console.error("[bloodlink] upload postgres load failed", err);
+    return null;
   }
 }

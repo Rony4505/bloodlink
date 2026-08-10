@@ -270,18 +270,40 @@ export function AdminPanel() {
         method: "POST",
         body: form,
       });
-      const data = await res.json();
+      let data: { error?: string; url?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
       if (!res.ok) {
-        setSettingsMsg(data.error || t.errorGeneric);
+        setSettingsMsg(data.error || t.uploadFailed);
         return;
       }
-      setSiteAppearance((prev) => ({
-        ...prev,
+      const nextAppearance = {
+        ...siteAppearance,
         [field]: data.url || "",
-      }));
-      setSettingsMsg(t.saved);
+      };
+      setSiteAppearance(nextAppearance);
+
+      const saveRes = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "site-appearance",
+          siteAppearance: nextAppearance,
+        }),
+      });
+      if (!saveRes.ok) {
+        setSettingsMsg(t.uploadSavedLocalFail);
+        return;
+      }
+      const saveData = await saveRes.json();
+      if (saveData.siteAppearance) setSiteAppearance(saveData.siteAppearance);
+      setSettingsMsg(t.uploadSaved);
+      reloadAppearance();
     } catch {
-      setSettingsMsg(t.errorGeneric);
+      setSettingsMsg(t.uploadFailed);
     } finally {
       setAppearanceUploading(null);
     }
@@ -1020,10 +1042,13 @@ export function AdminPanel() {
               />
               <label className="block text-sm md:col-span-2">
                 <span className="mb-1 block font-medium">{t.founderPhotoUpload}</span>
+                <span className="mb-2 block text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                  {t.uploadImageHint}
+                </span>
                 <input
                   className="field"
                   type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
                   disabled={appearanceUploading === "founder"}
                   onChange={(e) => {
                     void uploadAppearanceImage(
@@ -1033,7 +1058,20 @@ export function AdminPanel() {
                     e.target.value = "";
                   }}
                 />
+                {appearanceUploading === "founder" ? (
+                  <span className="mt-1 block text-xs">{t.bannerUploading}</span>
+                ) : null}
               </label>
+              {siteAppearance.founderPhotoUrl ? (
+                <div className="md:col-span-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={siteAppearance.founderPhotoUrl}
+                    alt={t.creatorName}
+                    className="h-28 w-28 rounded-full object-cover ring-2 ring-[color-mix(in_oklab,var(--blood)_25%,white)]"
+                  />
+                </div>
+              ) : null}
               <input
                 className="field md:col-span-2"
                 placeholder={t.founderPhotoUrl}
