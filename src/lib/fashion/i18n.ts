@@ -3,6 +3,17 @@ export type FashionLocale = "bn" | "en";
 export const fashionI18n = {
   bn: {
     language: "English",
+    languageShort: "EN",
+    currentLanguage: "বাংলা",
+    couponLabel: "কুপন",
+    couponDetails: "কুপন ডিটেইলস",
+    couponDiscount: "ছাড়",
+    couponProducts: "প্রযোজ্য প্রোডাক্ট",
+    couponAllProducts: "সব প্রোডাক্ট",
+    couponValidUntil: "মেয়াদ",
+    couponMinOrder: "মিনিমাম অর্ডার",
+    couponNoExpiry: "মেয়াদসীমা নেই",
+    close: "বন্ধ",
     nav: {
       collections: "কালেকশন",
       about: "আমাদের গল্প",
@@ -64,6 +75,17 @@ export const fashionI18n = {
   },
   en: {
     language: "বাংলা",
+    languageShort: "বাং",
+    currentLanguage: "English",
+    couponLabel: "Coupons",
+    couponDetails: "Coupon details",
+    couponDiscount: "Discount",
+    couponProducts: "Applicable products",
+    couponAllProducts: "All products",
+    couponValidUntil: "Valid until",
+    couponMinOrder: "Minimum order",
+    couponNoExpiry: "No expiry date",
+    close: "Close",
     nav: {
       collections: "Collections",
       about: "Our Story",

@@ -28,6 +28,8 @@ export type Coupon = {
   minOrder?: number;
   expiresAt?: string;
   active: boolean;
+  description?: string;
+  productIds?: string[];
 };
 
 export type AdvertiseKind = "new" | "discount" | "offer" | "custom";
@@ -90,6 +92,7 @@ export type Product = {
   offerActive?: boolean;
   offerLabel?: string;
   offerDiscountPercent?: number;
+  offerExpiresAt?: string;
   isNew?: boolean;
   advertiseActive?: boolean;
   advertiseKind?: AdvertiseKind;

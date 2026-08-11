@@ -29,8 +29,9 @@ import type {
   StoreSettings,
 } from "@/lib/fashion/types";
 
-type Tab = "products" | "orders" | "delivery" | "coupons" | "settings" | "analytics" | "reports";
+type Tab = "products" | "orders" | "delivery" | "coupons" | "offers-product" | "settings" | "analytics" | "reports";
 type ProductSubTab = "inventory" | "categories";
+type OffersSubTab = "offers" | "advertisement";
 
 const emptyProduct: ProductInput = {
   name: "", nameBn: "", price: 0, buyPrice: 0, categorySlug: "festive",
@@ -40,7 +41,25 @@ const emptyProduct: ProductInput = {
   stock: 25, inStock: true, featured: false, pricingMode: "manual", advertiseActive: false,
 };
 
-const emptyCoupon: Coupon = { id: "", code: "", discountType: "percent", discountValue: 10, active: true };
+const emptyCoupon: Coupon = {
+  id: "",
+  code: "",
+  discountType: "percent",
+  discountValue: 10,
+  active: true,
+  productIds: [],
+  description: "",
+};
+
+const emptyBanner: PromoBanner = {
+  id: "",
+  imageUrl: "",
+  title: "",
+  badgeLabel: "অফার",
+  advertiseKind: "offer",
+  active: true,
+  sortOrder: 0,
+};
 
 const statusOptions: OrderStatus[] = ["pending", "confirmed", "processing", "out_for_delivery", "delivered", "cancelled"];
 
@@ -49,6 +68,7 @@ const menuItems: { id: Tab; label: string; theme: AdminTheme; hint: string }[] =
   { id: "orders", label: copy.admin.orders, theme: "ocean", hint: "ট্র্যাকিং" },
   { id: "delivery", label: copy.admin.delivery, theme: "sunset", hint: "জেলা স্ক্রল" },
   { id: "coupons", label: copy.admin.coupons, theme: "violet", hint: "কুপন কোড" },
+  { id: "offers-product", label: copy.admin.offersProduct, theme: "gold", hint: "Offers + Ads" },
   { id: "settings", label: copy.admin.settings, theme: "gold", hint: "ওয়েবসাইট" },
   { id: "analytics", label: copy.admin.analytics, theme: "slate", hint: "হিসাব" },
   { id: "reports", label: copy.admin.reports, theme: "pearl", hint: "রিপোর্ট" },
@@ -58,10 +78,12 @@ export function FashionAdminPanel() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const [productSubTab, setProductSubTab] = useState<ProductSubTab>("inventory");
+  const [offersSubTab, setOffersSubTab] = useState<OffersSubTab>("offers");
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<FashionOrder[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [analytics, setAnalytics] = useState<{ daily: AnalyticsSummary; monthly: AnalyticsSummary } | null>(null);
   const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
@@ -73,6 +95,11 @@ export function FashionAdminPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [couponForm, setCouponForm] = useState<Coupon>(emptyCoupon);
+  const [bannerForm, setBannerForm] = useState<PromoBanner>(emptyBanner);
+  const [offerEditId, setOfferEditId] = useState<string>("");
+  const [offerLabel, setOfferLabel] = useState("অফার");
+  const [offerDiscount, setOfferDiscount] = useState(10);
+  const [offerExpiresAt, setOfferExpiresAt] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<FashionOrder | null>(null);
   const [invoiceOrder, setInvoiceOrder] = useState<FashionOrder | null>(null);
   const [reportType, setReportType] = useState<ReportType | null>(null);
@@ -107,6 +134,7 @@ export function FashionAdminPanel() {
     setCategories(c.categories ?? []);
     setCoupons(cp.coupons ?? []);
     setSettings(s.settings ?? null);
+    setBanners(s.settings?.promoBanners ?? []);
     setAnalytics({ daily: d.analytics, monthly: m.analytics });
     setAdminNotifications(n.notifications ?? []);
   }
@@ -311,6 +339,77 @@ export function FashionAdminPanel() {
   async function removeCoupon(id: string) {
     await fetch(`/api/fashion/coupons?id=${id}`, { method: "DELETE" });
     showSuccess("মুছে ফেলা হয়েছে", "কুপন সরানো হয়েছে", "violet");
+    await load();
+  }
+
+  async function saveProductOffer(event: FormEvent) {
+    event.preventDefault();
+    const product = products.find((p) => p.id === offerEditId);
+    if (!product) return;
+    const res = await fetch(`/api/fashion/products/${product.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...product,
+        offerActive: true,
+        offerLabel,
+        offerDiscountPercent: offerDiscount,
+        offerExpiresAt: offerExpiresAt ? new Date(offerExpiresAt).toISOString() : undefined,
+        pricingMode: "manual",
+      }),
+    });
+    if (!res.ok) return;
+    setOfferEditId("");
+    setOfferExpiresAt("");
+    showSuccess("সফল!", "Offer সেট হয়েছে", "gold");
+    await load();
+  }
+
+  async function removeProductOffer(productId: string) {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    await fetch(`/api/fashion/products/${productId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...product,
+        offerActive: false,
+        offerLabel: undefined,
+        offerDiscountPercent: undefined,
+        offerExpiresAt: undefined,
+        pricingMode: "manual",
+      }),
+    });
+    showSuccess("মুছে ফেলা হয়েছে", "Offer সরানো হয়েছে", "gold");
+    await load();
+  }
+
+  async function saveBanner(event: FormEvent) {
+    event.preventDefault();
+    const product = bannerForm.productId ? products.find((p) => p.id === bannerForm.productId) : undefined;
+    const payload: PromoBanner = {
+      ...bannerForm,
+      id: bannerForm.id || `pb${Date.now()}`,
+      imageUrl: bannerForm.imageUrl || product?.imageUrl || "",
+      linkSlug: product?.slug || bannerForm.linkSlug,
+      title: bannerForm.title || product?.nameBn || "Advertisement",
+      sortOrder: bannerForm.sortOrder || Date.now(),
+      expiresAt: bannerForm.expiresAt || undefined,
+      active: true,
+    };
+    await fetch("/api/fashion/banners", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setBannerForm(emptyBanner);
+    showSuccess("সফল!", "Advertisement সেভ হয়েছে", "gold");
+    await load();
+  }
+
+  async function removeBanner(id: string) {
+    await fetch(`/api/fashion/banners?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    showSuccess("মুছে ফেলা হয়েছে", "Advertisement সরানো হয়েছে", "gold");
     await load();
   }
 
@@ -614,19 +713,166 @@ export function FashionAdminPanel() {
           <div className="grid gap-3 md:grid-cols-2">
             <input className="field" placeholder="কুপন কোড" value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })} required />
             <input className="field" type="number" placeholder="ছাড়" value={couponForm.discountValue} onChange={(e) => setCouponForm({ ...couponForm, discountValue: Number(e.target.value) })} required />
-            <input className="field" type="datetime-local" value={couponForm.expiresAt?.slice(0, 16) ?? ""} onChange={(e) => setCouponForm({ ...couponForm, expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
+            <select className="field" value={couponForm.discountType} onChange={(e) => setCouponForm({ ...couponForm, discountType: e.target.value as "percent" | "fixed" })}>
+              <option value="percent">Percent %</option>
+              <option value="fixed">Fixed ৳</option>
+            </select>
+            <input className="field" type="number" placeholder="মিনিমাম অর্ডার (ঐচ্ছিক)" value={couponForm.minOrder ?? ""} onChange={(e) => setCouponForm({ ...couponForm, minOrder: Number(e.target.value) || undefined })} />
+            <input className="field md:col-span-2" type="datetime-local" value={couponForm.expiresAt?.slice(0, 16) ?? ""} onChange={(e) => setCouponForm({ ...couponForm, expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
+            <textarea className="field md:col-span-2 min-h-20" placeholder="কুপন বিবরণ" value={couponForm.description ?? ""} onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })} />
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold text-[#9b7766]">প্রযোজ্য প্রোডাক্ট (খালি = সব)</p>
+            <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-black/6 bg-white p-2">
+              {products.map((p) => {
+                const checked = couponForm.productIds?.includes(p.id) ?? false;
+                return (
+                  <label key={p.id} className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-[#faf4f0]">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const ids = new Set(couponForm.productIds ?? []);
+                        if (e.target.checked) ids.add(p.id);
+                        else ids.delete(p.id);
+                        setCouponForm({ ...couponForm, productIds: [...ids] });
+                      }}
+                    />
+                    {p.nameBn}
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <FashionButton type="submit">{copy.actions.save}</FashionButton>
         </form>
         {coupons.map((coupon) => (
           <div key={coupon.id} className="mb-2 flex justify-between rounded-xl border border-black/6 bg-white/80 p-3">
-            <span className="font-semibold">{coupon.code}</span>
+            <div>
+              <span className="font-semibold">{coupon.code}</span>
+              <p className="text-xs text-[#8b6456]">
+                {coupon.discountType === "percent" ? `${coupon.discountValue}%` : formatBdt(coupon.discountValue)}
+                {coupon.expiresAt ? ` · ${new Date(coupon.expiresAt).toLocaleDateString("bn-BD")} পর্যন্ত` : ""}
+                {coupon.productIds?.length ? ` · ${coupon.productIds.length} প্রোডাক্ট` : " · সব প্রোডাক্ট"}
+              </p>
+            </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setCouponForm(coupon)}>{copy.actions.edit}</button>
               <button type="button" className="text-red-700" onClick={() => removeCoupon(coupon.id)}>{copy.actions.delete}</button>
             </div>
           </div>
         ))}
+      </AdminModal>
+
+      <AdminModal open={activeTab === "offers-product"} onClose={() => setActiveTab(null)} title={copy.admin.offersProduct} subtitle="Offers ও Advertisement — নির্দিষ্ট তারিখ পর্যন্ত, পরে auto delete" theme="gold" wide>
+        <div className="mb-4 flex gap-2">
+          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>Offers</button>
+          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>Advertisement</button>
+        </div>
+
+        {offersSubTab === "offers" ? (
+          <div className="space-y-4">
+            <form onSubmit={saveProductOffer} className="space-y-3 rounded-2xl border border-black/6 bg-white/80 p-4">
+              <select className="field" value={offerEditId} onChange={(e) => setOfferEditId(e.target.value)} required>
+                <option value="">প্রোডাক্ট select করুন</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nameBn} — {formatBdt(p.price)}</option>
+                ))}
+              </select>
+              <div className="grid gap-3 md:grid-cols-3">
+                <input className="field" placeholder="Offer label" value={offerLabel} onChange={(e) => setOfferLabel(e.target.value)} required />
+                <input className="field" type="number" placeholder="Discount %" value={offerDiscount} onChange={(e) => setOfferDiscount(Number(e.target.value))} required />
+                <input className="field" type="datetime-local" value={offerExpiresAt} onChange={(e) => setOfferExpiresAt(e.target.value)} />
+              </div>
+              <p className="text-xs text-[#9b7766]">Expiry date দিলে সেই সময়ের পর offer auto delete হবে</p>
+              <FashionButton type="submit">Offer সেভ</FashionButton>
+            </form>
+
+            <div className="max-h-72 space-y-2 overflow-y-auto">
+              {products.filter((p) => p.offerActive).map((p) => (
+                <div key={p.id} className="flex items-center justify-between rounded-xl border border-black/6 bg-white/80 px-4 py-3">
+                  <div>
+                    <p className="font-semibold">{p.nameBn}</p>
+                    <p className="text-xs text-[#8b6456]">
+                      {p.offerLabel} · {p.offerDiscountPercent}% ছাড়
+                      {p.offerExpiresAt ? ` · ${new Date(p.offerExpiresAt).toLocaleString("bn-BD")} পর্যন্ত` : ""}
+                    </p>
+                  </div>
+                  <button type="button" className="text-sm font-semibold text-red-700" onClick={() => removeProductOffer(p.id)}>{copy.actions.delete}</button>
+                </div>
+              ))}
+              {products.filter((p) => p.offerActive).length === 0 ? (
+                <p className="text-sm text-[#9b7766]">এখন কোনো active offer নেই</p>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <form onSubmit={saveBanner} className="space-y-3 rounded-2xl border border-black/6 bg-white/80 p-4">
+              <select className="field" value={bannerForm.productId ?? ""} onChange={(e) => {
+                const product = products.find((p) => p.id === e.target.value);
+                setBannerForm({
+                  ...bannerForm,
+                  productId: e.target.value || undefined,
+                  imageUrl: product?.imageUrl || bannerForm.imageUrl,
+                  linkSlug: product?.slug,
+                  title: product?.nameBn || bannerForm.title,
+                });
+              }}>
+                <option value="">প্রোডাক্ট select (ঐচ্ছিক)</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.nameBn}</option>)}
+              </select>
+              <div className="grid gap-3 md:grid-cols-2">
+                <input className="field" placeholder="Title / label" value={bannerForm.title ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} />
+                <input className="field" placeholder="Badge (নতুন/ডিসকাউন্ট/...)" value={bannerForm.badgeLabel ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, badgeLabel: e.target.value })} />
+                <select className="field" value={bannerForm.advertiseKind ?? "offer"} onChange={(e) => setBannerForm({ ...bannerForm, advertiseKind: e.target.value as AdvertiseKind })}>
+                  <option value="new">নতুন</option>
+                  <option value="discount">ডিসকাউন্ট</option>
+                  <option value="offer">অফার</option>
+                  <option value="custom">কাস্টম</option>
+                </select>
+                <input className="field" type="datetime-local" value={bannerForm.expiresAt?.slice(0, 16) ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
+              </div>
+              <input className="field" placeholder="Image URL" value={bannerForm.imageUrl} onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })} required={!bannerForm.productId} />
+              <input ref={bannerFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                void (async () => {
+                  setUploading(true);
+                  const fd = new FormData();
+                  fd.append("file", f);
+                  const res = await fetch("/api/fashion/upload", { method: "POST", body: fd });
+                  const data = await res.json();
+                  setUploading(false);
+                  if (data.url) setBannerForm((c) => ({ ...c, imageUrl: data.url }));
+                })();
+              }} />
+              <FashionButton type="button" variant="secondary" onClick={() => bannerFileRef.current?.click()} disabled={uploading}>{copy.actions.upload}</FashionButton>
+              <p className="text-xs text-[#9b7766]">Expiry date দিলে সেই সময়ের পর advertisement auto delete হবে</p>
+              <FashionButton type="submit">Advertisement সেভ</FashionButton>
+            </form>
+
+            <div className="max-h-72 space-y-2 overflow-y-auto">
+              {banners.map((b) => (
+                <div key={b.id} className="flex items-center justify-between gap-3 rounded-xl border border-black/6 bg-white/80 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{b.title || b.badgeLabel || b.id}</p>
+                    <p className="text-xs text-[#8b6456]">
+                      {b.badgeLabel || b.advertiseKind || "ad"}
+                      {b.expiresAt ? ` · ${new Date(b.expiresAt).toLocaleString("bn-BD")} পর্যন্ত` : ""}
+                      {!b.active ? " · inactive" : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button type="button" onClick={() => setBannerForm(b)}>{copy.actions.edit}</button>
+                    <button type="button" className="text-red-700" onClick={() => removeBanner(b.id)}>{copy.actions.delete}</button>
+                  </div>
+                </div>
+              ))}
+              {banners.length === 0 ? <p className="text-sm text-[#9b7766]">এখন কোনো advertisement নেই</p> : null}
+            </div>
+          </div>
+        )}
       </AdminModal>
 
       <AdminModal open={activeTab === "settings"} onClose={() => setActiveTab(null)} title={copy.admin.settings} theme="gold" wide>

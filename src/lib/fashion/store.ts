@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import { computeSellPrice, getEffectivePrice } from "./pricing";
 import { defaultCategories, defaultSettings } from "./defaults";
 import { seedProducts as rawSeedProducts } from "./seed-products";
-import { slugify } from "./search";
 import type {
   AdminNotification,
   AnalyticsSummary,
@@ -49,13 +48,39 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
 function purgeExpired(store: FashionStore): boolean {
   const beforeCoupons = store.coupons.length;
   const beforeBanners = store.settings.promoBanners?.length ?? 0;
+  let changed = false;
+
   store.coupons = store.coupons.filter((c) => !isExpired(c.expiresAt));
   if (store.settings.promoBanners) {
     store.settings.promoBanners = store.settings.promoBanners.filter(
       (b) => !isExpired(b.expiresAt),
     );
   }
-  return store.coupons.length !== beforeCoupons || (store.settings.promoBanners?.length ?? 0) !== beforeBanners;
+
+  for (const product of store.products) {
+    if (product.offerActive && isExpired(product.offerExpiresAt)) {
+      product.offerActive = false;
+      product.offerLabel = undefined;
+      product.offerDiscountPercent = undefined;
+      product.offerExpiresAt = undefined;
+      changed = true;
+    }
+    if (product.advertiseActive) {
+      const banner = store.settings.promoBanners?.find((b) => b.productId === product.id);
+      if (!banner) {
+        product.advertiseActive = false;
+        product.advertiseKind = undefined;
+        product.advertiseLabel = undefined;
+        changed = true;
+      }
+    }
+  }
+
+  return (
+    changed ||
+    store.coupons.length !== beforeCoupons ||
+    (store.settings.promoBanners?.length ?? 0) !== beforeBanners
+  );
 }
 
 function migrateProduct(product: Partial<Product>, settings: StoreSettings): Product {
@@ -93,6 +118,7 @@ function migrateProduct(product: Partial<Product>, settings: StoreSettings): Pro
     offerActive: product.offerActive,
     offerLabel: product.offerLabel,
     offerDiscountPercent: product.offerDiscountPercent,
+    offerExpiresAt: product.offerExpiresAt,
     isNew: product.isNew,
     advertiseActive: product.advertiseActive,
     advertiseKind: product.advertiseKind,
@@ -306,7 +332,7 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 
 export async function getActiveOffers(): Promise<Product[]> {
   const store = await ensureStore();
-  return store.products.filter((p) => p.offerActive);
+  return store.products.filter((p) => p.offerActive && !isExpired(p.offerExpiresAt));
 }
 
 export async function getNewProducts(sinceDays = 14): Promise<Product[]> {
@@ -362,6 +388,7 @@ function resolveProductPrice(input: ProductInput, settings: StoreSettings): Prod
     offerActive: input.offerActive,
     offerLabel: input.offerLabel,
     offerDiscountPercent: input.offerDiscountPercent,
+    offerExpiresAt: input.offerExpiresAt,
     isNew: input.isNew ?? !input.id,
     advertiseActive: input.advertiseActive,
     advertiseKind: input.advertiseKind,
@@ -384,6 +411,7 @@ function syncProductAdvertisement(store: FashionStore, product: Product): void {
       badgeLabel: advertiseBadge(product),
       advertiseKind: product.advertiseKind,
       active: true,
+      expiresAt: existingIndex >= 0 ? banners[existingIndex].expiresAt : undefined,
       sortOrder: existingIndex >= 0 ? banners[existingIndex].sortOrder : banners.length,
     };
     if (existingIndex >= 0) banners[existingIndex] = banner;
@@ -487,6 +515,58 @@ export async function getActivePromoBanners(): Promise<PromoBanner[]> {
   return (store.settings.promoBanners ?? [])
     .filter((b) => b.active && !isExpired(b.expiresAt))
     .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function upsertPromoBanner(banner: PromoBanner): Promise<PromoBanner> {
+  const store = await ensureStore();
+  const banners = [...(store.settings.promoBanners ?? [])];
+  const index = banners.findIndex((b) => b.id === banner.id);
+  if (index >= 0) banners[index] = banner;
+  else banners.push(banner);
+  store.settings.promoBanners = banners;
+
+  if (banner.productId) {
+    const product = store.products.find((p) => p.id === banner.productId);
+    if (product) {
+      product.advertiseActive = banner.active;
+      product.advertiseKind = banner.advertiseKind;
+      product.advertiseLabel = banner.badgeLabel || banner.title;
+    }
+  }
+
+  await writeStore(store);
+  return banner;
+}
+
+export async function deletePromoBanner(id: string): Promise<boolean> {
+  const store = await ensureStore();
+  const banners = store.settings.promoBanners ?? [];
+  const target = banners.find((b) => b.id === id);
+  const next = banners.filter((b) => b.id !== id);
+  if (next.length === banners.length) return false;
+  store.settings.promoBanners = next;
+  if (target?.productId) {
+    const product = store.products.find((p) => p.id === target.productId);
+    if (product) {
+      product.advertiseActive = false;
+      product.advertiseKind = undefined;
+      product.advertiseLabel = undefined;
+    }
+  }
+  await writeStore(store);
+  return true;
+}
+
+export async function clearProductOffer(productId: string): Promise<boolean> {
+  const store = await ensureStore();
+  const product = store.products.find((p) => p.id === productId);
+  if (!product) return false;
+  product.offerActive = false;
+  product.offerLabel = undefined;
+  product.offerDiscountPercent = undefined;
+  product.offerExpiresAt = undefined;
+  await writeStore(store);
+  return true;
 }
 
 export async function upsertCoupon(coupon: Coupon): Promise<Coupon> {

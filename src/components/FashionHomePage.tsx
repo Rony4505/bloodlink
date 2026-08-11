@@ -81,7 +81,7 @@ export async function FashionHomePage() {
           <FashionHeader variant="dark" />
 
           <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
-            <PromoCarousel slides={carouselSlides} coupons={displayCoupons} />
+            <PromoCarousel slides={carouselSlides} coupons={displayCoupons} products={products} />
           </div>
 
           <div className="pt-14 md:pt-16">

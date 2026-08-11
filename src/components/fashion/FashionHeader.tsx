@@ -13,7 +13,7 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   const pathname = usePathname();
   const { itemCount } = useCart();
   const { fc } = useFashionCopy();
-  const { toggleLocale } = useLocale();
+  const { locale, setLocale } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
   const [unread, setUnread] = useState(0);
   const [brand, setBrand] = useState(copy.brand);
@@ -118,14 +118,36 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
               {fc.nav.login}
             </Link>
           )}
-          <button
-            type="button"
-            onClick={toggleLocale}
-            className={cn("rounded-full px-3.5 py-1.5 font-medium transition duration-200", idleClass)}
-            aria-label="Toggle language"
-          >
-            {fc.language}
-          </button>
+          <div className="inline-flex items-center overflow-hidden rounded-full border border-current/20 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setLocale("bn")}
+              className={cn(
+                "px-3 py-1.5 transition",
+                locale === "bn"
+                  ? isDark
+                    ? "bg-white text-[#4a2f28]"
+                    : "bg-[#8f624e] text-white"
+                  : "opacity-70 hover:opacity-100",
+              )}
+            >
+              বাং
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale("en")}
+              className={cn(
+                "px-3 py-1.5 transition",
+                locale === "en"
+                  ? isDark
+                    ? "bg-white text-[#4a2f28]"
+                    : "bg-[#8f624e] text-white"
+                  : "opacity-70 hover:opacity-100",
+              )}
+            >
+              EN
+            </button>
+          </div>
           <Link
             href="/cart"
             className={cn(

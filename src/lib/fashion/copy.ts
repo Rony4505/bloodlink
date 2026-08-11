@@ -76,6 +76,7 @@ export const copy = {
     categories: "ক্যাটাগরি",
     delivery: "ডেলিভারি ফি",
     coupons: "কুপন",
+    offersProduct: "Offers Product",
     settings: "সেটিংস",
     analytics: "হিসাব",
     reports: "রিপোর্ট",
