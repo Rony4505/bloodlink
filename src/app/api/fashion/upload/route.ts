@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { isFashionAdminAuthenticated } from "@/lib/fashion/customer-auth";
+import { fashionUploadDir, fashionUploadUrl } from "@/lib/fashion/paths";
 
 export async function POST(request: Request) {
   if (!(await isFashionAdminAuthenticated())) {
@@ -19,9 +20,9 @@ export async function POST(request: Request) {
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const safeExt = ["jpg", "jpeg", "png", "webp", "gif"].includes(ext) ? ext : "jpg";
   const filename = `fashion-${Date.now()}.${safeExt}`;
-  const uploadDir = path.join(/* turbopackIgnore: true */ process.cwd(), "public", "uploads", "fashion");
+  const uploadDir = fashionUploadDir();
   await mkdir(uploadDir, { recursive: true });
   await writeFile(path.join(uploadDir, filename), buffer);
 
-  return NextResponse.json({ url: `/uploads/fashion/${filename}` });
+  return NextResponse.json({ url: fashionUploadUrl(filename) });
 }

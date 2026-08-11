@@ -9,6 +9,7 @@ import {
 } from "@/lib/fashion/customer-auth";
 import { issueOtp, verifyOtp } from "@/lib/fashion/otp";
 import { findCustomerByEmail } from "@/lib/fashion/store";
+import { fashionDataDir } from "@/lib/fashion/paths";
 
 type PendingReg = {
   name: string;
@@ -19,7 +20,7 @@ type PendingReg = {
   expiresAt: number;
 };
 
-const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
+const dataDir = fashionDataDir();
 const pendingPath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-pending-reg.json");
 
 async function readPending(): Promise<Record<string, PendingReg>> {

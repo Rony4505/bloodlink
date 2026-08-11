@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { fashionDataDir } from "./paths";
 
 type OtpRecord = {
   code: string;
@@ -9,7 +10,7 @@ type OtpRecord = {
   expiresAt: number;
 };
 
-const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
+const dataDir = fashionDataDir();
 const otpPath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-otp.json");
 
 async function readAll(): Promise<Record<string, OtpRecord>> {

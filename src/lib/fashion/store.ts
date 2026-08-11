@@ -1,5 +1,4 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
-import path from "path";
 import bcrypt from "bcryptjs";
 import { computeSellPrice, getEffectivePrice } from "./pricing";
 import { defaultCategories, defaultSettings } from "./defaults";
@@ -24,9 +23,24 @@ import type {
 import { computeAnalytics } from "./analytics";
 import { generateTrackingNumber } from "./tracking";
 import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
+import { fashionDataDir, fashionStorePath } from "./paths";
 
-const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
-const storePath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-store.json");
+const dataDir = fashionDataDir();
+const storePath = fashionStorePath();
+
+const defaultCoupons: Coupon[] = [
+  {
+    id: "cp-smartcraft10",
+    code: "SMARTCRAFT10",
+    discountType: "percent",
+    discountValue: 10,
+    active: true,
+  },
+];
+
+function defaultAdminPassword(): string {
+  return process.env.FASHION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "rony4505";
+}
 
 function isExpired(iso?: string): boolean {
   if (!iso) return false;
@@ -236,13 +250,13 @@ async function ensureStore(): Promise<FashionStore> {
       products,
       customers: parsed.customers ?? [],
       orders: (parsed.orders ?? []).map(migrateOrder),
-      coupons: parsed.coupons ?? [],
+      coupons: parsed.coupons?.length ? parsed.coupons : defaultCoupons,
       reviews: parsed.reviews ?? [],
       userNotifications: parsed.userNotifications ?? [],
       adminNotifications: parsed.adminNotifications ?? [],
       adminPasswordHash:
         parsed.adminPasswordHash ||
-        (await bcrypt.hash(process.env.FASHION_ADMIN_PASSWORD || "nooreadmin", 12)),
+        (await bcrypt.hash(defaultAdminPassword(), 12)),
     };
     if (purgeExpired(store)) await writeStore(store);
     if (normalizeProductSlugs(store)) await writeStore(store);
@@ -256,14 +270,11 @@ async function ensureStore(): Promise<FashionStore> {
       products: rawSeedProducts.map((p) => migrateProduct(p, settings)),
       customers: [],
       orders: [],
-      coupons: [],
+      coupons: defaultCoupons,
       reviews: [],
       userNotifications: [],
       adminNotifications: [],
-      adminPasswordHash: await bcrypt.hash(
-        process.env.FASHION_ADMIN_PASSWORD || "nooreadmin",
-        12,
-      ),
+      adminPasswordHash: await bcrypt.hash(defaultAdminPassword(), 12),
     };
     await writeStore(initial);
     return initial;
