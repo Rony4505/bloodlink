@@ -1,14 +1,54 @@
-"use client";
+import type { Metadata } from "next";
+import { FashionShell } from "@/components/fashion/FashionShell";
 
-import { AboutContent } from "@/components/AboutContent";
-import { PageShell } from "@/components/PageShell";
-import { useLocale } from "@/lib/i18n/locale-context";
+export const metadata: Metadata = {
+  title: "Our Story",
+  description: "Learn about Nooré Dhaka and our luxury womenswear vision for Bangladesh.",
+};
 
 export default function AboutPage() {
-  const { t } = useLocale();
   return (
-    <PageShell title={t.about} bannerPage="about">
-      <AboutContent />
-    </PageShell>
+    <FashionShell>
+      <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
+        <div className="max-w-3xl">
+          <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9b7766]">
+            Our story
+          </p>
+          <h1 className="mt-3 font-[family-name:var(--font-display)] text-5xl font-bold md:text-6xl">
+            Luxury that feels natural for Bangladeshi women
+          </h1>
+          <p className="mt-5 text-lg leading-8 text-[#6e5449]">
+            Nooré Dhaka শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience
+            ক слож হওয়া উচিত নয়। আমরা চেয়েছি এমন একটি destination যেখানে heritage,
+            modest elegance, এবং modern lifestyle একসাথে থাকবে।
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          {[
+            [
+              "Curated, not crowded",
+              "আমরা quantity-র চেয়ে quality, fabric feel, এবং styling clarity-তে focus করি।",
+            ],
+            [
+              "Bangladesh-first service",
+              "COD, bKash, Nagad, Dhaka fast delivery, এবং nationwide courier support standard।",
+            ],
+            [
+              "Women-first experience",
+              "Size guidance, styling help, festive packaging, এবং thoughtful post-purchase care।",
+            ],
+          ].map(([title, body]) => (
+            <article
+              key={title}
+              className="rounded-[2rem] border border-black/6 bg-white p-7 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            >
+              <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold">{title}</h2>
+              <p className="mt-4 text-base leading-8 text-[#6c5247]">{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </FashionShell>
   );
 }

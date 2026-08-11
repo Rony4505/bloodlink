@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
+import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
@@ -82,7 +83,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="bn" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
         <LocaleProvider>
-          <SiteAppearanceProvider>{children}</SiteAppearanceProvider>
+          <CartProvider>
+            <SiteAppearanceProvider>{children}</SiteAppearanceProvider>
+          </CartProvider>
         </LocaleProvider>
       </body>
     </html>

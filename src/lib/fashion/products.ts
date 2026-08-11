@@ -1,0 +1,275 @@
+import type { Product } from "./types";
+
+export const products: Product[] = [
+  {
+    id: "p1",
+    slug: "noor-signature-silk-set",
+    name: "Noor Signature Silk Set",
+    nameBn: "নূর সিগনেচার সিল্ক সেট",
+    price: 8450,
+    compareAtPrice: 9200,
+    categorySlug: "festive",
+    label: "Best Seller",
+    description:
+      "Soft silk kameez with tailored trousers and a hand-finished organza dupatta for polished festive evenings.",
+    descriptionBn:
+      "নরম সিল্ক কামিজ, টেইলারড ট্রাউজার এবং হ্যান্ড-ফিনিশড organza dupatta—ফেস্টিভ evening look-এর জন্য ideal।",
+    fabric: "Premium silk blend with organza dupatta",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Rose Pearl", hex: "#f8dfd5" },
+      { name: "Mocha Nude", hex: "#d8b3a0" },
+      { name: "Soft Gold", hex: "#e8c9a8" },
+    ],
+    tone: "bg-[#f8efe9]",
+    featured: true,
+    inStock: true,
+  },
+  {
+    id: "p2",
+    slug: "dhaka-pearl-abaya",
+    name: "Dhaka Pearl Abaya",
+    nameBn: "ঢাকা পার্ল আবায়া",
+    price: 6280,
+    categorySlug: "festive",
+    label: "New Arrival",
+    description:
+      "Flowing modest silhouette with pearl cuff detailing and breathable premium nida fabric.",
+    descriptionBn:
+      "Pearl cuff detailing সহ flowing modest silhouette, breathable premium nida fabric-এ তৈরি।",
+    fabric: "Premium nida with pearl embellishment",
+    sizes: ["S", "M", "L", "XL", "XXL"],
+    colors: [
+      { name: "Ivory Pearl", hex: "#f5ece6" },
+      { name: "Warm Taupe", hex: "#c9a995" },
+    ],
+    tone: "bg-[#f5ece6]",
+    featured: true,
+    inStock: true,
+  },
+  {
+    id: "p3",
+    slug: "rose-gold-saree-capsule",
+    name: "Rose Gold Saree Capsule",
+    nameBn: "রোজ গোল্ড শাড়ি ক্যাপসুল",
+    price: 11900,
+    categorySlug: "festive",
+    label: "Limited Edit",
+    description:
+      "Luminous festive saree with blouse piece, soft drape, and gift-ready packaging.",
+    descriptionBn:
+      "Luminous festive saree, blouse piece, soft drape এবং gift-ready packaging সহ।",
+    fabric: "Silk blend with metallic finish",
+    sizes: ["Free Size"],
+    colors: [{ name: "Rose Gold", hex: "#e8b8a0" }],
+    tone: "bg-[#f2e3dc]",
+    featured: true,
+    inStock: true,
+  },
+  {
+    id: "p4",
+    slug: "minimal-luxe-coord",
+    name: "Minimal Luxe Co-ord",
+    nameBn: "মিনিমাল লাক্স কো-অর্ড",
+    price: 5790,
+    categorySlug: "daily",
+    label: "Easy Luxury",
+    description:
+      "Premium daywear co-ord with clean lines, breathable textured cotton, and relaxed tailoring.",
+    descriptionBn:
+      "Clean lines, breathable textured cotton এবং relaxed tailoring-এ premium daywear co-ord।",
+    fabric: "Textured premium cotton",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Sand", hex: "#efe7e1" },
+      { name: "Clay", hex: "#d4b5a5" },
+    ],
+    tone: "bg-[#efe7e1]",
+    featured: true,
+    inStock: true,
+  },
+  {
+    id: "p5",
+    slug: "heritage-jamdani-kameez",
+    name: "Heritage Jamdani Kameez",
+    nameBn: "হেরিটেজ জামদানি কামিজ",
+    price: 9850,
+    categorySlug: "jamdani",
+    label: "Heritage Pick",
+    description:
+      "Artisan-inspired jamdani weave with contemporary cut and lightweight festive drape.",
+    descriptionBn:
+      "Artisan-inspired jamdani weave, contemporary cut এবং lightweight festive drape।",
+    fabric: "Hand-inspired jamdani cotton",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Ivory Mist", hex: "#f5e8dc" },
+      { name: "Blush Rose", hex: "#e8cfc2" },
+    ],
+    tone: "bg-[#f5e8dc]",
+    featured: true,
+    inStock: true,
+  },
+  {
+    id: "p6",
+    slug: "pearl-evening-edit",
+    name: "Pearl Evening Edit",
+    nameBn: "পার্ল ইভনিং এডিট",
+    price: 9990,
+    categorySlug: "festive",
+    label: "Editor's Pick",
+    description:
+      "Satin shimmer with structured drape and delicate embellished finishing for wedding nights.",
+    descriptionBn:
+      "Satin shimmer, structured drape এবং delicate embellished finishing—wedding nights-এর জন্য।",
+    fabric: "Satin blend with embellishment",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Rose Pearl", hex: "#f8dfd5" },
+      { name: "Champagne", hex: "#ead9c8" },
+    ],
+    tone: "bg-[#f6ece6]",
+    inStock: true,
+  },
+  {
+    id: "p7",
+    slug: "soft-gold-jamdani-saree",
+    name: "Soft Gold Jamdani Saree",
+    nameBn: "সফট গোল্ড জামদানি শাড়ি",
+    price: 13450,
+    categorySlug: "jamdani",
+    label: "Premium",
+    description:
+      "Refined jamdani saree with muted gold accents and heirloom-quality finishing.",
+    descriptionBn:
+      "Muted gold accents এবং heirloom-quality finishing-সহ refined jamdani saree।",
+    fabric: "Premium jamdani cotton silk",
+    sizes: ["Free Size"],
+    colors: [{ name: "Soft Gold", hex: "#e8c9a8" }],
+    tone: "bg-[#f0e2d4]",
+    inStock: true,
+  },
+  {
+    id: "p8",
+    slug: "office-luxe-tunic-set",
+    name: "Office Luxe Tunic Set",
+    nameBn: "অফিস লাক্স টিউনিক সেট",
+    price: 4950,
+    categorySlug: "daily",
+    description:
+      "Minimal tunic and trouser set designed for office polish with all-day comfort.",
+    descriptionBn:
+      "Office polish এবং all-day comfort-এর জন্য minimal tunic ও trouser set।",
+    fabric: "Stretch cotton blend",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Stone", hex: "#e8ddd6" },
+      { name: "Espresso", hex: "#6f4f43" },
+    ],
+    tone: "bg-[#ece4de]",
+    inStock: true,
+  },
+  {
+    id: "p9",
+    slug: "eid-modest-three-piece",
+    name: "Eid Modest Three Piece",
+    nameBn: "ঈদ মডেস্ট থ্রি পিস",
+    price: 7650,
+    compareAtPrice: 8400,
+    categorySlug: "festive",
+    label: "Eid Favorite",
+    description:
+      "Complete modest festive set with kameez, inner, and dupatta in a soft luxury palette.",
+    descriptionBn:
+      "Kameez, inner এবং dupatta-সহ complete modest festive set, soft luxury palette-এ।",
+    fabric: "Premium viscose with organza dupatta",
+    sizes: ["S", "M", "L", "XL", "XXL"],
+    colors: [
+      { name: "Dusty Rose", hex: "#e7c8bc" },
+      { name: "Mocha", hex: "#b8927f" },
+    ],
+    tone: "bg-[#f3e7e1]",
+    inStock: true,
+  },
+  {
+    id: "p10",
+    slug: "cafe-day-linen-dress",
+    name: "Cafe Day Linen Dress",
+    nameBn: "ক্যাফে ডে লিনেন ড্রেস",
+    price: 4290,
+    categorySlug: "daily",
+    description:
+      "Relaxed linen dress with subtle waist shaping and breathable premium finish.",
+    descriptionBn:
+      "Subtle waist shaping এবং breathable premium finish-সহ relaxed linen dress।",
+    fabric: "Premium linen blend",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Oat", hex: "#efe4dd" },
+      { name: "Sage", hex: "#c8d3c4" },
+    ],
+    tone: "bg-[#efe4dd]",
+    inStock: true,
+  },
+  {
+    id: "p11",
+    slug: "woven-jamdani-kurta",
+    name: "Woven Jamdani Kurta",
+    nameBn: "উভেন জামদানি কুর্তা",
+    price: 6120,
+    categorySlug: "jamdani",
+    description:
+      "Lightweight jamdani kurta with artisan texture and easy pairing for day events.",
+    descriptionBn:
+      "Artisan texture এবং day events-এ easy pairing-এর জন্য lightweight jamdani kurta।",
+    fabric: "Woven jamdani cotton",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Cloud White", hex: "#faf6f2" },
+      { name: "Blush", hex: "#edd5ca" },
+    ],
+    tone: "bg-[#faf0ea]",
+    inStock: true,
+  },
+  {
+    id: "p12",
+    slug: "bridal-guest-gown",
+    name: "Bridal Guest Gown",
+    nameBn: "ব্রাইডাল গেস্ট গাউন",
+    price: 14200,
+    categorySlug: "festive",
+    label: "Occasion Edit",
+    description:
+      "Floor-length modest gown with refined embellishment and a softly structured silhouette.",
+    descriptionBn:
+      "Refined embellishment এবং softly structured silhouette-সহ floor-length modest gown।",
+    fabric: "Georgette with inner lining",
+    sizes: ["S", "M", "L", "XL"],
+    colors: [
+      { name: "Champagne Blush", hex: "#ead9c8" },
+      { name: "Deep Rose", hex: "#c99286" },
+    ],
+    tone: "bg-[#efe0d8]",
+    inStock: true,
+  },
+];
+
+export function getProduct(slug: string): Product | undefined {
+  return products.find((product) => product.slug === slug);
+}
+
+export function getFeaturedProducts(): Product[] {
+  return products.filter((product) => product.featured);
+}
+
+export function getProductsByCategory(categorySlug: string): Product[] {
+  return products.filter((product) => product.categorySlug === categorySlug);
+}
+
+export function getRelatedProducts(product: Product, limit = 4): Product[] {
+  return products
+    .filter(
+      (item) => item.categorySlug === product.categorySlug && item.id !== product.id,
+    )
+    .slice(0, limit);
+}
