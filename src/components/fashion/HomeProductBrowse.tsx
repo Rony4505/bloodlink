@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ProductGrid } from "@/components/fashion/ProductGrid";
-import { copy } from "@/lib/fashion/copy";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
+import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { Category, Product } from "@/lib/fashion/types";
 
 type PriceSort = "default" | "price-asc" | "price-desc";
@@ -23,16 +23,18 @@ function PriceSortSelect({
   value: PriceSort;
   onChange: (value: PriceSort) => void;
 }) {
+  const { fc } = useFashionCopy();
+
   return (
     <select
       className="field w-auto min-w-[180px] text-sm"
       value={value}
       onChange={(e) => onChange(e.target.value as PriceSort)}
-      aria-label="দাম অনুযায়ী সাজান"
+      aria-label={fc.home.sortPrice}
     >
-      <option value="default">{copy.search.sortFeatured}</option>
-      <option value="price-asc">{copy.search.sortPriceLow}</option>
-      <option value="price-desc">{copy.search.sortPriceHigh}</option>
+      <option value="default">{fc.search.sortFeatured}</option>
+      <option value="price-asc">{fc.search.sortPriceLow}</option>
+      <option value="price-desc">{fc.search.sortPriceHigh}</option>
     </select>
   );
 }
@@ -83,6 +85,7 @@ export function HomeProductBrowse({
   newProducts: Product[];
   offerProducts: Product[];
 }) {
+  const { fc } = useFashionCopy();
   const [categorySlug, setCategorySlug] = useState("");
   const [categorySort, setCategorySort] = useState<PriceSort>("default");
   const [newSort, setNewSort] = useState<PriceSort>("default");
@@ -104,14 +107,12 @@ export function HomeProductBrowse({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.28em] text-[#9b7766]">
-                ক্যাটাগরি
+                {fc.home.categoryTitle}
               </p>
               <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold md:text-4xl">
-                {selectedCategory ? selectedCategory.titleBn : "সব প্রোডাক্ট"}
+                {selectedCategory ? selectedCategory.titleBn : fc.home.allProducts}
               </h2>
-              <p className="mt-2 text-sm text-[#6e5449]">
-                ক্যাটাগরি বেছে নিন — নিচে সেই অনুযায়ী প্রোডাক্ট দেখাবে
-              </p>
+              <p className="mt-2 text-sm text-[#6e5449]">{fc.home.categoryHint}</p>
             </div>
             <PriceSortSelect value={categorySort} onChange={setCategorySort} />
           </div>
@@ -126,7 +127,7 @@ export function HomeProductBrowse({
                   : "border border-[#e8c4b0]/60 bg-white text-[#6f554a] hover:bg-[#faf4f0]"
               }`}
             >
-              {copy.search.allCategories}
+              {fc.search.allCategories}
             </button>
             {categories.map((cat) => (
               <button
@@ -151,16 +152,16 @@ export function HomeProductBrowse({
       </section>
 
       <ProductSection
-        title="নতুন প্রোডাক্ট"
-        subtitle="সম্প্রতি যোগ হওয়া নতুন আইটেম"
+        title={fc.home.newProducts}
+        subtitle={fc.home.newProductsSub}
         products={newProducts}
         sort={newSort}
         onSortChange={setNewSort}
       />
 
       <ProductSection
-        title="অফার ও ডিসকাউন্ট"
-        subtitle="বিশেষ ছাড়ে পাওয়া প্রোডাক্ট"
+        title={fc.home.offers}
+        subtitle={fc.home.offersSub}
         products={offerProducts}
         sort={offerSort}
         onSortChange={setOfferSort}

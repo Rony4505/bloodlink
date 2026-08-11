@@ -3,11 +3,12 @@
 import { useState } from "react";
 import type { Product } from "@/lib/fashion/types";
 import { useCart } from "@/lib/fashion/cart-context";
-import { copy } from "@/lib/fashion/copy";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
+import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { FashionButton } from "./FashionButton";
 
 export function AddToCartPanel({ product }: { product: Product }) {
+  const { fc } = useFashionCopy();
   const { addItem } = useCart();
   const [size, setSize] = useState(product.sizes[0] ?? "Free Size");
   const [color, setColor] = useState(product.colors[0]?.name ?? "Default");
@@ -28,12 +29,12 @@ export function AddToCartPanel({ product }: { product: Product }) {
     <div className="rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]">
       {!inStock ? (
         <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
-          {copy.cart.outOfStock}
+          {fc.actions.outOfStock}
         </p>
       ) : null}
 
       <div>
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">সাইজ</p>
+        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">{fc.actions.size}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {product.sizes.map((option) => (
             <button
@@ -53,7 +54,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
       </div>
 
       <div className="mt-6">
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">রং</p>
+        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">{fc.actions.color}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {product.colors.map((option) => (
             <button
@@ -78,7 +79,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
 
       <div className="mt-6">
         <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">
-          পরিমাণ (স্টক: {maxQty})
+          {fc.actions.quantity} ({fc.home.stock}: {maxQty})
         </p>
         <div className="mt-3 inline-flex items-center rounded-full border border-black/8 bg-[#faf4f0]">
           <button
@@ -102,10 +103,10 @@ export function AddToCartPanel({ product }: { product: Product }) {
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <FashionButton onClick={handleAdd} disabled={!inStock || quantity > maxQty}>
-          {added ? copy.actions.addedToCart : copy.actions.addToCart}
+          {added ? fc.actions.addedToCart : fc.actions.addToCart}
         </FashionButton>
         <FashionButton href="/cart" variant="secondary">
-          {copy.actions.viewCart}
+          {fc.actions.viewCart}
         </FashionButton>
       </div>
     </div>

@@ -24,6 +24,7 @@ import type {
 } from "./types";
 import { computeAnalytics } from "./analytics";
 import { generateTrackingNumber } from "./tracking";
+import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
 
 const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
 const storePath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-store.json");
@@ -93,8 +94,56 @@ function migrateProduct(product: Partial<Product>, settings: StoreSettings): Pro
     offerLabel: product.offerLabel,
     offerDiscountPercent: product.offerDiscountPercent,
     isNew: product.isNew,
+    advertiseActive: product.advertiseActive,
+    advertiseKind: product.advertiseKind,
+    advertiseLabel: product.advertiseLabel,
     createdAt: product.createdAt ?? new Date().toISOString(),
   };
+}
+
+function normalizeProductSlugs(store: FashionStore): boolean {
+  let changed = false;
+  const slugMap = new Map<string, string>();
+
+  for (const product of store.products) {
+    const nextSlug = buildProductSlug(product, product.id);
+    if (product.slug !== nextSlug) {
+      slugMap.set(product.slug, nextSlug);
+      product.slug = nextSlug;
+      changed = true;
+    } else if (!isAsciiProductSlug(product.slug)) {
+      const fixed = buildProductSlug(product, product.id);
+      slugMap.set(product.slug, fixed);
+      product.slug = fixed;
+      changed = true;
+    }
+  }
+
+  if (slugMap.size > 0) {
+    for (const banner of store.settings.promoBanners ?? []) {
+      if (banner.linkSlug && slugMap.has(banner.linkSlug)) {
+        banner.linkSlug = slugMap.get(banner.linkSlug)!;
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
+function advertiseBadge(product: Product): string {
+  switch (product.advertiseKind) {
+    case "new":
+      return "নতুন";
+    case "discount":
+      return product.offerDiscountPercent ? `${product.offerDiscountPercent}% ছাড়` : "ডিসকাউন্ট";
+    case "offer":
+      return product.advertiseLabel || product.offerLabel || "অফার";
+    case "custom":
+      return product.advertiseLabel || "অফার";
+    default:
+      return product.advertiseLabel || "অফার";
+  }
 }
 
 function migrateOrder(order: Partial<FashionOrder>): FashionOrder {
@@ -156,6 +205,7 @@ async function ensureStore(): Promise<FashionStore> {
         (await bcrypt.hash(process.env.FASHION_ADMIN_PASSWORD || "nooreadmin", 12)),
     };
     if (purgeExpired(store)) await writeStore(store);
+    if (normalizeProductSlugs(store)) await writeStore(store);
     return store;
   } catch {
     await mkdir(dataDir, { recursive: true });
@@ -238,7 +288,10 @@ export async function listProducts(): Promise<Product[]> {
 
 export async function getProductBySlug(slug: string): Promise<Product | undefined> {
   const store = await ensureStore();
-  return store.products.find((product) => product.slug === slug);
+  const decoded = decodeURIComponent(slug);
+  return store.products.find(
+    (product) => product.slug === slug || product.slug === decoded,
+  );
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
@@ -275,15 +328,21 @@ export async function getRelatedProducts(product: Product, limit = 4): Promise<P
 }
 
 function resolveProductPrice(input: ProductInput, settings: StoreSettings): Product {
+  const id = input.id ?? `p${Date.now()}`;
   const buyPrice = input.buyPrice ?? Math.round((input.price ?? 0) / 1.35);
   const basePrice = computeSellPrice(buyPrice, settings, input);
   const stock = input.stock ?? 0;
+  const pricingMode = input.pricingMode ?? "manual";
+  const price = (input.price ?? 0) > 0 ? input.price! : basePrice;
   return {
-    id: input.id ?? `p${Date.now()}`,
-    slug: input.slug ?? slugify(input.nameBn || input.name),
+    id,
+    slug: buildProductSlug(
+      { slug: input.slug, name: input.name, nameBn: input.nameBn, id },
+      id,
+    ),
     name: input.name,
     nameBn: input.nameBn,
-    price: input.pricingMode === "manual" && input.price ? input.price : basePrice,
+    price,
     buyPrice,
     compareAtPrice: input.compareAtPrice,
     categorySlug: input.categorySlug,
@@ -298,13 +357,15 @@ function resolveProductPrice(input: ProductInput, settings: StoreSettings): Prod
     stock,
     featured: input.featured,
     inStock: stock > 0,
-    pricingMode: input.pricingMode,
+    pricingMode,
     markupPercent: input.markupPercent,
     offerActive: input.offerActive,
     offerLabel: input.offerLabel,
     offerDiscountPercent: input.offerDiscountPercent,
     isNew: input.isNew ?? !input.id,
     advertiseActive: input.advertiseActive,
+    advertiseKind: input.advertiseKind,
+    advertiseLabel: input.advertiseLabel,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
 }
@@ -317,9 +378,11 @@ function syncProductAdvertisement(store: FashionStore, product: Product): void {
     const banner: PromoBanner = {
       id: existingIndex >= 0 ? banners[existingIndex].id : `pb-${product.id}`,
       imageUrl: product.imageUrl,
-      title: product.nameBn,
+      title: product.advertiseLabel || product.nameBn,
       linkSlug: product.slug,
       productId: product.id,
+      badgeLabel: advertiseBadge(product),
+      advertiseKind: product.advertiseKind,
       active: true,
       sortOrder: existingIndex >= 0 ? banners[existingIndex].sortOrder : banners.length,
     };

@@ -18,6 +18,7 @@ import { formatBdt } from "@/lib/fashion/format";
 import type {
   AdminNotification,
   AnalyticsSummary,
+  AdvertiseKind,
   Category,
   Coupon,
   FashionOrder,
@@ -36,7 +37,7 @@ const emptyProduct: ProductInput = {
   description: "", descriptionBn: "", fabric: "", sizes: ["S", "M", "L"],
   colors: [{ name: "Default", hex: "#f8efe9" }], tone: "bg-[#f8efe9]",
   imageUrl: "https://images.unsplash.com/photo-1595777457582-31a4f8e1a5c5?auto=format&fit=crop&w=900&q=80",
-  stock: 25, inStock: true, featured: false, pricingMode: "markup", advertiseActive: false,
+  stock: 25, inStock: true, featured: false, pricingMode: "manual", advertiseActive: false,
 };
 
 const emptyCoupon: Coupon = { id: "", code: "", discountType: "percent", discountValue: 10, active: true };
@@ -85,6 +86,9 @@ export function FashionAdminPanel() {
   const [newCategoryTitleBn, setNewCategoryTitleBn] = useState("");
   const [newCategorySlug, setNewCategorySlug] = useState("");
   const [pendingDeleteProduct, setPendingDeleteProduct] = useState<Product | null>(null);
+  const [advertiseModalOpen, setAdvertiseModalOpen] = useState(false);
+  const [advertiseKind, setAdvertiseKind] = useState<AdvertiseKind>("new");
+  const [advertiseLabel, setAdvertiseLabel] = useState("");
   const [uploadBannerId, setUploadBannerId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bannerFileRef = useRef<HTMLInputElement>(null);
@@ -136,6 +140,8 @@ export function FashionAdminPanel() {
         product.advertiseActive ??
         settings?.promoBanners?.some((b) => b.productId === product.id && b.active) ??
         false,
+      advertiseKind: product.advertiseKind,
+      advertiseLabel: product.advertiseLabel,
     });
     setProductModalOpen(true);
   }
@@ -206,7 +212,7 @@ export function FashionAdminPanel() {
     const res = await fetch(editingId ? `/api/fashion/products/${editingId}` : "/api/fashion/products", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, categorySlug }),
+      body: JSON.stringify({ ...form, categorySlug, pricingMode: "manual" }),
     });
     if (!res.ok) return;
     setProductModalOpen(false);
@@ -341,19 +347,43 @@ export function FashionAdminPanel() {
 
   const activeRule = getRuleForDistrict(selectedDistrict);
   const activeRuleIndex = settings?.deliveryRules.findIndex((r) => r.district === selectedDistrict) ?? -1;
+  function openAdvertiseSetup() {
+    setAdvertiseKind(form.advertiseKind ?? "new");
+    setAdvertiseLabel(form.advertiseLabel ?? "");
+    setAdvertiseModalOpen(true);
+  }
+
+  function confirmAdvertiseSetup() {
+    setForm((current) => ({
+      ...current,
+      advertiseActive: true,
+      advertiseKind,
+      advertiseLabel: advertiseKind === "custom" ? advertiseLabel.trim() : undefined,
+    }));
+    setAdvertiseModalOpen(false);
+  }
+
+  function disableAdvertise() {
+    setForm((current) => ({
+      ...current,
+      advertiseActive: false,
+      advertiseKind: undefined,
+      advertiseLabel: undefined,
+    }));
+  }
+
   const unreadCount = adminNotifications.filter((n) => !n.read).length;
   const filteredDistricts = bangladeshDistricts.filter((d) => {
     const q = districtSearch.trim().toLowerCase();
     if (!q) return true;
     return d.toLowerCase().includes(q);
   });
-  const brandLabel = settings?.brandName?.trim() || copy.brand;
 
   return (
     <AdminShell>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">{brandLabel}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">Founder</p>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">{copy.admin.title}</h1>
           {unreadCount > 0 ? <p className="mt-2 text-sm text-[#b86a2e]">{unreadCount} নতুন অর্ডার</p> : null}
         </div>
@@ -708,10 +738,35 @@ export function FashionAdminPanel() {
                 <FashionButton type="button" variant="secondary" onClick={() => void addProductSize()}>যোগ</FashionButton>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={Boolean(form.advertiseActive)} onChange={(e) => setForm((c) => ({ ...c, advertiseActive: e.target.checked }))} />
-              হোমপেজ advertise/carousel-এ দেখান
-            </label>
+            <div className="rounded-2xl border border-black/6 bg-white/80 p-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.advertiseActive)}
+                  onChange={(e) => {
+                    if (e.target.checked) openAdvertiseSetup();
+                    else disableAdvertise();
+                  }}
+                />
+                হোমপেজ advertise/carousel-এ দেখান
+              </label>
+              {form.advertiseActive ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#6f554a]">
+                  <span className="rounded-full bg-[#faf0ea] px-3 py-1 font-semibold">
+                    {form.advertiseKind === "new"
+                      ? "নতুন প্রোডাক্ট"
+                      : form.advertiseKind === "discount"
+                        ? "ডিসকাউন্ট"
+                        : form.advertiseKind === "offer"
+                          ? "অফার"
+                          : form.advertiseLabel || "কাস্টম"}
+                  </span>
+                  <button type="button" className="font-semibold text-[#8f624e]" onClick={openAdvertiseSetup}>
+                    advertise সেটিং পরিবর্তন
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={Boolean(form.offerActive)} onChange={(e) => setForm((c) => ({ ...c, offerActive: e.target.checked }))} />
               অফার/ডিসকাউন্ট প্রোডাক্ট
@@ -733,6 +788,45 @@ export function FashionAdminPanel() {
         title="স্ট্যাটাস নিশ্চিত করুন" message={pendingStatus ? `${copy.orderStatus[pendingStatus.status]}?` : ""} confirmLabel="হ্যাঁ" theme="ocean" />
       <AdminConfirmModal open={Boolean(pendingDeleteProduct)} onClose={() => setPendingDeleteProduct(null)} onConfirm={confirmDeleteProduct}
         title="প্রোডাক্ট মুছবেন?" message={pendingDeleteProduct ? `${pendingDeleteProduct.nameBn} স্থায়ীভাবে মুছে ফেলা হবে।` : ""} confirmLabel="মুছুন" theme="rose" />
+
+      {advertiseModalOpen ? (
+        <div className="fixed inset-0 z-[82] flex items-center justify-center bg-[#2b1d19]/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-[2rem] border border-[#e8c4b0]/60 bg-[linear-gradient(160deg,#fff8f4,#fdeee4)] p-6 shadow-2xl">
+            <h3 className="font-[family-name:var(--font-display)] text-2xl font-bold">Advertise হিসেবে দেখাবেন?</h3>
+            <p className="mt-2 text-sm text-[#6f554a]">homepage carousel-এ কী ধরনের advertise দেখাবে select করুন</p>
+            <div className="mt-4 space-y-2">
+              {([
+                ["new", "নতুন প্রোডাক্ট"],
+                ["discount", "ডিসকাউন্ট"],
+                ["offer", "অফার"],
+                ["custom", "অন্যান্য (নিজে লিখুন)"],
+              ] as const).map(([kind, label]) => (
+                <label key={kind} className="flex cursor-pointer items-center gap-3 rounded-xl border border-black/6 bg-white/80 px-4 py-3">
+                  <input type="radio" name="advertiseKind" checked={advertiseKind === kind} onChange={() => setAdvertiseKind(kind)} />
+                  <span className="font-semibold">{label}</span>
+                </label>
+              ))}
+            </div>
+            {advertiseKind === "custom" ? (
+              <input
+                className="field mt-3"
+                placeholder="যেমন: Summer Sale, Best Seller..."
+                value={advertiseLabel}
+                onChange={(e) => setAdvertiseLabel(e.target.value)}
+              />
+            ) : null}
+            <div className="mt-5 flex gap-2">
+              <FashionButton type="button" variant="secondary" className="flex-1" onClick={() => setAdvertiseModalOpen(false)}>
+                {copy.actions.close}
+              </FashionButton>
+              <FashionButton type="button" className="flex-1" onClick={confirmAdvertiseSetup}>
+                Confirm
+              </FashionButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <AdminSuccessModal open={Boolean(success)} onClose={() => setSuccess(null)} title={success?.title ?? ""} message={success?.message ?? ""} theme={success?.theme ?? "rose"} />
     </AdminShell>
   );

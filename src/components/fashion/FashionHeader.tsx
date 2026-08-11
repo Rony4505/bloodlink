@@ -4,19 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "@/lib/fashion/cart-context";
-import { copy } from "@/lib/fashion/copy";
 import { cn } from "@/lib/fashion/cn";
-
-const links = [
-  { href: "/collections", label: copy.nav.collections },
-  { href: "/track", label: copy.nav.track },
-  { href: "/about", label: copy.nav.about },
-  { href: "/contact", label: copy.nav.contact },
-];
+import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
+import { useLocale } from "@/lib/i18n/locale-context";
+import { copy } from "@/lib/fashion/copy";
 
 export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark" }) {
   const pathname = usePathname();
   const { itemCount } = useCart();
+  const { fc } = useFashionCopy();
+  const { toggleLocale } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
   const [unread, setUnread] = useState(0);
   const [brand, setBrand] = useState(copy.brand);
@@ -55,6 +52,13 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   const idleClass = isDark
     ? "text-white/85 hover:bg-white/12 hover:text-white"
     : "text-[#7a5c50] hover:bg-[#faf0ea] hover:text-[#4a2f28]";
+
+  const links = [
+    { href: "/collections", label: fc.nav.collections },
+    { href: "/track", label: fc.nav.track },
+    { href: "/about", label: fc.nav.about },
+    { href: "/contact", label: fc.nav.contact },
+  ];
 
   return (
     <header
@@ -99,7 +103,7 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
                 pathname.startsWith("/account") ? activeClass : idleClass,
               )}
             >
-              {copy.nav.account}
+              {fc.nav.account}
               {unread > 0 ? (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#e8a598] text-[10px] font-bold text-white">
                   {unread}
@@ -111,9 +115,17 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
               href="/account/login"
               className={cn("rounded-full px-3.5 py-1.5 font-medium transition duration-200", idleClass)}
             >
-              {copy.nav.login}
+              {fc.nav.login}
             </Link>
           )}
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className={cn("rounded-full px-3.5 py-1.5 font-medium transition duration-200", idleClass)}
+            aria-label="Toggle language"
+          >
+            {fc.language}
+          </button>
           <Link
             href="/cart"
             className={cn(
@@ -123,7 +135,7 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
                 : "bg-[linear-gradient(135deg,#d4a574,#f0c9a8)] text-[#3d2a24] hover:opacity-90 shadow-md",
             )}
           >
-            {copy.nav.cart}
+            {fc.nav.cart}
             {itemCount > 0 ? ` (${itemCount})` : ""}
           </Link>
         </nav>

@@ -18,7 +18,7 @@ export function buildCarouselSlides(
     imageUrl: b.imageUrl,
     href: b.linkSlug ? `/products/${b.linkSlug}` : "/collections",
     label: b.title,
-    badge: "অফার",
+    badge: b.badgeLabel ?? "অফার",
   }));
 
   for (const product of offers) {

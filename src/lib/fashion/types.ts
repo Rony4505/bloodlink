@@ -30,12 +30,16 @@ export type Coupon = {
   active: boolean;
 };
 
+export type AdvertiseKind = "new" | "discount" | "offer" | "custom";
+
 export type PromoBanner = {
   id: string;
   imageUrl: string;
   title?: string;
   linkSlug?: string;
   productId?: string;
+  badgeLabel?: string;
+  advertiseKind?: AdvertiseKind;
   active: boolean;
   expiresAt?: string;
   sortOrder: number;
@@ -88,6 +92,8 @@ export type Product = {
   offerDiscountPercent?: number;
   isNew?: boolean;
   advertiseActive?: boolean;
+  advertiseKind?: AdvertiseKind;
+  advertiseLabel?: string;
   createdAt: string;
 };
 
