@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import CheckoutSuccessClient from "./CheckoutSuccessClient";
+import SearchPageClient from "./SearchPageClient";
 
-export default function CheckoutSuccessPage() {
+export default function SearchPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#fffaf7]" />}>
-      <CheckoutSuccessClient />
+      <SearchPageClient />
     </Suspense>
   );
 }

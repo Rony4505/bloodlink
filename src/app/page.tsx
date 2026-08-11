@@ -1,5 +1,5 @@
 import { FashionHomePage } from "@/components/FashionHomePage";
 
-export default function Home() {
+export default async function Home() {
   return <FashionHomePage />;
 }

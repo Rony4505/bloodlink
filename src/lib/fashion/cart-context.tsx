@@ -76,6 +76,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             color,
             quantity,
             tone: product.tone,
+            imageUrl: product.imageUrl,
           },
         ];
       });

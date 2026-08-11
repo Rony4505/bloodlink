@@ -3,7 +3,8 @@ import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
 import { ProductCard } from "@/components/fashion/ProductCard";
 import { categories } from "@/lib/fashion/categories";
-import { getFeaturedProducts } from "@/lib/fashion/products";
+import { copy } from "@/lib/fashion/copy";
+import { getFeaturedProducts } from "@/lib/fashion/store";
 
 const serviceHighlights = [
   "ঢাকা সিটিতে দ্রুত ডেলিভারি এবং সারা বাংলাদেশে কুরিয়ার সাপোর্ট",
@@ -45,8 +46,8 @@ const faqs = [
   },
 ];
 
-export function FashionHomePage() {
-  const featuredProducts = getFeaturedProducts();
+export async function FashionHomePage() {
+  const featuredProducts = await getFeaturedProducts();
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-[#241815]">
