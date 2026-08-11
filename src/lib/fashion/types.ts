@@ -47,6 +47,21 @@ export type PromoBanner = {
   sortOrder: number;
 };
 
+export type AboutPillar = {
+  title: string;
+  body: string;
+};
+
+export type FaqItem = {
+  question: string;
+  answer: string;
+};
+
+export type TestimonialItem = {
+  quote: string;
+  author: string;
+};
+
 export type StoreSettings = {
   brandName: string;
   brandTagline: string;
@@ -56,13 +71,43 @@ export type StoreSettings = {
   heroTitle?: string;
   heroSubtitle?: string;
   heroDescription?: string;
+  heroCtaPrimaryLabel?: string;
+  heroCtaPrimaryHref?: string;
+  heroCtaSecondaryLabel?: string;
+  heroCtaSecondaryHref?: string;
+  heroStat1Value?: string;
+  heroStat1Label?: string;
+  heroStat2Value?: string;
+  heroStat2Label?: string;
+  heroStat3Value?: string;
+  heroStat3Label?: string;
   contactEmail?: string;
   contactPhone?: string;
   whatsapp?: string;
+  supportNote?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
   footerText?: string;
+  aboutTitle?: string;
+  aboutSubtitle?: string;
   aboutText?: string;
+  aboutPillars?: AboutPillar[];
   freeShippingNote?: string;
+  announcementEnabled?: boolean;
+  announcementText?: string;
+  featuresTitle?: string;
+  featuresBody?: string;
+  serviceHighlights?: string[];
+  testimonials?: TestimonialItem[];
+  faqs?: FaqItem[];
   showCouponsOnHome?: boolean;
+  showNewProducts?: boolean;
+  showOffers?: boolean;
+  showFeatures?: boolean;
+  showTestimonials?: boolean;
+  showFaq?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
   promoBanners?: PromoBanner[];
   availableSizes?: string[];
 };

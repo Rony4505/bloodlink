@@ -4,19 +4,28 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { copy } from "@/lib/fashion/copy";
+import type { StoreSettings } from "@/lib/fashion/types";
 
 export function FashionFooter() {
   const { fc } = useFashionCopy();
   const [brand, setBrand] = useState(copy.brand);
+  const [settings, setSettings] = useState<Partial<StoreSettings>>({});
 
   useEffect(() => {
     fetch("/api/fashion/settings")
       .then((r) => r.json())
       .then((data) => {
         if (data.settings?.brandName) setBrand(data.settings.brandName);
+        if (data.settings) setSettings(data.settings);
       })
       .catch(() => undefined);
   }, []);
+
+  const phone = settings.contactPhone || "+880 1XXX-XXXXXX";
+  const email = settings.contactEmail || "hello@slowgun.com";
+  const whatsapp = settings.whatsapp || "8801700000000";
+  const supportNote = settings.supportNote || "Dhaka delivery + nationwide courier";
+  const blurb = settings.footerText || fc.footer.blurb;
 
   return (
     <footer className="border-t border-black/5 bg-[#2b1d19] px-5 py-14 text-white md:px-8">
@@ -25,7 +34,21 @@ export function FashionFooter() {
           <p className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-[0.18em] uppercase">
             {brand}
           </p>
-          <p className="mt-4 max-w-md text-base leading-8 text-white/72">{fc.footer.blurb}</p>
+          <p className="mt-4 max-w-md text-base leading-8 text-white/72">{blurb}</p>
+          {(settings.facebookUrl || settings.instagramUrl) && (
+            <div className="mt-5 flex gap-4 text-sm text-white/70">
+              {settings.facebookUrl ? (
+                <a href={settings.facebookUrl} target="_blank" rel="noreferrer" className="hover:text-white">
+                  Facebook
+                </a>
+              ) : null}
+              {settings.instagramUrl ? (
+                <a href={settings.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-white">
+                  Instagram
+                </a>
+              ) : null}
+            </div>
+          )}
         </div>
 
         <div>
@@ -45,9 +68,19 @@ export function FashionFooter() {
             {fc.footer.support}
           </p>
           <div className="mt-4 space-y-3 text-white/78">
-            <p>WhatsApp: +880 1XXX-XXXXXX</p>
-            <p>Email: hello@slowgun.com</p>
-            <p>Dhaka delivery + nationwide courier</p>
+            <p>
+              WhatsApp:{" "}
+              <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`} className="hover:text-white">
+                {phone}
+              </a>
+            </p>
+            <p>
+              Email:{" "}
+              <a href={`mailto:${email}`} className="hover:text-white">
+                {email}
+              </a>
+            </p>
+            <p>{supportNote}</p>
           </div>
         </div>
       </div>

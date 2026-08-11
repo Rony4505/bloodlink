@@ -11,6 +11,7 @@ import {
 } from "@/components/fashion/admin/AdminShell";
 import { OrderInvoiceView } from "@/components/fashion/admin/OrderInvoiceView";
 import { ReportContent, type ReportType } from "@/components/fashion/admin/ReportContent";
+import { SettingsEditor } from "@/components/fashion/admin/SettingsEditor";
 import { adminThemes, type AdminTheme } from "@/components/fashion/admin/admin-themes";
 import { copy } from "@/lib/fashion/copy";
 import { advertiseKindLabel } from "@/lib/fashion/i18n";
@@ -896,15 +897,24 @@ export function FashionAdminPanel() {
         )}
       </AdminModal>
 
-      <AdminModal open={activeTab === "settings"} onClose={() => setActiveTab(null)} title={fc.admin.settings} theme="gold" wide>
+      <AdminModal
+        open={activeTab === "settings"}
+        onClose={() => setActiveTab(null)}
+        title={fc.admin.settings}
+        subtitle={fc.admin.settingsHint}
+        theme="gold"
+        wide="xl"
+      >
         {settings ? (
-          <div className="space-y-4">
-            {[["brandName", "ব্র্যান্ড"], ["brandTagline", "ট্যাগলাইন"], ["heroTitle", "হিরো"], ["contactPhone", "ফোন"], ["whatsapp", "WhatsApp"]].map(([key, label]) => (
-              <label key={key} className="block"><span className="text-xs text-[#9b7766]">{label}</span>
-                <input className="field mt-1" value={String(settings[key as keyof StoreSettings] ?? "")} onChange={(e) => setSettings({ ...settings, [key]: e.target.value })} /></label>
-            ))}
-            <FashionButton onClick={saveSettings}>{copy.actions.save}</FashionButton>
-          </div>
+          <SettingsEditor
+            settings={settings}
+            setSettings={setSettings}
+            onSave={saveSettings}
+            newSize={newSize}
+            setNewSize={setNewSize}
+            onAddSize={addSize}
+            onRemoveSize={removeSize}
+          />
         ) : null}
       </AdminModal>
 

@@ -79,11 +79,15 @@ export function HomeProductBrowse({
   products,
   newProducts,
   offerProducts,
+  showNewProducts = true,
+  showOffers = true,
 }: {
   categories: Category[];
   products: Product[];
   newProducts: Product[];
   offerProducts: Product[];
+  showNewProducts?: boolean;
+  showOffers?: boolean;
 }) {
   const { fc } = useFashionCopy();
   const [categorySlug, setCategorySlug] = useState("");
@@ -151,21 +155,25 @@ export function HomeProductBrowse({
         </div>
       </section>
 
-      <ProductSection
-        title={fc.home.newProducts}
-        subtitle={fc.home.newProductsSub}
-        products={newProducts}
-        sort={newSort}
-        onSortChange={setNewSort}
-      />
+      {showNewProducts ? (
+        <ProductSection
+          title={fc.home.newProducts}
+          subtitle={fc.home.newProductsSub}
+          products={newProducts}
+          sort={newSort}
+          onSortChange={setNewSort}
+        />
+      ) : null}
 
-      <ProductSection
-        title={fc.home.offers}
-        subtitle={fc.home.offersSub}
-        products={offerProducts}
-        sort={offerSort}
-        onSortChange={setOfferSort}
-      />
+      {showOffers ? (
+        <ProductSection
+          title={fc.home.offers}
+          subtitle={fc.home.offersSub}
+          products={offerProducts}
+          sort={offerSort}
+          onSortChange={setOfferSort}
+        />
+      ) : null}
     </>
   );
 }

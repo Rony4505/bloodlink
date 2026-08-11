@@ -42,6 +42,10 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
       : defaultSettings.deliveryRules,
     promoBanners: parsed?.promoBanners ?? defaultSettings.promoBanners ?? [],
     availableSizes: parsed?.availableSizes ?? defaultSettings.availableSizes,
+    aboutPillars: parsed?.aboutPillars ?? defaultSettings.aboutPillars,
+    serviceHighlights: parsed?.serviceHighlights ?? defaultSettings.serviceHighlights,
+    testimonials: parsed?.testimonials ?? defaultSettings.testimonials,
+    faqs: parsed?.faqs ?? defaultSettings.faqs,
   };
 }
 
@@ -90,7 +94,7 @@ function migrateProduct(product: Partial<Product>, settings: StoreSettings): Pro
     computeSellPrice(buyPrice, settings, {
       pricingMode: product.pricingMode,
       markupPercent: product.markupPercent,
-      ...(product.price !== undefined ? { price: product.price } : {}),
+      price: product.price ?? 0,
     });
   const stock = product.stock ?? (product.inStock === false ? 0 : 25);
   return {
@@ -274,6 +278,11 @@ export async function updateStoreSettings(partial: Partial<StoreSettings>): Prom
     ...partial,
     deliveryRules: partial.deliveryRules ?? current.deliveryRules,
     promoBanners: partial.promoBanners ?? current.promoBanners ?? [],
+    availableSizes: partial.availableSizes ?? current.availableSizes,
+    aboutPillars: partial.aboutPillars ?? current.aboutPillars,
+    serviceHighlights: partial.serviceHighlights ?? current.serviceHighlights,
+    testimonials: partial.testimonials ?? current.testimonials,
+    faqs: partial.faqs ?? current.faqs,
   };
   purgeExpired(store);
   await writeStore(store);

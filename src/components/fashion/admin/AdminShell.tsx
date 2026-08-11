@@ -28,7 +28,7 @@ export function AdminModal({
   subtitle?: string;
   theme?: AdminTheme;
   children: ReactNode;
-  wide?: boolean;
+  wide?: boolean | "xl";
 }) {
   if (!open) return null;
   const t = adminThemes[theme];
@@ -36,7 +36,7 @@ export function AdminModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[#2b1d19]/45 p-0 backdrop-blur-md sm:items-center sm:p-4">
       <div
-        className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border shadow-[0_40px_100px_rgba(43,29,25,0.25)] sm:rounded-[2rem] ${t.gradient} ${t.border} ${wide ? "max-w-4xl" : "max-w-2xl"}`}
+        className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border shadow-[0_40px_100px_rgba(43,29,25,0.25)] sm:rounded-[2rem] ${t.gradient} ${t.border} ${wide === "xl" ? "max-w-5xl" : wide ? "max-w-4xl" : "max-w-2xl"}`}
       >
         <div className="sticky top-0 z-10 border-b border-black/5 bg-white/40 px-6 py-5 backdrop-blur-md">
           <div className="flex items-start justify-between gap-4">

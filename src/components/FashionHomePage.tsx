@@ -34,6 +34,11 @@ export async function FashionHomePage() {
   return (
     <main className="min-h-screen bg-[#fffaf7] text-[#241815]">
       <TopLanguageBar />
+      {settings.announcementEnabled && settings.announcementText ? (
+        <div className="bg-[#2b1d19] px-4 py-2 text-center text-sm text-white/90">
+          {settings.announcementText}
+        </div>
+      ) : null}
       <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(circle_at_top_left,#fff6ef,transparent_35%),linear-gradient(135deg,#2c1d1a_0%,#4f342f_48%,#b88b74_100%)] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_38%,rgba(255,255,255,0.12)_100%)]" />
         <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/20 blur-3xl" />
@@ -53,6 +58,7 @@ export async function FashionHomePage() {
               settings.heroDescription ??
               "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।"
             }
+            settings={settings}
           />
         </div>
       </section>
@@ -62,9 +68,11 @@ export async function FashionHomePage() {
         products={products}
         newProducts={newProducts}
         offerProducts={offers}
+        showNewProducts={settings.showNewProducts !== false}
+        showOffers={settings.showOffers !== false}
       />
 
-      <HomeLowerSections />
+      <HomeLowerSections settings={settings} />
       <FashionFooter />
     </main>
   );
