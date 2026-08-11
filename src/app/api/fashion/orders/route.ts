@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentCustomer, isFashionAdminAuthenticated } from "@/lib/fashion/customer-auth";
-import { createOrder, listOrders, listOrdersForCustomer } from "@/lib/fashion/store";
+import { calculateDeliveryFee } from "@/lib/fashion/delivery";
+import { createOrder, getProductById, getStoreSettings, listOrders, listOrdersForCustomer, validateCoupon } from "@/lib/fashion/store";
 import type { CartItem, CheckoutForm } from "@/lib/fashion/types";
 
 export async function GET() {
@@ -25,10 +26,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid order" }, { status: 400 });
   }
 
+  for (const item of items) {
+    const product = await getProductById(item.productId);
+    if (!product || product.stock < item.quantity) {
+      return NextResponse.json(
+        { error: `${item.name} স্টকে পর্যাপ্ত নেই` },
+        { status: 400 },
+      );
+    }
+  }
+
+  const settings = await getStoreSettings();
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal >= 7000 ? 0 : 120;
-  const total = subtotal + shipping;
+
+  let discount = 0;
+  let couponCode: string | undefined;
+  if (form.couponCode?.trim()) {
+    const coupon = await validateCoupon(form.couponCode, subtotal);
+    if (coupon) {
+      discount =
+        coupon.discountType === "percent"
+          ? Math.round(subtotal * (coupon.discountValue / 100))
+          : coupon.discountValue;
+      couponCode = coupon.code;
+    }
+  }
+
+  const subtotalAfterDiscount = Math.max(0, subtotal - discount);
+  const shipping = calculateDeliveryFee(settings, form.district, subtotalAfterDiscount);
+  const total = subtotalAfterDiscount + shipping;
   const customer = await getCurrentCustomer();
+
+  const orderItems = await Promise.all(
+    items.map(async (item) => {
+      const product = await getProductById(item.productId);
+      return {
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        buyPrice: product?.buyPrice ?? Math.round(item.price / 1.35),
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+      };
+    }),
+  );
+
+  const costTotal = orderItems.reduce((sum, item) => sum + item.buyPrice * item.quantity, 0);
 
   const order = await createOrder({
     customerId: customer?.id,
@@ -39,17 +83,13 @@ export async function POST(request: Request) {
     district: form.district,
     note: form.note || undefined,
     paymentMethod: form.paymentMethod,
-    items: items.map((item) => ({
-      productId: item.productId,
-      name: item.name,
-      price: item.price,
-      size: item.size,
-      color: item.color,
-      quantity: item.quantity,
-    })),
+    items: orderItems,
     subtotal,
+    discount,
+    couponCode,
     shipping,
     total,
+    costTotal,
   });
 
   return NextResponse.json({ order });

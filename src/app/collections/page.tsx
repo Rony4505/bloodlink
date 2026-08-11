@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FashionShell } from "@/components/fashion/FashionShell";
-import { categories } from "@/lib/fashion/categories";
+import { getCategories } from "@/lib/fashion/categories-server";
 import { listProducts } from "@/lib/fashion/store";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "কালেকশন",
-  description: "Nooré Dhaka-র সব লাক্সারি কালেকশন দেখুন।",
+  description: "Slowgun-এর সব লাক্সারি কালেকশন দেখুন।",
 };
 
 export default async function CollectionsPage() {
-  const products = await listProducts();
+  const [products, categoryList] = await Promise.all([listProducts(), getCategories()]);
 
   return (
     <FashionShell>
@@ -27,7 +27,7 @@ export default async function CollectionsPage() {
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {categories.map((category) => {
+          {categoryList.map((category) => {
             const count = products.filter((p) => p.categorySlug === category.slug).length;
             return (
               <Link

@@ -1,17 +1,22 @@
 import Link from "next/link";
 import type { Product } from "@/lib/fashion/types";
 import { formatBdt } from "@/lib/fashion/format";
+import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { ProductImage } from "./ProductImage";
 
 export function ProductCard({ product }: { product: Product }) {
+  const price = getEffectivePrice(product);
+  const showStrike = product.offerActive || product.compareAtPrice;
+  const strikePrice = product.offerActive ? product.price : product.compareAtPrice;
+
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_24px_80px_rgba(48,27,20,0.06)] transition hover:-translate-y-1">
       <Link href={`/products/${product.slug}`} className="block">
         <div className={`relative ${product.tone}`}>
           <ProductImage src={product.imageUrl} alt={product.nameBn} className="h-72 rounded-none" />
-          {product.label ? (
-            <div className="absolute right-5 top-5 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#8d6657] shadow-sm">
-              {product.label}
+          {(product.offerActive ? product.offerLabel : product.label) ? (
+            <div className="absolute right-5 top-5 rounded-full bg-[linear-gradient(135deg,#2b1d19,#8b6456)] px-3 py-1 text-xs font-semibold text-[#f4d4c2] shadow-sm">
+              {product.offerActive ? product.offerLabel ?? "অফার" : product.label}
             </div>
           ) : null}
         </div>
@@ -25,11 +30,11 @@ export function ProductCard({ product }: { product: Product }) {
             </div>
             <div className="text-right">
               <p className="text-base font-semibold text-[#8f624e]">
-                {formatBdt(product.price)}
+                {formatBdt(price)}
               </p>
-              {product.compareAtPrice ? (
+              {showStrike && strikePrice ? (
                 <p className="text-xs text-[#a0897d] line-through">
-                  {formatBdt(product.compareAtPrice)}
+                  {formatBdt(strikePrice)}
                 </p>
               ) : null}
             </div>

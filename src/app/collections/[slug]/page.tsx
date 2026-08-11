@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FashionShell } from "@/components/fashion/FashionShell";
 import { ProductGrid } from "@/components/fashion/ProductGrid";
-import { categories, getCategory } from "@/lib/fashion/categories";
+import { categories } from "@/lib/fashion/categories";
+import { getCategory } from "@/lib/fashion/categories-server";
 import { getProductsByCategory } from "@/lib/fashion/store";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +18,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const category = await getCategory(slug);
   if (!category) return { title: "Collection" };
   return { title: category.titleBn, description: category.description };
 }
 
 export default async function CollectionPage({ params }: Props) {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const category = await getCategory(slug);
   if (!category) notFound();
 
   const categoryProducts = await getProductsByCategory(slug);

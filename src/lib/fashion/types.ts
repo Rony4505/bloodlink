@@ -12,12 +12,39 @@ export type Category = {
   description: string;
 };
 
+export type DeliveryRule = {
+  id: string;
+  district: string;
+  fee: number;
+  minOrderForFree?: number;
+  active: boolean;
+};
+
+export type Coupon = {
+  id: string;
+  code: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  minOrder?: number;
+  expiresAt?: string;
+  active: boolean;
+};
+
+export type StoreSettings = {
+  brandName: string;
+  brandTagline: string;
+  defaultMarkupPercent: number;
+  pricingMode: "markup" | "manual";
+  deliveryRules: DeliveryRule[];
+};
+
 export type Product = {
   id: string;
   slug: string;
   name: string;
   nameBn: string;
   price: number;
+  buyPrice: number;
   compareAtPrice?: number;
   categorySlug: string;
   label?: string;
@@ -28,8 +55,26 @@ export type Product = {
   colors: ProductColor[];
   tone: string;
   imageUrl: string;
+  stock: number;
   featured?: boolean;
   inStock: boolean;
+  pricingMode?: "markup" | "manual";
+  markupPercent?: number;
+  offerActive?: boolean;
+  offerLabel?: string;
+  offerDiscountPercent?: number;
+  isNew?: boolean;
+  createdAt: string;
+};
+
+export type ProductReview = {
+  id: string;
+  productId: string;
+  customerId?: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
 };
 
 export type CartItem = {
@@ -53,6 +98,21 @@ export type CheckoutForm = {
   district: string;
   note: string;
   paymentMethod: "cod" | "bkash" | "nagad";
+  couponCode?: string;
+};
+
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
+
+export type OrderStatusUpdate = {
+  status: OrderStatus;
+  message: string;
+  updatedAt: string;
 };
 
 export type FashionCustomer = {
@@ -68,6 +128,7 @@ export type FashionOrderItem = {
   productId: string;
   name: string;
   price: number;
+  buyPrice: number;
   size: string;
   color: string;
   quantity: number;
@@ -85,22 +146,54 @@ export type FashionOrder = {
   paymentMethod: CheckoutForm["paymentMethod"];
   items: FashionOrderItem[];
   subtotal: number;
+  discount: number;
+  couponCode?: string;
   shipping: number;
   total: number;
-  status: "pending" | "confirmed" | "delivered";
+  costTotal: number;
+  status: OrderStatus;
+  statusHistory: OrderStatusUpdate[];
+  createdAt: string;
+};
+
+export type UserNotification = {
+  id: string;
+  customerId?: string;
+  type: "new_product" | "new_offer" | "order_update";
+  title: string;
+  body: string;
+  link?: string;
+  readBy: string[];
+  createdAt: string;
+};
+
+export type AdminNotification = {
+  id: string;
+  type: "new_order";
+  title: string;
+  body: string;
+  orderId?: string;
+  read: boolean;
   createdAt: string;
 };
 
 export type FashionStore = {
+  settings: StoreSettings;
+  categories: Category[];
   products: Product[];
   customers: FashionCustomer[];
   orders: FashionOrder[];
+  coupons: Coupon[];
+  reviews: ProductReview[];
+  userNotifications: UserNotification[];
+  adminNotifications: AdminNotification[];
   adminPasswordHash: string;
 };
 
-export type ProductInput = Omit<Product, "id" | "slug"> & {
+export type ProductInput = Omit<Product, "id" | "slug" | "createdAt"> & {
   id?: string;
   slug?: string;
+  createdAt?: string;
 };
 
 export type SearchFilters = {
@@ -110,4 +203,14 @@ export type SearchFilters = {
   maxPrice?: number;
   inStockOnly?: boolean;
   sort?: "featured" | "price-asc" | "price-desc" | "newest";
+};
+
+export type AnalyticsSummary = {
+  period: "daily" | "monthly";
+  revenue: number;
+  cost: number;
+  profit: number;
+  deliveryFees: number;
+  orderCount: number;
+  cancelledCount: number;
 };

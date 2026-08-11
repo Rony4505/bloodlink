@@ -3,7 +3,18 @@ import type { Product } from "./types";
 const img = (id: string) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
 
-export const seedProducts: Product[] = [
+const createdAt = "2026-01-01T00:00:00.000Z";
+
+function seed(p: Omit<Product, "buyPrice" | "stock" | "createdAt"> & Partial<Pick<Product, "buyPrice" | "stock" | "createdAt">>): Product {
+  return {
+    ...p,
+    buyPrice: p.buyPrice ?? Math.round(p.price / 1.35),
+    stock: p.stock ?? 25,
+    createdAt: p.createdAt ?? createdAt,
+  };
+}
+
+const rawProducts = [
   {
     id: "p1",
     slug: "noor-signature-silk-set",
@@ -268,3 +279,7 @@ export const seedProducts: Product[] = [
     inStock: true,
   },
 ];
+
+export const seedProducts: Product[] = rawProducts.map((p) =>
+  seed({ ...p, sizes: [...p.sizes], colors: p.colors.map((c) => ({ ...c })) }),
+);

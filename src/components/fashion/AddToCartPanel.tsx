@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Product } from "@/lib/fashion/types";
 import { useCart } from "@/lib/fashion/cart-context";
 import { copy } from "@/lib/fashion/copy";
+import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { FashionButton } from "./FashionButton";
 
 export function AddToCartPanel({ product }: { product: Product }) {
@@ -12,15 +13,25 @@ export function AddToCartPanel({ product }: { product: Product }) {
   const [color, setColor] = useState(product.colors[0]?.name ?? "Default");
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const maxQty = product.stock;
+  const inStock = product.stock > 0 && product.inStock;
+  const price = getEffectivePrice(product);
 
   function handleAdd() {
-    addItem(product, size, color, quantity);
+    if (!inStock || quantity > maxQty) return;
+    addItem({ ...product, price }, size, color, quantity);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   }
 
   return (
     <div className="rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]">
+      {!inStock ? (
+        <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          {copy.cart.outOfStock}
+        </p>
+      ) : null}
+
       <div>
         <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">সাইজ</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -66,7 +77,9 @@ export function AddToCartPanel({ product }: { product: Product }) {
       </div>
 
       <div className="mt-6">
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">পরিমাণ</p>
+        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">
+          পরিমাণ (স্টক: {maxQty})
+        </p>
         <div className="mt-3 inline-flex items-center rounded-full border border-black/8 bg-[#faf4f0]">
           <button
             type="button"
@@ -79,7 +92,8 @@ export function AddToCartPanel({ product }: { product: Product }) {
           <button
             type="button"
             className="px-4 py-2 text-lg"
-            onClick={() => setQuantity((value) => value + 1)}
+            onClick={() => setQuantity((value) => Math.min(maxQty, value + 1))}
+            disabled={quantity >= maxQty}
           >
             +
           </button>
@@ -87,7 +101,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <FashionButton onClick={handleAdd} disabled={!product.inStock}>
+        <FashionButton onClick={handleAdd} disabled={!inStock || quantity > maxQty}>
           {added ? copy.actions.addedToCart : copy.actions.addToCart}
         </FashionButton>
         <FashionButton href="/cart" variant="secondary">

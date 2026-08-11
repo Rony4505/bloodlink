@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
+import { OfferBanner } from "@/components/fashion/OfferBanner";
 import { ProductCard } from "@/components/fashion/ProductCard";
-import { categories } from "@/lib/fashion/categories";
+import { getCategories } from "@/lib/fashion/categories-server";
 import { copy } from "@/lib/fashion/copy";
-import { getFeaturedProducts } from "@/lib/fashion/store";
+import { getActiveOffers, getFeaturedProducts } from "@/lib/fashion/store";
 
 const serviceHighlights = [
   "ঢাকা সিটিতে দ্রুত ডেলিভারি এবং সারা বাংলাদেশে কুরিয়ার সাপোর্ট",
@@ -47,10 +48,15 @@ const faqs = [
 ];
 
 export async function FashionHomePage() {
-  const featuredProducts = await getFeaturedProducts();
+  const [featuredProducts, categories, offers] = await Promise.all([
+    getFeaturedProducts(),
+    getCategories(),
+    getActiveOffers(),
+  ]);
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-[#241815]">
+      <OfferBanner offers={offers} />
       <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(circle_at_top_left,#fff6ef,transparent_35%),linear-gradient(135deg,#2c1d1a_0%,#4f342f_48%,#b88b74_100%)] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_38%,rgba(255,255,255,0.12)_100%)]" />
         <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/20 blur-3xl" />
@@ -72,7 +78,7 @@ export async function FashionHomePage() {
                 modern Bangladesh.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">
-                Nooré Dhaka এমন একটি e-commerce experience যেখানে premium fabric, soft
+                Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft
                 color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে
                 পাওয়া যায়। ঢাকা থেকে সারা বাংলাদেশে delivery, effortless browsing, আর
                 women-first styling support দিয়ে তৈরি।

@@ -23,13 +23,13 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Nooré Dhaka | Luxury Womenswear for Bangladesh",
-    template: "%s | Nooré Dhaka",
+    default: "Slowgun | Luxury Womenswear for Bangladesh",
+    template: "%s | Slowgun",
   },
   description:
-    "Nooré Dhaka is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
+    "Slowgun is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
   keywords: [
-    "Nooré Dhaka",
+    "Slowgun",
     "Bangladesh womens fashion",
     "luxury ecommerce Bangladesh",
     "ladies boutique Dhaka",
@@ -52,8 +52,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "bn_BD",
     url: siteUrl,
-    siteName: "Nooré Dhaka",
-    title: "Nooré Dhaka | Luxury Womenswear for Bangladesh",
+    siteName: "Slowgun",
+    title: "Slowgun | Luxury Womenswear for Bangladesh",
     description:
       "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
     images: [
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
         url: "/bloodlink-logo.png",
         width: 512,
         height: 512,
-        alt: "Nooré Dhaka brand image",
+        alt: "Slowgun brand image",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nooré Dhaka | Luxury Womenswear for Bangladesh",
+    title: "Slowgun | Luxury Womenswear for Bangladesh",
     description:
       "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
     images: ["/bloodlink-logo.png"],

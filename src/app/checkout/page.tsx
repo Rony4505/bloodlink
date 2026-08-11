@@ -28,6 +28,7 @@ const initialForm: CheckoutForm = {
   district: "Dhaka",
   note: "",
   paymentMethod: "cod",
+  couponCode: "",
 };
 
 export default function CheckoutPage() {
@@ -35,8 +36,10 @@ export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const [form, setForm] = useState<CheckoutForm>(initialForm);
   const [submitting, setSubmitting] = useState(false);
-  const shipping = subtotal >= 7000 || subtotal === 0 ? 0 : 120;
-  const total = subtotal + shipping;
+  const [shipping, setShipping] = useState(120);
+  const [discount, setDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState("");
+  const total = Math.max(0, subtotal - discount) + shipping;
 
   useEffect(() => {
     fetch("/api/fashion/auth")
@@ -54,6 +57,34 @@ export default function CheckoutPage() {
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    fetch("/api/fashion/delivery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ district: form.district, subtotal: Math.max(0, subtotal - discount) }),
+    })
+      .then((r) => r.json())
+      .then((data) => setShipping(data.fee ?? 120))
+      .catch(() => setShipping(120));
+  }, [form.district, subtotal, discount]);
+
+  async function applyCoupon() {
+    if (!form.couponCode?.trim()) return;
+    const res = await fetch("/api/fashion/coupons/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: form.couponCode, subtotal }),
+    });
+    const data = await res.json();
+    if (data.valid) {
+      setDiscount(data.discount);
+      setCouponMessage(`কুপন প্রয়োগ: ${data.coupon.code}`);
+    } else {
+      setDiscount(0);
+      setCouponMessage(data.error ?? "কুপন সঠিক নয়");
+    }
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (items.length === 0) return;
@@ -67,10 +98,13 @@ export default function CheckoutPage() {
     const data = await res.json();
     setSubmitting(false);
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      setCouponMessage(data.error ?? "অর্ডার করা যায়নি");
+      return;
+    }
 
     const order = data.order as FashionOrder;
-    sessionStorage.setItem("noore_last_order", JSON.stringify(order));
+    sessionStorage.setItem("slowgun_last_order", JSON.stringify(order));
     clearCart();
     router.push(`/checkout/success?orderId=${order.id}`);
   }
@@ -116,6 +150,19 @@ export default function CheckoutPage() {
             </div>
             <Field label={copy.form.note} value={form.note} onChange={(value) => setForm((c) => ({ ...c, note: value }))} multiline />
             <div>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.cart.coupon}</p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  className="field flex-1"
+                  value={form.couponCode ?? ""}
+                  onChange={(e) => setForm((c) => ({ ...c, couponCode: e.target.value }))}
+                  placeholder="SLOWGUN10"
+                />
+                <FashionButton type="button" variant="secondary" onClick={applyCoupon}>{copy.actions.apply}</FashionButton>
+              </div>
+              {couponMessage ? <p className="mt-2 text-sm text-[#8b6456]">{couponMessage}</p> : null}
+            </div>
+            <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.form.payment}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {[
@@ -152,6 +199,9 @@ export default function CheckoutPage() {
             </div>
             <div className="mt-6 space-y-3 border-t border-white/10 pt-4 text-white/78">
               <div className="flex justify-between"><span>{copy.cart.subtotal}</span><span>{formatBdt(subtotal)}</span></div>
+              {discount > 0 ? (
+                <div className="flex justify-between"><span>{copy.cart.discount}</span><span>-{formatBdt(discount)}</span></div>
+              ) : null}
               <div className="flex justify-between"><span>{copy.cart.shipping}</span><span>{shipping === 0 ? "Free" : formatBdt(shipping)}</span></div>
               <div className="flex justify-between text-lg font-semibold text-white"><span>{copy.cart.total}</span><span>{formatBdt(total)}</span></div>
             </div>
