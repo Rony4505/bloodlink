@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
-import { OfferBanner } from "@/components/fashion/OfferBanner";
+import { buildCarouselSlides, PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { ProductCard } from "@/components/fashion/ProductCard";
 import { getCategories } from "@/lib/fashion/categories-server";
 import { copy } from "@/lib/fashion/copy";
-import { getActiveOffers, getFeaturedProducts } from "@/lib/fashion/store";
+import {
+  getActiveOffers,
+  getActivePromoBanners,
+  getFeaturedProducts,
+  getNewProducts,
+  getStoreSettings,
+  listPublicCoupons,
+} from "@/lib/fashion/store";
 
 const serviceHighlights = [
   "ঢাকা সিটিতে দ্রুত ডেলিভারি এবং সারা বাংলাদেশে কুরিয়ার সাপোর্ট",
@@ -48,15 +55,23 @@ const faqs = [
 ];
 
 export async function FashionHomePage() {
-  const [featuredProducts, categories, offers] = await Promise.all([
-    getFeaturedProducts(),
-    getCategories(),
-    getActiveOffers(),
-  ]);
+  const [featuredProducts, categories, offers, newProducts, settings, banners, coupons] =
+    await Promise.all([
+      getFeaturedProducts(),
+      getCategories(),
+      getActiveOffers(),
+      getNewProducts(14),
+      getStoreSettings(),
+      getActivePromoBanners(),
+      listPublicCoupons(),
+    ]);
+
+  const carouselSlides = buildCarouselSlides(banners, offers, newProducts);
+  const displayCoupons = settings.showCouponsOnHome !== false ? coupons : [];
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-[#241815]">
-      <OfferBanner offers={offers} />
+      <PromoCarousel slides={carouselSlides} coupons={displayCoupons} />
       <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(circle_at_top_left,#fff6ef,transparent_35%),linear-gradient(135deg,#2c1d1a_0%,#4f342f_48%,#b88b74_100%)] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_38%,rgba(255,255,255,0.12)_100%)]" />
         <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/20 blur-3xl" />
@@ -68,20 +83,14 @@ export async function FashionHomePage() {
           <div className="grid gap-12 pt-14 md:grid-cols-[1.1fr_0.9fr] md:items-center md:pt-20">
             <div>
               <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur">
-                বাংলাদেশি নারীদের জন্য curated premium fashion destination
+                {settings.heroSubtitle ?? copy.tagline}
               </span>
               <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold md:text-7xl">
-                সহজ luxury,
-                <br />
-                refined style,
-                <br />
-                modern Bangladesh.
+                {settings.heroTitle ?? "সহজ luxury, refined style, modern Bangladesh."}
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">
-                Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft
-                color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে
-                পাওয়া যায়। ঢাকা থেকে সারা বাংলাদেশে delivery, effortless browsing, আর
-                women-first styling support দিয়ে তৈরি।
+                {settings.heroDescription ??
+                  "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।"}
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">

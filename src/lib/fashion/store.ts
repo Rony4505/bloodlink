@@ -18,6 +18,7 @@ import type {
   Product,
   ProductInput,
   ProductReview,
+  PromoBanner,
   StoreSettings,
   UserNotification,
 } from "./types";
@@ -25,6 +26,34 @@ import { computeAnalytics } from "./analytics";
 
 const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
 const storePath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-store.json");
+
+function isExpired(iso?: string): boolean {
+  if (!iso) return false;
+  return new Date(iso) < new Date();
+}
+
+function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
+  return {
+    ...defaultSettings,
+    ...parsed,
+    deliveryRules: parsed?.deliveryRules?.length
+      ? parsed.deliveryRules
+      : defaultSettings.deliveryRules,
+    promoBanners: parsed?.promoBanners ?? defaultSettings.promoBanners ?? [],
+  };
+}
+
+function purgeExpired(store: FashionStore): boolean {
+  const beforeCoupons = store.coupons.length;
+  const beforeBanners = store.settings.promoBanners?.length ?? 0;
+  store.coupons = store.coupons.filter((c) => !isExpired(c.expiresAt));
+  if (store.settings.promoBanners) {
+    store.settings.promoBanners = store.settings.promoBanners.filter(
+      (b) => !isExpired(b.expiresAt),
+    );
+  }
+  return store.coupons.length !== beforeCoupons || (store.settings.promoBanners?.length ?? 0) !== beforeBanners;
+}
 
 function migrateProduct(product: Partial<Product>, settings: StoreSettings): Product {
   const buyPrice = product.buyPrice ?? Math.round((product.price ?? 0) / 1.35);
@@ -105,17 +134,11 @@ async function ensureStore(): Promise<FashionStore> {
   try {
     const raw = await readFile(storePath, "utf8");
     const parsed = JSON.parse(raw) as Partial<FashionStore>;
-    const settings: StoreSettings = {
-      ...defaultSettings,
-      ...parsed.settings,
-      deliveryRules: parsed.settings?.deliveryRules?.length
-        ? parsed.settings.deliveryRules
-        : defaultSettings.deliveryRules,
-    };
+    const settings = migrateSettings(parsed.settings);
     const products = (parsed.products?.length ? parsed.products : rawSeedProducts).map((p) =>
       migrateProduct(p, settings),
     );
-    return {
+    const store: FashionStore = {
       settings,
       categories: parsed.categories?.length ? parsed.categories : defaultCategories,
       products,
@@ -129,6 +152,8 @@ async function ensureStore(): Promise<FashionStore> {
         parsed.adminPasswordHash ||
         (await bcrypt.hash(process.env.FASHION_ADMIN_PASSWORD || "nooreadmin", 12)),
     };
+    if (purgeExpired(store)) await writeStore(store);
+    return store;
   } catch {
     await mkdir(dataDir, { recursive: true });
     const settings = defaultSettings;
@@ -162,9 +187,16 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   return store.settings;
 }
 
-export async function updateStoreSettings(settings: Partial<StoreSettings>): Promise<StoreSettings> {
+export async function updateStoreSettings(partial: Partial<StoreSettings>): Promise<StoreSettings> {
   const store = await ensureStore();
-  store.settings = { ...store.settings, ...settings };
+  const current = store.settings;
+  store.settings = {
+    ...current,
+    ...partial,
+    deliveryRules: partial.deliveryRules ?? current.deliveryRules,
+    promoBanners: partial.promoBanners ?? current.promoBanners ?? [],
+  };
+  purgeExpired(store);
   await writeStore(store);
   return store.settings;
 }
@@ -174,9 +206,15 @@ export async function listCategories(): Promise<Category[]> {
   return store.categories;
 }
 
-export async function updateCategories(categories: Category[]): Promise<Category[]> {
+export async function updateCategories(incoming: Category[]): Promise<Category[]> {
   const store = await ensureStore();
-  store.categories = categories;
+  const merged = [...store.categories];
+  for (const cat of incoming) {
+    const index = merged.findIndex((item) => item.slug === cat.slug);
+    if (index >= 0) merged[index] = { ...merged[index], ...cat };
+    else merged.push(cat);
+  }
+  store.categories = merged;
   await writeStore(store);
   return store.categories;
 }
@@ -327,7 +365,23 @@ export async function decrementStock(productId: string, quantity: number): Promi
 
 export async function listCoupons(): Promise<Coupon[]> {
   const store = await ensureStore();
+  return store.coupons.filter((c) => c.active && !isExpired(c.expiresAt));
+}
+
+export async function listAllCouponsAdmin(): Promise<Coupon[]> {
+  const store = await ensureStore();
   return store.coupons;
+}
+
+export async function listPublicCoupons(): Promise<Coupon[]> {
+  return listCoupons();
+}
+
+export async function getActivePromoBanners(): Promise<PromoBanner[]> {
+  const store = await ensureStore();
+  return (store.settings.promoBanners ?? [])
+    .filter((b) => b.active && !isExpired(b.expiresAt))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 export async function upsertCoupon(coupon: Coupon): Promise<Coupon> {
@@ -350,11 +404,16 @@ export async function deleteCoupon(id: string): Promise<boolean> {
 
 export async function validateCoupon(code: string, subtotal: number): Promise<Coupon | null> {
   const store = await ensureStore();
+  purgeExpired(store);
   const coupon = store.coupons.find(
     (c) => c.active && c.code.toLowerCase() === code.trim().toLowerCase(),
   );
   if (!coupon) return null;
-  if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) return null;
+  if (isExpired(coupon.expiresAt)) {
+    store.coupons = store.coupons.filter((c) => c.id !== coupon.id);
+    await writeStore(store);
+    return null;
+  }
   if (coupon.minOrder && subtotal < coupon.minOrder) return null;
   return coupon;
 }

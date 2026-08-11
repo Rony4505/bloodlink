@@ -30,12 +30,34 @@ export type Coupon = {
   active: boolean;
 };
 
+export type PromoBanner = {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  linkSlug?: string;
+  productId?: string;
+  active: boolean;
+  expiresAt?: string;
+  sortOrder: number;
+};
+
 export type StoreSettings = {
   brandName: string;
   brandTagline: string;
   defaultMarkupPercent: number;
   pricingMode: "markup" | "manual";
   deliveryRules: DeliveryRule[];
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroDescription?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  whatsapp?: string;
+  footerText?: string;
+  aboutText?: string;
+  freeShippingNote?: string;
+  showCouponsOnHome?: boolean;
+  promoBanners?: PromoBanner[];
 };
 
 export type Product = {

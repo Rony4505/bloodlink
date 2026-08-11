@@ -1,4 +1,4 @@
-import type { Category, DeliveryRule, StoreSettings } from "./types";
+import type { Category, StoreSettings } from "./types";
 
 export const defaultSettings: StoreSettings = {
   brandName: "Slowgun",
@@ -8,7 +8,20 @@ export const defaultSettings: StoreSettings = {
   deliveryRules: [
     { id: "d1", district: "Dhaka", fee: 80, minOrderForFree: 7000, active: true },
     { id: "d2", district: "*", fee: 150, minOrderForFree: 10000, active: true },
-  ] satisfies DeliveryRule[],
+  ],
+  heroTitle: "সহজ luxury, refined style, modern Bangladesh.",
+  heroSubtitle: "বাংলাদেশি নারীদের জন্য curated premium fashion destination",
+  heroDescription:
+    "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।",
+  contactEmail: "hello@slowgun.com",
+  contactPhone: "+880 1XXX-XXXXXX",
+  whatsapp: "8801700000000",
+  footerText: "বাংলাদেশি নারীদের জন্য curated luxury fashion—effortless browsing, premium presentation, এবং trusted delivery experience।",
+  aboutText:
+    "Slowgun শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience বাংলাদেশি নারীদের কাছে সহজ ও elegant করে তোলা।",
+  freeShippingNote: "নির্দিষ্ট অর্ডারে ফ্রি ডেলিভারি",
+  showCouponsOnHome: true,
+  promoBanners: [],
 };
 
 export const defaultCategories: Category[] = [
