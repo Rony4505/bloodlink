@@ -33,7 +33,7 @@ export default function AccountPage() {
 
   async function logout() {
     await fetch("/api/fashion/auth/logout", { method: "POST" });
-    router.push("/shop");
+    router.push("/");
     router.refresh();
   }
 

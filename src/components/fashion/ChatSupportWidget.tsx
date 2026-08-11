@@ -52,7 +52,7 @@ export function ChatSupportWidget() {
             </p>
             <div className="flex flex-col p-2">
               <Link
-                href="/shop/contact"
+                href="/contact"
                 onClick={() => setOpen(false)}
                 className="rounded-xl px-3 py-2.5 text-sm font-semibold text-[#3d2a24] transition hover:bg-[#faf4f0]"
                 title={labels.webHint}

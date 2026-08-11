@@ -8,9 +8,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# NEXT_PUBLIC_* must be present at build time for Next.js.
-# Force the live custom domain so sitemap/robots never bake .com / railway.app.
-ENV NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
+# Default build targets BloodLink. Fashion service overrides via Railway build args.
+ARG APP_MODE=bloodlink
+ARG NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
+ENV APP_MODE=$APP_MODE
+ENV NEXT_PUBLIC_APP_MODE=$APP_MODE
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN npm run build \
   && mkdir -p .next/standalone/node_modules \
   && cp -R node_modules/pg .next/standalone/node_modules/ \
@@ -32,6 +35,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATA_DIR=/app/data
+ENV APP_MODE=bloodlink
+ENV NEXT_PUBLIC_APP_MODE=bloodlink
+ENV NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
 
 RUN apk add --no-cache su-exec \
   && addgroup -S nodejs && adduser -S nextjs -G nodejs \

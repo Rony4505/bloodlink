@@ -1,63 +1,47 @@
 # BloodLink + Smart craft corner — Online deploy guide
 
-Donor data must live in **Railway Postgres**. Fashion store data lives on the **Railway Volume** at `/app/data` (`fashion-store.json` + uploads).
+These are **two separate websites**:
 
-## Railway setup (required for permanent data)
+| Site | URL | `APP_MODE` |
+|------|-----|------------|
+| BloodLink BD | https://bloodlinkbd.org | `bloodlink` |
+| Smart craft corner | https://smartcraftcorner.com | `fashion` |
+
+See **SMARTCRAFT_DEPLOY.md** for creating the Smart craft Railway service + domain.
+
+Donor data must live in **Railway Postgres** (BloodLink service).  
+Fashion store data lives on the **Smart craft** service Volume at `/app/data`.
+
+## BloodLink Railway setup (existing)
 
 1. Open your BloodLink project on https://railway.app
-2. On the canvas click **`+ Create`**
-3. Choose **Database** → **PostgreSQL**
-4. After Postgres appears, open the **bloodlink** web service → **Variables**
-5. Click **Add variable** → **Add reference** (or connect database)
-   - Make sure `DATABASE_URL` is present on the **bloodlink** service
-   - Railway usually adds it automatically when you link Postgres
-6. Redeploy the **bloodlink** service
-7. Open `https://YOUR-DOMAIN/api/health`
-   - `"backend": "postgres"` must appear
-   - Then register a donor and note `donorCount`
-   - Redeploy again — `donorCount` should stay the same
+2. Ensure Postgres is linked and `DATABASE_URL` is set
+3. Set on the **bloodlink** service:
+   - `APP_MODE=bloodlink`
+   - `NEXT_PUBLIC_APP_MODE=bloodlink`
+   - `NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org`
+4. Volume mount path: `/app/data`
+5. Redeploy and check `https://bloodlinkbd.org/api/health`
 
-Also keep a Volume on the **bloodlink** service:
-
-- Mount path: `/app/data`
-
-Postgres is the source of truth for donors; the volume keeps fashion store JSON, OTP files, and product image uploads across redeploys.
-
-**Important:** After every redeploy check `https://bloodlinkbd.org/api/health`
-
-- `"backend": "postgres"`
-- `"donorCount"` must not drop to `0`
-
-Fashion store admin: `https://YOUR-DOMAIN/store-admin`  
-Fashion storefront: `https://YOUR-DOMAIN/shop`  
-Default login (change in Railway Variables): username `founder`, password from `FASHION_ADMIN_PASSWORD`
-
-BloodLink stays at the site root (`/`). Smart craft corner is added at `/shop` without replacing BloodLink.
-
-If donors were lost and you still have an old `bloodlink.json` backup, ask an admin to restore it via `POST /api/admin/restore`.
-
-### Other env vars
+### Other env vars (BloodLink)
 
 - `AUTH_SECRET` = long random string (32+ chars)
-- `ADMIN_USERNAME` = your admin username
-- `ADMIN_PASSWORD` = strong password
-- `FASHION_ADMIN_USERNAME` = fashion store admin (default `founder`)
-- `FASHION_ADMIN_PASSWORD` = fashion store admin password
-- `DATA_DIR` = `/app/data` (Railway volume mount)
-- `NEXT_PUBLIC_SITE_URL` = `https://bloodlinkbd.org`
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD`
+- `DATA_DIR=/app/data`
 
-Owner panel: `https://YOUR-DOMAIN/owner-hq-7f3m`
+Owner panel: `https://bloodlinkbd.org/owner-hq-7f3m`
+
+## Smart craft corner
+
+Follow **SMARTCRAFT_DEPLOY.md**.  
+Admin: `https://smartcraftcorner.com/store-admin` (`founder` / `FASHION_ADMIN_PASSWORD`).
 
 ## Local development
 
-Without `DATABASE_URL`, the app uses `data/bloodlink.json` on disk.  
-Fashion store uses `data/fashion-store.json` (or `$DATA_DIR/fashion-store.json`).
+```bash
+# BloodLink
+APP_MODE=bloodlink npm run dev
 
-## Before going public
-
-- Change admin password
-- Set a strong `AUTH_SECRET`
-- Confirm `/api/health` shows `"backend": "postgres"`
-- Confirm `/store-admin` login works
-- Test register → redeploy → donor still exists
-- Test add product image → redeploy → image still loads
+# Smart craft corner
+APP_MODE=fashion NEXT_PUBLIC_APP_MODE=fashion NEXT_PUBLIC_SITE_URL=http://localhost:3000 npm run dev
+```
