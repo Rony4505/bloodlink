@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #1c1412;
+  --mist: #f7f7f5;
+  --blood: #9b1b2e;
+  --blood-deep: #6e1220;
+  --bloom: #d64550;
+  --sage: #2f6b4f;
+  --sand: #e8d9cf;
+  --line: rgba(28, 20, 18, 0.12);
+  --background: var(--mist);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-mist: var(--mist);
+  --color-blood: var(--blood);
+  --color-blood-deep: var(--blood-deep);
+  --color-bloom: var(--bloom);
+  --color-sage: var(--sage);
+  --color-sand: var(--sand);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--mist);
+  color: var(--ink);
+  font-family: var(--font-body), "Noto Sans Bengali", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--blood) 28%, white);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -12px, 0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.8s ease both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.9s ease 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.95s ease 0.22s both;
+}
+
+.hero-orb {
+  animation: pulse-soft 6s ease-in-out infinite;
+}
+
+.hero-drift {
+  animation: drift 8s ease-in-out infinite alternate;
+}
+
+.field {
+  width: 100%;
+  border: 1.5px solid #c9a890;
+  background: #f3ebe4;
+  border-radius: 0.75rem;
+  padding: 0.8rem 0.95rem;
+  color: #1c1412;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-text-fill-color: #1c1412;
+  color-scheme: light;
+}
+
+.field option,
+select.field option,
+select option {
+  background: #f3ebe4;
+  color: #1c1412;
+  -webkit-text-fill-color: #1c1412;
+}
+
+select.field,
+select {
+  color: #1c1412 !important;
+  background-color: #f3ebe4 !important;
+  -webkit-text-fill-color: #1c1412;
+  color-scheme: light;
+}
+
+.field:focus {
+  border-color: #8f624e;
+  box-shadow: 0 0 0 3px rgba(143, 98, 78, 0.2);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--blood), var(--blood-deep));
+  color: white;
+  font-weight: 600;
+  padding: 0.85rem 1.35rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklab, white 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, white 12%, transparent);
+  color: white;
+  font-weight: 600;
+  padding: 0.85rem 1.35rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: color-mix(in oklab, white 22%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  padding: 0.7rem 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-ghost:hover {
+  background: color-mix(in oklab, var(--sand) 55%, white);
+}
+
+@media print {
+  header,
+  nav,
+  .btn-primary,
+  .btn-ghost,
+  .btn-secondary,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print\:shadow-none,
+  section,
+  ul,
+  li {
+    break-inside: avoid;
+  }
+}
