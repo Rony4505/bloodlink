@@ -5,7 +5,7 @@ export function ProductGrid({ products }: { products: Product[] }) {
   if (products.length === 0) {
     return (
       <div className="rounded-[2rem] border border-black/6 bg-white p-10 text-center text-[#6f554a]">
-        No products found in this collection yet.
+        এই ক্যাটাগরিতে এখন কোনো প্রোডাক্ট নেই।
       </div>
     );
   }

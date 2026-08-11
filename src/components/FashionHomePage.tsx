@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
+import { HomeProductBrowse } from "@/components/fashion/HomeProductBrowse";
 import { PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { buildCarouselSlides } from "@/lib/fashion/carousel-slides";
+import { getCategories } from "@/lib/fashion/categories-server";
 import { copy } from "@/lib/fashion/copy";
 import {
   getActiveOffers,
   getActivePromoBanners,
   getNewProducts,
   getStoreSettings,
+  listProducts,
   listPublicCoupons,
 } from "@/lib/fashion/store";
 
@@ -53,13 +56,16 @@ const faqs = [
 ];
 
 export async function FashionHomePage() {
-  const [offers, newProducts, settings, banners, coupons] = await Promise.all([
-    getActiveOffers(),
-    getNewProducts(14),
-    getStoreSettings(),
-    getActivePromoBanners(),
-    listPublicCoupons(),
-  ]);
+  const [offers, newProducts, settings, banners, coupons, categories, products] =
+    await Promise.all([
+      getActiveOffers(),
+      getNewProducts(14),
+      getStoreSettings(),
+      getActivePromoBanners(),
+      listPublicCoupons(),
+      getCategories(),
+      listProducts(),
+    ]);
 
   const carouselSlides = buildCarouselSlides(banners, offers, newProducts);
   const displayCoupons = settings.showCouponsOnHome !== false ? coupons : [];
@@ -125,6 +131,13 @@ export async function FashionHomePage() {
           </div>
         </div>
       </section>
+
+      <HomeProductBrowse
+        categories={categories}
+        products={products}
+        newProducts={newProducts}
+        offerProducts={offers}
+      />
 
       <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
         <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
