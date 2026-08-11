@@ -22,19 +22,19 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "BloodLink BD | Bangladesh Blood Donor Finder",
-    template: "%s | BloodLink BD",
+    default: "Nooré Dhaka | Luxury Womenswear for Bangladesh",
+    template: "%s | Nooré Dhaka",
   },
   description:
-    "BloodLink BD helps people in Bangladesh find blood donors by blood group and location. Post urgent needs, check availability, and connect securely.",
+    "Nooré Dhaka is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
   keywords: [
-    "BloodLink",
-    "BloodLink BD",
-    "blood donor Bangladesh",
-    "blood donation",
-    "রক্তদাতা",
-    "রক্তদান",
-    "bloodlinkbd.org",
+    "Nooré Dhaka",
+    "Bangladesh womens fashion",
+    "luxury ecommerce Bangladesh",
+    "ladies boutique Dhaka",
+    "women's clothing Bangladesh",
+    "মেয়েদের অনলাইন শপ",
+    "লাক্সারি ফ্যাশন বাংলাদেশ",
   ],
   alternates: {
     canonical: "/",
@@ -51,24 +51,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "bn_BD",
     url: siteUrl,
-    siteName: "BloodLink BD",
-    title: "BloodLink BD | Bangladesh Blood Donor Finder",
+    siteName: "Nooré Dhaka",
+    title: "Nooré Dhaka | Luxury Womenswear for Bangladesh",
     description:
-      "Find blood donors across Bangladesh by blood group and location.",
+      "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
     images: [
       {
         url: "/bloodlink-logo.png",
         width: 512,
         height: 512,
-        alt: "BloodLink BD logo",
+        alt: "Nooré Dhaka brand image",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "BloodLink BD | Bangladesh Blood Donor Finder",
+    title: "Nooré Dhaka | Luxury Womenswear for Bangladesh",
     description:
-      "Find blood donors across Bangladesh by blood group and location.",
+      "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
     images: ["/bloodlink-logo.png"],
   },
   robots: {
