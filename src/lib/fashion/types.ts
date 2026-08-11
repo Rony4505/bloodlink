@@ -87,6 +87,7 @@ export type Product = {
   offerLabel?: string;
   offerDiscountPercent?: number;
   isNew?: boolean;
+  advertiseActive?: boolean;
   createdAt: string;
 };
 

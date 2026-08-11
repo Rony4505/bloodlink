@@ -36,7 +36,7 @@ const emptyProduct: ProductInput = {
   description: "", descriptionBn: "", fabric: "", sizes: ["S", "M", "L"],
   colors: [{ name: "Default", hex: "#f8efe9" }], tone: "bg-[#f8efe9]",
   imageUrl: "https://images.unsplash.com/photo-1595777457582-31a4f8e1a5c5?auto=format&fit=crop&w=900&q=80",
-  stock: 25, inStock: true, featured: false, pricingMode: "markup",
+  stock: 25, inStock: true, featured: false, pricingMode: "markup", advertiseActive: false,
 };
 
 const emptyCoupon: Coupon = { id: "", code: "", discountType: "percent", discountValue: 10, active: true };
@@ -78,7 +78,13 @@ export function FashionAdminPanel() {
   const [pendingStatus, setPendingStatus] = useState<{ orderId: string; status: OrderStatus } | null>(null);
   const [success, setSuccess] = useState<{ title: string; message: string; theme: AdminTheme } | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState("Dhaka");
+  const [districtSearch, setDistrictSearch] = useState("");
   const [newSize, setNewSize] = useState("");
+  const [productNewSize, setProductNewSize] = useState("");
+  const [useNewCategory, setUseNewCategory] = useState(false);
+  const [newCategoryTitleBn, setNewCategoryTitleBn] = useState("");
+  const [newCategorySlug, setNewCategorySlug] = useState("");
+  const [pendingDeleteProduct, setPendingDeleteProduct] = useState<Product | null>(null);
   const [uploadBannerId, setUploadBannerId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bannerFileRef = useRef<HTMLInputElement>(null);
@@ -122,26 +128,101 @@ export function FashionAdminPanel() {
 
   function openProductEdit(product: Product) {
     setEditingId(product.id);
-    setForm({ ...product, featured: product.featured ?? false });
+    setUseNewCategory(false);
+    setForm({
+      ...product,
+      featured: product.featured ?? false,
+      advertiseActive:
+        product.advertiseActive ??
+        settings?.promoBanners?.some((b) => b.productId === product.id && b.active) ??
+        false,
+    });
     setProductModalOpen(true);
   }
 
   function openProductCreate() {
     setEditingId(null);
-    setForm({ ...emptyProduct, categorySlug: selectedCategorySlug || "festive", sizes: settings?.availableSizes?.slice(0, 3) ?? emptyProduct.sizes });
+    setUseNewCategory(false);
+    setNewCategoryTitleBn("");
+    setNewCategorySlug("");
+    setForm({
+      ...emptyProduct,
+      categorySlug: selectedCategorySlug || categories[0]?.slug || "festive",
+      sizes: settings?.availableSizes?.slice(0, 3) ?? emptyProduct.sizes,
+    });
     setProductModalOpen(true);
+  }
+
+  function toggleProductSize(size: string) {
+    setForm((current) => ({
+      ...current,
+      sizes: current.sizes.includes(size)
+        ? current.sizes.filter((s) => s !== size)
+        : [...current.sizes, size],
+    }));
+  }
+
+  async function addProductSize() {
+    const size = productNewSize.trim();
+    if (!size || !settings) return;
+    const availableSizes = [...new Set([...(settings.availableSizes ?? []), size])];
+    setSettings({ ...settings, availableSizes });
+    setForm((current) => ({ ...current, sizes: [...new Set([...current.sizes, size])] }));
+    setProductNewSize("");
+    await fetch("/api/fashion/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ availableSizes }),
+    });
   }
 
   async function saveProduct(event: FormEvent) {
     event.preventDefault();
+    let categorySlug = form.categorySlug;
+
+    if (useNewCategory) {
+      const slug = newCategorySlug.trim() || `cat-${Date.now()}`;
+      const cat: Category = {
+        slug,
+        title: newCategoryTitleBn.trim() || "New Category",
+        titleBn: newCategoryTitleBn.trim() || "নতুন ক্যাটাগরি",
+        subtitle: "",
+        accent: "from-[#f5e8dc] via-[#fffaf6] to-[#ead5c3]",
+        description: "",
+      };
+      const updatedCategories = categories.some((c) => c.slug === cat.slug)
+        ? categories
+        : [...categories, cat];
+      const catRes = await fetch("/api/fashion/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categories: updatedCategories }),
+      });
+      if (!catRes.ok) return;
+      categorySlug = cat.slug;
+      setCategories(updatedCategories);
+    }
+
     const res = await fetch(editingId ? `/api/fashion/products/${editingId}` : "/api/fashion/products", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, categorySlug }),
     });
     if (!res.ok) return;
     setProductModalOpen(false);
+    setUseNewCategory(false);
+    setNewCategoryTitleBn("");
+    setNewCategorySlug("");
     showSuccess("সফল!", "প্রোডাক্ট সংরক্ষণ হয়েছে", "rose");
+    await load();
+  }
+
+  async function confirmDeleteProduct() {
+    if (!pendingDeleteProduct) return;
+    const res = await fetch(`/api/fashion/products/${pendingDeleteProduct.id}`, { method: "DELETE" });
+    setPendingDeleteProduct(null);
+    if (!res.ok) return;
+    showSuccess("মুছে ফেলা হয়েছে", `${pendingDeleteProduct.nameBn} সরানো হয়েছে`, "rose");
     await load();
   }
 
@@ -261,12 +342,18 @@ export function FashionAdminPanel() {
   const activeRule = getRuleForDistrict(selectedDistrict);
   const activeRuleIndex = settings?.deliveryRules.findIndex((r) => r.district === selectedDistrict) ?? -1;
   const unreadCount = adminNotifications.filter((n) => !n.read).length;
+  const filteredDistricts = bangladeshDistricts.filter((d) => {
+    const q = districtSearch.trim().toLowerCase();
+    if (!q) return true;
+    return d.toLowerCase().includes(q);
+  });
+  const brandLabel = settings?.brandName?.trim() || copy.brand;
 
   return (
     <AdminShell>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">Slowgun</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">{brandLabel}</p>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">{copy.admin.title}</h1>
           {unreadCount > 0 ? <p className="mt-2 text-sm text-[#b86a2e]">{unreadCount} নতুন অর্ডার</p> : null}
         </div>
@@ -307,17 +394,25 @@ export function FashionAdminPanel() {
             <div className="mt-4 max-h-80 space-y-2 overflow-y-auto">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">মোট {inventoryProducts.length} প্রোডাক্ট</p>
               {inventoryProducts.map((p) => (
-                <button key={p.id} type="button" onClick={() => openProductEdit(p)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-black/6 bg-white/80 px-4 py-3 text-left hover:bg-white">
-                  <div>
-                    <p className="font-semibold">{p.nameBn}</p>
-                    <p className="text-xs text-[#8b6456]">{p.categorySlug} · {p.id}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-[#8f624e]">{formatBdt(p.price)}</p>
-                    <p className={`text-xs font-bold ${p.stock <= 5 ? "text-red-700" : "text-[#4a7350]"}`}>স্টক: {p.stock}</p>
-                  </div>
-                </button>
+                <div key={p.id} className="flex items-center gap-2 rounded-2xl border border-black/6 bg-white/80 px-4 py-3">
+                  <button type="button" onClick={() => openProductEdit(p)} className="flex flex-1 items-center justify-between text-left hover:opacity-90">
+                    <div>
+                      <p className="font-semibold">{p.nameBn}</p>
+                      <p className="text-xs text-[#8b6456]">{p.categorySlug} · {p.id}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-[#8f624e]">{formatBdt(p.price)}</p>
+                      <p className={`text-xs font-bold ${p.stock <= 5 ? "text-red-700" : "text-[#4a7350]"}`}>স্টক: {p.stock}</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingDeleteProduct(p)}
+                    className="shrink-0 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+                  >
+                    {copy.actions.delete}
+                  </button>
+                </div>
               ))}
             </div>
           </>
@@ -434,18 +529,29 @@ export function FashionAdminPanel() {
       ) : null}
 
       {/* Delivery Modal - scroll districts */}
-      <AdminModal open={activeTab === "delivery"} onClose={() => setActiveTab(null)} title={copy.admin.delivery} subtitle="বামে জেলা scroll — select করে ডানে এডিট" theme="sunset" wide>
-        <div className="grid gap-4 md:grid-cols-[180px_1fr]">
-          <div className="max-h-72 overflow-y-auto rounded-2xl border border-[#f0c49a]/50 bg-white/70 p-2">
-            {bangladeshDistricts.map((d) => {
-              const hasRule = settings?.deliveryRules.some((r) => r.district === d);
-              return (
-                <button key={d} type="button" onClick={() => { setSelectedDistrict(d); upsertDistrictRule(d); }}
-                  className={`mb-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition ${selectedDistrict === d ? "bg-[#ffd4b8] text-[#6b3a1e]" : "hover:bg-[#fff8f0]"}`}>
-                  {d} {hasRule ? "✓" : ""}
-                </button>
-              );
-            })}
+      <AdminModal open={activeTab === "delivery"} onClose={() => setActiveTab(null)} title={copy.admin.delivery} subtitle="জেলা সার্চ ও scroll — select করে ডানে এডিট" theme="sunset" wide>
+        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+          <div className="flex max-h-80 flex-col rounded-2xl border border-[#f0c49a]/50 bg-white/70 p-2">
+            <input
+              className="field mb-2 shrink-0 text-sm"
+              placeholder="জেলা সার্চ বা টাইপ..."
+              value={districtSearch}
+              onChange={(e) => setDistrictSearch(e.target.value)}
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {filteredDistricts.map((d) => {
+                const hasRule = settings?.deliveryRules.some((r) => r.district === d);
+                return (
+                  <button key={d} type="button" onClick={() => { setSelectedDistrict(d); upsertDistrictRule(d); }}
+                    className={`mb-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition ${selectedDistrict === d ? "bg-[#ffd4b8] text-[#6b3a1e]" : "hover:bg-[#fff8f0]"}`}>
+                    {d} {hasRule ? "✓" : ""}
+                  </button>
+                );
+              })}
+              {filteredDistricts.length === 0 ? (
+                <p className="px-2 py-4 text-center text-sm text-[#9b7766]">কোনো জেলা পাওয়া যায়নি</p>
+              ) : null}
+            </div>
           </div>
           {activeRule && settings && activeRuleIndex >= 0 ? (
             <div className="space-y-3 rounded-2xl border border-black/6 bg-white/80 p-4">
@@ -559,12 +665,63 @@ export function FashionAdminPanel() {
               <label key={key} className="block"><span className="text-sm text-[#9b7766]">{label}</span>
                 <input className="field mt-1" value={String(form[key as keyof ProductInput] ?? "")} onChange={(e) => setForm((c) => ({ ...c, [key]: ["price", "buyPrice", "stock"].includes(key) ? Number(e.target.value) : e.target.value }))} /></label>
             ))}
-            <label className="block"><span className="text-sm text-[#9b7766]">ক্যাটাগরি</span>
-              <select className="field mt-1" value={form.categorySlug} onChange={(e) => setForm((c) => ({ ...c, categorySlug: e.target.value }))}>
+            <div className="block">
+              <span className="text-sm text-[#9b7766]">ক্যাটাগরি</span>
+              <select
+                className="field mt-1"
+                value={useNewCategory ? "__new__" : form.categorySlug}
+                onChange={(e) => {
+                  if (e.target.value === "__new__") {
+                    setUseNewCategory(true);
+                    return;
+                  }
+                  setUseNewCategory(false);
+                  setForm((c) => ({ ...c, categorySlug: e.target.value }));
+                }}
+              >
                 {categories.map((c) => <option key={c.slug} value={c.slug}>{c.titleBn}</option>)}
-              </select></label>
-            <label className="block"><span className="text-sm text-[#9b7766]">সাইজ (কমা দিয়ে)</span>
-              <input className="field mt-1" value={form.sizes.join(", ")} onChange={(e) => setForm((c) => ({ ...c, sizes: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }))} /></label>
+                <option value="__new__">+ নতুন ক্যাটাগরি তৈরি</option>
+              </select>
+              {useNewCategory ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <input className="field" placeholder="ক্যাটাগরি নাম (বাংলা)" value={newCategoryTitleBn} onChange={(e) => setNewCategoryTitleBn(e.target.value)} required />
+                  <input className="field" placeholder="slug (ঐচ্ছিক)" value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} />
+                </div>
+              ) : null}
+            </div>
+            <div className="block">
+              <span className="text-sm text-[#9b7766]">সাইজ</span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {[...(settings?.availableSizes ?? []), ...form.sizes].filter((s, i, arr) => arr.indexOf(s) === i).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleProductSize(size)}
+                    className={`rounded-full px-3 py-1 text-sm font-semibold ${form.sizes.includes(size) ? "bg-[#e8b896] text-[#3d2a24]" : "border border-black/10 bg-white/80 text-[#6f554a]"}`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input className="field flex-1" placeholder="নতুন সাইজ যোগ (যেমন XXL)" value={productNewSize} onChange={(e) => setProductNewSize(e.target.value)} />
+                <FashionButton type="button" variant="secondary" onClick={() => void addProductSize()}>যোগ</FashionButton>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={Boolean(form.advertiseActive)} onChange={(e) => setForm((c) => ({ ...c, advertiseActive: e.target.checked }))} />
+              হোমপেজ advertise/carousel-এ দেখান
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={Boolean(form.offerActive)} onChange={(e) => setForm((c) => ({ ...c, offerActive: e.target.checked }))} />
+              অফার/ডিসকাউন্ট প্রোডাক্ট
+            </label>
+            {form.offerActive ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input className="field" placeholder="অফার লেবেল" value={form.offerLabel ?? ""} onChange={(e) => setForm((c) => ({ ...c, offerLabel: e.target.value }))} />
+                <input className="field" type="number" placeholder="ছাড় %" value={form.offerDiscountPercent ?? ""} onChange={(e) => setForm((c) => ({ ...c, offerDiscountPercent: Number(e.target.value) || undefined }))} />
+              </div>
+            ) : null}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUpload(f, "product"); }} />
             <FashionButton type="button" variant="secondary" onClick={() => fileRef.current?.click()} disabled={uploading}>{copy.actions.upload}</FashionButton>
             <FashionButton type="submit">{copy.actions.save}</FashionButton>
@@ -574,6 +731,8 @@ export function FashionAdminPanel() {
 
       <AdminConfirmModal open={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} onConfirm={confirmOrderStatus}
         title="স্ট্যাটাস নিশ্চিত করুন" message={pendingStatus ? `${copy.orderStatus[pendingStatus.status]}?` : ""} confirmLabel="হ্যাঁ" theme="ocean" />
+      <AdminConfirmModal open={Boolean(pendingDeleteProduct)} onClose={() => setPendingDeleteProduct(null)} onConfirm={confirmDeleteProduct}
+        title="প্রোডাক্ট মুছবেন?" message={pendingDeleteProduct ? `${pendingDeleteProduct.nameBn} স্থায়ীভাবে মুছে ফেলা হবে।` : ""} confirmLabel="মুছুন" theme="rose" />
       <AdminSuccessModal open={Boolean(success)} onClose={() => setSuccess(null)} title={success?.title ?? ""} message={success?.message ?? ""} theme={success?.theme ?? "rose"} />
     </AdminShell>
   );

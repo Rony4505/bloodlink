@@ -304,8 +304,32 @@ function resolveProductPrice(input: ProductInput, settings: StoreSettings): Prod
     offerLabel: input.offerLabel,
     offerDiscountPercent: input.offerDiscountPercent,
     isNew: input.isNew ?? !input.id,
+    advertiseActive: input.advertiseActive,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
+}
+
+function syncProductAdvertisement(store: FashionStore, product: Product): void {
+  const banners = [...(store.settings.promoBanners ?? [])];
+  const existingIndex = banners.findIndex((b) => b.productId === product.id);
+
+  if (product.advertiseActive) {
+    const banner: PromoBanner = {
+      id: existingIndex >= 0 ? banners[existingIndex].id : `pb-${product.id}`,
+      imageUrl: product.imageUrl,
+      title: product.nameBn,
+      linkSlug: product.slug,
+      productId: product.id,
+      active: true,
+      sortOrder: existingIndex >= 0 ? banners[existingIndex].sortOrder : banners.length,
+    };
+    if (existingIndex >= 0) banners[existingIndex] = banner;
+    else banners.push(banner);
+  } else if (existingIndex >= 0) {
+    banners.splice(existingIndex, 1);
+  }
+
+  store.settings.promoBanners = banners;
 }
 
 export async function upsertProduct(input: ProductInput): Promise<Product> {
@@ -313,21 +337,26 @@ export async function upsertProduct(input: ProductInput): Promise<Product> {
   const isNew = !input.id || !store.products.find((p) => p.id === input.id);
   const product = resolveProductPrice(input, store.settings);
   const index = store.products.findIndex((item) => item.id === product.id);
+  const previousProduct = index >= 0 ? store.products[index] : undefined;
   if (index >= 0) {
     store.products[index] = { ...store.products[index], ...product, createdAt: store.products[index].createdAt };
   } else {
     store.products.push(product);
   }
 
+  const savedProduct = store.products.find((p) => p.id === product.id) ?? product;
+
   if (isNew) {
-    await notifyUsersNewProduct(store, product);
+    await notifyUsersNewProduct(store, savedProduct);
   }
-  if (input.offerActive && !store.products.find((p) => p.id === product.id)?.offerActive) {
-    await notifyUsersNewOffer(store, product);
+  if (input.offerActive && !previousProduct?.offerActive) {
+    await notifyUsersNewOffer(store, savedProduct);
   }
 
+  syncProductAdvertisement(store, savedProduct);
+
   await writeStore(store);
-  return product;
+  return savedProduct;
 }
 
 async function notifyUsersNewProduct(store: FashionStore, product: Product): Promise<void> {
@@ -361,6 +390,7 @@ export async function deleteProduct(id: string): Promise<boolean> {
   const next = store.products.filter((product) => product.id !== id);
   if (next.length === store.products.length) return false;
   store.products = next;
+  store.settings.promoBanners = (store.settings.promoBanners ?? []).filter((b) => b.productId !== id);
   await writeStore(store);
   return true;
 }
