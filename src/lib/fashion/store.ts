@@ -36,7 +36,16 @@ const defaultCoupons: Coupon[] = [
 ];
 
 function defaultAdminPassword(): string {
-  return process.env.FASHION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "rony4505";
+  // Do not fall back to BloodLink ADMIN_PASSWORD — that locked founders out on shared Railway.
+  return process.env.FASHION_ADMIN_PASSWORD?.trim() || "rony4505";
+}
+
+async function syncAdminPasswordHash(store: FashionStore): Promise<boolean> {
+  const desired = defaultAdminPassword();
+  const matches = await bcrypt.compare(desired, store.adminPasswordHash);
+  if (matches) return false;
+  store.adminPasswordHash = await bcrypt.hash(desired, 12);
+  return true;
 }
 
 function dataDir(): string {
@@ -265,6 +274,7 @@ async function ensureStore(): Promise<FashionStore> {
     };
     if (purgeExpired(store)) await writeStore(store);
     if (normalizeProductSlugs(store)) await writeStore(store);
+    if (await syncAdminPasswordHash(store)) await writeStore(store);
     return store;
   } catch {
     await mkdir(dataDir(), { recursive: true });
@@ -763,6 +773,7 @@ export async function verifyFashionAdminCredentials(
     process.env.FASHION_ADMIN_USERNAME?.trim().toLowerCase() ||
     "founder";
   if (username.trim().toLowerCase() !== expected) return false;
+  if (password === defaultAdminPassword()) return true;
   return bcrypt.compare(password, store.adminPasswordHash);
 }
 
