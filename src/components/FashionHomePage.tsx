@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
-import { buildCarouselSlides, PromoCarousel } from "@/components/fashion/PromoCarousel";
+import { PromoCarousel } from "@/components/fashion/PromoCarousel";
+import { buildCarouselSlides } from "@/lib/fashion/carousel-slides";
 import { ProductCard } from "@/components/fashion/ProductCard";
 import { getCategories } from "@/lib/fashion/categories-server";
 import { copy } from "@/lib/fashion/copy";
