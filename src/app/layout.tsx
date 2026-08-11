@@ -42,12 +42,8 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
       alternates: { canonical: "/" },
       icons: {
-        icon: [
-          { url: "/favicon.ico", sizes: "any" },
-          { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
-          { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        ],
-        apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+        icon: [{ url: "/icon", type: "image/png" }],
+        apple: [{ url: "/apple-icon", type: "image/png" }],
       },
       openGraph: {
         type: "website",
@@ -59,9 +55,9 @@ export async function generateMetadata(): Promise<Metadata> {
           "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
         images: [
           {
-            url: "/bloodlink-logo.png",
-            width: 512,
-            height: 512,
+            url: "/apple-icon",
+            width: 180,
+            height: 180,
             alt: "Smart craft corner",
           },
         ],
@@ -71,7 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
         title: "Smart craft corner | Luxury Womenswear for Bangladesh",
         description:
           "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
-        images: ["/bloodlink-logo.png"],
+        images: ["/apple-icon"],
       },
       robots: { index: true, follow: true },
     };
@@ -100,8 +96,12 @@ export async function generateMetadata(): Promise<Metadata> {
         { url: "/favicon.ico", sizes: "any" },
         { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
         { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon", type: "image/png" },
       ],
-      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+      apple: [
+        { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+        { url: "/apple-icon", type: "image/png" },
+      ],
     },
     openGraph: {
       type: "website",
