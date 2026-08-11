@@ -25,9 +25,6 @@ import { generateTrackingNumber } from "./tracking";
 import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
 import { fashionDataDir, fashionStorePath } from "./paths";
 
-const dataDir = fashionDataDir();
-const storePath = fashionStorePath();
-
 const defaultCoupons: Coupon[] = [
   {
     id: "cp-smartcraft10",
@@ -40,6 +37,14 @@ const defaultCoupons: Coupon[] = [
 
 function defaultAdminPassword(): string {
   return process.env.FASHION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "rony4505";
+}
+
+function dataDir(): string {
+  return fashionDataDir();
+}
+
+function storePath(): string {
+  return fashionStorePath();
 }
 
 function isExpired(iso?: string): boolean {
@@ -238,7 +243,7 @@ function migrateOrder(order: Partial<FashionOrder>): FashionOrder {
 
 async function ensureStore(): Promise<FashionStore> {
   try {
-    const raw = await readFile(storePath, "utf8");
+    const raw = await readFile(storePath(), "utf8");
     const parsed = JSON.parse(raw) as Partial<FashionStore>;
     const settings = migrateSettings(parsed.settings);
     const products = (parsed.products?.length ? parsed.products : rawSeedProducts).map((p) =>
@@ -262,7 +267,7 @@ async function ensureStore(): Promise<FashionStore> {
     if (normalizeProductSlugs(store)) await writeStore(store);
     return store;
   } catch {
-    await mkdir(dataDir, { recursive: true });
+    await mkdir(dataDir(), { recursive: true });
     const settings = defaultSettings;
     const initial: FashionStore = {
       settings,
@@ -282,8 +287,8 @@ async function ensureStore(): Promise<FashionStore> {
 }
 
 async function writeStore(store: FashionStore): Promise<void> {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(storePath, JSON.stringify(store, null, 2), "utf8");
+  await mkdir(dataDir(), { recursive: true });
+  await writeFile(storePath(), JSON.stringify(store, null, 2), "utf8");
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {

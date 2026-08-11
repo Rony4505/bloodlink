@@ -20,20 +20,21 @@ type PendingReg = {
   expiresAt: number;
 };
 
-const dataDir = fashionDataDir();
-const pendingPath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-pending-reg.json");
+function pendingPath(): string {
+  return path.join(/* turbopackIgnore: true */ fashionDataDir(), "fashion-pending-reg.json");
+}
 
 async function readPending(): Promise<Record<string, PendingReg>> {
   try {
-    return JSON.parse(await readFile(pendingPath, "utf8")) as Record<string, PendingReg>;
+    return JSON.parse(await readFile(pendingPath(), "utf8")) as Record<string, PendingReg>;
   } catch {
     return {};
   }
 }
 
 async function writePending(data: Record<string, PendingReg>) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(pendingPath, JSON.stringify(data, null, 2), "utf8");
+  await mkdir(fashionDataDir(), { recursive: true });
+  await writeFile(pendingPath(), JSON.stringify(data, null, 2), "utf8");
 }
 
 export async function GET() {

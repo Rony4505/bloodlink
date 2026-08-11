@@ -10,12 +10,13 @@ type OtpRecord = {
   expiresAt: number;
 };
 
-const dataDir = fashionDataDir();
-const otpPath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-otp.json");
+function otpPath(): string {
+  return path.join(/* turbopackIgnore: true */ fashionDataDir(), "fashion-otp.json");
+}
 
 async function readAll(): Promise<Record<string, OtpRecord>> {
   try {
-    const raw = await readFile(otpPath, "utf8");
+    const raw = await readFile(otpPath(), "utf8");
     return JSON.parse(raw) as Record<string, OtpRecord>;
   } catch {
     return {};
@@ -23,8 +24,8 @@ async function readAll(): Promise<Record<string, OtpRecord>> {
 }
 
 async function writeAll(data: Record<string, OtpRecord>) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(otpPath, JSON.stringify(data, null, 2), "utf8");
+  await mkdir(fashionDataDir(), { recursive: true });
+  await writeFile(otpPath(), JSON.stringify(data, null, 2), "utf8");
 }
 
 function keyFor(purpose: string, target: string) {

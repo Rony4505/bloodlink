@@ -8,6 +8,12 @@ FLAG_META="/tmp/bloodlink_db_flag"
 
 mkdir -p "$DATA_DIR" 2>/dev/null || true
 
+# Railway volumes often mount as root-owned; fix before dropping privileges.
+if [ "$(id -u)" = "0" ]; then
+  chown -R nextjs:nodejs "$DATA_DIR" 2>/dev/null || true
+  chmod -R u+rwX "$DATA_DIR" 2>/dev/null || true
+fi
+
 is_private() {
   printf '%s' "$1" | grep -qi 'railway\.internal'
 }
@@ -72,6 +78,12 @@ else
   printf '0' > "$FLAG_META"
   echo "[bloodlink] db url present: false"
   echo "[bloodlink] hint: paste DATABASE_PUBLIC_URL (proxy.rlwy.net) in Owner panel → Storage"
+fi
+
+echo "[bloodlink] DATA_DIR=${DATA_DIR}"
+
+if [ "$(id -u)" = "0" ]; then
+  exec su-exec nextjs node server.js
 fi
 
 exec node server.js
