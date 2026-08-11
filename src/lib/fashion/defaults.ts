@@ -3,6 +3,7 @@ import type { Category, StoreSettings } from "./types";
 export const defaultSettings: StoreSettings = {
   brandName: "Slowgun",
   brandTagline: "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন",
+  brandTaglineEn: "Luxury fashion for Bangladeshi women",
   defaultMarkupPercent: 35,
   pricingMode: "markup",
   deliveryRules: [
@@ -10,74 +11,99 @@ export const defaultSettings: StoreSettings = {
     { id: "d2", district: "*", fee: 150, minOrderForFree: 10000, active: true },
   ],
   heroTitle: "সহজ luxury, refined style, modern Bangladesh.",
+  heroTitleEn: "Effortless luxury, refined style, modern Bangladesh.",
   heroSubtitle: "বাংলাদেশি নারীদের জন্য curated premium fashion destination",
+  heroSubtitleEn: "A curated premium fashion destination for Bangladeshi women",
   heroDescription:
     "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।",
+  heroDescriptionEn:
+    "Slowgun is an e-commerce experience where premium fabric, a soft color palette, festive elegance, and daily sophistication come together.",
   heroCtaPrimaryLabel: "কালেকশন দেখুন",
+  heroCtaPrimaryLabelEn: "Shop collections",
   heroCtaPrimaryHref: "/collections",
   heroCtaSecondaryLabel: "ফিচার্ড প্রোডাক্ট",
+  heroCtaSecondaryLabelEn: "Featured product",
   heroCtaSecondaryHref: "/collections",
   heroStat1Value: "150+",
   heroStat1Label: "কিউরেটেড লাক্সারি পিস",
+  heroStat1LabelEn: "Curated luxury pieces",
   heroStat2Value: "৬৪ জেলা",
   heroStat2Label: "সারা দেশে ডেলিভারি",
+  heroStat2LabelEn: "Nationwide delivery",
   heroStat3Value: "4.9/5",
   heroStat3Label: "কাস্টমার রেটিং",
+  heroStat3LabelEn: "Customer rating",
   contactEmail: "hello@slowgun.com",
   contactPhone: "+880 1XXX-XXXXXX",
   whatsapp: "8801700000000",
-  supportNote: "Dhaka delivery + nationwide courier",
+  supportNote: "ঢাকা ডেলিভারি + সারা দেশে কুরিয়ার",
+  supportNoteEn: "Dhaka delivery + nationwide courier",
   facebookUrl: "",
   instagramUrl: "",
   footerText:
     "বাংলাদেশি নারীদের জন্য curated luxury fashion—effortless browsing, premium presentation, এবং trusted delivery experience।",
-  aboutTitle: "Luxury that feels natural for Bangladeshi women",
-  aboutSubtitle: "Our story",
+  footerTextEn:
+    "Curated luxury fashion for Bangladeshi women—effortless browsing, premium presentation, and trusted delivery.",
+  aboutTitle: "বাংলাদেশি নারীদের জন্য স্বাভাবিক লাক্সারি",
+  aboutTitleEn: "Luxury that feels natural for Bangladeshi women",
+  aboutSubtitle: "আমাদের গল্প",
+  aboutSubtitleEn: "Our story",
   aboutText:
     "Slowgun শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience বাংলাদেশি নারীদের কাছে সহজ ও elegant করে তোলা।",
+  aboutTextEn:
+    "Slowgun began with a simple belief—making premium fashion feel easy and elegant for Bangladeshi women.",
   aboutPillars: [
     {
-      title: "Curated, not crowded",
+      title: "কিউরেটেড, crowded নয়",
       body: "আমরা quantity-র চেয়ে quality, fabric feel, এবং styling clarity-তে focus করি।",
     },
     {
-      title: "Bangladesh-first service",
-      body: "COD, bKash, Nagad, Dhaka fast delivery, এবং nationwide courier support standard।",
+      title: "বাংলাদেশ-first সার্ভিস",
+      body: "COD, bKash, Nagad, ঢাকা fast delivery, এবং nationwide courier support standard।",
     },
     {
-      title: "Women-first experience",
+      title: "নারী-first অভিজ্ঞতা",
       body: "Size guidance, styling help, festive packaging, এবং thoughtful post-purchase care।",
     },
   ],
+  aboutPillarsEn: [
+    {
+      title: "Curated, not crowded",
+      body: "We focus on quality, fabric feel, and styling clarity over quantity.",
+    },
+    {
+      title: "Bangladesh-first service",
+      body: "COD, bKash, Nagad, fast Dhaka delivery, and nationwide courier support are standard.",
+    },
+    {
+      title: "Women-first experience",
+      body: "Size guidance, styling help, festive packaging, and thoughtful post-purchase care.",
+    },
+  ],
   freeShippingNote: "নির্দিষ্ট অর্ডারে ফ্রি ডেলিভারি",
+  freeShippingNoteEn: "Free delivery on selected orders",
   announcementEnabled: false,
   announcementText: "",
+  announcementTextEn: "",
   featuresTitle: "লাক্সারি জটিল হওয়ার দরকার নেই",
+  featuresTitleEn: "Luxury doesn't have to feel complicated",
   featuresBody:
     "এই স্টোরের UI, product selection, payment options, এবং post-purchase communication—সবকিছু এমনভাবে সাজানো যাতে high-end shopping feel থাকে, কিন্তু ব্যবহার করা একদম সহজ হয়।",
+  featuresBodyEn:
+    "UI, product selection, payment options, and post-purchase communication are designed for a high-end feel that's still easy to use.",
   serviceHighlights: [
     "ঢাকা সিটিতে দ্রুত ডেলিভারি এবং সারা বাংলাদেশে কুরিয়ার সাপোর্ট",
     "Cash on Delivery, bKash, Nagad এবং কার্ড পেমেন্ট",
     "সাইজ গাইড, স্টাইলিং হেল্প, এবং WhatsApp কনসাল্টেশন",
     "গিফট বক্স, ফেস্টিভ প্যাকেজিং, এবং curated bundle offers",
   ],
-  testimonials: [
-    {
-      quote:
-        "ডিজাইনগুলো খুব ক্লিন, ফ্যাব্রিক প্রিমিয়াম, আর delivery experience সত্যিই polished লেগেছে।",
-      author: "Nusrat, Dhanmondi",
-    },
-    {
-      quote:
-        "অনলাইনে luxury feel পাওয়া কঠিন, কিন্তু এই স্টোরের product curation আর presentation খুব confidence দেয়।",
-      author: "Fariha, Chattogram",
-    },
-    {
-      quote:
-        "Festive shopping-এর জন্য one-stop solution মনে হয়েছে। Size support আর packaging দুটোই excellent.",
-      author: "Mahi, Sylhet",
-    },
+  serviceHighlightsEn: [
+    "Fast Dhaka delivery and nationwide courier support",
+    "Cash on Delivery, bKash, Nagad and card payments",
+    "Size guide, styling help, and WhatsApp consultation",
+    "Gift boxes, festive packaging, and curated bundle offers",
   ],
+  testimonials: [],
   faqs: [
     {
       question: "সাইজ ঠিকমতো বুঝবো কীভাবে?",
@@ -95,17 +121,38 @@ export const defaultSettings: StoreSettings = {
         "হ্যাঁ, selected festive pieces-এর জন্য custom measurement consultation এবং preorder slot রাখা হয়েছে।",
     },
   ],
+  faqsEn: [
+    {
+      question: "How do I choose the right size?",
+      answer:
+        "Every product includes a detailed size chart, fabric notes, and fitting suggestions. WhatsApp styling support is also available.",
+    },
+    {
+      question: "Do you offer returns or exchanges?",
+      answer:
+        "Size exchange is available within 3 days of delivery, and damaged items get priority replacement.",
+    },
+    {
+      question: "Can festive collections be custom ordered?",
+      answer:
+        "Yes — selected festive pieces include custom measurement consultation and preorder slots.",
+    },
+  ],
   showCouponsOnHome: true,
   showNewProducts: true,
   showOffers: true,
   showFeatures: true,
-  showTestimonials: true,
+  showTestimonials: false,
   showFaq: true,
-  metaTitle: "Slowgun — Luxury fashion for Bangladeshi women",
+  metaTitle: "Slowgun — বাংলাদেশি নারীদের লাক্সারি ফ্যাশন",
+  metaTitleEn: "Slowgun — Luxury fashion for Bangladeshi women",
   metaDescription:
+    "প্রিমিয়াম জামদানি, ফেস্টিভ ও ডেইলি এলিগেন্স কালেকশন—সারা বাংলাদেশে ডেলিভারি।",
+  metaDescriptionEn:
     "Premium jamdani, festive, and daily elegance collections with nationwide delivery across Bangladesh.",
   promoBanners: [],
   availableSizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size"],
+  websiteChatEnabled: true,
 };
 
 export const defaultCategories: Category[] = [

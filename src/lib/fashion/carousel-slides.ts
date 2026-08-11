@@ -1,4 +1,4 @@
-import type { Product, PromoBanner } from "@/lib/fashion/types";
+import type { PromoBanner } from "@/lib/fashion/types";
 
 export type CarouselSlide = {
   id: string;
@@ -8,39 +8,16 @@ export type CarouselSlide = {
   badge?: string;
 };
 
-export function buildCarouselSlides(
-  banners: PromoBanner[],
-  offers: Product[],
-  newProducts: Product[],
-): CarouselSlide[] {
-  const slides: CarouselSlide[] = banners.map((b) => ({
-    id: b.id,
-    imageUrl: b.imageUrl,
-    href: b.linkSlug ? `/products/${b.linkSlug}` : "/collections",
-    label: b.title,
-    badge: b.badgeLabel ?? "অফার",
-  }));
-
-  for (const product of offers) {
-    slides.push({
-      id: `offer-${product.id}`,
-      imageUrl: product.imageUrl,
-      href: `/products/${product.slug}`,
-      label: product.offerLabel ?? product.nameBn,
-      badge: product.offerDiscountPercent ? `${product.offerDiscountPercent}% ছাড়` : "অফার",
-    });
-  }
-
-  for (const product of newProducts.slice(0, 4)) {
-    if (slides.some((s) => s.id === `offer-${product.id}`)) continue;
-    slides.push({
-      id: `new-${product.id}`,
-      imageUrl: product.imageUrl,
-      href: `/products/${product.slug}`,
-      label: product.nameBn,
-      badge: "নতুন",
-    });
-  }
-
-  return slides;
+/** Homepage carousel shows only admin-added advertisements. */
+export function buildCarouselSlides(banners: PromoBanner[]): CarouselSlide[] {
+  return banners
+    .filter((b) => b.active !== false && Boolean(b.imageUrl))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((b) => ({
+      id: b.id,
+      imageUrl: b.imageUrl,
+      href: b.linkSlug ? `/products/${b.linkSlug}` : "/collections",
+      label: b.title,
+      badge: b.badgeLabel ?? "অ্যাড",
+    }));
 }

@@ -2,41 +2,53 @@
 
 import Link from "next/link";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
-import type { FaqItem, StoreSettings, TestimonialItem } from "@/lib/fashion/types";
+import { tSetting } from "@/lib/fashion/locale-settings";
+import type { FaqItem, StoreSettings } from "@/lib/fashion/types";
 
 export function HomeHeroActions({
-  heroSubtitle,
-  heroTitle,
-  heroDescription,
   settings,
 }: {
-  heroSubtitle: string;
-  heroTitle: string;
-  heroDescription: string;
   settings: StoreSettings;
 }) {
-  const { fc } = useFashionCopy();
+  const { locale, fc } = useFashionCopy();
 
-  const primaryLabel = settings.heroCtaPrimaryLabel || fc.actions.shopCollections;
+  const heroSubtitle = tSetting(settings, "heroSubtitle", "heroSubtitleEn", locale, fc.home.categoryHint);
+  const heroTitle = tSetting(
+    settings,
+    "heroTitle",
+    "heroTitleEn",
+    locale,
+    "সহজ luxury, refined style, modern Bangladesh.",
+  );
+  const heroDescription = tSetting(settings, "heroDescription", "heroDescriptionEn", locale, "");
+  const primaryLabel = tSetting(
+    settings,
+    "heroCtaPrimaryLabel",
+    "heroCtaPrimaryLabelEn",
+    locale,
+    fc.actions.shopCollections,
+  );
   const primaryHref = settings.heroCtaPrimaryHref || "/collections";
-  const secondaryLabel = settings.heroCtaSecondaryLabel || fc.actions.viewFeatured;
+  const secondaryLabel = tSetting(
+    settings,
+    "heroCtaSecondaryLabel",
+    "heroCtaSecondaryLabelEn",
+    locale,
+    fc.actions.viewFeatured,
+  );
   const secondaryHref = settings.heroCtaSecondaryHref || "/collections";
-
-  const stats = [
-    [settings.heroStat1Value || "150+", settings.heroStat1Label || fc.home.curatedPieces],
-    [settings.heroStat2Value || "৬৪ জেলা", settings.heroStat2Label || fc.home.nationwide],
-    [settings.heroStat3Value || "4.9/5", settings.heroStat3Label || fc.home.rating],
-  ];
 
   return (
     <div className="pt-14 md:pt-16">
-      <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur">
+      <span className="inline-flex rounded-full border border-white/25 bg-[#2b1d19]/35 px-4 py-2 text-sm font-medium text-white backdrop-blur">
         {heroSubtitle}
       </span>
       <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold md:text-7xl">
         {heroTitle}
       </h1>
-      <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">{heroDescription}</p>
+      {heroDescription ? (
+        <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">{heroDescription}</p>
+      ) : null}
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
@@ -47,55 +59,82 @@ export function HomeHeroActions({
         </Link>
         <Link
           href={secondaryHref}
-          className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/16"
+          className="inline-flex items-center justify-center rounded-full border-2 border-white/70 bg-[#2b1d19]/55 px-6 py-3 text-sm font-semibold text-white shadow-sm backdrop-blur transition hover:bg-[#2b1d19]/75"
         >
           {secondaryLabel}
         </Link>
-      </div>
-
-      <div className="mt-10 grid gap-4 sm:grid-cols-3">
-        {stats.map(([value, label]) => (
-          <div key={label} className="rounded-3xl border border-white/12 bg-white/10 px-5 py-5 backdrop-blur">
-            <p className="font-[family-name:var(--font-display)] text-3xl font-bold">{value}</p>
-            <p className="mt-2 text-sm text-white/72">{label}</p>
-          </div>
-        ))}
       </div>
     </div>
   );
 }
 
+export function HomeStatsStrip({ settings }: { settings: StoreSettings }) {
+  const { locale, fc } = useFashionCopy();
+  const stats = [
+    [
+      settings.heroStat1Value || "150+",
+      tSetting(settings, "heroStat1Label", "heroStat1LabelEn", locale, fc.home.curatedPieces),
+    ],
+    [
+      settings.heroStat2Value || (locale === "bn" ? "৬৪ জেলা" : "64 districts"),
+      tSetting(settings, "heroStat2Label", "heroStat2LabelEn", locale, fc.home.nationwide),
+    ],
+    [
+      settings.heroStat3Value || "4.9/5",
+      tSetting(settings, "heroStat3Label", "heroStat3LabelEn", locale, fc.home.rating),
+    ],
+  ];
+
+  return (
+    <section className="border-b border-black/5 bg-[#f7f7f5]">
+      <div className="mx-auto grid max-w-7xl gap-4 px-5 py-10 sm:grid-cols-3 md:px-8 md:py-12">
+        {stats.map(([value, label]) => (
+          <div
+            key={label}
+            className="rounded-[1.5rem] border border-black/6 bg-white px-5 py-6 text-center shadow-[0_12px_40px_rgba(48,27,20,0.04)]"
+          >
+            <p className="font-[family-name:var(--font-display)] text-3xl font-bold text-[#2b1d19]">
+              {value}
+            </p>
+            <p className="mt-2 text-sm text-[#6e5449]">{label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
-  const { fc } = useFashionCopy();
+  const { locale, fc } = useFashionCopy();
 
   const highlights =
-    settings.serviceHighlights?.filter(Boolean).length
-      ? settings.serviceHighlights.filter(Boolean)
-      : [
-          "ঢাকা সিটিতে দ্রুত ডেলিভারি এবং সারা বাংলাদেশে কুরিয়ার সাপোর্ট",
-          "Cash on Delivery, bKash, Nagad এবং কার্ড পেমেন্ট",
-          "সাইজ গাইড, স্টাইলিং হেল্প, এবং WhatsApp কনসাল্টেশন",
-          "গিফট বক্স, ফেস্টিভ প্যাকেজিং, এবং curated bundle offers",
-        ];
-
-  const quotes: TestimonialItem[] =
-    settings.testimonials?.filter((t) => t.quote.trim()).length
-      ? settings.testimonials.filter((t) => t.quote.trim())
-      : [
-          {
-            quote:
-              "ডিজাইনগুলো খুব ক্লিন, ফ্যাব্রিক প্রিমিয়াম, আর delivery experience সত্যিই polished লেগেছে।",
-            author: "Nusrat, Dhanmondi",
-          },
-        ];
+    locale === "en"
+      ? (settings.serviceHighlightsEn?.filter(Boolean).length
+          ? settings.serviceHighlightsEn.filter(Boolean)
+          : settings.serviceHighlights?.filter(Boolean) ?? [])
+      : (settings.serviceHighlights?.filter(Boolean) ?? []);
 
   const faqItems: FaqItem[] =
-    settings.faqs?.filter((f) => f.question.trim()).length
-      ? settings.faqs.filter((f) => f.question.trim())
-      : [];
+    locale === "en"
+      ? (settings.faqsEn?.filter((f) => f.question.trim()).length
+          ? settings.faqsEn.filter((f) => f.question.trim())
+          : settings.faqs?.filter((f) => f.question.trim()) ?? [])
+      : (settings.faqs?.filter((f) => f.question.trim()) ?? []);
 
-  const featuresTitle = settings.featuresTitle || fc.home.featuresTitle;
-  const featuresBody = settings.featuresBody || fc.home.featuresBody;
+  const featuresTitle = tSetting(
+    settings,
+    "featuresTitle",
+    "featuresTitleEn",
+    locale,
+    fc.home.featuresTitle,
+  );
+  const featuresBody = tSetting(
+    settings,
+    "featuresBody",
+    "featuresBodyEn",
+    locale,
+    fc.home.featuresBody,
+  );
 
   return (
     <>
@@ -122,26 +161,6 @@ export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
                   </div>
                   <p className="mt-5 text-base leading-8 text-[#60483f]">{item}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {settings.showTestimonials !== false ? (
-        <section className="border-y border-black/5 bg-white">
-          <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
-            <div className="grid gap-5 lg:grid-cols-3">
-              {quotes.map((item) => (
-                <blockquote
-                  key={`${item.author}-${item.quote.slice(0, 20)}`}
-                  className="rounded-[2rem] border border-black/6 bg-[#fdf8f4] p-7 shadow-[0_20px_70px_rgba(48,27,20,0.05)]"
-                >
-                  <p className="text-lg leading-8 text-[#513b33]">&ldquo;{item.quote}&rdquo;</p>
-                  <footer className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-[#9b7766]">
-                    {item.author}
-                  </footer>
-                </blockquote>
               ))}
             </div>
           </div>

@@ -43,9 +43,13 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
     promoBanners: parsed?.promoBanners ?? defaultSettings.promoBanners ?? [],
     availableSizes: parsed?.availableSizes ?? defaultSettings.availableSizes,
     aboutPillars: parsed?.aboutPillars ?? defaultSettings.aboutPillars,
+    aboutPillarsEn: parsed?.aboutPillarsEn ?? defaultSettings.aboutPillarsEn,
     serviceHighlights: parsed?.serviceHighlights ?? defaultSettings.serviceHighlights,
+    serviceHighlightsEn: parsed?.serviceHighlightsEn ?? defaultSettings.serviceHighlightsEn,
     testimonials: parsed?.testimonials ?? defaultSettings.testimonials,
     faqs: parsed?.faqs ?? defaultSettings.faqs,
+    faqsEn: parsed?.faqsEn ?? defaultSettings.faqsEn,
+    showTestimonials: parsed?.showTestimonials ?? false,
   };
 }
 
@@ -280,9 +284,12 @@ export async function updateStoreSettings(partial: Partial<StoreSettings>): Prom
     promoBanners: partial.promoBanners ?? current.promoBanners ?? [],
     availableSizes: partial.availableSizes ?? current.availableSizes,
     aboutPillars: partial.aboutPillars ?? current.aboutPillars,
+    aboutPillarsEn: partial.aboutPillarsEn ?? current.aboutPillarsEn,
     serviceHighlights: partial.serviceHighlights ?? current.serviceHighlights,
+    serviceHighlightsEn: partial.serviceHighlightsEn ?? current.serviceHighlightsEn,
     testimonials: partial.testimonials ?? current.testimonials,
     faqs: partial.faqs ?? current.faqs,
+    faqsEn: partial.faqsEn ?? current.faqsEn,
   };
   purgeExpired(store);
   await writeStore(store);

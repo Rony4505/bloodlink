@@ -11,7 +11,7 @@ import { copy } from "@/lib/fashion/copy";
 export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark" }) {
   const pathname = usePathname();
   const { itemCount } = useCart();
-  const { fc } = useFashionCopy();
+  const { fc, locale } = useFashionCopy();
   const [loggedIn, setLoggedIn] = useState(false);
   const [unread, setUnread] = useState(0);
   const [brand, setBrand] = useState(copy.brand);
@@ -38,10 +38,16 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
       .then((r) => r.json())
       .then((data) => {
         if (data.settings?.brandName) setBrand(data.settings.brandName);
-        if (data.settings?.brandTagline) setTagline(data.settings.brandTagline);
+        if (data.settings?.brandTagline) {
+          const tag =
+            locale === "en" && data.settings.brandTaglineEn
+              ? data.settings.brandTaglineEn
+              : data.settings.brandTagline;
+          setTagline(tag);
+        }
       })
       .catch(() => undefined);
-  }, [pathname]);
+  }, [pathname, locale]);
 
   const activeClass = isDark
     ? "bg-[linear-gradient(135deg,#f0c9a8,#f8e4d4)] text-[#4a2f28] ring-2 ring-[#f4d4c2]/70 shadow-[0_4px_18px_rgba(240,201,168,0.45)]"

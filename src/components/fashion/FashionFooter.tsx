@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
+import { tSetting } from "@/lib/fashion/locale-settings";
 import { copy } from "@/lib/fashion/copy";
 import type { StoreSettings } from "@/lib/fashion/types";
 
 export function FashionFooter() {
-  const { fc } = useFashionCopy();
+  const { locale, fc } = useFashionCopy();
   const [brand, setBrand] = useState(copy.brand);
   const [settings, setSettings] = useState<Partial<StoreSettings>>({});
 
@@ -24,8 +25,20 @@ export function FashionFooter() {
   const phone = settings.contactPhone || "+880 1XXX-XXXXXX";
   const email = settings.contactEmail || "hello@slowgun.com";
   const whatsapp = settings.whatsapp || "8801700000000";
-  const supportNote = settings.supportNote || "Dhaka delivery + nationwide courier";
-  const blurb = settings.footerText || fc.footer.blurb;
+  const supportNote = tSetting(
+    settings as StoreSettings,
+    "supportNote",
+    "supportNoteEn",
+    locale,
+    locale === "bn" ? "ঢাকা ডেলিভারি + সারা দেশে কুরিয়ার" : "Dhaka delivery + nationwide courier",
+  );
+  const blurb = tSetting(
+    settings as StoreSettings,
+    "footerText",
+    "footerTextEn",
+    locale,
+    fc.footer.blurb,
+  );
 
   return (
     <footer className="border-t border-black/5 bg-[#2b1d19] px-5 py-14 text-white md:px-8">

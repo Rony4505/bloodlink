@@ -120,6 +120,8 @@ export function FashionAdminPanel() {
   const [advertiseKind, setAdvertiseKind] = useState<AdvertiseKind>("new");
   const [advertiseLabel, setAdvertiseLabel] = useState("");
   const [uploadBannerId, setUploadBannerId] = useState<string | null>(null);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [offersSearch, setOffersSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const bannerFileRef = useRef<HTMLInputElement>(null);
 
@@ -154,6 +156,55 @@ export function FashionAdminPanel() {
     if (!q) return true;
     return [p.name, p.nameBn, p.id, p.slug].join(" ").toLowerCase().includes(q);
   });
+
+  const filteredOrders = orders.filter((order) => {
+    const q = orderSearch.trim().toLowerCase();
+    if (!q) return true;
+    return [
+      order.trackingNumber,
+      order.id,
+      order.customerName,
+      order.phone,
+      order.district,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(q);
+  });
+
+  const offerSearchQuery = offersSearch.trim().toLowerCase();
+  function matchesOfferSearch(product: Product) {
+    if (!offerSearchQuery) return true;
+    return [
+      product.name,
+      product.nameBn,
+      product.id,
+      product.slug,
+      product.offerLabel,
+      product.advertiseLabel,
+      product.advertiseKind,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(offerSearchQuery);
+  }
+  function matchesBannerSearch(banner: PromoBanner) {
+    if (!offerSearchQuery) return true;
+    const linked = products.find((p) => p.id === banner.productId);
+    return [
+      banner.title,
+      banner.badgeLabel,
+      banner.advertiseKind,
+      banner.id,
+      banner.productId,
+      linked?.name,
+      linked?.nameBn,
+      linked?.id,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(offerSearchQuery);
+  }
 
   const filteredCategories = categories.filter((c) => {
     const q = categorySearch.trim().toLowerCase();
@@ -485,8 +536,7 @@ export function FashionAdminPanel() {
     <AdminShell>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">{fc.admin.founder}</p>
-          <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">{fc.admin.title}</h1>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">{fc.admin.founder}</h1>
           {unreadCount > 0 ? <p className="mt-2 text-sm text-[#b86a2e]">{unreadCount} {fc.admin.newOrders}</p> : null}
         </div>
         <FashionButton variant="secondary" onClick={async () => { await fetch("/api/fashion/admin", { method: "DELETE" }); router.push("/store-admin/login"); }}>{fc.nav.logout}</FashionButton>
@@ -596,8 +646,14 @@ export function FashionAdminPanel() {
 
       {/* Orders Modal - list only */}
       <AdminModal open={activeTab === "orders"} onClose={() => setActiveTab(null)} title={fc.admin.orders} theme="ocean" wide>
+        <input
+          className="field mb-3"
+          placeholder={fc.admin.trackSearch}
+          value={orderSearch}
+          onChange={(e) => setOrderSearch(e.target.value)}
+        />
         <div className="max-h-[28rem] space-y-2 overflow-y-auto">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <button key={order.id} type="button" onClick={() => setSelectedOrder(order)}
               className="flex w-full items-center justify-between rounded-2xl border border-black/6 bg-white/80 px-4 py-3 text-left hover:bg-white">
               <div>
@@ -610,6 +666,9 @@ export function FashionAdminPanel() {
               </div>
             </button>
           ))}
+          {filteredOrders.length === 0 ? (
+            <p className="text-sm text-[#9b7766]">{locale === "bn" ? "কোনো অর্ডার পাওয়া যায়নি" : "No orders found"}</p>
+          ) : null}
         </div>
       </AdminModal>
 
@@ -769,9 +828,15 @@ export function FashionAdminPanel() {
 
       <AdminModal open={activeTab === "offers-product"} onClose={() => setActiveTab(null)} title={fc.admin.offersProduct} subtitle={fc.admin.offersHint} theme="gold" wide>
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>{fc.admin.offersTab}</button>
-          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>{fc.admin.adsTab}</button>
+          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70 text-[#3d2a24]"}`}>{fc.admin.offersTab}</button>
+          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70 text-[#3d2a24]"}`}>{fc.admin.adsTab}</button>
         </div>
+        <input
+          className="field mb-4"
+          placeholder={fc.admin.offersSearch}
+          value={offersSearch}
+          onChange={(e) => setOffersSearch(e.target.value)}
+        />
 
         {offersSubTab === "offers" ? (
           <div className="space-y-4">
@@ -792,7 +857,7 @@ export function FashionAdminPanel() {
             </form>
 
             <div className="max-h-80 space-y-2 overflow-y-auto">
-              {products.filter((p) => p.offerActive).map((p) => (
+              {products.filter((p) => p.offerActive && matchesOfferSearch(p)).map((p) => (
                 <div key={p.id} className="rounded-xl border border-black/6 bg-white/80 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -812,7 +877,7 @@ export function FashionAdminPanel() {
                   </div>
                 </div>
               ))}
-              {products.filter((p) => p.offerActive).length === 0 ? (
+              {products.filter((p) => p.offerActive && matchesOfferSearch(p)).length === 0 ? (
                 <p className="text-sm text-[#9b7766]">{fc.admin.noOffers}</p>
               ) : null}
             </div>
@@ -864,7 +929,7 @@ export function FashionAdminPanel() {
             </form>
 
             <div className="max-h-80 space-y-2 overflow-y-auto">
-              {banners.map((b) => {
+              {banners.filter(matchesBannerSearch).map((b) => {
                 const linked = products.find((p) => p.id === b.productId);
                 return (
                   <div key={b.id} className="rounded-xl border border-black/6 bg-white/80 px-4 py-3">
@@ -891,7 +956,7 @@ export function FashionAdminPanel() {
                   </div>
                 );
               })}
-              {banners.length === 0 ? <p className="text-sm text-[#9b7766]">{fc.admin.noAds}</p> : null}
+              {banners.filter(matchesBannerSearch).length === 0 ? <p className="text-sm text-[#9b7766]">{fc.admin.noAds}</p> : null}
             </div>
           </div>
         )}
@@ -968,10 +1033,26 @@ export function FashionAdminPanel() {
           <form onSubmit={saveProduct} className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[2rem] border border-[#e8c4b0]/60 bg-[linear-gradient(160deg,#fff8f4,#fdeee4)] p-6 shadow-2xl space-y-3">
             <div className="flex justify-between"><h2 className="text-2xl font-bold">{editingId ? copy.actions.edit : copy.actions.create}</h2>
               <button type="button" onClick={() => setProductModalOpen(false)}>✕</button></div>
-            {[["nameBn", "নাম (বাংলা)"], ["name", "নাম"], ["buyPrice", "কেনা দাম"], ["price", "বিক্রয়"], ["stock", "স্টক"]].map(([key, label]) => (
+            {([["nameBn", "নাম (বাংলা)"], ["name", "Name (English)"], ["buyPrice", "কেনা দাম"], ["price", "বিক্রয়"], ["stock", "স্টক"]] as const).map(([key, label]) => (
               <label key={key} className="block"><span className="text-sm text-[#9b7766]">{label}</span>
                 <input className="field mt-1" value={String(form[key as keyof ProductInput] ?? "")} onChange={(e) => setForm((c) => ({ ...c, [key]: ["price", "buyPrice", "stock"].includes(key) ? Number(e.target.value) : e.target.value }))} /></label>
             ))}
+            <label className="block">
+              <span className="text-sm text-[#9b7766]">বিবরণ (বাংলা)</span>
+              <textarea
+                className="field mt-1 min-h-[80px]"
+                value={form.descriptionBn ?? ""}
+                onChange={(e) => setForm((c) => ({ ...c, descriptionBn: e.target.value }))}
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm text-[#9b7766]">Description (English)</span>
+              <textarea
+                className="field mt-1 min-h-[80px]"
+                value={form.description ?? ""}
+                onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))}
+              />
+            </label>
             <div className="block">
               <span className="text-sm text-[#9b7766]">ক্যাটাগরি</span>
               <select

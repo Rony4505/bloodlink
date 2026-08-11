@@ -7,7 +7,6 @@ import type {
   AboutPillar,
   FaqItem,
   StoreSettings,
-  TestimonialItem,
 } from "@/lib/fashion/types";
 
 type SettingsTab =
@@ -32,6 +31,47 @@ function Field({
       <span className="text-xs font-medium text-[#9b7766]">{label}</span>
       <div className="mt-1">{children}</div>
     </label>
+  );
+}
+
+function DualText({
+  label,
+  bn,
+  en,
+  onBn,
+  onEn,
+  multiline = false,
+}: {
+  label: string;
+  bn: string;
+  en: string;
+  onBn: (v: string) => void;
+  onEn: (v: string) => void;
+  multiline?: boolean;
+}) {
+  const { fc } = useFashionCopy();
+  return (
+    <div className="space-y-2 rounded-xl border border-black/6 bg-white/70 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">{label}</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[11px] font-semibold text-[#8f624e]">{fc.admin.bangla}</span>
+          {multiline ? (
+            <textarea className="field mt-1 min-h-[80px]" value={bn} onChange={(e) => onBn(e.target.value)} />
+          ) : (
+            <input className="field mt-1" value={bn} onChange={(e) => onBn(e.target.value)} />
+          )}
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-semibold text-[#8f624e]">{fc.admin.english}</span>
+          {multiline ? (
+            <textarea className="field mt-1 min-h-[80px]" value={en} onChange={(e) => onEn(e.target.value)} />
+          ) : (
+            <input className="field mt-1" value={en} onChange={(e) => onEn(e.target.value)} />
+          )}
+        </label>
+      </div>
+    </div>
   );
 }
 
@@ -92,25 +132,40 @@ export function SettingsEditor({
     setSettings({ ...settings, [key]: value });
   }
 
-  function updatePillar(index: number, key: keyof AboutPillar, value: string) {
+  function updatePillar(index: number, key: keyof AboutPillar, value: string, lang: "bn" | "en") {
+    if (lang === "en") {
+      const pillars = [...(settings.aboutPillarsEn ?? settings.aboutPillars ?? [])];
+      while (pillars.length <= index) pillars.push({ title: "", body: "" });
+      pillars[index] = { ...pillars[index], [key]: value };
+      patch("aboutPillarsEn", pillars);
+      return;
+    }
     const pillars = [...(settings.aboutPillars ?? [])];
     pillars[index] = { ...pillars[index], [key]: value };
     patch("aboutPillars", pillars);
   }
 
-  function updateHighlight(index: number, value: string) {
+  function updateHighlight(index: number, value: string, lang: "bn" | "en") {
+    if (lang === "en") {
+      const items = [...(settings.serviceHighlightsEn ?? [])];
+      while (items.length <= index) items.push("");
+      items[index] = value;
+      patch("serviceHighlightsEn", items);
+      return;
+    }
     const items = [...(settings.serviceHighlights ?? [])];
     items[index] = value;
     patch("serviceHighlights", items);
   }
 
-  function updateTestimonial(index: number, key: keyof TestimonialItem, value: string) {
-    const items = [...(settings.testimonials ?? [])];
-    items[index] = { ...items[index], [key]: value };
-    patch("testimonials", items);
-  }
-
-  function updateFaq(index: number, key: keyof FaqItem, value: string) {
+  function updateFaq(index: number, key: keyof FaqItem, value: string, lang: "bn" | "en") {
+    if (lang === "en") {
+      const items = [...(settings.faqsEn ?? [])];
+      while (items.length <= index) items.push({ question: "", answer: "" });
+      items[index] = { ...items[index], [key]: value };
+      patch("faqsEn", items);
+      return;
+    }
     const items = [...(settings.faqs ?? [])];
     items[index] = { ...items[index], [key]: value };
     patch("faqs", items);
@@ -119,7 +174,7 @@ export function SettingsEditor({
   return (
     <div className="space-y-5">
       <p className="text-sm text-[#7a5c50]">
-        ওয়েবসাইটের ব্র্যান্ড, হিরো, যোগাযোগ, অ্যাবাউট, হোমপেজ সেকশন, প্রাইসিং ও SEO — সব এখান থেকে এডিট করুন।
+        প্রতিটি লেখার জন্য বাংলা ও English আলাদা রাখুন — language switch করলে সাইটে সেই ভাষা দেখাবে।
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -140,7 +195,7 @@ export function SettingsEditor({
       </div>
 
       {tab === "brand" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-3">
           <Field label="Brand name">
             <input
               className="field"
@@ -148,99 +203,96 @@ export function SettingsEditor({
               onChange={(e) => patch("brandName", e.target.value)}
             />
           </Field>
-          <Field label="Brand tagline">
-            <input
-              className="field"
-              value={settings.brandTagline}
-              onChange={(e) => patch("brandTagline", e.target.value)}
-            />
-          </Field>
-          <Field label="Announcement bar">
-            <input
-              className="field"
-              value={settings.announcementText ?? ""}
-              onChange={(e) => patch("announcementText", e.target.value)}
-              placeholder="হোমপেজের উপরে দেখানো মেসেজ"
-            />
-          </Field>
-          <div className="flex items-end">
-            <Toggle
-              label="Announcement দেখাও"
-              checked={Boolean(settings.announcementEnabled)}
-              onChange={(v) => patch("announcementEnabled", v)}
-            />
-          </div>
-          <Field label="Free shipping note">
-            <input
-              className="field"
-              value={settings.freeShippingNote ?? ""}
-              onChange={(e) => patch("freeShippingNote", e.target.value)}
-            />
-          </Field>
+          <DualText
+            label="Tagline"
+            bn={settings.brandTagline}
+            en={settings.brandTaglineEn ?? ""}
+            onBn={(v) => patch("brandTagline", v)}
+            onEn={(v) => patch("brandTaglineEn", v)}
+          />
+          <DualText
+            label="Announcement"
+            bn={settings.announcementText ?? ""}
+            en={settings.announcementTextEn ?? ""}
+            onBn={(v) => patch("announcementText", v)}
+            onEn={(v) => patch("announcementTextEn", v)}
+          />
+          <Toggle
+            label="Announcement দেখাও"
+            checked={Boolean(settings.announcementEnabled)}
+            onChange={(v) => patch("announcementEnabled", v)}
+          />
+          <DualText
+            label="Free shipping note"
+            bn={settings.freeShippingNote ?? ""}
+            en={settings.freeShippingNoteEn ?? ""}
+            onBn={(v) => patch("freeShippingNote", v)}
+            onEn={(v) => patch("freeShippingNoteEn", v)}
+          />
         </div>
       ) : null}
 
       {tab === "hero" ? (
         <div className="space-y-3">
-          <Field label="Hero subtitle">
+          <DualText
+            label="Hero subtitle"
+            bn={settings.heroSubtitle ?? ""}
+            en={settings.heroSubtitleEn ?? ""}
+            onBn={(v) => patch("heroSubtitle", v)}
+            onEn={(v) => patch("heroSubtitleEn", v)}
+          />
+          <DualText
+            label="Hero title"
+            bn={settings.heroTitle ?? ""}
+            en={settings.heroTitleEn ?? ""}
+            onBn={(v) => patch("heroTitle", v)}
+            onEn={(v) => patch("heroTitleEn", v)}
+            multiline
+          />
+          <DualText
+            label="Hero description"
+            bn={settings.heroDescription ?? ""}
+            en={settings.heroDescriptionEn ?? ""}
+            onBn={(v) => patch("heroDescription", v)}
+            onEn={(v) => patch("heroDescriptionEn", v)}
+            multiline
+          />
+          <DualText
+            label="Primary CTA label"
+            bn={settings.heroCtaPrimaryLabel ?? ""}
+            en={settings.heroCtaPrimaryLabelEn ?? ""}
+            onBn={(v) => patch("heroCtaPrimaryLabel", v)}
+            onEn={(v) => patch("heroCtaPrimaryLabelEn", v)}
+          />
+          <Field label="Primary CTA link">
             <input
               className="field"
-              value={settings.heroSubtitle ?? ""}
-              onChange={(e) => patch("heroSubtitle", e.target.value)}
+              value={settings.heroCtaPrimaryHref ?? ""}
+              onChange={(e) => patch("heroCtaPrimaryHref", e.target.value)}
             />
           </Field>
-          <Field label="Hero title">
-            <textarea
-              className="field min-h-[70px]"
-              value={settings.heroTitle ?? ""}
-              onChange={(e) => patch("heroTitle", e.target.value)}
+          <DualText
+            label="Secondary CTA (Featured) label"
+            bn={settings.heroCtaSecondaryLabel ?? ""}
+            en={settings.heroCtaSecondaryLabelEn ?? ""}
+            onBn={(v) => patch("heroCtaSecondaryLabel", v)}
+            onEn={(v) => patch("heroCtaSecondaryLabelEn", v)}
+          />
+          <Field label="Secondary CTA link">
+            <input
+              className="field"
+              value={settings.heroCtaSecondaryHref ?? ""}
+              onChange={(e) => patch("heroCtaSecondaryHref", e.target.value)}
             />
           </Field>
-          <Field label="Hero description">
-            <textarea
-              className="field min-h-[90px]"
-              value={settings.heroDescription ?? ""}
-              onChange={(e) => patch("heroDescription", e.target.value)}
-            />
-          </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Primary CTA label">
-              <input
-                className="field"
-                value={settings.heroCtaPrimaryLabel ?? ""}
-                onChange={(e) => patch("heroCtaPrimaryLabel", e.target.value)}
-              />
-            </Field>
-            <Field label="Primary CTA link">
-              <input
-                className="field"
-                value={settings.heroCtaPrimaryHref ?? ""}
-                onChange={(e) => patch("heroCtaPrimaryHref", e.target.value)}
-              />
-            </Field>
-            <Field label="Secondary CTA label">
-              <input
-                className="field"
-                value={settings.heroCtaSecondaryLabel ?? ""}
-                onChange={(e) => patch("heroCtaSecondaryLabel", e.target.value)}
-              />
-            </Field>
-            <Field label="Secondary CTA link">
-              <input
-                className="field"
-                value={settings.heroCtaSecondaryHref ?? ""}
-                onChange={(e) => patch("heroCtaSecondaryHref", e.target.value)}
-              />
-            </Field>
-          </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {(
               [
-                ["heroStat1Value", "heroStat1Label", "Stat 1"],
-                ["heroStat2Value", "heroStat2Label", "Stat 2"],
-                ["heroStat3Value", "heroStat3Label", "Stat 3"],
+                ["heroStat1Value", "heroStat1Label", "heroStat1LabelEn", "Stat 1"],
+                ["heroStat2Value", "heroStat2Label", "heroStat2LabelEn", "Stat 2"],
+                ["heroStat3Value", "heroStat3Label", "heroStat3LabelEn", "Stat 3"],
               ] as const
-            ).map(([valueKey, labelKey, title]) => (
+            ).map(([valueKey, labelKey, labelEnKey, title]) => (
               <div key={title} className="space-y-2 rounded-xl border border-black/6 bg-white/60 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">{title}</p>
                 <input
@@ -251,9 +303,15 @@ export function SettingsEditor({
                 />
                 <input
                   className="field"
-                  placeholder="Label"
+                  placeholder="Label (বাংলা)"
                   value={String(settings[labelKey] ?? "")}
                   onChange={(e) => patch(labelKey, e.target.value)}
+                />
+                <input
+                  className="field"
+                  placeholder="Label (English)"
+                  value={String(settings[labelEnKey] ?? "")}
+                  onChange={(e) => patch(labelEnKey, e.target.value)}
                 />
               </div>
             ))}
@@ -284,13 +342,6 @@ export function SettingsEditor({
               onChange={(e) => patch("contactEmail", e.target.value)}
             />
           </Field>
-          <Field label="Support note">
-            <input
-              className="field"
-              value={settings.supportNote ?? ""}
-              onChange={(e) => patch("supportNote", e.target.value)}
-            />
-          </Field>
           <Field label="Facebook URL">
             <input
               className="field"
@@ -306,70 +357,71 @@ export function SettingsEditor({
             />
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Footer text">
-              <textarea
-                className="field min-h-[90px]"
-                value={settings.footerText ?? ""}
-                onChange={(e) => patch("footerText", e.target.value)}
-              />
-            </Field>
+            <DualText
+              label="Support note"
+              bn={settings.supportNote ?? ""}
+              en={settings.supportNoteEn ?? ""}
+              onBn={(v) => patch("supportNote", v)}
+              onEn={(v) => patch("supportNoteEn", v)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <DualText
+              label="Footer text"
+              bn={settings.footerText ?? ""}
+              en={settings.footerTextEn ?? ""}
+              onBn={(v) => patch("footerText", v)}
+              onEn={(v) => patch("footerTextEn", v)}
+              multiline
+            />
           </div>
         </div>
       ) : null}
 
       {tab === "about" ? (
         <div className="space-y-3">
-          <Field label="About subtitle">
-            <input
-              className="field"
-              value={settings.aboutSubtitle ?? ""}
-              onChange={(e) => patch("aboutSubtitle", e.target.value)}
-            />
-          </Field>
-          <Field label="About title">
-            <input
-              className="field"
-              value={settings.aboutTitle ?? ""}
-              onChange={(e) => patch("aboutTitle", e.target.value)}
-            />
-          </Field>
-          <Field label="About body">
-            <textarea
-              className="field min-h-[100px]"
-              value={settings.aboutText ?? ""}
-              onChange={(e) => patch("aboutText", e.target.value)}
-            />
-          </Field>
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">Pillars</p>
-            {(settings.aboutPillars ?? []).map((pillar, index) => (
-              <div key={index} className="grid gap-2 rounded-xl border border-black/6 bg-white/60 p-3 sm:grid-cols-2">
-                <input
-                  className="field"
-                  placeholder="Title"
-                  value={pillar.title}
-                  onChange={(e) => updatePillar(index, "title", e.target.value)}
-                />
-                <textarea
-                  className="field min-h-[70px] sm:col-span-2"
-                  placeholder="Body"
-                  value={pillar.body}
-                  onChange={(e) => updatePillar(index, "body", e.target.value)}
-                />
-              </div>
-            ))}
-            <FashionButton
-              variant="secondary"
-              onClick={() =>
-                patch("aboutPillars", [
-                  ...(settings.aboutPillars ?? []),
-                  { title: "New pillar", body: "" },
-                ])
-              }
-            >
-              + Pillar
-            </FashionButton>
-          </div>
+          <DualText
+            label="About subtitle"
+            bn={settings.aboutSubtitle ?? ""}
+            en={settings.aboutSubtitleEn ?? ""}
+            onBn={(v) => patch("aboutSubtitle", v)}
+            onEn={(v) => patch("aboutSubtitleEn", v)}
+          />
+          <DualText
+            label="About title"
+            bn={settings.aboutTitle ?? ""}
+            en={settings.aboutTitleEn ?? ""}
+            onBn={(v) => patch("aboutTitle", v)}
+            onEn={(v) => patch("aboutTitleEn", v)}
+          />
+          <DualText
+            label="About body"
+            bn={settings.aboutText ?? ""}
+            en={settings.aboutTextEn ?? ""}
+            onBn={(v) => patch("aboutText", v)}
+            onEn={(v) => patch("aboutTextEn", v)}
+            multiline
+          />
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">Pillars</p>
+          {(settings.aboutPillars ?? []).map((pillar, index) => (
+            <div key={index} className="space-y-2 rounded-xl border border-black/6 bg-white/60 p-3">
+              <DualText
+                label={`Pillar ${index + 1} title`}
+                bn={pillar.title}
+                en={settings.aboutPillarsEn?.[index]?.title ?? ""}
+                onBn={(v) => updatePillar(index, "title", v, "bn")}
+                onEn={(v) => updatePillar(index, "title", v, "en")}
+              />
+              <DualText
+                label={`Pillar ${index + 1} body`}
+                bn={pillar.body}
+                en={settings.aboutPillarsEn?.[index]?.body ?? ""}
+                onBn={(v) => updatePillar(index, "body", v, "bn")}
+                onEn={(v) => updatePillar(index, "body", v, "en")}
+                multiline
+              />
+            </div>
+          ))}
         </div>
       ) : null}
 
@@ -392,14 +444,9 @@ export function SettingsEditor({
               onChange={(v) => patch("showOffers", v)}
             />
             <Toggle
-              label="Features সেকশন"
+              label="Features / Why shoppers stay"
               checked={settings.showFeatures !== false}
               onChange={(v) => patch("showFeatures", v)}
-            />
-            <Toggle
-              label="Testimonials সেকশন"
-              checked={settings.showTestimonials !== false}
-              onChange={(v) => patch("showTestimonials", v)}
             />
             <Toggle
               label="FAQ সেকশন"
@@ -408,100 +455,59 @@ export function SettingsEditor({
             />
           </div>
 
-          <Field label="Features title">
-            <input
-              className="field"
-              value={settings.featuresTitle ?? ""}
-              onChange={(e) => patch("featuresTitle", e.target.value)}
-            />
-          </Field>
-          <Field label="Features body">
-            <textarea
-              className="field min-h-[80px]"
-              value={settings.featuresBody ?? ""}
-              onChange={(e) => patch("featuresBody", e.target.value)}
-            />
-          </Field>
+          <DualText
+            label="Features title"
+            bn={settings.featuresTitle ?? ""}
+            en={settings.featuresTitleEn ?? ""}
+            onBn={(v) => patch("featuresTitle", v)}
+            onEn={(v) => patch("featuresTitleEn", v)}
+          />
+          <DualText
+            label="Features body"
+            bn={settings.featuresBody ?? ""}
+            en={settings.featuresBodyEn ?? ""}
+            onBn={(v) => patch("featuresBody", v)}
+            onEn={(v) => patch("featuresBodyEn", v)}
+            multiline
+          />
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">
               Service highlights
             </p>
             {(settings.serviceHighlights ?? []).map((item, index) => (
-              <input
+              <DualText
                 key={index}
-                className="field"
-                value={item}
-                onChange={(e) => updateHighlight(index, e.target.value)}
+                label={`Highlight ${index + 1}`}
+                bn={item}
+                en={settings.serviceHighlightsEn?.[index] ?? ""}
+                onBn={(v) => updateHighlight(index, v, "bn")}
+                onEn={(v) => updateHighlight(index, v, "en")}
               />
             ))}
-            <FashionButton
-              variant="secondary"
-              onClick={() =>
-                patch("serviceHighlights", [...(settings.serviceHighlights ?? []), ""])
-              }
-            >
-              + Highlight
-            </FashionButton>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">
-              Testimonials
-            </p>
-            {(settings.testimonials ?? []).map((item, index) => (
-              <div key={index} className="space-y-2 rounded-xl border border-black/6 bg-white/60 p-3">
-                <textarea
-                  className="field min-h-[70px]"
-                  value={item.quote}
-                  onChange={(e) => updateTestimonial(index, "quote", e.target.value)}
-                />
-                <input
-                  className="field"
-                  value={item.author}
-                  onChange={(e) => updateTestimonial(index, "author", e.target.value)}
-                />
-              </div>
-            ))}
-            <FashionButton
-              variant="secondary"
-              onClick={() =>
-                patch("testimonials", [
-                  ...(settings.testimonials ?? []),
-                  { quote: "", author: "" },
-                ])
-              }
-            >
-              + Testimonial
-            </FashionButton>
           </div>
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">FAQ</p>
             {(settings.faqs ?? []).map((item, index) => (
               <div key={index} className="space-y-2 rounded-xl border border-black/6 bg-white/60 p-3">
-                <input
-                  className="field"
-                  placeholder="Question"
-                  value={item.question}
-                  onChange={(e) => updateFaq(index, "question", e.target.value)}
+                <DualText
+                  label="Question"
+                  bn={item.question}
+                  en={settings.faqsEn?.[index]?.question ?? ""}
+                  onBn={(v) => updateFaq(index, "question", v, "bn")}
+                  onEn={(v) => updateFaq(index, "question", v, "en")}
                 />
-                <textarea
-                  className="field min-h-[70px]"
-                  placeholder="Answer"
-                  value={item.answer}
-                  onChange={(e) => updateFaq(index, "answer", e.target.value)}
+                <DualText
+                  label="Answer"
+                  bn={item.answer}
+                  en={settings.faqsEn?.[index]?.answer ?? ""}
+                  onBn={(v) => updateFaq(index, "answer", v, "bn")}
+                  onEn={(v) => updateFaq(index, "answer", v, "en")}
+                  multiline
                 />
               </div>
             ))}
-            <FashionButton
-              variant="secondary"
-              onClick={() =>
-                patch("faqs", [...(settings.faqs ?? []), { question: "", answer: "" }])
-              }
-            >
-              + FAQ
-            </FashionButton>
           </div>
         </div>
       ) : null}
@@ -529,28 +535,26 @@ export function SettingsEditor({
               onChange={(e) => patch("defaultMarkupPercent", Number(e.target.value) || 0)}
             />
           </Field>
-          <p className="sm:col-span-2 text-sm text-[#7a5c50]">
-            ডেলিভারি ফি আলাদা মেনুতে (Delivery) এডিট করুন। কুপন ও অফারও আলাদা মেনুতে আছে।
-          </p>
         </div>
       ) : null}
 
       {tab === "seo" ? (
         <div className="space-y-3">
-          <Field label="Meta title">
-            <input
-              className="field"
-              value={settings.metaTitle ?? ""}
-              onChange={(e) => patch("metaTitle", e.target.value)}
-            />
-          </Field>
-          <Field label="Meta description">
-            <textarea
-              className="field min-h-[90px]"
-              value={settings.metaDescription ?? ""}
-              onChange={(e) => patch("metaDescription", e.target.value)}
-            />
-          </Field>
+          <DualText
+            label="Meta title"
+            bn={settings.metaTitle ?? ""}
+            en={settings.metaTitleEn ?? ""}
+            onBn={(v) => patch("metaTitle", v)}
+            onEn={(v) => patch("metaTitleEn", v)}
+          />
+          <DualText
+            label="Meta description"
+            bn={settings.metaDescription ?? ""}
+            en={settings.metaDescriptionEn ?? ""}
+            onBn={(v) => patch("metaDescription", v)}
+            onEn={(v) => patch("metaDescriptionEn", v)}
+            multiline
+          />
         </div>
       ) : null}
 

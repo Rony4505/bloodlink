@@ -1,12 +1,17 @@
 import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
 import { HomeProductBrowse } from "@/components/fashion/HomeProductBrowse";
-import { HomeHeroActions, HomeLowerSections } from "@/components/fashion/HomeLocalized";
+import {
+  HomeHeroActions,
+  HomeLowerSections,
+  HomeStatsStrip,
+} from "@/components/fashion/HomeLocalized";
 import { PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { TopLanguageBar } from "@/components/fashion/LanguageSwitcher";
+import { ChatSupportWidget } from "@/components/fashion/ChatSupportWidget";
+import { AnnouncementBar } from "@/components/fashion/AnnouncementBar";
 import { buildCarouselSlides } from "@/lib/fashion/carousel-slides";
 import { getCategories } from "@/lib/fashion/categories-server";
-import { copy } from "@/lib/fashion/copy";
 import {
   getActiveOffers,
   getActivePromoBanners,
@@ -28,17 +33,14 @@ export async function FashionHomePage() {
       listProducts(),
     ]);
 
-  const carouselSlides = buildCarouselSlides(banners, offers, newProducts);
+  const carouselSlides = buildCarouselSlides(banners);
   const displayCoupons = settings.showCouponsOnHome !== false ? coupons : [];
 
   return (
-    <main className="min-h-screen bg-[#fffaf7] text-[#241815]">
+    <main className="min-h-screen bg-[#f7f7f5] text-[#241815]">
       <TopLanguageBar />
-      {settings.announcementEnabled && settings.announcementText ? (
-        <div className="bg-[#2b1d19] px-4 py-2 text-center text-sm text-white/90">
-          {settings.announcementText}
-        </div>
-      ) : null}
+      <ChatSupportWidget />
+      <AnnouncementBar settings={settings} />
       <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(circle_at_top_left,#fff6ef,transparent_35%),linear-gradient(135deg,#2c1d1a_0%,#4f342f_48%,#b88b74_100%)] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_38%,rgba(255,255,255,0.12)_100%)]" />
         <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/20 blur-3xl" />
@@ -51,15 +53,7 @@ export async function FashionHomePage() {
             <PromoCarousel slides={carouselSlides} coupons={displayCoupons} products={products} />
           </div>
 
-          <HomeHeroActions
-            heroSubtitle={settings.heroSubtitle ?? copy.tagline}
-            heroTitle={settings.heroTitle ?? "সহজ luxury, refined style, modern Bangladesh."}
-            heroDescription={
-              settings.heroDescription ??
-              "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।"
-            }
-            settings={settings}
-          />
+          <HomeHeroActions settings={settings} />
         </div>
       </section>
 
@@ -72,6 +66,7 @@ export async function FashionHomePage() {
         showOffers={settings.showOffers !== false}
       />
 
+      <HomeStatsStrip settings={settings} />
       <HomeLowerSections settings={settings} />
       <FashionFooter />
     </main>

@@ -2,7 +2,7 @@
 
 :root {
   --ink: #1c1412;
-  --mist: #f7f2ee;
+  --mist: #f7f7f5;
   --blood: #9b1b2e;
   --blood-deep: #6e1220;
   --bloom: #d64550;
@@ -106,12 +106,18 @@ a {
 .field {
   width: 100%;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  background: #ffffff;
   border-radius: 0.75rem;
   padding: 0.8rem 0.95rem;
-  color: var(--ink);
+  color: #1c1412;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field option,
+select.field option {
+  background: #ffffff;
+  color: #1c1412;
 }
 
 .field:focus {
