@@ -13,8 +13,10 @@ import { OrderInvoiceView } from "@/components/fashion/admin/OrderInvoiceView";
 import { ReportContent, type ReportType } from "@/components/fashion/admin/ReportContent";
 import { adminThemes, type AdminTheme } from "@/components/fashion/admin/admin-themes";
 import { copy } from "@/lib/fashion/copy";
+import { advertiseKindLabel } from "@/lib/fashion/i18n";
 import { bangladeshDistricts } from "@/lib/fashion/districts";
 import { formatBdt } from "@/lib/fashion/format";
+import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type {
   AdminNotification,
   AnalyticsSummary,
@@ -63,19 +65,19 @@ const emptyBanner: PromoBanner = {
 
 const statusOptions: OrderStatus[] = ["pending", "confirmed", "processing", "out_for_delivery", "delivered", "cancelled"];
 
-const menuItems: { id: Tab; label: string; theme: AdminTheme; hint: string }[] = [
-  { id: "products", label: copy.admin.products, theme: "rose", hint: "স্টক + ক্যাটাগরি" },
-  { id: "orders", label: copy.admin.orders, theme: "ocean", hint: "ট্র্যাকিং" },
-  { id: "delivery", label: copy.admin.delivery, theme: "sunset", hint: "জেলা স্ক্রল" },
-  { id: "coupons", label: copy.admin.coupons, theme: "violet", hint: "কুপন কোড" },
-  { id: "offers-product", label: copy.admin.offersProduct, theme: "gold", hint: "Offers + Ads" },
-  { id: "settings", label: copy.admin.settings, theme: "gold", hint: "ওয়েবসাইট" },
-  { id: "analytics", label: copy.admin.analytics, theme: "slate", hint: "হিসাব" },
-  { id: "reports", label: copy.admin.reports, theme: "pearl", hint: "রিপোর্ট" },
-];
-
 export function FashionAdminPanel() {
   const router = useRouter();
+  const { locale, fc } = useFashionCopy();
+  const menuItems: { id: Tab; label: string; theme: AdminTheme; hint: string }[] = [
+    { id: "products", label: fc.admin.products, theme: "rose", hint: fc.admin.productHint },
+    { id: "orders", label: fc.admin.orders, theme: "ocean", hint: fc.admin.orderHint },
+    { id: "delivery", label: fc.admin.delivery, theme: "sunset", hint: fc.admin.deliveryHint },
+    { id: "coupons", label: fc.admin.coupons, theme: "violet", hint: fc.admin.couponHint },
+    { id: "offers-product", label: fc.admin.offersProduct, theme: "gold", hint: fc.admin.offersMenuHint },
+    { id: "settings", label: fc.admin.settings, theme: "gold", hint: fc.admin.settingsHint },
+    { id: "analytics", label: fc.admin.analytics, theme: "slate", hint: fc.admin.analyticsHint },
+    { id: "reports", label: fc.admin.reports, theme: "pearl", hint: fc.admin.reportsHint },
+  ];
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const [productSubTab, setProductSubTab] = useState<ProductSubTab>("inventory");
   const [offersSubTab, setOffersSubTab] = useState<OffersSubTab>("offers");
@@ -482,11 +484,11 @@ export function FashionAdminPanel() {
     <AdminShell>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">Founder</p>
-          <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">{copy.admin.title}</h1>
-          {unreadCount > 0 ? <p className="mt-2 text-sm text-[#b86a2e]">{unreadCount} নতুন অর্ডার</p> : null}
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9b7766]">{fc.admin.founder}</p>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">{fc.admin.title}</h1>
+          {unreadCount > 0 ? <p className="mt-2 text-sm text-[#b86a2e]">{unreadCount} {fc.admin.newOrders}</p> : null}
         </div>
-        <FashionButton variant="secondary" onClick={async () => { await fetch("/api/fashion/admin", { method: "DELETE" }); router.push("/store-admin/login"); }}>{copy.nav.logout}</FashionButton>
+        <FashionButton variant="secondary" onClick={async () => { await fetch("/api/fashion/admin", { method: "DELETE" }); router.push("/store-admin/login"); }}>{fc.nav.logout}</FashionButton>
       </div>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -504,10 +506,10 @@ export function FashionAdminPanel() {
       </div>
 
       {/* Products Modal */}
-      <AdminModal open={activeTab === "products"} onClose={() => setActiveTab(null)} title={copy.admin.products} subtitle="ইনভেন্টরি, স্টক, ক্যাটাগরি ও সাইজ" theme="rose" wide>
+      <AdminModal open={activeTab === "products"} onClose={() => setActiveTab(null)} title={fc.admin.products} subtitle={fc.admin.categoriesSizes} theme="rose" wide>
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setProductSubTab("inventory")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "inventory" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>ইনভেন্টরি</button>
-          <button type="button" onClick={() => setProductSubTab("categories")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "categories" ? "bg-[#b5d4b5] text-[#2d4a32]" : "bg-white/70"}`}>ক্যাটাগরি ও সাইজ</button>
+          <button type="button" onClick={() => setProductSubTab("inventory")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "inventory" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>{fc.admin.inventory}</button>
+          <button type="button" onClick={() => setProductSubTab("categories")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "categories" ? "bg-[#b5d4b5] text-[#2d4a32]" : "bg-white/70"}`}>{fc.admin.categoriesSizes}</button>
         </div>
 
         {productSubTab === "inventory" ? (
@@ -592,7 +594,7 @@ export function FashionAdminPanel() {
       </AdminModal>
 
       {/* Orders Modal - list only */}
-      <AdminModal open={activeTab === "orders"} onClose={() => setActiveTab(null)} title={copy.admin.orders} subtitle="অর্ডার select করলে tracking details popup আসবে" theme="ocean" wide>
+      <AdminModal open={activeTab === "orders"} onClose={() => setActiveTab(null)} title={fc.admin.orders} theme="ocean" wide>
         <div className="max-h-[28rem] space-y-2 overflow-y-auto">
           {orders.map((order) => (
             <button key={order.id} type="button" onClick={() => setSelectedOrder(order)}
@@ -658,7 +660,7 @@ export function FashionAdminPanel() {
       ) : null}
 
       {/* Delivery Modal - scroll districts */}
-      <AdminModal open={activeTab === "delivery"} onClose={() => setActiveTab(null)} title={copy.admin.delivery} subtitle="জেলা সার্চ ও scroll — select করে ডানে এডিট" theme="sunset" wide>
+      <AdminModal open={activeTab === "delivery"} onClose={() => setActiveTab(null)} title={fc.admin.delivery} theme="sunset" wide>
         <div className="grid gap-4 md:grid-cols-[220px_1fr]">
           <div className="flex max-h-80 flex-col rounded-2xl border border-[#f0c49a]/50 bg-white/70 p-2">
             <input
@@ -708,7 +710,7 @@ export function FashionAdminPanel() {
       </AdminModal>
 
       {/* Coupons, Settings, Analytics modals - keep similar to before but condensed */}
-      <AdminModal open={activeTab === "coupons"} onClose={() => setActiveTab(null)} title={copy.admin.coupons} theme="violet" wide>
+      <AdminModal open={activeTab === "coupons"} onClose={() => setActiveTab(null)} title={fc.admin.coupons} theme="violet" wide>
         <form onSubmit={saveCoupon} className="mb-4 space-y-3 rounded-2xl border border-black/6 bg-white/80 p-4">
           <div className="grid gap-3 md:grid-cols-2">
             <input className="field" placeholder="কুপন কোড" value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })} required />
@@ -764,45 +766,53 @@ export function FashionAdminPanel() {
         ))}
       </AdminModal>
 
-      <AdminModal open={activeTab === "offers-product"} onClose={() => setActiveTab(null)} title={copy.admin.offersProduct} subtitle="Offers ও Advertisement — নির্দিষ্ট তারিখ পর্যন্ত, পরে auto delete" theme="gold" wide>
+      <AdminModal open={activeTab === "offers-product"} onClose={() => setActiveTab(null)} title={fc.admin.offersProduct} subtitle={fc.admin.offersHint} theme="gold" wide>
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>Offers</button>
-          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>Advertisement</button>
+          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>{fc.admin.offersTab}</button>
+          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>{fc.admin.adsTab}</button>
         </div>
 
         {offersSubTab === "offers" ? (
           <div className="space-y-4">
             <form onSubmit={saveProductOffer} className="space-y-3 rounded-2xl border border-black/6 bg-white/80 p-4">
               <select className="field" value={offerEditId} onChange={(e) => setOfferEditId(e.target.value)} required>
-                <option value="">প্রোডাক্ট select করুন</option>
+                <option value="">{fc.admin.selectProduct}</option>
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.nameBn} — {formatBdt(p.price)}</option>
+                  <option key={p.id} value={p.id}>{(locale === "bn" ? p.nameBn : p.name) || p.nameBn} — {formatBdt(p.price)}</option>
                 ))}
               </select>
               <div className="grid gap-3 md:grid-cols-3">
-                <input className="field" placeholder="Offer label" value={offerLabel} onChange={(e) => setOfferLabel(e.target.value)} required />
-                <input className="field" type="number" placeholder="Discount %" value={offerDiscount} onChange={(e) => setOfferDiscount(Number(e.target.value))} required />
+                <input className="field" placeholder={fc.admin.offerLabel} value={offerLabel} onChange={(e) => setOfferLabel(e.target.value)} required />
+                <input className="field" type="number" placeholder={fc.admin.discountPercent} value={offerDiscount} onChange={(e) => setOfferDiscount(Number(e.target.value))} required />
                 <input className="field" type="datetime-local" value={offerExpiresAt} onChange={(e) => setOfferExpiresAt(e.target.value)} />
               </div>
-              <p className="text-xs text-[#9b7766]">Expiry date দিলে সেই সময়ের পর offer auto delete হবে</p>
-              <FashionButton type="submit">Offer সেভ</FashionButton>
+              <p className="text-xs text-[#9b7766]">{fc.admin.expiryHint}</p>
+              <FashionButton type="submit">{fc.admin.saveOffer}</FashionButton>
             </form>
 
-            <div className="max-h-72 space-y-2 overflow-y-auto">
+            <div className="max-h-80 space-y-2 overflow-y-auto">
               {products.filter((p) => p.offerActive).map((p) => (
-                <div key={p.id} className="flex items-center justify-between rounded-xl border border-black/6 bg-white/80 px-4 py-3">
-                  <div>
-                    <p className="font-semibold">{p.nameBn}</p>
-                    <p className="text-xs text-[#8b6456]">
-                      {p.offerLabel} · {p.offerDiscountPercent}% ছাড়
-                      {p.offerExpiresAt ? ` · ${new Date(p.offerExpiresAt).toLocaleString("bn-BD")} পর্যন্ত` : ""}
-                    </p>
+                <div key={p.id} className="rounded-xl border border-black/6 bg-white/80 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{locale === "bn" ? p.nameBn : p.name}</p>
+                      <p className="mt-1 text-sm text-[#6f554a]">
+                        <span className="font-semibold text-[#8f624e]">{fc.admin.offerReason}: </span>
+                        {p.offerLabel || fc.admin.offer}
+                        {p.offerDiscountPercent ? ` · ${p.offerDiscountPercent}% ${fc.admin.discount}` : ""}
+                      </p>
+                      <p className="text-xs text-[#8b6456]">
+                        {p.offerExpiresAt
+                          ? `${fc.admin.until}: ${new Date(p.offerExpiresAt).toLocaleString(locale === "bn" ? "bn-BD" : "en-BD")}`
+                          : fc.couponNoExpiry}
+                      </p>
+                    </div>
+                    <button type="button" className="text-sm font-semibold text-red-700" onClick={() => removeProductOffer(p.id)}>{fc.actions.delete}</button>
                   </div>
-                  <button type="button" className="text-sm font-semibold text-red-700" onClick={() => removeProductOffer(p.id)}>{copy.actions.delete}</button>
                 </div>
               ))}
               {products.filter((p) => p.offerActive).length === 0 ? (
-                <p className="text-sm text-[#9b7766]">এখন কোনো active offer নেই</p>
+                <p className="text-sm text-[#9b7766]">{fc.admin.noOffers}</p>
               ) : null}
             </div>
           </div>
@@ -819,17 +829,17 @@ export function FashionAdminPanel() {
                   title: product?.nameBn || bannerForm.title,
                 });
               }}>
-                <option value="">প্রোডাক্ট select (ঐচ্ছিক)</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.nameBn}</option>)}
+                <option value="">{fc.admin.selectProduct}</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{locale === "bn" ? p.nameBn : p.name}</option>)}
               </select>
               <div className="grid gap-3 md:grid-cols-2">
-                <input className="field" placeholder="Title / label" value={bannerForm.title ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} />
-                <input className="field" placeholder="Badge (নতুন/ডিসকাউন্ট/...)" value={bannerForm.badgeLabel ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, badgeLabel: e.target.value })} />
+                <input className="field" placeholder={fc.admin.offerLabel} value={bannerForm.title ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} />
+                <input className="field" placeholder="Badge" value={bannerForm.badgeLabel ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, badgeLabel: e.target.value })} />
                 <select className="field" value={bannerForm.advertiseKind ?? "offer"} onChange={(e) => setBannerForm({ ...bannerForm, advertiseKind: e.target.value as AdvertiseKind })}>
-                  <option value="new">নতুন</option>
-                  <option value="discount">ডিসকাউন্ট</option>
-                  <option value="offer">অফার</option>
-                  <option value="custom">কাস্টম</option>
+                  <option value="new">{fc.admin.newProduct}</option>
+                  <option value="discount">{fc.admin.discount}</option>
+                  <option value="offer">{fc.admin.offer}</option>
+                  <option value="custom">{fc.admin.custom}</option>
                 </select>
                 <input className="field" type="datetime-local" value={bannerForm.expiresAt?.slice(0, 16) ?? ""} onChange={(e) => setBannerForm({ ...bannerForm, expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
               </div>
@@ -847,35 +857,46 @@ export function FashionAdminPanel() {
                   if (data.url) setBannerForm((c) => ({ ...c, imageUrl: data.url }));
                 })();
               }} />
-              <FashionButton type="button" variant="secondary" onClick={() => bannerFileRef.current?.click()} disabled={uploading}>{copy.actions.upload}</FashionButton>
-              <p className="text-xs text-[#9b7766]">Expiry date দিলে সেই সময়ের পর advertisement auto delete হবে</p>
-              <FashionButton type="submit">Advertisement সেভ</FashionButton>
+              <FashionButton type="button" variant="secondary" onClick={() => bannerFileRef.current?.click()} disabled={uploading}>{fc.actions.upload}</FashionButton>
+              <p className="text-xs text-[#9b7766]">{fc.admin.expiryHint}</p>
+              <FashionButton type="submit">{fc.admin.saveAd}</FashionButton>
             </form>
 
-            <div className="max-h-72 space-y-2 overflow-y-auto">
-              {banners.map((b) => (
-                <div key={b.id} className="flex items-center justify-between gap-3 rounded-xl border border-black/6 bg-white/80 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{b.title || b.badgeLabel || b.id}</p>
-                    <p className="text-xs text-[#8b6456]">
-                      {b.badgeLabel || b.advertiseKind || "ad"}
-                      {b.expiresAt ? ` · ${new Date(b.expiresAt).toLocaleString("bn-BD")} পর্যন্ত` : ""}
-                      {!b.active ? " · inactive" : ""}
-                    </p>
+            <div className="max-h-80 space-y-2 overflow-y-auto">
+              {banners.map((b) => {
+                const linked = products.find((p) => p.id === b.productId);
+                return (
+                  <div key={b.id} className="rounded-xl border border-black/6 bg-white/80 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{b.title || linked?.nameBn || b.id}</p>
+                        <p className="mt-1 text-sm text-[#6f554a]">
+                          <span className="font-semibold text-[#8f624e]">{fc.admin.adReason}: </span>
+                          {advertiseKindLabel(b.advertiseKind, fc)}
+                          {b.badgeLabel ? ` · ${b.badgeLabel}` : ""}
+                          {linked ? ` · ${locale === "bn" ? linked.nameBn : linked.name}` : ""}
+                        </p>
+                        <p className="text-xs text-[#8b6456]">
+                          {b.expiresAt
+                            ? `${fc.admin.until}: ${new Date(b.expiresAt).toLocaleString(locale === "bn" ? "bn-BD" : "en-BD")}`
+                            : fc.couponNoExpiry}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button type="button" onClick={() => setBannerForm(b)}>{fc.actions.edit}</button>
+                        <button type="button" className="text-red-700" onClick={() => removeBanner(b.id)}>{fc.actions.delete}</button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button type="button" onClick={() => setBannerForm(b)}>{copy.actions.edit}</button>
-                    <button type="button" className="text-red-700" onClick={() => removeBanner(b.id)}>{copy.actions.delete}</button>
-                  </div>
-                </div>
-              ))}
-              {banners.length === 0 ? <p className="text-sm text-[#9b7766]">এখন কোনো advertisement নেই</p> : null}
+                );
+              })}
+              {banners.length === 0 ? <p className="text-sm text-[#9b7766]">{fc.admin.noAds}</p> : null}
             </div>
           </div>
         )}
       </AdminModal>
 
-      <AdminModal open={activeTab === "settings"} onClose={() => setActiveTab(null)} title={copy.admin.settings} theme="gold" wide>
+      <AdminModal open={activeTab === "settings"} onClose={() => setActiveTab(null)} title={fc.admin.settings} theme="gold" wide>
         {settings ? (
           <div className="space-y-4">
             {[["brandName", "ব্র্যান্ড"], ["brandTagline", "ট্যাগলাইন"], ["heroTitle", "হিরো"], ["contactPhone", "ফোন"], ["whatsapp", "WhatsApp"]].map(([key, label]) => (
@@ -887,7 +908,7 @@ export function FashionAdminPanel() {
         ) : null}
       </AdminModal>
 
-      <AdminModal open={activeTab === "analytics"} onClose={() => setActiveTab(null)} title={copy.admin.analytics} theme="slate" wide>
+      <AdminModal open={activeTab === "analytics"} onClose={() => setActiveTab(null)} title={fc.admin.analytics} theme="slate" wide>
         {analytics ? (
           <div className="grid gap-4 md:grid-cols-2">
             {(["daily", "monthly"] as const).map((period) => (
@@ -901,7 +922,7 @@ export function FashionAdminPanel() {
       </AdminModal>
 
       {/* Reports Modal - sub menus */}
-      <AdminModal open={activeTab === "reports"} onClose={() => { setActiveTab(null); setReportType(null); }} title={copy.admin.reports} subtitle="রিপোর্ট select করুন" theme="pearl" wide>
+      <AdminModal open={activeTab === "reports"} onClose={() => { setActiveTab(null); setReportType(null); }} title={fc.admin.reports} theme="pearl" wide>
         <div className="grid gap-3 sm:grid-cols-3">
           {([
             ["sell", "বিক্রয় রিপোর্ট"],
@@ -1080,18 +1101,28 @@ export function FashionAdminPanel() {
 
 export function FashionAdminLogin() {
   const router = useRouter();
+  const { fc, locale } = useFashionCopy();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const res = await fetch("/api/fashion/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
-    if (!res.ok) { setError("পাসওয়ার্ড সঠিক নয়"); return; }
+    const res = await fetch("/api/fashion/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) {
+      setError(locale === "bn" ? "পাসওয়ার্ড সঠিক নয়" : "Incorrect password");
+      return;
+    }
     router.push("/store-admin");
   }
+
   return (
     <AdminShell>
       <section className="mx-auto max-w-md py-12">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">{copy.admin.loginTitle}</h1>
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">{fc.admin.loginTitle}</h1>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <input className="field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />

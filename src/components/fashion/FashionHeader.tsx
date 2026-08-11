@@ -6,14 +6,12 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/lib/fashion/cart-context";
 import { cn } from "@/lib/fashion/cn";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
-import { useLocale } from "@/lib/i18n/locale-context";
 import { copy } from "@/lib/fashion/copy";
 
 export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark" }) {
   const pathname = usePathname();
   const { itemCount } = useCart();
   const { fc } = useFashionCopy();
-  const { locale, setLocale } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
   const [unread, setUnread] = useState(0);
   const [brand, setBrand] = useState(copy.brand);
@@ -118,36 +116,6 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
               {fc.nav.login}
             </Link>
           )}
-          <div className="inline-flex items-center overflow-hidden rounded-full border border-current/20 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setLocale("bn")}
-              className={cn(
-                "px-3 py-1.5 transition",
-                locale === "bn"
-                  ? isDark
-                    ? "bg-white text-[#4a2f28]"
-                    : "bg-[#8f624e] text-white"
-                  : "opacity-70 hover:opacity-100",
-              )}
-            >
-              বাং
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocale("en")}
-              className={cn(
-                "px-3 py-1.5 transition",
-                locale === "en"
-                  ? isDark
-                    ? "bg-white text-[#4a2f28]"
-                    : "bg-[#8f624e] text-white"
-                  : "opacity-70 hover:opacity-100",
-              )}
-            >
-              EN
-            </button>
-          </div>
           <Link
             href="/cart"
             className={cn(
