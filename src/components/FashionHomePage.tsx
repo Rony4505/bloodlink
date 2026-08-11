@@ -3,13 +3,10 @@ import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
 import { PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { buildCarouselSlides } from "@/lib/fashion/carousel-slides";
-import { ProductCard } from "@/components/fashion/ProductCard";
-import { getCategories } from "@/lib/fashion/categories-server";
 import { copy } from "@/lib/fashion/copy";
 import {
   getActiveOffers,
   getActivePromoBanners,
-  getFeaturedProducts,
   getNewProducts,
   getStoreSettings,
   listPublicCoupons,
@@ -56,23 +53,19 @@ const faqs = [
 ];
 
 export async function FashionHomePage() {
-  const [featuredProducts, categories, offers, newProducts, settings, banners, coupons] =
-    await Promise.all([
-      getFeaturedProducts(),
-      getCategories(),
-      getActiveOffers(),
-      getNewProducts(14),
-      getStoreSettings(),
-      getActivePromoBanners(),
-      listPublicCoupons(),
-    ]);
+  const [offers, newProducts, settings, banners, coupons] = await Promise.all([
+    getActiveOffers(),
+    getNewProducts(14),
+    getStoreSettings(),
+    getActivePromoBanners(),
+    listPublicCoupons(),
+  ]);
 
   const carouselSlides = buildCarouselSlides(banners, offers, newProducts);
   const displayCoupons = settings.showCouponsOnHome !== false ? coupons : [];
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-[#241815]">
-      <PromoCarousel slides={carouselSlides} coupons={displayCoupons} />
       <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(circle_at_top_left,#fff6ef,transparent_35%),linear-gradient(135deg,#2c1d1a_0%,#4f342f_48%,#b88b74_100%)] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_38%,rgba(255,255,255,0.12)_100%)]" />
         <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/20 blur-3xl" />
@@ -81,174 +74,54 @@ export async function FashionHomePage() {
         <div className="relative mx-auto max-w-7xl px-5 pb-16 pt-6 md:px-8 md:pb-24 md:pt-8">
           <FashionHeader variant="dark" />
 
-          <div className="grid gap-12 pt-14 md:grid-cols-[1.1fr_0.9fr] md:items-center md:pt-20">
-            <div>
-              <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur">
-                {settings.heroSubtitle ?? copy.tagline}
-              </span>
-              <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold md:text-7xl">
-                {settings.heroTitle ?? "সহজ luxury, refined style, modern Bangladesh."}
-              </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">
-                {settings.heroDescription ??
-                  "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।"}
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/collections"
-                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#2d1f1b] transition hover:-translate-y-0.5"
-                >
-                  Shop Collections
-                </Link>
-                <Link
-                  href="/products/noor-signature-silk-set"
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/16"
-                >
-                  View Featured Piece
-                </Link>
-              </div>
-
-              <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                {[
-                  ["150+", "Curated luxury pieces"],
-                  ["64 জেলা", "Nationwide delivery reach"],
-                  ["4.9/5", "Client satisfaction rating"],
-                ].map(([value, label]) => (
-                  <div
-                    key={label}
-                    className="rounded-3xl border border-white/12 bg-white/10 px-5 py-5 backdrop-blur"
-                  >
-                    <p className="font-[family-name:var(--font-display)] text-3xl font-bold">
-                      {value}
-                    </p>
-                    <p className="mt-2 text-sm text-white/72">{label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:pl-10">
-              <div className="rounded-[2rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.22),rgba(255,255,255,0.06))] p-5 shadow-2xl backdrop-blur">
-                <div className="rounded-[1.75rem] bg-[#f6ece6] p-5 text-[#281a17]">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-[0.25em] text-[#8b6354]">
-                        Editor&apos;s Pick
-                      </p>
-                      <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-bold">
-                        Pearl Evening Edit
-                      </h2>
-                      <p className="mt-3 text-sm leading-7 text-[#654a3f]">
-                        Satin shimmer, structured drape, and delicate embellished
-                        finishing for intimate wedding nights and polished dinner looks.
-                      </p>
-                    </div>
-                    <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#8d6657]">
-                      ৳ 9,990+
-                    </div>
-                  </div>
-
-                  <div className="mt-6 grid grid-cols-3 gap-3">
-                    {["Rose Pearl", "Mocha Nude", "Soft Gold"].map((shade) => (
-                      <div
-                        key={shade}
-                        className="rounded-2xl border border-black/5 bg-white px-3 py-4 text-center shadow-sm"
-                      >
-                        <div className="mx-auto h-10 w-10 rounded-full bg-[linear-gradient(135deg,#f8dfd5,#dcb7a4)]" />
-                        <p className="mt-3 text-xs font-medium text-[#76584b]">{shade}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[1.75rem] border border-white/12 bg-white/10 p-5 backdrop-blur">
-                  <p className="text-sm text-white/68">Premium fabrics</p>
-                  <p className="mt-2 font-[family-name:var(--font-display)] text-2xl font-bold">
-                    Silk, organza, nida, textured cotton
-                  </p>
-                </div>
-                <div className="rounded-[1.75rem] border border-white/12 bg-[#f1ddd1] p-5 text-[#2a1d19] shadow-xl">
-                  <p className="text-sm text-[#7b5a4d]">Style support</p>
-                  <p className="mt-2 font-[family-name:var(--font-display)] text-2xl font-bold">
-                    WhatsApp consultation & gift curation
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
+            <PromoCarousel slides={carouselSlides} coupons={displayCoupons} />
           </div>
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9b7766]">
-              Collections
+          <div className="pt-14 md:pt-16">
+            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur">
+              {settings.heroSubtitle ?? copy.tagline}
+            </span>
+            <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold md:text-7xl">
+              {settings.heroTitle ?? "সহজ luxury, refined style, modern Bangladesh."}
+            </h1>
+            <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">
+              {settings.heroDescription ??
+                "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।"}
             </p>
-            <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">
-              Curated edits for every elegant moment
-            </h2>
-          </div>
-          <p className="max-w-xl text-base leading-8 text-[#6e5449]">
-            Casual থেকে festive, modest থেকে statement—সব collection একই luxury
-            ভাষায় সাজানো, যাতে browsing experience clean থাকে এবং product decision
-            সহজ হয়।
-          </p>
-        </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {categories.map((card) => (
-            <Link
-              key={card.slug}
-              href={`/collections/${card.slug}`}
-              className={`rounded-[2rem] border border-black/6 bg-gradient-to-br ${card.accent} p-7 shadow-[0_24px_80px_rgba(48,27,20,0.06)] transition hover:-translate-y-1`}
-            >
-              <div className="flex h-full flex-col justify-between gap-8">
-                <div>
-                  <span className="inline-flex rounded-full border border-black/8 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#8d6557]">
-                    curated
-                  </span>
-                  <h3 className="mt-5 font-[family-name:var(--font-display)] text-3xl font-bold">
-                    {card.titleBn}
-                  </h3>
-                  <p className="mt-3 text-base leading-7 text-[#694f45]">{card.subtitle}</p>
-                </div>
-                <div className="flex items-center justify-between text-sm font-medium text-[#5b4339]">
-                  <span>Explore edit</span>
-                  <span aria-hidden="true">↗</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-y border-black/5 bg-[#f8f0eb]">
-        <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9b7766]">
-                Featured products
-              </p>
-              <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">
-                Premium pieces customers will notice first
-              </h2>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/collections"
+                className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#2d1f1b] transition hover:-translate-y-0.5"
+              >
+                Shop Collections
+              </Link>
+              <Link
+                href="/products/noor-signature-silk-set"
+                className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/16"
+              >
+                View Featured Piece
+              </Link>
             </div>
-            <Link
-              href="/collections"
-              className="rounded-full border border-black/8 bg-white px-5 py-3 text-sm text-[#6f554a] shadow-sm"
-            >
-              View all collections
-            </Link>
-          </div>
 
-          <div className="mt-10 grid gap-5 lg:grid-cols-4">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              {[
+                ["150+", "Curated luxury pieces"],
+                ["64 জেলা", "Nationwide delivery reach"],
+                ["4.9/5", "Client satisfaction rating"],
+              ].map(([value, label]) => (
+                <div
+                  key={label}
+                  className="rounded-3xl border border-white/12 bg-white/10 px-5 py-5 backdrop-blur"
+                >
+                  <p className="font-[family-name:var(--font-display)] text-3xl font-bold">
+                    {value}
+                  </p>
+                  <p className="mt-2 text-sm text-white/72">{label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
