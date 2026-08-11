@@ -28,14 +28,21 @@ function PriceSortSelect({
 
   return (
     <select
-      className="field w-auto min-w-[180px] text-sm font-semibold text-[#2b1d19]"
+      className="min-w-[200px] rounded-xl border-2 border-[#8f624e] bg-[#f3ebe4] px-4 py-2.5 text-sm font-bold text-[#1c1412] shadow-sm outline-none"
       value={value}
       onChange={(e) => onChange(e.target.value as PriceSort)}
       aria-label={fc.home.sortPrice}
+      style={{ color: "#1c1412", backgroundColor: "#f3ebe4", WebkitTextFillColor: "#1c1412" }}
     >
-      <option value="default">{fc.search.sortFeatured}</option>
-      <option value="price-asc">{fc.search.sortPriceLow}</option>
-      <option value="price-desc">{fc.search.sortPriceHigh}</option>
+      <option value="default" style={{ color: "#1c1412", backgroundColor: "#f3ebe4" }}>
+        {fc.search.sortFeatured}
+      </option>
+      <option value="price-asc" style={{ color: "#1c1412", backgroundColor: "#f3ebe4" }}>
+        {fc.search.sortPriceLow}
+      </option>
+      <option value="price-desc" style={{ color: "#1c1412", backgroundColor: "#f3ebe4" }}>
+        {fc.search.sortPriceHigh}
+      </option>
     </select>
   );
 }
@@ -184,7 +191,7 @@ export function HomeProductBrowse({
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 !categorySlug
                   ? "bg-[#8f624e] text-white shadow-md"
-                  : "border border-[#c9b0a0] bg-white text-[#3d2a24] hover:bg-[#faf4f0]"
+                  : "border-2 border-[#8f624e]/50 bg-[#f3ebe4] text-[#1c1412] hover:bg-[#ebe0d6]"
               }`}
             >
               {fc.search.allCategories}
@@ -200,7 +207,7 @@ export function HomeProductBrowse({
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                   categorySlug === cat.slug
                     ? "bg-[#8f624e] text-white shadow-md"
-                    : "border border-[#c9b0a0] bg-white text-[#3d2a24] hover:bg-[#faf4f0]"
+                    : "border-2 border-[#8f624e]/50 bg-[#f3ebe4] text-[#1c1412] hover:bg-[#ebe0d6]"
                 }`}
               >
                 {cat.titleBn}

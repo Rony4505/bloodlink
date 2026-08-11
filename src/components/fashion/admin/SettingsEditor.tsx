@@ -186,7 +186,7 @@ export function SettingsEditor({
             className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
               tab === item.id
                 ? "bg-[#2b1d19] text-white"
-                : "bg-white/70 text-[#5b4339] hover:bg-white"
+                : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412] hover:bg-[#ebe0d6]"
             }`}
           >
             {item.label}

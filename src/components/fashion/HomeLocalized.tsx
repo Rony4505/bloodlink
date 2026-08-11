@@ -59,7 +59,7 @@ export function HomeHeroActions({
         </Link>
         <Link
           href={secondaryHref}
-          className="inline-flex items-center justify-center rounded-full border-2 border-white/70 bg-[#2b1d19]/55 px-6 py-3 text-sm font-semibold text-white shadow-sm backdrop-blur transition hover:bg-[#2b1d19]/75"
+          className="inline-flex items-center justify-center rounded-full border-2 border-[#f4d4c2] bg-[#f4d4c2] px-6 py-3 text-sm font-semibold text-[#2d1f1b] shadow-sm transition hover:bg-white"
         >
           {secondaryLabel}
         </Link>

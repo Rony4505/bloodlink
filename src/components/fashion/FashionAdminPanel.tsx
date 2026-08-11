@@ -559,8 +559,8 @@ export function FashionAdminPanel() {
       {/* Products Modal */}
       <AdminModal open={activeTab === "products"} onClose={() => setActiveTab(null)} title={fc.admin.products} subtitle={fc.admin.categoriesSizes} theme="rose" wide>
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setProductSubTab("inventory")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "inventory" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70"}`}>{fc.admin.inventory}</button>
-          <button type="button" onClick={() => setProductSubTab("categories")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "categories" ? "bg-[#b5d4b5] text-[#2d4a32]" : "bg-white/70"}`}>{fc.admin.categoriesSizes}</button>
+          <button type="button" onClick={() => setProductSubTab("inventory")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "inventory" ? "bg-[#e8b896] text-[#3d2a24]" : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"}`}>{fc.admin.inventory}</button>
+          <button type="button" onClick={() => setProductSubTab("categories")} className={`rounded-full px-4 py-2 text-sm font-semibold ${productSubTab === "categories" ? "bg-[#b5d4b5] text-[#2d4a32]" : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"}`}>{fc.admin.categoriesSizes}</button>
         </div>
 
         {productSubTab === "inventory" ? (
@@ -828,8 +828,8 @@ export function FashionAdminPanel() {
 
       <AdminModal open={activeTab === "offers-product"} onClose={() => setActiveTab(null)} title={fc.admin.offersProduct} subtitle={fc.admin.offersHint} theme="gold" wide>
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70 text-[#3d2a24]"}`}>{fc.admin.offersTab}</button>
-          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "bg-white/70 text-[#3d2a24]"}`}>{fc.admin.adsTab}</button>
+          <button type="button" onClick={() => setOffersSubTab("offers")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "offers" ? "bg-[#e8b896] text-[#3d2a24]" : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"}`}>{fc.admin.offersTab}</button>
+          <button type="button" onClick={() => setOffersSubTab("advertisement")} className={`rounded-full px-4 py-2 text-sm font-semibold ${offersSubTab === "advertisement" ? "bg-[#e8b896] text-[#3d2a24]" : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"}`}>{fc.admin.adsTab}</button>
         </div>
         <input
           className="field mb-4"

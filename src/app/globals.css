@@ -105,24 +105,36 @@ a {
 
 .field {
   width: 100%;
-  border: 1px solid var(--line);
-  background: #ffffff;
+  border: 1.5px solid #c9a890;
+  background: #f3ebe4;
   border-radius: 0.75rem;
   padding: 0.8rem 0.95rem;
   color: #1c1412;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-text-fill-color: #1c1412;
+  color-scheme: light;
 }
 
 .field option,
-select.field option {
-  background: #ffffff;
+select.field option,
+select option {
+  background: #f3ebe4;
   color: #1c1412;
+  -webkit-text-fill-color: #1c1412;
+}
+
+select.field,
+select {
+  color: #1c1412 !important;
+  background-color: #f3ebe4 !important;
+  -webkit-text-fill-color: #1c1412;
+  color-scheme: light;
 }
 
 .field:focus {
-  border-color: color-mix(in oklab, var(--blood) 55%, white);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--blood) 18%, transparent);
+  border-color: #8f624e;
+  box-shadow: 0 0 0 3px rgba(143, 98, 78, 0.2);
 }
 
 .btn-primary {
