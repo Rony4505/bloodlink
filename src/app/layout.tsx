@@ -23,13 +23,13 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Slowgun | Luxury Womenswear for Bangladesh",
-    template: "%s | Slowgun",
+    default: "Smart craft corner | Luxury Womenswear for Bangladesh",
+    template: "%s | Smart craft corner",
   },
   description:
-    "Slowgun is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
+    "Smart craft corner is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
   keywords: [
-    "Slowgun",
+    "Smart craft corner",
     "Bangladesh womens fashion",
     "luxury ecommerce Bangladesh",
     "ladies boutique Dhaka",
@@ -52,8 +52,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "bn_BD",
     url: siteUrl,
-    siteName: "Slowgun",
-    title: "Slowgun | Luxury Womenswear for Bangladesh",
+    siteName: "Smart craft corner",
+    title: "Smart craft corner | Luxury Womenswear for Bangladesh",
     description:
       "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
     images: [
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
         url: "/bloodlink-logo.png",
         width: 512,
         height: 512,
-        alt: "Slowgun brand image",
+        alt: "Smart craft corner brand image",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Slowgun | Luxury Womenswear for Bangladesh",
+    title: "Smart craft corner | Luxury Womenswear for Bangladesh",
     description:
       "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
     images: ["/bloodlink-logo.png"],

@@ -14,7 +14,7 @@ export default function CheckoutSuccessClient() {
   const [order, setOrder] = useState<FashionOrder | null>(null);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("slowgun_last_order");
+    const raw = sessionStorage.getItem("scc_last_order");
     if (raw) {
       setOrder(JSON.parse(raw) as FashionOrder);
       return;

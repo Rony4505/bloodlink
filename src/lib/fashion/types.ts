@@ -134,6 +134,14 @@ export type StoreSettings = {
   promoBanners?: PromoBanner[];
   availableSizes?: string[];
   websiteChatEnabled?: boolean;
+  /** Top buyer (VIP) — min lifetime spend (BDT) to unlock discount */
+  vipMinSpend?: number;
+  /** Top buyer discount percent when threshold met */
+  vipDiscountPercent?: number;
+  vipEnabled?: boolean;
+  adminUsername?: string;
+  adminEmail?: string;
+  adminPhone?: string;
 };
 
 export type Product = {
@@ -223,6 +231,8 @@ export type FashionCustomer = {
   email: string;
   phone: string;
   passwordHash: string;
+  verified?: boolean;
+  verifiedChannel?: "email" | "phone";
   createdAt: string;
 };
 

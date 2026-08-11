@@ -471,7 +471,7 @@ async function notifyUsersNewProduct(store: FashionStore, product: Product): Pro
     id: `un${Date.now()}`,
     type: "new_product",
     title: "নতুন প্রোডাক্ট",
-    body: `${product.nameBn} এখন Slowgun-এ উপলব্ধ`,
+    body: `${product.nameBn} এখন Smart craft corner-এ উপলব্ধ`,
     link: `/products/${product.slug}`,
     readBy: [],
     createdAt: new Date().toISOString(),
@@ -687,6 +687,8 @@ export async function createCustomer(input: {
   email: string;
   phone: string;
   passwordHash: string;
+  verified?: boolean;
+  verifiedChannel?: "email" | "phone";
 }): Promise<FashionCustomer> {
   const store = await ensureStore();
   const customer: FashionCustomer = {
@@ -695,12 +697,59 @@ export async function createCustomer(input: {
     email: input.email.trim().toLowerCase(),
     phone: input.phone.trim(),
     passwordHash: input.passwordHash,
+    verified: input.verified ?? false,
+    verifiedChannel: input.verifiedChannel,
     createdAt: new Date().toISOString(),
   };
   store.customers.push(customer);
   await writeStore(store);
   return customer;
 }
+
+/** Lifetime delivered/confirmed spend for VIP top-buyer discount. */
+export async function getCustomerLifetimeSpend(customerId: string): Promise<number> {
+  const orders = await listOrdersForCustomer(customerId);
+  return orders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + o.total, 0);
+}
+
+export async function getVipDiscountPreview(input: {
+  customerId?: string;
+  subtotal: number;
+}): Promise<{ eligible: boolean; percent: number; amount: number; minSpend: number; spent: number }> {
+  const settings = await getStoreSettings();
+  const percent = settings.vipDiscountPercent ?? 0;
+  const minSpend = settings.vipMinSpend ?? 0;
+  const enabled = settings.vipEnabled !== false && percent > 0;
+  if (!enabled || !input.customerId) {
+    return { eligible: false, percent, amount: 0, minSpend, spent: 0 };
+  }
+  const spent = await getCustomerLifetimeSpend(input.customerId);
+  const eligible = spent >= minSpend;
+  const amount = eligible ? Math.round((input.subtotal * percent) / 100) : 0;
+  return { eligible, percent, amount, minSpend, spent };
+}
+
+export async function verifyFashionAdminCredentials(
+  username: string,
+  password: string,
+): Promise<boolean> {
+  const store = await ensureStore();
+  const expected =
+    store.settings.adminUsername?.trim().toLowerCase() ||
+    process.env.FASHION_ADMIN_USERNAME?.trim().toLowerCase() ||
+    "founder";
+  if (username.trim().toLowerCase() !== expected) return false;
+  return bcrypt.compare(password, store.adminPasswordHash);
+}
+
+export async function verifyFashionAdminPassword(password: string): Promise<boolean> {
+  const store = await ensureStore();
+  return bcrypt.compare(password, store.adminPasswordHash);
+}
+
+export { rawSeedProducts as seedProducts };
 
 export async function listOrders(): Promise<FashionOrder[]> {
   const store = await ensureStore();
@@ -734,7 +783,7 @@ export async function createOrder(
   const now = new Date().toISOString();
   const record: FashionOrder = {
     ...order,
-    id: `SG${Date.now().toString().slice(-8)}`,
+    id: `SC${Date.now().toString().slice(-8)}`,
     trackingNumber: generateTrackingNumber(),
     status: "pending",
     statusHistory: [{ status: "pending", message: "অর্ডার গ্রহণ করা হয়েছে", updatedAt: now }],
@@ -811,10 +860,3 @@ export async function getAnalytics(period: "daily" | "monthly"): Promise<Analyti
   const store = await ensureStore();
   return computeAnalytics(store.orders, period);
 }
-
-export async function verifyFashionAdminPassword(password: string): Promise<boolean> {
-  const store = await ensureStore();
-  return bcrypt.compare(password, store.adminPasswordHash);
-}
-
-export { rawSeedProducts as seedProducts };

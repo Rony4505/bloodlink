@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentCustomer, isFashionAdminAuthenticated } from "@/lib/fashion/customer-auth";
 import { calculateDeliveryFee } from "@/lib/fashion/delivery";
-import { createOrder, getProductById, getStoreSettings, listOrders, listOrdersForCustomer, validateCoupon } from "@/lib/fashion/store";
+import { createOrder, getProductById, getStoreSettings, getVipDiscountPreview, listOrders, listOrdersForCustomer, validateCoupon } from "@/lib/fashion/store";
 import type { CartItem, CheckoutForm } from "@/lib/fashion/types";
 
 export async function GET() {
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
 
   const settings = await getStoreSettings();
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const customer = await getCurrentCustomer();
 
   let discount = 0;
   let couponCode: string | undefined;
@@ -52,10 +53,17 @@ export async function POST(request: Request) {
     }
   }
 
+  const vip = await getVipDiscountPreview({
+    customerId: customer?.id,
+    subtotal,
+  });
+  if (vip.eligible) {
+    discount += vip.amount;
+  }
+
   const subtotalAfterDiscount = Math.max(0, subtotal - discount);
   const shipping = calculateDeliveryFee(settings, form.district, subtotalAfterDiscount);
   const total = subtotalAfterDiscount + shipping;
-  const customer = await getCurrentCustomer();
 
   const orderItems = await Promise.all(
     items.map(async (item) => {

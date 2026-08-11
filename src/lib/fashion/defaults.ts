@@ -1,7 +1,7 @@
 import type { Category, StoreSettings } from "./types";
 
 export const defaultSettings: StoreSettings = {
-  brandName: "Slowgun",
+  brandName: "Smart craft corner",
   brandTagline: "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন",
   brandTaglineEn: "Luxury fashion for Bangladeshi women",
   defaultMarkupPercent: 35,
@@ -15,9 +15,9 @@ export const defaultSettings: StoreSettings = {
   heroSubtitle: "বাংলাদেশি নারীদের জন্য curated premium fashion destination",
   heroSubtitleEn: "A curated premium fashion destination for Bangladeshi women",
   heroDescription:
-    "Slowgun এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।",
+    "Smart craft corner এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।",
   heroDescriptionEn:
-    "Slowgun is an e-commerce experience where premium fabric, a soft color palette, festive elegance, and daily sophistication come together.",
+    "Smart craft corner is an e-commerce experience where premium fabric, a soft color palette, festive elegance, and daily sophistication come together.",
   heroCtaPrimaryLabel: "কালেকশন দেখুন",
   heroCtaPrimaryLabelEn: "Shop collections",
   heroCtaPrimaryHref: "/collections",
@@ -33,7 +33,7 @@ export const defaultSettings: StoreSettings = {
   heroStat3Value: "4.9/5",
   heroStat3Label: "কাস্টমার রেটিং",
   heroStat3LabelEn: "Customer rating",
-  contactEmail: "hello@slowgun.com",
+  contactEmail: "hello@smartcraftcorner.com",
   contactPhone: "+880 1XXX-XXXXXX",
   whatsapp: "8801700000000",
   supportNote: "ঢাকা ডেলিভারি + সারা দেশে কুরিয়ার",
@@ -49,9 +49,9 @@ export const defaultSettings: StoreSettings = {
   aboutSubtitle: "আমাদের গল্প",
   aboutSubtitleEn: "Our story",
   aboutText:
-    "Slowgun শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience বাংলাদেশি নারীদের কাছে সহজ ও elegant করে তোলা।",
+    "Smart craft corner শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience বাংলাদেশি নারীদের কাছে সহজ ও elegant করে তোলা।",
   aboutTextEn:
-    "Slowgun began with a simple belief—making premium fashion feel easy and elegant for Bangladeshi women.",
+    "Smart craft corner began with a simple belief—making premium fashion feel easy and elegant for Bangladeshi women.",
   aboutPillars: [
     {
       title: "কিউরেটেড, crowded নয়",
@@ -144,8 +144,8 @@ export const defaultSettings: StoreSettings = {
   showFeatures: true,
   showTestimonials: false,
   showFaq: true,
-  metaTitle: "Slowgun — বাংলাদেশি নারীদের লাক্সারি ফ্যাশন",
-  metaTitleEn: "Slowgun — Luxury fashion for Bangladeshi women",
+  metaTitle: "Smart craft corner — বাংলাদেশি নারীদের লাক্সারি ফ্যাশন",
+  metaTitleEn: "Smart craft corner — Luxury fashion for Bangladeshi women",
   metaDescription:
     "প্রিমিয়াম জামদানি, ফেস্টিভ ও ডেইলি এলিগেন্স কালেকশন—সারা বাংলাদেশে ডেলিভারি।",
   metaDescriptionEn:
@@ -153,6 +153,12 @@ export const defaultSettings: StoreSettings = {
   promoBanners: [],
   availableSizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size"],
   websiteChatEnabled: true,
+  vipEnabled: true,
+  vipMinSpend: 20000,
+  vipDiscountPercent: 5,
+  adminUsername: "founder",
+  adminEmail: "hello@smartcraftcorner.com",
+  adminPhone: "8801700000000",
 };
 
 export const defaultCategories: Category[] = [

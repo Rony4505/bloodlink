@@ -23,7 +23,7 @@ export function ChatSupportWidget() {
 
   const whatsapp = (settings.whatsapp || "8801700000000").replace(/\D/g, "");
   const facebook = settings.facebookUrl?.trim() || "https://facebook.com";
-  const email = settings.contactEmail || "hello@slowgun.com";
+  const email = settings.contactEmail || "hello@smartcraftcorner.com";
 
   const labels =
     locale === "bn"

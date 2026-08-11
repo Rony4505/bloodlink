@@ -7,18 +7,10 @@ import { FashionShell } from "@/components/fashion/FashionShell";
 import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
 import { useCart } from "@/lib/fashion/cart-context";
+import { bangladeshDistricts } from "@/lib/fashion/districts";
 import type { CheckoutForm, FashionOrder } from "@/lib/fashion/types";
 
-const districts = [
-  "Dhaka",
-  "Chattogram",
-  "Sylhet",
-  "Rajshahi",
-  "Khulna",
-  "Barishal",
-  "Rangpur",
-  "Mymensingh",
-];
+const districts = bangladeshDistricts.filter((d) => d !== "*");
 
 const initialForm: CheckoutForm = {
   name: "",
@@ -37,9 +29,18 @@ export default function CheckoutPage() {
   const [form, setForm] = useState<CheckoutForm>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [shipping, setShipping] = useState(120);
-  const [discount, setDiscount] = useState(0);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [vipDiscount, setVipDiscount] = useState(0);
+  const [vipMessage, setVipMessage] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
+  const [districtSearch, setDistrictSearch] = useState("");
+  const discount = couponDiscount + vipDiscount;
   const total = Math.max(0, subtotal - discount) + shipping;
+  const filteredDistricts = districts.filter((d) =>
+    !districtSearch.trim()
+      ? true
+      : d.toLowerCase().includes(districtSearch.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     fetch("/api/fashion/auth")
@@ -56,6 +57,30 @@ export default function CheckoutPage() {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    fetch(`/api/fashion/vip?subtotal=${subtotal}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.vip?.eligible) {
+          setVipDiscount(data.vip.amount ?? 0);
+          setVipMessage(
+            `Top buyer VIP ${data.vip.percent}% · lifetime ৳${data.vip.spent?.toLocaleString?.() ?? data.vip.spent}`,
+          );
+        } else {
+          setVipDiscount(0);
+          setVipMessage(
+            data.vip?.minSpend
+              ? `VIP unlocks after ৳${data.vip.minSpend.toLocaleString()} lifetime spend (now ৳${data.vip.spent ?? 0})`
+              : "",
+          );
+        }
+      })
+      .catch(() => {
+        setVipDiscount(0);
+        setVipMessage("");
+      });
+  }, [subtotal]);
 
   useEffect(() => {
     fetch("/api/fashion/delivery", {
@@ -77,10 +102,10 @@ export default function CheckoutPage() {
     });
     const data = await res.json();
     if (data.valid) {
-      setDiscount(data.discount);
+      setCouponDiscount(data.discount);
       setCouponMessage(`কুপন প্রয়োগ: ${data.coupon.code}`);
     } else {
-      setDiscount(0);
+      setCouponDiscount(0);
       setCouponMessage(data.error ?? "কুপন সঠিক নয়");
     }
   }
@@ -104,7 +129,7 @@ export default function CheckoutPage() {
     }
 
     const order = data.order as FashionOrder;
-    sessionStorage.setItem("slowgun_last_order", JSON.stringify(order));
+    sessionStorage.setItem("scc_last_order", JSON.stringify(order));
     clearCart();
     router.push(`/checkout/success?orderId=${order.id}`);
   }
@@ -142,8 +167,19 @@ export default function CheckoutPage() {
             <Field label={copy.form.address} value={form.address} onChange={(value) => setForm((c) => ({ ...c, address: value }))} required multiline />
             <div>
               <label className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.form.district}</label>
-              <select className="field mt-2" value={form.district} onChange={(e) => setForm((c) => ({ ...c, district: e.target.value }))}>
-                {districts.map((district) => (
+              <input
+                className="field mt-2"
+                placeholder="জেলা সার্চ..."
+                value={districtSearch}
+                onChange={(e) => setDistrictSearch(e.target.value)}
+              />
+              <select
+                className="field mt-2"
+                value={form.district}
+                onChange={(e) => setForm((c) => ({ ...c, district: e.target.value }))}
+                size={Math.min(8, Math.max(4, filteredDistricts.length))}
+              >
+                {filteredDistricts.map((district) => (
                   <option key={district} value={district}>{district}</option>
                 ))}
               </select>
@@ -156,11 +192,12 @@ export default function CheckoutPage() {
                   className="field flex-1"
                   value={form.couponCode ?? ""}
                   onChange={(e) => setForm((c) => ({ ...c, couponCode: e.target.value }))}
-                  placeholder="SLOWGUN10"
+                  placeholder="COUPON10"
                 />
                 <FashionButton type="button" variant="secondary" onClick={applyCoupon}>{copy.actions.apply}</FashionButton>
               </div>
               {couponMessage ? <p className="mt-2 text-sm text-[#8b6456]">{couponMessage}</p> : null}
+              {vipMessage ? <p className="mt-2 text-sm text-[#4a7350]">{vipMessage}</p> : null}
             </div>
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.form.payment}</p>

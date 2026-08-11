@@ -513,28 +513,88 @@ export function SettingsEditor({
       ) : null}
 
       {tab === "pricing" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Default pricing mode">
-            <select
-              className="field"
-              value={settings.pricingMode}
-              onChange={(e) =>
-                patch("pricingMode", e.target.value as StoreSettings["pricingMode"])
-              }
-            >
-              <option value="markup">Markup %</option>
-              <option value="manual">Manual</option>
-            </select>
-          </Field>
-          <Field label="Default markup %">
-            <input
-              className="field"
-              type="number"
-              min={0}
-              value={settings.defaultMarkupPercent}
-              onChange={(e) => patch("defaultMarkupPercent", Number(e.target.value) || 0)}
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Default pricing mode">
+              <select
+                className="field"
+                value={settings.pricingMode}
+                onChange={(e) =>
+                  patch("pricingMode", e.target.value as StoreSettings["pricingMode"])
+                }
+              >
+                <option value="markup">Markup %</option>
+                <option value="manual">Manual</option>
+              </select>
+            </Field>
+            <Field label="Default markup %">
+              <input
+                className="field"
+                type="number"
+                min={0}
+                value={settings.defaultMarkupPercent}
+                onChange={(e) => patch("defaultMarkupPercent", Number(e.target.value) || 0)}
+              />
+            </Field>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-black/6 bg-white/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">
+              Top Buying User (VIP) discount
+            </p>
+            <Toggle
+              label="VIP discount চালু"
+              checked={settings.vipEnabled !== false}
+              onChange={(v) => patch("vipEnabled", v)}
             />
-          </Field>
+            <Field label="মিনিমাম মোট কেনাকাটা (৳) — এত টাকার বেশি কিনলে VIP">
+              <input
+                className="field"
+                type="number"
+                min={0}
+                value={settings.vipMinSpend ?? 0}
+                onChange={(e) => patch("vipMinSpend", Number(e.target.value) || 0)}
+              />
+            </Field>
+            <Field label="VIP discount %">
+              <input
+                className="field"
+                type="number"
+                min={0}
+                max={100}
+                value={settings.vipDiscountPercent ?? 0}
+                onChange={(e) => patch("vipDiscountPercent", Number(e.target.value) || 0)}
+              />
+            </Field>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-black/6 bg-white/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">
+              Admin login security
+            </p>
+            <Field label="Admin username">
+              <input
+                className="field"
+                value={settings.adminUsername ?? "founder"}
+                onChange={(e) => patch("adminUsername", e.target.value)}
+              />
+            </Field>
+            <Field label="Admin Gmail (OTP)">
+              <input
+                className="field"
+                type="email"
+                value={settings.adminEmail ?? ""}
+                onChange={(e) => patch("adminEmail", e.target.value)}
+              />
+            </Field>
+            <Field label="Admin phone (OTP)">
+              <input
+                className="field"
+                value={settings.adminPhone ?? ""}
+                onChange={(e) => patch("adminPhone", e.target.value)}
+              />
+            </Field>
+          </div>
         </div>
       ) : null}
 

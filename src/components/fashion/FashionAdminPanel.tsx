@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FashionButton } from "@/components/fashion/FashionButton";
+import { PasswordField } from "@/components/fashion/PasswordField";
 import {
   AdminConfirmModal,
   AdminModal,
@@ -15,7 +16,7 @@ import { SettingsEditor } from "@/components/fashion/admin/SettingsEditor";
 import { adminThemes, type AdminTheme } from "@/components/fashion/admin/admin-themes";
 import { copy } from "@/lib/fashion/copy";
 import { advertiseKindLabel } from "@/lib/fashion/i18n";
-import { bangladeshDistricts } from "@/lib/fashion/districts";
+import { bangladeshDistricts, BANNER_RECOMMENDED_SIZE } from "@/lib/fashion/districts";
 import { formatBdt } from "@/lib/fashion/format";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type {
@@ -721,21 +722,30 @@ export function FashionAdminPanel() {
 
       {/* Delivery Modal - scroll districts */}
       <AdminModal open={activeTab === "delivery"} onClose={() => setActiveTab(null)} title={fc.admin.delivery} theme="sunset" wide>
-        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-          <div className="flex max-h-80 flex-col rounded-2xl border border-[#f0c49a]/50 bg-white/70 p-2">
+        <p className="mb-3 text-sm text-[#7a5c50]">
+          বাংলাদেশের {bangladeshDistricts.filter((d) => d !== "*").length} জেলা — সার্চ বক্সে ক্লিক/টাইপ করুন, অথবা স্ক্রল করে সিলেক্ট করুন।
+        </p>
+        <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+          <div className="flex max-h-96 flex-col rounded-2xl border border-[#f0c49a]/50 bg-[#fff8f0] p-2">
             <input
               className="field mb-2 shrink-0 text-sm"
-              placeholder="জেলা সার্চ বা টাইপ..."
+              placeholder="জেলা সার্চ বা টাইপ... (৬৪ জেলা)"
               value={districtSearch}
               onChange={(e) => setDistrictSearch(e.target.value)}
+              onFocus={() => {
+                if (!districtSearch) setDistrictSearch("");
+              }}
             />
+            <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-[#9b7766]">
+              {filteredDistricts.length} জেলা
+            </p>
             <div className="min-h-0 flex-1 overflow-y-auto">
               {filteredDistricts.map((d) => {
                 const hasRule = settings?.deliveryRules.some((r) => r.district === d);
                 return (
                   <button key={d} type="button" onClick={() => { setSelectedDistrict(d); upsertDistrictRule(d); }}
-                    className={`mb-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition ${selectedDistrict === d ? "bg-[#ffd4b8] text-[#6b3a1e]" : "hover:bg-[#fff8f0]"}`}>
-                    {d} {hasRule ? "✓" : ""}
+                    className={`mb-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition ${selectedDistrict === d ? "bg-[#ffd4b8] text-[#6b3a1e]" : "text-[#1c1412] hover:bg-[#fff8f0]"}`}>
+                    {d === "*" ? "Other / Nationwide (*)" : d} {hasRule ? "✓" : ""}
                   </button>
                 );
               })}
@@ -885,6 +895,10 @@ export function FashionAdminPanel() {
         ) : (
           <div className="space-y-4">
             <form onSubmit={saveBanner} className="space-y-3 rounded-2xl border border-black/6 bg-white/80 p-4">
+              <p className="rounded-xl border border-[#e8cc80]/70 bg-[#fffbf0] px-3 py-2 text-sm text-[#6b5420]">
+                Banner size: <strong>{BANNER_RECOMMENDED_SIZE.label}</strong> ({BANNER_RECOMMENDED_SIZE.ratio}).
+                {" "}{BANNER_RECOMMENDED_SIZE.hint}
+              </p>
               <select className="field" value={bannerForm.productId ?? ""} onChange={(e) => {
                 const product = products.find((p) => p.id === e.target.value);
                 setBannerForm({
@@ -1193,18 +1207,66 @@ export function FashionAdminPanel() {
 export function FashionAdminLogin() {
   const router = useRouter();
   const { fc, locale } = useFashionCopy();
+  const [username, setUsername] = useState("founder");
   const [password, setPassword] = useState("");
+  const [channel, setChannel] = useState<"email" | "phone">("email");
+  const [step, setStep] = useState<"creds" | "otp">("creds");
+  const [otp, setOtp] = useState("");
+  const [debugOtp, setDebugOtp] = useState("");
+  const [targetHint, setTargetHint] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(event: FormEvent) {
+  async function checkCreds(event: FormEvent) {
     event.preventDefault();
+    setLoading(true);
+    setError("");
     const res = await fetch("/api/fashion/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ action: "credentials", username, password }),
     });
+    setLoading(false);
     if (!res.ok) {
-      setError(locale === "bn" ? "পাসওয়ার্ড সঠিক নয়" : "Incorrect password");
+      setError(locale === "bn" ? "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়" : "Incorrect username or password");
+      return;
+    }
+    setLoading(true);
+    const otpRes = await fetch("/api/fashion/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send-otp", username, password, channel }),
+    });
+    const data = await otpRes.json();
+    setLoading(false);
+    if (!otpRes.ok) {
+      setError(data.error || "OTP পাঠানো যায়নি");
+      return;
+    }
+    setDebugOtp(data.debugOtp || "");
+    setTargetHint(data.targetHint || "");
+    setStep("otp");
+  }
+
+  async function verifyOtp(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    const res = await fetch("/api/fashion/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "verify-otp",
+        username,
+        password,
+        channel,
+        code: otp,
+      }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || (locale === "bn" ? "OTP সঠিক নয়" : "Invalid OTP"));
       return;
     }
     router.push("/store-admin");
@@ -1214,11 +1276,87 @@ export function FashionAdminLogin() {
     <AdminShell>
       <section className="mx-auto max-w-md py-12">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">{fc.admin.loginTitle}</h1>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <input className="field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <FashionButton type="submit">Login</FashionButton>
-        </form>
+        {step === "creds" ? (
+          <form onSubmit={checkCreds} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            <label className="block">
+              <span className="text-sm text-[#9b7766]">Username</span>
+              <input
+                className="field mt-1"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+              />
+            </label>
+            <PasswordField
+              label={locale === "bn" ? "পাসওয়ার্ড" : "Password"}
+              value={password}
+              onChange={setPassword}
+              required
+            />
+            <div>
+              <p className="mb-2 text-sm text-[#9b7766]">
+                {locale === "bn" ? "ভেরিফিকেশন কোথায় পাঠাবেন?" : "Send verification via"}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setChannel("email")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    channel === "email"
+                      ? "bg-[#8f624e] text-white"
+                      : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"
+                  }`}
+                >
+                  Gmail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannel("phone")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    channel === "phone"
+                      ? "bg-[#8f624e] text-white"
+                      : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"
+                  }`}
+                >
+                  Phone
+                </button>
+              </div>
+            </div>
+            <FashionButton type="submit" disabled={loading}>
+              {loading ? "..." : locale === "bn" ? "পরবর্তী · OTP" : "Next · OTP"}
+            </FashionButton>
+          </form>
+        ) : (
+          <form onSubmit={verifyOtp} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            <p className="text-sm text-[#6f554a]">
+              OTP sent to {targetHint || channel}
+            </p>
+            {debugOtp ? (
+              <p className="rounded-xl bg-[#f3ebe4] px-3 py-2 text-sm">
+                Demo OTP: <strong>{debugOtp}</strong>
+              </p>
+            ) : null}
+            <label className="block">
+              <span className="text-sm text-[#9b7766]">OTP</span>
+              <input
+                className="field mt-1 tracking-[0.3em]"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                required
+                maxLength={6}
+              />
+            </label>
+            <FashionButton type="submit" disabled={loading}>
+              {loading ? "..." : "Login"}
+            </FashionButton>
+            <button type="button" className="text-sm font-semibold text-[#8f624e]" onClick={() => setStep("creds")}>
+              ← Back
+            </button>
+          </form>
+        )}
       </section>
     </AdminShell>
   );

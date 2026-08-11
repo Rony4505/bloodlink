@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ProductGrid } from "@/components/fashion/ProductGrid";
+import { VisibleSelect } from "@/components/fashion/VisibleSelect";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { Category, Product } from "@/lib/fashion/types";
@@ -27,23 +28,16 @@ function PriceSortSelect({
   const { fc } = useFashionCopy();
 
   return (
-    <select
-      className="min-w-[200px] rounded-xl border-2 border-[#8f624e] bg-[#f3ebe4] px-4 py-2.5 text-sm font-bold text-[#1c1412] shadow-sm outline-none"
+    <VisibleSelect
       value={value}
-      onChange={(e) => onChange(e.target.value as PriceSort)}
-      aria-label={fc.home.sortPrice}
-      style={{ color: "#1c1412", backgroundColor: "#f3ebe4", WebkitTextFillColor: "#1c1412" }}
-    >
-      <option value="default" style={{ color: "#1c1412", backgroundColor: "#f3ebe4" }}>
-        {fc.search.sortFeatured}
-      </option>
-      <option value="price-asc" style={{ color: "#1c1412", backgroundColor: "#f3ebe4" }}>
-        {fc.search.sortPriceLow}
-      </option>
-      <option value="price-desc" style={{ color: "#1c1412", backgroundColor: "#f3ebe4" }}>
-        {fc.search.sortPriceHigh}
-      </option>
-    </select>
+      onChange={(v) => onChange(v as PriceSort)}
+      ariaLabel={fc.home.sortPrice}
+      options={[
+        { value: "default", label: fc.search.sortFeatured },
+        { value: "price-asc", label: fc.search.sortPriceLow },
+        { value: "price-desc", label: fc.search.sortPriceHigh },
+      ]}
+    />
   );
 }
 

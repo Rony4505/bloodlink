@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "কালেকশন",
-  description: "Slowgun-এর সব লাক্সারি কালেকশন দেখুন।",
+  description: "Smart craft corner-এর সব লাক্সারি কালেকশন দেখুন।",
 };
 
 export default async function CollectionsPage() {

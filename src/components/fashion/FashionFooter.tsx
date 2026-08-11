@@ -23,7 +23,7 @@ export function FashionFooter() {
   }, []);
 
   const phone = settings.contactPhone || "+880 1XXX-XXXXXX";
-  const email = settings.contactEmail || "hello@slowgun.com";
+  const email = settings.contactEmail || "hello@smartcraftcorner.com";
   const whatsapp = settings.whatsapp || "8801700000000";
   const supportNote = tSetting(
     settings as StoreSettings,

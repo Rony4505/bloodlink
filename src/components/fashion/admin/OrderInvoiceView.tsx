@@ -14,7 +14,7 @@ export function OrderInvoiceView({
   settings?: Pick<StoreSettings, "brandName" | "contactPhone" | "whatsapp"> | null;
   id?: string;
 }) {
-  const brand = settings?.brandName ?? "Slowgun";
+  const brand = settings?.brandName ?? "Smart craft corner";
   const invoiceText = [
     `${brand} Invoice`,
     `Order: ${order.id}`,

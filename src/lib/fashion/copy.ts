@@ -1,5 +1,5 @@
 export const copy = {
-  brand: "Slowgun",
+  brand: "Smart craft corner",
   tagline: "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন",
   nav: {
     collections: "কালেকশন",
@@ -70,7 +70,7 @@ export const copy = {
     orderStatus: "অর্ডার স্ট্যাটাস",
   },
   admin: {
-    title: "Slowgun Admin",
+    title: "Smart craft corner Admin",
     products: "প্রোডাক্ট",
     orders: "অর্ডার",
     categories: "ক্যাটাগরি",

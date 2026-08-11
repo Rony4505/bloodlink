@@ -30,6 +30,8 @@ export async function registerCustomer(input: {
   email: string;
   phone: string;
   password: string;
+  verified?: boolean;
+  verifiedChannel?: "email" | "phone";
 }) {
   const existing = await findCustomerByEmail(input.email);
   if (existing) {
@@ -41,6 +43,8 @@ export async function registerCustomer(input: {
     email: input.email,
     phone: input.phone,
     passwordHash: await hashPassword(input.password),
+    verified: input.verified,
+    verifiedChannel: input.verifiedChannel,
   });
 
   await createCustomerSession(customer.id);
@@ -140,6 +144,7 @@ export function sanitizeCustomer(customer: NonNullable<Awaited<ReturnType<typeof
     name: customer.name,
     email: customer.email,
     phone: customer.phone,
+    verified: customer.verified,
     createdAt: customer.createdAt,
   };
 }
