@@ -58,6 +58,7 @@ export type StoreSettings = {
   freeShippingNote?: string;
   showCouponsOnHome?: boolean;
   promoBanners?: PromoBanner[];
+  availableSizes?: string[];
 };
 
 export type Product = {
@@ -158,6 +159,7 @@ export type FashionOrderItem = {
 
 export type FashionOrder = {
   id: string;
+  trackingNumber: string;
   customerId?: string;
   customerName: string;
   phone: string;

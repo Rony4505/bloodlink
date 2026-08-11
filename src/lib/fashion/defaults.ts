@@ -22,6 +22,7 @@ export const defaultSettings: StoreSettings = {
   freeShippingNote: "নির্দিষ্ট অর্ডারে ফ্রি ডেলিভারি",
   showCouponsOnHome: true,
   promoBanners: [],
+  availableSizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size"],
 };
 
 export const defaultCategories: Category[] = [

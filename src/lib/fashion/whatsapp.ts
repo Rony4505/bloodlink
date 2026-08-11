@@ -26,7 +26,7 @@ export function buildWhatsAppOrderMessage(order: {
         : "Nagad";
 
   const lines = [
-    "Assalamu Alaikum, Nooré Dhaka থেকে নতুন অর্ডার:",
+    "Assalamu Alaikum, Slowgun থেকে নতুন অর্ডার:",
     "",
     `Order ID: ${order.id}`,
     `Name: ${order.customerName}`,

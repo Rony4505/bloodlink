@@ -23,6 +23,7 @@ import type {
   UserNotification,
 } from "./types";
 import { computeAnalytics } from "./analytics";
+import { generateTrackingNumber } from "./tracking";
 
 const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
 const storePath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-store.json");
@@ -40,6 +41,7 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
       ? parsed.deliveryRules
       : defaultSettings.deliveryRules,
     promoBanners: parsed?.promoBanners ?? defaultSettings.promoBanners ?? [],
+    availableSizes: parsed?.availableSizes ?? defaultSettings.availableSizes,
   };
 }
 
@@ -99,6 +101,7 @@ function migrateOrder(order: Partial<FashionOrder>): FashionOrder {
   const status = order.status ?? "pending";
   return {
     id: order.id!,
+    trackingNumber: order.trackingNumber ?? `SG-TRK-${order.id!}`,
     customerId: order.customerId,
     customerName: order.customerName!,
     phone: order.phone!,
@@ -217,6 +220,15 @@ export async function updateCategories(incoming: Category[]): Promise<Category[]
   store.categories = merged;
   await writeStore(store);
   return store.categories;
+}
+
+export async function deleteCategory(slug: string): Promise<boolean> {
+  const store = await ensureStore();
+  const next = store.categories.filter((c) => c.slug !== slug);
+  if (next.length === store.categories.length) return false;
+  store.categories = next;
+  await writeStore(store);
+  return true;
 }
 
 export async function listProducts(): Promise<Product[]> {
@@ -516,14 +528,25 @@ export async function getOrderById(id: string): Promise<FashionOrder | undefined
   return orders.find((o) => o.id === id);
 }
 
+export async function getOrderByTrackingNumber(tracking: string): Promise<FashionOrder | undefined> {
+  const orders = await listOrders();
+  const q = tracking.trim().toUpperCase();
+  return orders.find(
+    (o) =>
+      o.trackingNumber.toUpperCase() === q ||
+      o.id.toUpperCase() === q,
+  );
+}
+
 export async function createOrder(
-  order: Omit<FashionOrder, "id" | "createdAt" | "status" | "statusHistory">,
+  order: Omit<FashionOrder, "id" | "trackingNumber" | "createdAt" | "status" | "statusHistory">,
 ): Promise<FashionOrder> {
   const store = await ensureStore();
   const now = new Date().toISOString();
   const record: FashionOrder = {
     ...order,
     id: `SG${Date.now().toString().slice(-8)}`,
+    trackingNumber: generateTrackingNumber(),
     status: "pending",
     statusHistory: [{ status: "pending", message: "অর্ডার গ্রহণ করা হয়েছে", updatedAt: now }],
     createdAt: now,
@@ -554,8 +577,8 @@ export async function createOrder(
       customerId: record.customerId,
       type: "order_update",
       title: "অর্ডার নিশ্চিত",
-      body: `আপনার অর্ডার ${record.id} গ্রহণ করা হয়েছে`,
-      link: "/account",
+      body: `আপনার অর্ডার ${record.id} গ্রহণ করা হয়েছে। ট্র্যাকিং: ${record.trackingNumber}`,
+      link: "/track",
       readBy: [],
       createdAt: now,
     });

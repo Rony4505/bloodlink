@@ -3,9 +3,9 @@ export const copy = {
   tagline: "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন",
   nav: {
     collections: "কালেকশন",
-    search: "খুঁজুন",
     about: "আমাদের গল্প",
     contact: "যোগাযোগ",
+    track: "ট্র্যাক অর্ডার",
     cart: "কার্ট",
     account: "অ্যাকাউন্ট",
     login: "লগইন",

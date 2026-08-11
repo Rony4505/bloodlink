@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { FashionShell } from "@/components/fashion/FashionShell";
@@ -98,13 +99,21 @@ export default function AccountPage() {
               {orders.map((order) => (
                 <article key={order.id} className="rounded-[1.75rem] border border-black/6 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="font-semibold">{order.id}</p>
+                    <div>
+                      <p className="font-semibold">{order.id}</p>
+                      <p className="text-xs text-[#8b6456]">Tracking: {order.trackingNumber ?? "—"}</p>
+                    </div>
                     <p className="text-[#8f624e]">{formatBdt(order.total)}</p>
                   </div>
                   <p className="mt-2 text-sm text-[#6f554a]">{new Date(order.createdAt).toLocaleString("bn-BD")}</p>
-                  <p className="mt-2 text-sm font-medium text-[#8b6456]">
+                  <p className="mt-1 text-sm font-medium text-[#8b6456]">
                     {copy.account.orderStatus}: {copy.orderStatus[order.status]}
                   </p>
+                  {order.trackingNumber ? (
+                    <Link href={`/track?tracking=${encodeURIComponent(order.trackingNumber)}`} className="mt-2 inline-block text-xs font-semibold text-[#8f624e]">
+                      অর্ডার ট্র্যাক করুন →
+                    </Link>
+                  ) : null}
                   {order.statusHistory?.length ? (
                     <ul className="mt-3 space-y-1 border-t border-black/5 pt-3 text-xs text-[#8b6456]">
                       {order.statusHistory.map((h, i) => (

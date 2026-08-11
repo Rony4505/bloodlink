@@ -9,6 +9,7 @@ import { cn } from "@/lib/fashion/cn";
 
 const links = [
   { href: "/collections", label: copy.nav.collections },
+  { href: "/track", label: copy.nav.track },
   { href: "/about", label: copy.nav.about },
   { href: "/contact", label: copy.nav.contact },
 ];
