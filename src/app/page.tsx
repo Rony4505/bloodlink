@@ -1,7 +1,5 @@
-import { FashionHomePage } from "@/components/FashionHomePage";
+import { HomePage } from "@/components/HomePage";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  return <FashionHomePage />;
+export default function Home() {
+  return <HomePage />;
 }

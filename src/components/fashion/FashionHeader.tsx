@@ -60,8 +60,8 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   const links = [
     { href: "/collections", label: fc.nav.collections },
     { href: "/track", label: fc.nav.track },
-    { href: "/about", label: fc.nav.about },
-    { href: "/contact", label: fc.nav.contact },
+    { href: "/shop/about", label: fc.nav.about },
+    { href: "/shop/contact", label: fc.nav.contact },
   ];
 
   return (
@@ -74,7 +74,7 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
       )}
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <Link href="/" className="group">
+        <Link href="/shop" className="group">
           <p className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[0.2em] uppercase">
             {brand}
           </p>

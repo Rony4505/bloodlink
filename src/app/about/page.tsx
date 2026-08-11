@@ -1,21 +1,14 @@
-import type { Metadata } from "next";
-import { AboutPageClient } from "@/components/fashion/AboutPageClient";
-import { FashionShell } from "@/components/fashion/FashionShell";
-import { getStoreSettings } from "@/lib/fashion/store";
+"use client";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getStoreSettings();
-  return {
-    title: settings.aboutTitleEn || settings.aboutTitle || "Our Story",
-    description: settings.aboutTextEn || settings.aboutText || settings.metaDescription,
-  };
-}
+import { AboutContent } from "@/components/AboutContent";
+import { PageShell } from "@/components/PageShell";
+import { useLocale } from "@/lib/i18n/locale-context";
 
-export default async function AboutPage() {
-  const settings = await getStoreSettings();
+export default function AboutPage() {
+  const { t } = useLocale();
   return (
-    <FashionShell>
-      <AboutPageClient settings={settings} />
-    </FashionShell>
+    <PageShell title={t.about} bannerPage="about">
+      <AboutContent />
+    </PageShell>
   );
 }

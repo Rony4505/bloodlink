@@ -23,19 +23,19 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Smart craft corner | Luxury Womenswear for Bangladesh",
-    template: "%s | Smart craft corner",
+    default: "BloodLink BD | Bangladesh Blood Donor Finder",
+    template: "%s | BloodLink BD",
   },
   description:
-    "Smart craft corner is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
+    "BloodLink BD helps people in Bangladesh find blood donors by blood group and location. Post urgent needs, check availability, and connect securely.",
   keywords: [
-    "Smart craft corner",
-    "Bangladesh womens fashion",
-    "luxury ecommerce Bangladesh",
-    "ladies boutique Dhaka",
-    "women's clothing Bangladesh",
-    "মেয়েদের অনলাইন শপ",
-    "লাক্সারি ফ্যাশন বাংলাদেশ",
+    "BloodLink",
+    "BloodLink BD",
+    "blood donor Bangladesh",
+    "blood donation",
+    "রক্তদাতা",
+    "রক্তদান",
+    "bloodlinkbd.org",
   ],
   alternates: {
     canonical: "/",
@@ -52,24 +52,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "bn_BD",
     url: siteUrl,
-    siteName: "Smart craft corner",
-    title: "Smart craft corner | Luxury Womenswear for Bangladesh",
+    siteName: "BloodLink BD",
+    title: "BloodLink BD | Bangladesh Blood Donor Finder",
     description:
-      "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
+      "Find blood donors across Bangladesh by blood group and location.",
     images: [
       {
         url: "/bloodlink-logo.png",
         width: 512,
         height: 512,
-        alt: "Smart craft corner brand image",
+        alt: "BloodLink BD logo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Smart craft corner | Luxury Womenswear for Bangladesh",
+    title: "BloodLink BD | Bangladesh Blood Donor Finder",
     description:
-      "Premium women's fashion, festive edits, and simple luxury shopping for Bangladesh.",
+      "Find blood donors across Bangladesh by blood group and location.",
     images: ["/bloodlink-logo.png"],
   },
   robots: {

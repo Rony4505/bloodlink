@@ -72,7 +72,7 @@ export function FashionFooter() {
             <Link href="/collections">{fc.footer.collections}</Link>
             <Link href="/cart">{fc.footer.cart}</Link>
             <Link href="/checkout">{fc.footer.checkout}</Link>
-            <Link href="/about">{fc.footer.about}</Link>
+            <Link href="/shop/about">{fc.footer.about}</Link>
           </div>
         </div>
 

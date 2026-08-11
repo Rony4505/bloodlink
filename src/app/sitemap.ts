@@ -17,10 +17,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/about",
     "/warnings",
     "/privacy",
+    "/shop",
+    "/collections",
+    "/store-admin",
   ].map((path) => ({
     url: `${site}${path}`,
     lastModified: now,
-    changeFrequency: path === "" || path === "/find" ? "daily" : "weekly",
-    priority: path === "" ? 1 : path === "/find" || path === "/requests" ? 0.9 : 0.7,
+    changeFrequency: path === "" || path === "/find" || path === "/shop" ? "daily" : "weekly",
+    priority:
+      path === ""
+        ? 1
+        : path === "/find" || path === "/requests" || path === "/shop"
+          ? 0.9
+          : 0.7,
   }));
 }

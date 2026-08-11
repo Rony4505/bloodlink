@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { FashionShell } from "@/components/fashion/FashionShell";
 
-export default function ContactPage() {
+export default function ShopContactPage() {
   const [sent, setSent] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -25,7 +25,7 @@ export default function ContactPage() {
             </h1>
             <div className="mt-8 space-y-4 text-base leading-8 text-[#6e5449]">
               <p>WhatsApp: +880 1XXX-XXXXXX</p>
-              <p>Email: hello@nooredhaka.com</p>
+              <p>Email: hello@smartcraftcorner.com</p>
               <p>Hours: 10:00 AM – 9:00 PM (GMT+6)</p>
               <p>Dhaka showroom appointments available on request.</p>
             </div>

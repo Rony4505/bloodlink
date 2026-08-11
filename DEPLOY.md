@@ -29,7 +29,10 @@ Postgres is the source of truth for donors; the volume keeps fashion store JSON,
 - `"donorCount"` must not drop to `0`
 
 Fashion store admin: `https://YOUR-DOMAIN/store-admin`  
+Fashion storefront: `https://YOUR-DOMAIN/shop`  
 Default login (change in Railway Variables): username `founder`, password from `FASHION_ADMIN_PASSWORD`
+
+BloodLink stays at the site root (`/`). Smart craft corner is added at `/shop` without replacing BloodLink.
 
 If donors were lost and you still have an old `bloodlink.json` backup, ask an admin to restore it via `POST /api/admin/restore`.
 
