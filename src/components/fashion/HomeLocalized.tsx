@@ -39,29 +39,31 @@ export function HomeHeroActions({
   const secondaryHref = settings.heroCtaSecondaryHref || "/collections";
 
   return (
-    <div className="pt-14 md:pt-16">
+    <div className="pt-14 text-white md:pt-16">
       <span className="inline-flex rounded-full border border-white/25 bg-[#2b1d19]/35 px-4 py-2 text-sm font-medium text-white backdrop-blur">
         {heroSubtitle}
       </span>
-      <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold md:text-7xl">
+      <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold text-white md:text-7xl">
         {heroTitle}
       </h1>
       {heroDescription ? (
         <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">{heroDescription}</p>
       ) : null}
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link
           href={primaryHref}
-          className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#2d1f1b] transition hover:-translate-y-0.5"
+          className="inline-flex items-center justify-center rounded-full bg-[#faf6f2] px-6 py-3 text-sm font-semibold text-[#2d1f1b] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+          style={{ color: "#2d1f1b" }}
         >
-          {primaryLabel}
+          {primaryLabel || (locale === "bn" ? "কালেকশন দেখুন" : "Shop collections")}
         </Link>
         <Link
           href={secondaryHref}
-          className="inline-flex items-center justify-center rounded-full border-2 border-[#f4d4c2] bg-[#f4d4c2] px-6 py-3 text-sm font-semibold text-[#2d1f1b] shadow-sm transition hover:bg-white"
+          className="inline-flex items-center justify-center rounded-full border-2 border-[#c9957a] bg-[#e8b896] px-6 py-3 text-sm font-semibold text-[#2d1f1b] shadow-sm transition hover:bg-[#f4d4c2]"
+          style={{ color: "#2d1f1b" }}
         >
-          {secondaryLabel}
+          {secondaryLabel || (locale === "bn" ? "ফিচার্ড প্রোডাক্ট" : "Featured product")}
         </Link>
       </div>
     </div>

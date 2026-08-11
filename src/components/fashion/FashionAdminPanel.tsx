@@ -127,41 +127,62 @@ export function FashionAdminPanel() {
   const bannerFileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
-    try {
-      const res = await Promise.all([
-        fetch("/api/fashion/products"),
-        fetch("/api/fashion/orders"),
-        fetch("/api/fashion/categories"),
-        fetch("/api/fashion/coupons"),
-        fetch("/api/fashion/settings"),
-        fetch("/api/fashion/analytics?period=daily"),
-        fetch("/api/fashion/analytics?period=monthly"),
-        fetch("/api/fashion/notifications?scope=admin"),
-      ]);
-      if (res.some((r) => r.status === 401)) {
-        router.push("/store-admin/login");
-        return;
+    const safeFetch = async (url: string) => {
+      try {
+        return await fetch(url, { cache: "no-store" });
+      } catch {
+        // Network blips (port-forward drop) must not throw into the Next.js overlay.
+        return new Response(JSON.stringify({}), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
       }
-      const [p, o, c, cp, s, d, m, n] = await Promise.all(
-        res.map(async (r) => {
-          try {
-            return await r.json();
-          } catch {
-            return {};
-          }
-        }),
-      );
-      setProducts(p.products ?? []);
-      setOrders(o.orders ?? []);
-      setCategories(c.categories ?? []);
-      setCoupons(cp.coupons ?? []);
-      setSettings(s.settings ?? null);
-      setBanners(s.settings?.promoBanners ?? []);
-      setAnalytics({ daily: d.analytics, monthly: m.analytics });
-      setAdminNotifications(n.notifications ?? []);
-    } catch (err) {
-      console.error("[admin load]", err);
+    };
+
+    const urls = [
+      "/api/fashion/products",
+      "/api/fashion/orders",
+      "/api/fashion/categories",
+      "/api/fashion/coupons",
+      "/api/fashion/settings",
+      "/api/fashion/analytics?period=daily",
+      "/api/fashion/analytics?period=monthly",
+      "/api/fashion/notifications?scope=admin",
+    ] as const;
+
+    const settled = await Promise.allSettled(urls.map((url) => safeFetch(url)));
+    const res = settled.map((item) =>
+      item.status === "fulfilled"
+        ? item.value
+        : new Response(JSON.stringify({}), {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          }),
+    );
+
+    if (res.some((r) => r.status === 401)) {
+      router.push("/store-admin/login");
+      return;
     }
+
+    const bodies = await Promise.all(
+      res.map(async (r) => {
+        try {
+          return await r.json();
+        } catch {
+          return {};
+        }
+      }),
+    );
+    const [p, o, c, cp, s, d, m, n] = bodies;
+    setProducts(p.products ?? []);
+    setOrders(o.orders ?? []);
+    setCategories(c.categories ?? []);
+    setCoupons(cp.coupons ?? []);
+    setSettings(s.settings ?? null);
+    setBanners(s.settings?.promoBanners ?? []);
+    setAnalytics({ daily: d.analytics, monthly: m.analytics });
+    setAdminNotifications(n.notifications ?? []);
   }
 
   useEffect(() => { void load(); }, [router]);
