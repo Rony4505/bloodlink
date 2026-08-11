@@ -1,3 +1,5 @@
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 import { NextResponse } from "next/server";
 import {
   getCurrentCustomer,
@@ -8,17 +10,30 @@ import {
 import { issueOtp, verifyOtp } from "@/lib/fashion/otp";
 import { findCustomerByEmail } from "@/lib/fashion/store";
 
-const pendingRegistrations = new Map<
-  string,
-  {
-    name: string;
-    email: string;
-    phone: string;
-    password: string;
-    channel: "email" | "phone";
-    expiresAt: number;
+type PendingReg = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  channel: "email" | "phone";
+  expiresAt: number;
+};
+
+const dataDir = path.join(/* turbopackIgnore: true */ process.cwd(), "data");
+const pendingPath = path.join(/* turbopackIgnore: true */ dataDir, "fashion-pending-reg.json");
+
+async function readPending(): Promise<Record<string, PendingReg>> {
+  try {
+    return JSON.parse(await readFile(pendingPath, "utf8")) as Record<string, PendingReg>;
+  } catch {
+    return {};
   }
->();
+}
+
+async function writePending(data: Record<string, PendingReg>) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(pendingPath, JSON.stringify(data, null, 2), "utf8");
+}
 
 export async function GET() {
   const customer = await getCurrentCustomer();
@@ -37,6 +52,9 @@ export async function POST(request: Request) {
       if (!body.name || !email || !phone || !body.password) {
         return NextResponse.json({ error: "সব ঘর পূরণ করুন" }, { status: 400 });
       }
+      if (String(body.password).length < 6) {
+        return NextResponse.json({ error: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষর" }, { status: 400 });
+      }
       const existing = await findCustomerByEmail(email);
       if (existing) {
         return NextResponse.json(
@@ -50,14 +68,16 @@ export async function POST(request: Request) {
         channel,
         target,
       });
-      pendingRegistrations.set(email, {
+      const pending = await readPending();
+      pending[email] = {
         name: body.name,
         email,
         phone,
         password: body.password,
         channel,
         expiresAt: Date.now() + 15 * 60 * 1000,
-      });
+      };
+      await writePending(pending);
       return NextResponse.json({
         ok: true,
         channel,
@@ -71,9 +91,11 @@ export async function POST(request: Request) {
 
     if (body.action === "register-verify") {
       const email = String(body.email ?? "").trim().toLowerCase();
-      const pending = pendingRegistrations.get(email);
+      const pendingAll = await readPending();
+      const pending = pendingAll[email];
       if (!pending || pending.expiresAt < Date.now()) {
-        pendingRegistrations.delete(email);
+        delete pendingAll[email];
+        await writePending(pendingAll);
         return NextResponse.json(
           { error: "রেজিস্ট্রেশন সেশন শেষ — আবার চেষ্টা করুন" },
           { status: 400 },
@@ -96,12 +118,12 @@ export async function POST(request: Request) {
         verified: true,
         verifiedChannel: pending.channel,
       });
-      pendingRegistrations.delete(email);
+      delete pendingAll[email];
+      await writePending(pendingAll);
       return NextResponse.json({ customer: sanitizeCustomer(customer) });
     }
 
     if (body.action === "register") {
-      // Fallback without OTP (legacy) — still create account
       const customer = await registerCustomer({
         name: body.name,
         email: body.email,

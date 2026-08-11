@@ -92,6 +92,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (action === "login-direct") {
+    const ok = await verifyFashionAdminCredentials(
+      body.username ?? "",
+      body.password ?? "",
+    );
+    if (!ok) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    await createFashionAdminSession();
+    return NextResponse.json({ ok: true });
+  }
+
   // Legacy password-only (still requires matching default username if provided)
   const ok = await verifyFashionAdminCredentials(
     body.username || "founder",

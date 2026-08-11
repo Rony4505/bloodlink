@@ -105,6 +105,7 @@ export function RegisterForm() {
       return;
     }
     setDebugOtp(data.debugOtp || "");
+    setOtp(String(data.debugOtp || ""));
     setStep("otp");
   }
 
@@ -209,18 +210,20 @@ export function RegisterForm() {
               {channel === "email" ? "ইমেইল" : "ফোন"}-এ OTP পাঠানো হয়েছে। কোডটি লিখুন।
             </p>
             {debugOtp ? (
-              <p className="rounded-xl bg-[#f3ebe4] px-3 py-2 text-sm text-[#5b4339]">
-                Demo OTP: <strong>{debugOtp}</strong>
+              <p className="rounded-xl border border-[#e8cc80] bg-[#fffbf0] px-4 py-3 text-center text-lg font-bold tracking-[0.35em] text-[#6b5420]">
+                {debugOtp}
               </p>
             ) : null}
+            <p className="text-xs text-[#9b7766]">উপরের OTP কোডটি নিচে লিখুন</p>
             <label className="block">
               <span className="text-sm text-[#9b7766]">OTP কোড</span>
               <input
-                className="field mt-2 tracking-[0.3em]"
+                className="field mt-2 tracking-[0.35em]"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 required
                 maxLength={6}
+                inputMode="numeric"
               />
             </label>
             <FashionButton type="submit" disabled={loading}>

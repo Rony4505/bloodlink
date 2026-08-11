@@ -50,6 +50,12 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
     faqs: parsed?.faqs ?? defaultSettings.faqs,
     faqsEn: parsed?.faqsEn ?? defaultSettings.faqsEn,
     showTestimonials: parsed?.showTestimonials ?? false,
+    adminUsername: parsed?.adminUsername ?? defaultSettings.adminUsername,
+    adminEmail: parsed?.adminEmail ?? defaultSettings.adminEmail,
+    adminPhone: parsed?.adminPhone ?? defaultSettings.adminPhone,
+    vipEnabled: parsed?.vipEnabled ?? defaultSettings.vipEnabled,
+    vipMinSpend: parsed?.vipMinSpend ?? defaultSettings.vipMinSpend,
+    vipDiscountPercent: parsed?.vipDiscountPercent ?? defaultSettings.vipDiscountPercent,
   };
 }
 

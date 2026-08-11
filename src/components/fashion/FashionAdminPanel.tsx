@@ -127,22 +127,41 @@ export function FashionAdminPanel() {
   const bannerFileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
-    const res = await Promise.all([
-      fetch("/api/fashion/products"), fetch("/api/fashion/orders"), fetch("/api/fashion/categories"),
-      fetch("/api/fashion/coupons"), fetch("/api/fashion/settings"),
-      fetch("/api/fashion/analytics?period=daily"), fetch("/api/fashion/analytics?period=monthly"),
-      fetch("/api/fashion/notifications?scope=admin"),
-    ]);
-    if (res[0].status === 401) { router.push("/store-admin/login"); return; }
-    const [p, o, c, cp, s, d, m, n] = await Promise.all(res.map((r) => r.json()));
-    setProducts(p.products ?? []);
-    setOrders(o.orders ?? []);
-    setCategories(c.categories ?? []);
-    setCoupons(cp.coupons ?? []);
-    setSettings(s.settings ?? null);
-    setBanners(s.settings?.promoBanners ?? []);
-    setAnalytics({ daily: d.analytics, monthly: m.analytics });
-    setAdminNotifications(n.notifications ?? []);
+    try {
+      const res = await Promise.all([
+        fetch("/api/fashion/products"),
+        fetch("/api/fashion/orders"),
+        fetch("/api/fashion/categories"),
+        fetch("/api/fashion/coupons"),
+        fetch("/api/fashion/settings"),
+        fetch("/api/fashion/analytics?period=daily"),
+        fetch("/api/fashion/analytics?period=monthly"),
+        fetch("/api/fashion/notifications?scope=admin"),
+      ]);
+      if (res.some((r) => r.status === 401)) {
+        router.push("/store-admin/login");
+        return;
+      }
+      const [p, o, c, cp, s, d, m, n] = await Promise.all(
+        res.map(async (r) => {
+          try {
+            return await r.json();
+          } catch {
+            return {};
+          }
+        }),
+      );
+      setProducts(p.products ?? []);
+      setOrders(o.orders ?? []);
+      setCategories(c.categories ?? []);
+      setCoupons(cp.coupons ?? []);
+      setSettings(s.settings ?? null);
+      setBanners(s.settings?.promoBanners ?? []);
+      setAnalytics({ daily: d.analytics, monthly: m.analytics });
+      setAdminNotifications(n.notifications ?? []);
+    } catch (err) {
+      console.error("[admin load]", err);
+    }
   }
 
   useEffect(() => { void load(); }, [router]);
@@ -495,8 +514,34 @@ export function FashionAdminPanel() {
     if (existing) return;
     setSettings({
       ...settings,
-      deliveryRules: [...settings.deliveryRules, { id: `d${Date.now()}`, district, fee: 120, minOrderForFree: 7000, active: true }],
+      deliveryRules: [
+        ...settings.deliveryRules,
+        {
+          id: `d${Date.now()}-${district}`,
+          district,
+          fee: district === "Dhaka" ? 80 : 150,
+          minOrderForFree: district === "Dhaka" ? 7000 : 10000,
+          active: true,
+        },
+      ],
     });
+  }
+
+  function seedAllDistrictRules() {
+    if (!settings) return;
+    const existing = new Set(settings.deliveryRules.map((r) => r.district));
+    const next = [...settings.deliveryRules];
+    for (const district of bangladeshDistricts) {
+      if (existing.has(district)) continue;
+      next.push({
+        id: `d${Date.now()}-${district}`,
+        district,
+        fee: district === "Dhaka" ? 80 : 150,
+        minOrderForFree: district === "Dhaka" ? 7000 : 10000,
+        active: true,
+      });
+    }
+    setSettings({ ...settings, deliveryRules: next });
   }
 
   const activeRule = getRuleForDistrict(selectedDistrict);
@@ -725,6 +770,14 @@ export function FashionAdminPanel() {
         <p className="mb-3 text-sm text-[#7a5c50]">
           বাংলাদেশের {bangladeshDistricts.filter((d) => d !== "*").length} জেলা — সার্চ বক্সে ক্লিক/টাইপ করুন, অথবা স্ক্রল করে সিলেক্ট করুন।
         </p>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <FashionButton type="button" variant="secondary" onClick={seedAllDistrictRules}>
+            সব ৬৪ জেলায় ডিফল্ট ফি যোগ করুন
+          </FashionButton>
+          <FashionButton type="button" onClick={saveDelivery}>
+            {copy.actions.save}
+          </FashionButton>
+        </div>
         <div className="grid gap-4 md:grid-cols-[260px_1fr]">
           <div className="flex max-h-96 flex-col rounded-2xl border border-[#f0c49a]/50 bg-[#fff8f0] p-2">
             <input
@@ -1221,64 +1274,91 @@ export function FashionAdminLogin() {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const res = await fetch("/api/fashion/admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "credentials", username, password }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setError(locale === "bn" ? "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়" : "Incorrect username or password");
-      return;
+    try {
+      const res = await fetch("/api/fashion/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "credentials", username, password }),
+      });
+      if (!res.ok) {
+        setError(locale === "bn" ? "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়" : "Incorrect username or password");
+        setLoading(false);
+        return;
+      }
+      const otpRes = await fetch("/api/fashion/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send-otp", username, password, channel }),
+      });
+      const data = await otpRes.json();
+      if (!otpRes.ok) {
+        // Fallback: if OTP channel not configured, complete login with password
+        const fallback = await fetch("/api/fashion/admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "login-direct", username, password }),
+        });
+        setLoading(false);
+        if (fallback.ok) {
+          router.push("/store-admin");
+          router.refresh();
+          return;
+        }
+        setError(data.error || "OTP পাঠানো যায়নি — Settings-এ admin email/phone সেট করুন");
+        return;
+      }
+      setDebugOtp(String(data.debugOtp || ""));
+      setOtp(String(data.debugOtp || ""));
+      setTargetHint(data.targetHint || "");
+      setStep("otp");
+    } catch {
+      setError(locale === "bn" ? "নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন" : "Network error — try again");
     }
-    setLoading(true);
-    const otpRes = await fetch("/api/fashion/admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "send-otp", username, password, channel }),
-    });
-    const data = await otpRes.json();
     setLoading(false);
-    if (!otpRes.ok) {
-      setError(data.error || "OTP পাঠানো যায়নি");
-      return;
-    }
-    setDebugOtp(data.debugOtp || "");
-    setTargetHint(data.targetHint || "");
-    setStep("otp");
   }
 
-  async function verifyOtp(event: FormEvent) {
+  async function verifyOtpSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const res = await fetch("/api/fashion/admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "verify-otp",
-        username,
-        password,
-        channel,
-        code: otp,
-      }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || (locale === "bn" ? "OTP সঠিক নয়" : "Invalid OTP"));
-      return;
+    try {
+      const res = await fetch("/api/fashion/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify-otp",
+          username,
+          password,
+          channel,
+          code: otp,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || (locale === "bn" ? "OTP সঠিক নয়" : "Invalid OTP"));
+        setLoading(false);
+        return;
+      }
+      router.push("/store-admin");
+      router.refresh();
+    } catch {
+      setError(locale === "bn" ? "নেটওয়ার্ক সমস্যা" : "Network error");
+      setLoading(false);
     }
-    router.push("/store-admin");
   }
 
   return (
     <AdminShell>
       <section className="mx-auto max-w-md py-12">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">{fc.admin.loginTitle}</h1>
+        <p className="mt-2 text-sm text-[#7a5c50]">
+          {locale === "bn"
+            ? "Username + পাসওয়ার্ড → তারপর OTP দিয়ে লগইন"
+            : "Username + password → then verify with OTP"}
+        </p>
         {step === "creds" ? (
           <form onSubmit={checkCreds} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
-            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
             <label className="block">
               <span className="text-sm text-[#9b7766]">Username</span>
               <input
@@ -1297,7 +1377,7 @@ export function FashionAdminLogin() {
             />
             <div>
               <p className="mb-2 text-sm text-[#9b7766]">
-                {locale === "bn" ? "ভেরিফিকেশন কোথায় পাঠাবেন?" : "Send verification via"}
+                {locale === "bn" ? "OTP কোথায় পাঠাবেন?" : "Send OTP via"}
               </p>
               <div className="flex gap-2">
                 <button
@@ -1325,34 +1405,47 @@ export function FashionAdminLogin() {
               </div>
             </div>
             <FashionButton type="submit" disabled={loading}>
-              {loading ? "..." : locale === "bn" ? "পরবর্তী · OTP" : "Next · OTP"}
+              {loading ? "..." : locale === "bn" ? "পরবর্তী · OTP পাঠান" : "Next · Send OTP"}
             </FashionButton>
           </form>
         ) : (
-          <form onSubmit={verifyOtp} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
-            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          <form onSubmit={verifyOtpSubmit} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
             <p className="text-sm text-[#6f554a]">
-              OTP sent to {targetHint || channel}
+              OTP পাঠানো হয়েছে: <strong>{targetHint || channel}</strong>
             </p>
             {debugOtp ? (
-              <p className="rounded-xl bg-[#f3ebe4] px-3 py-2 text-sm">
-                Demo OTP: <strong>{debugOtp}</strong>
+              <p className="rounded-xl border border-[#e8cc80] bg-[#fffbf0] px-4 py-3 text-center text-lg font-bold tracking-[0.35em] text-[#6b5420]">
+                {debugOtp}
               </p>
             ) : null}
+            <p className="text-xs text-[#9b7766]">
+              {locale === "bn"
+                ? "উপরের কোডটি নিচে লিখুন (ডেমোতে OTP এখানে দেখানো হয়)"
+                : "Enter the code above (demo shows OTP here)"}
+            </p>
             <label className="block">
               <span className="text-sm text-[#9b7766]">OTP</span>
               <input
-                className="field mt-1 tracking-[0.3em]"
+                className="field mt-1 tracking-[0.35em]"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 required
                 maxLength={6}
+                inputMode="numeric"
               />
             </label>
             <FashionButton type="submit" disabled={loading}>
-              {loading ? "..." : "Login"}
+              {loading ? "..." : locale === "bn" ? "লগইন সম্পন্ন করুন" : "Complete login"}
             </FashionButton>
-            <button type="button" className="text-sm font-semibold text-[#8f624e]" onClick={() => setStep("creds")}>
+            <button
+              type="button"
+              className="text-sm font-semibold text-[#8f624e]"
+              onClick={() => {
+                setStep("creds");
+                setError("");
+              }}
+            >
               ← Back
             </button>
           </form>

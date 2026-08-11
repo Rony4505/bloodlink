@@ -2,17 +2,21 @@ import { NextResponse } from "next/server";
 import { isFashionAdminAuthenticated } from "@/lib/fashion/customer-auth";
 import {
   deletePromoBanner,
+  getActivePromoBanners,
   getStoreSettings,
   upsertPromoBanner,
 } from "@/lib/fashion/store";
 import type { PromoBanner } from "@/lib/fashion/types";
 
+/** Public: active banners for homepage. Admin sees all. */
 export async function GET() {
-  if (!(await isFashionAdminAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const admin = await isFashionAdminAuthenticated();
+  if (admin) {
+    const settings = await getStoreSettings();
+    return NextResponse.json({ banners: settings.promoBanners ?? [] });
   }
-  const settings = await getStoreSettings();
-  return NextResponse.json({ banners: settings.promoBanners ?? [] });
+  const banners = await getActivePromoBanners();
+  return NextResponse.json({ banners });
 }
 
 export async function POST(request: Request) {
