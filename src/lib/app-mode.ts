@@ -1,3 +1,5 @@
+import { BLOODLINK_OWNER_PATH } from "./bloodlink-admin-path";
+
 export type AppMode = "bloodlink" | "fashion";
 
 /** Runtime site mode — BloodLink and Smart craft corner deploy as separate services. */
@@ -41,6 +43,7 @@ export const BLOODLINK_PATH_PREFIXES = [
   "/requests",
   "/dashboard",
   "/admin",
+  BLOODLINK_OWNER_PATH,
   "/owner-hq-7f3m",
   "/bl-manage-rony",
   "/notifications",

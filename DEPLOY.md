@@ -29,7 +29,7 @@ Fashion store data lives on the **Smart craft** service Volume at `/app/data`.
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD`
 - `DATA_DIR=/app/data`
 
-Owner panel: `https://bloodlinkbd.org/owner-hq-7f3m`
+Owner panel: `https://bloodlinkbd.org/bloodlinkbd.admin.rony4505`
 
 ## Smart craft corner
 

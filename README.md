@@ -10,7 +10,7 @@ Free humanitarian platform to help people in Bangladesh find blood donors by blo
 - Urgent blood-need posts + account notifications
 - Daily 10:00 AM (Asia/Dhaka) update reminder for logged-in users
 - Editable privacy page (admin)
-- Hidden owner panel at `/owner-hq-7f3m` (not linked in public UI)
+- Hidden owner panel at `/bloodlinkbd.admin.rony4505` (not linked in public UI)
 
 ## Setup
 
