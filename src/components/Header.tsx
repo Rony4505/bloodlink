@@ -7,7 +7,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { BLOODLINK_OWNER_PATH } from "@/lib/bloodlink-admin-path";
 import { useLocale } from "@/lib/i18n/locale-context";
 
-export function Header() {
+export function Header({ compact = false }: { compact?: boolean }) {
   const { t, toggleLocale } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -32,9 +32,29 @@ export function Header() {
 
   return (
     <header className="absolute inset-x-0 top-0 z-20">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
-        <BrandMark variant="light" size="md" />
-        <nav className="flex items-center gap-2 text-sm text-white md:gap-3">
+      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 md:px-8">
+        <div
+          className={
+            compact
+              ? "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              : "flex items-center justify-between gap-3"
+          }
+        >
+          <BrandMark
+            variant="light"
+            size={compact ? "sm" : "md"}
+            showWordmark={!compact}
+            className={compact ? "max-w-[10rem] sm:max-w-none" : "max-w-[9rem] xs:max-w-none sm:max-w-none"}
+          />
+          <nav
+            className={`flex flex-wrap items-center text-sm text-white ${
+              compact
+                ? "justify-start gap-2 sm:justify-end sm:gap-2.5"
+                : "justify-end gap-1.5 sm:gap-2 md:gap-3"
+            }`}
+          >
+          {!compact ? (
+            <>
           <Link
             href="/find"
             className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 sm:inline"
@@ -65,7 +85,16 @@ export function Header() {
           >
             {t.warningsNav}
           </Link>
-          {isAdmin ? (
+            </>
+          ) : (
+            <Link
+              href="/"
+              className="rounded-full px-3 py-2 transition hover:bg-white/10"
+            >
+              {t.bannerPageHome}
+            </Link>
+          )}
+          {isAdmin && !compact ? (
             <Link
               href={BLOODLINK_OWNER_PATH}
               className="rounded-full px-3 py-2 transition hover:bg-white/10"
@@ -73,7 +102,7 @@ export function Header() {
               {t.admin}
             </Link>
           ) : null}
-          {loggedIn ? (
+          {!compact && loggedIn ? (
             <>
               <NotificationBell />
               <Link
@@ -90,7 +119,7 @@ export function Header() {
                 {t.logout}
               </button>
             </>
-          ) : (
+          ) : !compact ? (
             <>
               <Link
                 href="/login"
@@ -105,7 +134,7 @@ export function Header() {
                 {t.becomeDonor}
               </Link>
             </>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={toggleLocale}
@@ -114,7 +143,8 @@ export function Header() {
           >
             {t.language}
           </button>
-        </nav>
+          </nav>
+        </div>
       </div>
     </header>
   );

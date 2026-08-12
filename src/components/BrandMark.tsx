@@ -8,6 +8,7 @@ type BrandMarkProps = {
   variant?: "light" | "dark";
   size?: "sm" | "md" | "lg";
   showWordmark?: boolean;
+  className?: string;
 };
 
 const sizes = {
@@ -20,6 +21,7 @@ export function BrandMark({
   variant = "light",
   size = "md",
   showWordmark = true,
+  className = "",
 }: BrandMarkProps) {
   const { brand, logoUrl } = useSiteAppearance();
   const dims = sizes[size];
@@ -31,7 +33,10 @@ export function BrandMark({
     logoUrl.startsWith("/") && !logoUrl.startsWith("/api/");
 
   return (
-    <Link href="/" className="inline-flex items-center gap-2.5">
+    <Link
+      href="/"
+      className={`inline-flex min-w-0 shrink-0 items-center gap-2.5 ${className}`}
+    >
       {isLocalLogo ? (
         <Image
           src={logoUrl}
@@ -54,7 +59,7 @@ export function BrandMark({
       )}
       {showWordmark ? (
         <span
-          className={`font-[family-name:var(--font-display)] font-bold tracking-tight ${dims.text} ${textClass}`}
+          className={`truncate font-[family-name:var(--font-display)] font-bold tracking-tight ${dims.text} ${textClass}`}
         >
           {brand}
         </span>
