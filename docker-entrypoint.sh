@@ -82,6 +82,11 @@ fi
 
 echo "[bloodlink] DATA_DIR=${DATA_DIR}"
 
+if [ -f /app/.build-id ]; then
+  export BUILD_ID="$(tr -d '\r\n' < /app/.build-id)"
+  echo "[bloodlink] BUILD_ID=${BUILD_ID}"
+fi
+
 if [ "$(id -u)" = "0" ]; then
   exec su-exec nextjs node server.js
 fi

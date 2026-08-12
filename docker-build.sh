@@ -15,16 +15,20 @@ case "${RAILWAY_SERVICE_NAME:-}" in
     ;;
 esac
 
-export APP_MODE NEXT_PUBLIC_APP_MODE NEXT_PUBLIC_SITE_URL
+BUILD_ID="${RAILWAY_GIT_COMMIT_SHA:-${BUILD_ID:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}}"
+
+export APP_MODE NEXT_PUBLIC_APP_MODE NEXT_PUBLIC_SITE_URL BUILD_ID
 export NEXT_TELEMETRY_DISABLED=1
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 
 echo "[docker-build] RAILWAY_SERVICE_NAME=${RAILWAY_SERVICE_NAME:-unknown}"
 echo "[docker-build] APP_MODE=${APP_MODE}"
 echo "[docker-build] NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}"
+echo "[docker-build] BUILD_ID=${BUILD_ID}"
 
 npm run build
 test -d .next/standalone || (echo "[docker-build] missing .next/standalone" && exit 1)
+printf '%s' "$BUILD_ID" > /app/.build-id
 
 if [ "$APP_MODE" = "fashion" ]; then
   echo "[docker-build] fashion mode — skipping Postgres bundle copy"

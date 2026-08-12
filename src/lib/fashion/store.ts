@@ -120,7 +120,7 @@ function isExpired(iso?: string): boolean {
 }
 
 function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
-  return {
+  const merged = {
     ...defaultSettings,
     ...parsed,
     deliveryRules: parsed?.deliveryRules?.length
@@ -143,6 +143,25 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
     vipMinSpend: parsed?.vipMinSpend ?? defaultSettings.vipMinSpend,
     vipDiscountPercent: parsed?.vipDiscountPercent ?? defaultSettings.vipDiscountPercent,
   };
+
+  const staleHero =
+    /effortless|refined style|সহজ luxury/i.test(merged.heroTitle ?? "") ||
+    /effortless|refined style/i.test(merged.heroTitleEn ?? "");
+  if (staleHero) {
+    merged.heroTitle = defaultSettings.heroTitle;
+    merged.heroTitleEn = defaultSettings.heroTitleEn;
+    merged.heroSubtitle = defaultSettings.heroSubtitle;
+    merged.heroSubtitleEn = defaultSettings.heroSubtitleEn;
+    merged.heroDescription = defaultSettings.heroDescription;
+    merged.heroDescriptionEn = defaultSettings.heroDescriptionEn;
+  }
+
+  if (/effortless browsing|effortless/i.test(merged.footerText ?? "")) {
+    merged.footerText = defaultSettings.footerText;
+    merged.footerTextEn = defaultSettings.footerTextEn;
+  }
+
+  return merged;
 }
 
 function purgeExpired(store: FashionStore): boolean {
@@ -349,8 +368,16 @@ async function ensureStore(): Promise<FashionStore> {
 
   try {
     const parsed = await readStoreJson();
+    const beforeHero = parsed.settings?.heroTitle;
+    const beforeFooter = parsed.settings?.footerText;
     const store = await buildStoreFromParsed(parsed);
     if (building) return store;
+    if (
+      (beforeHero && beforeHero !== store.settings.heroTitle) ||
+      (beforeFooter && beforeFooter !== store.settings.footerText)
+    ) {
+      await writeStore(store);
+    }
     if (purgeExpired(store)) await writeStore(store);
     if (normalizeProductSlugs(store)) await writeStore(store);
     if (await syncAdminPasswordHash(store)) await writeStore(store);
