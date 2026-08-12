@@ -313,51 +313,79 @@ function migrateOrder(order: Partial<FashionOrder>): FashionOrder {
   };
 }
 
+function isNextBuild(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
+async function createInitialStore(): Promise<FashionStore> {
+  const settings = defaultSettings;
+  return {
+    settings,
+    categories: defaultCategories,
+    products: rawSeedProducts.map((p) => migrateProduct(p, settings)),
+    customers: [],
+    orders: [],
+    coupons: defaultCoupons,
+    reviews: [],
+    userNotifications: [],
+    adminNotifications: [],
+    adminPasswordHash: await bcrypt.hash(defaultAdminPassword(), 12),
+  };
+}
+
 async function ensureStore(): Promise<FashionStore> {
-  await mkdir(dataDir(), { recursive: true });
+  const building = isNextBuild();
   const primary = storePath();
 
+  if (!building) {
+    await mkdir(dataDir(), { recursive: true });
+  }
+
   if (!(await fileExists(primary))) {
-    const settings = defaultSettings;
-    const initial: FashionStore = {
-      settings,
-      categories: defaultCategories,
-      products: rawSeedProducts.map((p) => migrateProduct(p, settings)),
-      customers: [],
-      orders: [],
-      coupons: defaultCoupons,
-      reviews: [],
-      userNotifications: [],
-      adminNotifications: [],
-      adminPasswordHash: await bcrypt.hash(defaultAdminPassword(), 12),
-    };
-    await writeStore(initial);
+    const initial = await createInitialStore();
+    if (!building) await writeStore(initial);
     return initial;
   }
 
   try {
     const parsed = await readStoreJson();
     const store = await buildStoreFromParsed(parsed);
+    if (building) return store;
     if (purgeExpired(store)) await writeStore(store);
     if (normalizeProductSlugs(store)) await writeStore(store);
     if (await syncAdminPasswordHash(store)) await writeStore(store);
     return store;
   } catch (error) {
+    if (building) {
+      console.warn("[fashion-store] build-time store read failed, using defaults", error);
+      return createInitialStore();
+    }
     console.error("[fashion-store] failed to load store — refusing to reset data", error);
     throw new Error("Store data could not be loaded. Check DATA_DIR volume mount.");
   }
 }
 
 async function writeStore(store: FashionStore): Promise<void> {
+  if (isNextBuild()) return;
   await mkdir(dataDir(), { recursive: true });
   const primary = storePath();
   const temp = storeTempPath();
   const payload = JSON.stringify(store, null, 2);
-  await writeFile(temp, payload, "utf8");
-  if (await fileExists(primary)) {
-    await copyFile(primary, storeBackupPath());
+  try {
+    await writeFile(temp, payload, "utf8");
+    if (await fileExists(primary)) {
+      await copyFile(primary, storeBackupPath());
+    }
+    await rename(temp, primary);
+  } catch {
+    // Concurrent writers or Docker build layers can race on rename — direct write is safe enough.
+    await writeFile(primary, payload, "utf8");
+    try {
+      await copyFile(primary, storeBackupPath());
+    } catch {
+      /* ignore backup errors */
+    }
   }
-  await rename(temp, primary);
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
