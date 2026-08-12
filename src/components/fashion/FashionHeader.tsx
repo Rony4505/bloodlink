@@ -132,35 +132,45 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
             </button>
             {myMenuOpen ? (
               <div className="absolute left-0 top-full z-30 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-[#e8d4e8]/70 bg-white py-2 shadow-[0_20px_50px_rgba(90,60,95,0.12)]">
-                {loggedIn ? (
-                  <>
-                    <Link
-                      href="/account"
-                      className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
-                      onClick={() => setMyMenuOpen(false)}
-                    >
-                      {fc.nav.myOrders}
-                    </Link>
-                    <Link
-                      href="/track"
-                      className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
-                      onClick={() => setMyMenuOpen(false)}
-                    >
-                      {fc.nav.track}
-                    </Link>
-                  </>
-                ) : (
-                  <Link
-                    href="/account/login"
-                    className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
-                    onClick={() => setMyMenuOpen(false)}
-                  >
-                    {fc.nav.login}
-                  </Link>
-                )}
+                <Link
+                  href="/account"
+                  className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
+                  onClick={() => setMyMenuOpen(false)}
+                >
+                  {fc.nav.myOrders}
+                </Link>
+                <Link
+                  href="/track"
+                  className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
+                  onClick={() => setMyMenuOpen(false)}
+                >
+                  {fc.nav.track}
+                </Link>
               </div>
             ) : null}
           </div>
+
+          {loggedIn ? (
+            <Link
+              href="/account"
+              className={cn(
+                "rounded-full px-3.5 py-1.5 font-medium transition duration-200",
+                pathname.startsWith("/account") ? activeClass : idleClass,
+              )}
+            >
+              {fc.nav.account}
+            </Link>
+          ) : (
+            <Link
+              href="/account/login"
+              className={cn(
+                "rounded-full px-3.5 py-1.5 font-medium transition duration-200",
+                pathname === "/account/login" ? activeClass : idleClass,
+              )}
+            >
+              {fc.nav.login}
+            </Link>
+          )}
 
           <Link
             href="/cart"
