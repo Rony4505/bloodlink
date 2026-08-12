@@ -17,6 +17,8 @@ export const fashionI18n = {
       about: "আমাদের গল্প",
       contact: "যোগাযোগ",
       track: "ট্র্যাক অর্ডার",
+      myProduct: "আমার প্রোডাক্ট",
+      myOrders: "আমার অর্ডার",
       cart: "কার্ট",
       account: "অ্যাকাউন্ট",
       login: "লগইন",
@@ -77,9 +79,10 @@ export const fashionI18n = {
       cart: "শপিং কার্ট",
       checkout: "চেকআউট",
       about: "আমাদের গল্প",
+      contact: "যোগাযোগ",
       rights: "সর্বস্বত্ব সংরক্ষিত।",
       blurb:
-        "বাংলাদেশি নারীদের জন্য curated luxury fashion—effortless browsing, premium presentation, এবং trusted delivery experience।",
+        "বাংলাদেশি নারীদের জন্য কিউরেটেড প্রিমিয়াম ফ্যাশন—সহজ অর্ডার, সুন্দর কালেকশন, এবং নির্ভরযোগ্য ডেলিভারি।",
     },
     admin: {
       founder: "প্রতিষ্ঠাতা",
@@ -156,6 +159,8 @@ export const fashionI18n = {
       about: "Our Story",
       contact: "Contact",
       track: "Track Order",
+      myProduct: "My Product",
+      myOrders: "My Orders",
       cart: "Cart",
       account: "Account",
       login: "Login",
@@ -216,9 +221,10 @@ export const fashionI18n = {
       cart: "Shopping Cart",
       checkout: "Checkout",
       about: "Our Story",
+      contact: "Contact",
       rights: "All rights reserved.",
       blurb:
-        "Curated luxury fashion for Bangladeshi women—effortless browsing, premium presentation, and trusted delivery.",
+        "Curated premium fashion for Bangladeshi women—easy ordering, beautiful collections, and reliable delivery.",
     },
     admin: {
       founder: "Founder",

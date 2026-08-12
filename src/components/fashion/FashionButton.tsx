@@ -22,11 +22,11 @@ export function FashionButton({
   const styles = cn(
     "inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition",
     variant === "primary" &&
-      "bg-[#2b1d19] text-white hover:-translate-y-0.5 hover:bg-[#3a2924]",
+      "bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-md hover:-translate-y-0.5 hover:opacity-95",
     variant === "secondary" &&
-      "border border-black/10 bg-white text-[#2b1d19] hover:bg-[#faf4f0]",
+      "border border-[#e8d4e8]/60 bg-white text-[#5c3d5e] hover:bg-[#faf0f5]",
     variant === "ghost" &&
-      "border border-black/10 bg-transparent text-[#2b1d19] hover:bg-[#faf4f0]",
+      "border border-[#e8d4e8]/60 bg-transparent text-[#5c3d5e] hover:bg-[#faf0f5]",
     disabled && "cursor-not-allowed opacity-55 hover:translate-y-0",
     className,
   );

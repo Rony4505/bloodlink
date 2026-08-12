@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Smart craft corner | Luxury Womenswear for Bangladesh",
   description:
-    "Smart craft corner is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
+    "Smart craft corner — premium women's fashion for Bangladesh. Curated collections, festive and everyday wear, with nationwide delivery.",
   alternates: {
     canonical: "/shop",
   },

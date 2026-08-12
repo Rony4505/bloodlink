@@ -41,22 +41,22 @@ export function FashionFooter() {
   );
 
   return (
-    <footer className="border-t border-black/5 bg-[#2b1d19] px-5 py-14 text-white md:px-8">
+    <footer className="border-t border-[#e8d4e8]/80 bg-[linear-gradient(165deg,#faf4f8_0%,#f3e8f0_48%,#ebe0f0_100%)] px-5 py-14 text-[#4a3348] md:px-8">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
-          <p className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-[0.18em] uppercase">
+          <p className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-[0.18em] uppercase text-[#5c3d5e]">
             {brand}
           </p>
-          <p className="mt-4 max-w-md text-base leading-8 text-white/72">{blurb}</p>
+          <p className="mt-4 max-w-md text-base leading-8 text-[#6e5870]">{blurb}</p>
           {(settings.facebookUrl || settings.instagramUrl) && (
-            <div className="mt-5 flex gap-4 text-sm text-white/70">
+            <div className="mt-5 flex gap-4 text-sm text-[#7a6280]">
               {settings.facebookUrl ? (
-                <a href={settings.facebookUrl} target="_blank" rel="noreferrer" className="hover:text-white">
+                <a href={settings.facebookUrl} target="_blank" rel="noreferrer" className="hover:text-[#5c3d5e]">
                   Facebook
                 </a>
               ) : null}
               {settings.instagramUrl ? (
-                <a href={settings.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-white">
+                <a href={settings.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#5c3d5e]">
                   Instagram
                 </a>
               ) : null}
@@ -65,31 +65,39 @@ export function FashionFooter() {
         </div>
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/55">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#9d6b8a]">
             {fc.footer.explore}
           </p>
-          <div className="mt-4 flex flex-col gap-3 text-white/78">
-            <Link href="/collections">{fc.footer.collections}</Link>
-            <Link href="/cart">{fc.footer.cart}</Link>
-            <Link href="/checkout">{fc.footer.checkout}</Link>
-            <Link href="/about">{fc.footer.about}</Link>
+          <div className="mt-4 flex flex-col gap-3 text-[#5c4860]">
+            <Link href="/collections" className="hover:text-[#5c3d5e]">
+              {fc.footer.collections}
+            </Link>
+            <Link href="/cart" className="hover:text-[#5c3d5e]">
+              {fc.footer.cart}
+            </Link>
+            <Link href="/about" className="hover:text-[#5c3d5e]">
+              {fc.footer.about}
+            </Link>
+            <Link href="/contact" className="hover:text-[#5c3d5e]">
+              {fc.footer.contact}
+            </Link>
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/55">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#9d6b8a]">
             {fc.footer.support}
           </p>
-          <div className="mt-4 space-y-3 text-white/78">
+          <div className="mt-4 space-y-3 text-[#5c4860]">
             <p>
               WhatsApp:{" "}
-              <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`} className="hover:text-white">
+              <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`} className="hover:text-[#5c3d5e]">
                 {phone}
               </a>
             </p>
             <p>
               Email:{" "}
-              <a href={`mailto:${email}`} className="hover:text-white">
+              <a href={`mailto:${email}`} className="hover:text-[#5c3d5e]">
                 {email}
               </a>
             </p>
@@ -98,7 +106,7 @@ export function FashionFooter() {
         </div>
       </div>
 
-      <div className="mx-auto mt-10 max-w-7xl border-t border-white/10 pt-6 text-sm text-white/50">
+      <div className="mx-auto mt-10 max-w-7xl border-t border-[#dccde0] pt-6 text-sm text-[#8a7490]">
         © {new Date().getFullYear()} {brand}. {fc.footer.rights}
       </div>
     </footer>

@@ -18,7 +18,7 @@ export function HomeHeroActions({
     "heroTitle",
     "heroTitleEn",
     locale,
-    "সহজ luxury, refined style, modern Bangladesh.",
+    "প্রিমিয়াম ফ্যাশন, আপনার স্টাইলে।",
   );
   const heroDescription = tSetting(settings, "heroDescription", "heroDescriptionEn", locale, "");
   const primaryLabel = tSetting(
@@ -39,29 +39,27 @@ export function HomeHeroActions({
   const secondaryHref = settings.heroCtaSecondaryHref || "/collections";
 
   return (
-    <div className="pt-14 text-white md:pt-16">
-      <span className="inline-flex rounded-full border border-white/30 bg-white/12 px-4 py-2 text-sm font-medium text-white backdrop-blur">
+    <div className="pt-14 md:pt-16">
+      <span className="inline-flex rounded-full border border-[#dccde0]/70 bg-white/70 px-4 py-2 text-sm font-medium text-[#6e5870] backdrop-blur">
         {heroSubtitle}
       </span>
-      <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold text-white md:text-7xl">
+      <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold text-[#4a3348] md:text-7xl">
         {heroTitle}
       </h1>
       {heroDescription ? (
-        <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-lg">{heroDescription}</p>
+        <p className="mt-6 max-w-2xl text-base leading-8 text-[#6e5870] md:text-lg">{heroDescription}</p>
       ) : null}
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link
           href={primaryHref}
-          className="inline-flex items-center justify-center rounded-full bg-[#faf6f2] px-6 py-3 text-sm font-semibold text-[#2d1f1b] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-          style={{ color: "#2d1f1b" }}
+          className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:opacity-95"
         >
           {primaryLabel || (locale === "bn" ? "কালেকশন দেখুন" : "Shop collections")}
         </Link>
         <Link
           href={secondaryHref}
-          className="inline-flex items-center justify-center rounded-full border-2 border-[#c9957a] bg-[#e8b896] px-6 py-3 text-sm font-semibold text-[#2d1f1b] shadow-sm transition hover:bg-[#f4d4c2]"
-          style={{ color: "#2d1f1b" }}
+          className="inline-flex items-center justify-center rounded-full border-2 border-[#e8b896] bg-white/85 px-6 py-3 text-sm font-semibold text-[#5c3d5e] shadow-sm transition hover:bg-[#faf0f5]"
         >
           {secondaryLabel || (locale === "bn" ? "ফিচার্ড প্রোডাক্ট" : "Featured product")}
         </Link>
@@ -95,7 +93,7 @@ export function HomeStatsStrip({ settings }: { settings: StoreSettings }) {
             key={label}
             className="rounded-[1.5rem] border border-black/6 bg-white px-5 py-6 text-center shadow-[0_12px_40px_rgba(48,27,20,0.04)]"
           >
-            <p className="font-[family-name:var(--font-display)] text-3xl font-bold text-[#2b1d19]">
+            <p className="font-[family-name:var(--font-display)] text-3xl font-bold text-[#5c3d5e]">
               {value}
             </p>
             <p className="mt-2 text-sm text-[#6e5449]">{label}</p>
@@ -143,14 +141,14 @@ export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
       {settings.showFeatures !== false ? (
         <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
           <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="rounded-[2rem] bg-[#2f211d] p-8 text-white shadow-[0_30px_90px_rgba(48,27,20,0.18)]">
-              <p className="text-sm font-medium uppercase tracking-[0.28em] text-white/55">
+            <div className="rounded-[2rem] border border-[#e8d4e8]/60 bg-[linear-gradient(145deg,#fdf8f5,#f5e8f0_55%,#ebe0f5)] p-8 text-[#4a3348] shadow-[0_30px_90px_rgba(122,85,128,0.08)]">
+              <p className="text-sm font-medium uppercase tracking-[0.28em] text-[#9d6b8a]">
                 {fc.home.whyStay}
               </p>
-              <h2 className="mt-4 font-[family-name:var(--font-display)] text-4xl font-bold">
+              <h2 className="mt-4 font-[family-name:var(--font-display)] text-4xl font-bold text-[#5c3d5e]">
                 {featuresTitle}
               </h2>
-              <p className="mt-4 max-w-xl text-base leading-8 text-white/76">{featuresBody}</p>
+              <p className="mt-4 max-w-xl text-base leading-8 text-[#6e5870]">{featuresBody}</p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               {highlights.map((item) => (
