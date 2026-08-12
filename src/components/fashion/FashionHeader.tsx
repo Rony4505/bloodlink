@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useCart } from "@/lib/fashion/cart-context";
 import { cn } from "@/lib/fashion/cn";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
@@ -15,9 +16,13 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   const [loggedIn, setLoggedIn] = useState(false);
   const [unread, setUnread] = useState(0);
   const [myMenuOpen, setMyMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(
+    null,
+  );
   const [brand, setBrand] = useState(copy.brand);
   const [tagline, setTagline] = useState(copy.tagline);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const isDark = variant === "dark";
 
   useEffect(() => {
@@ -55,6 +60,31 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
     setMyMenuOpen(false);
   }, [pathname]);
 
+  useLayoutEffect(() => {
+    if (!myMenuOpen || !triggerRef.current) {
+      setMenuPos(null);
+      return;
+    }
+
+    function updatePosition() {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuPos({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: Math.max(rect.width, 176),
+      });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [myMenuOpen]);
+
   useEffect(() => {
     function onDocClick(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) {
@@ -78,10 +108,37 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   const myProductActive =
     pathname.startsWith("/account") || pathname.startsWith("/track");
 
+  const dropdown =
+    myMenuOpen && menuPos
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className="fixed z-[500] overflow-hidden rounded-2xl border border-[#e8d4e8]/70 bg-white py-2 shadow-[0_24px_60px_rgba(90,60,95,0.22)]"
+            style={{ top: menuPos.top, left: menuPos.left, minWidth: menuPos.width }}
+          >
+            <Link
+              href="/account"
+              className="block px-4 py-3 text-[#4a3348] transition hover:bg-[#faf0f5]"
+              onClick={() => setMyMenuOpen(false)}
+            >
+              {fc.nav.myOrders}
+            </Link>
+            <Link
+              href="/track"
+              className="block px-4 py-3 text-[#4a3348] transition hover:bg-[#faf0f5]"
+              onClick={() => setMyMenuOpen(false)}
+            >
+              {fc.nav.track}
+            </Link>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <header
       className={cn(
-        "rounded-[2rem] border px-5 py-4 backdrop-blur md:px-7",
+        "relative z-30 rounded-[2rem] border px-5 py-4 backdrop-blur md:px-7",
         isDark
           ? "border-[#e8d4e8]/60 bg-white/75 text-[#4a3348] shadow-[0_18px_60px_rgba(122,85,128,0.08)]"
           : "border-[#e8d4c4]/50 bg-white/92 text-[#4a3348] shadow-[0_18px_60px_rgba(122,85,128,0.06)]",
@@ -114,8 +171,9 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
             );
           })}
 
-          <div className="relative" ref={menuRef}>
+          <div className="relative">
             <button
+              ref={triggerRef}
               type="button"
               onClick={() => setMyMenuOpen((open) => !open)}
               className={cn(
@@ -130,24 +188,6 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
                 </span>
               ) : null}
             </button>
-            {myMenuOpen ? (
-              <div className="absolute left-0 top-full z-30 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-[#e8d4e8]/70 bg-white py-2 shadow-[0_20px_50px_rgba(90,60,95,0.12)]">
-                <Link
-                  href="/account"
-                  className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
-                  onClick={() => setMyMenuOpen(false)}
-                >
-                  {fc.nav.myOrders}
-                </Link>
-                <Link
-                  href="/track"
-                  className="block px-4 py-2.5 text-[#4a3348] transition hover:bg-[#faf0f5]"
-                  onClick={() => setMyMenuOpen(false)}
-                >
-                  {fc.nav.track}
-                </Link>
-              </div>
-            ) : null}
           </div>
 
           {loggedIn ? (
@@ -184,6 +224,7 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
           </Link>
         </nav>
       </div>
+      {dropdown}
     </header>
   );
 }

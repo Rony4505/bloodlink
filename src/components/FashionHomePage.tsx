@@ -43,15 +43,17 @@ export async function FashionHomePage() {
       <ChatSupportWidget />
       <SiteEntryPopup />
       <AnnouncementBar settings={settings} />
-      <section className="relative overflow-hidden border-b border-[#e8d4e8]/40 bg-[radial-gradient(ellipse_at_12%_8%,rgba(255,240,248,0.85),transparent_52%),radial-gradient(ellipse_at_92%_92%,rgba(243,228,216,0.75),transparent_48%),linear-gradient(135deg,#fdf8f5_0%,#f5e8f0_38%,#ebe0f5_72%,#f8efe8_100%)]">
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.55),transparent_45%,rgba(255,248,252,0.35)_100%)]" />
-        <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#e8c4d8]/30 blur-3xl" />
-        <div className="hero-drift pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[#f0d4c2]/35 blur-3xl" />
+      <section className="relative border-b border-[#e8d4e8]/40 bg-[radial-gradient(ellipse_at_12%_8%,rgba(255,240,248,0.85),transparent_52%),radial-gradient(ellipse_at_92%_92%,rgba(243,228,216,0.75),transparent_48%),linear-gradient(135deg,#fdf8f5_0%,#f5e8f0_38%,#ebe0f5_72%,#f8efe8_100%)]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.55),transparent_45%,rgba(255,248,252,0.35)_100%)]" />
+          <div className="hero-orb absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#e8c4d8]/30 blur-3xl" />
+          <div className="hero-drift absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[#f0d4c2]/35 blur-3xl" />
+        </div>
 
-        <div className="relative mx-auto max-w-7xl px-5 pb-16 pt-14 md:px-8 md:pb-24 md:pt-16">
+        <div className="relative z-20 mx-auto max-w-7xl px-5 pb-16 pt-14 md:px-8 md:pb-24 md:pt-16">
           <FashionHeader variant="light" />
 
-          <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
+          <div className="relative z-0 mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
             <PromoCarousel slides={carouselSlides} coupons={displayCoupons} products={products} />
           </div>
 
