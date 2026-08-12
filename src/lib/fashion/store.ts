@@ -94,21 +94,32 @@ async function readStoreJson(): Promise<Partial<FashionStore>> {
   }
 }
 
-async function buildStoreFromParsed(parsed: Partial<FashionStore>): Promise<FashionStore> {
+async function buildStoreFromParsed(
+  parsed: Partial<FashionStore>,
+  options: { allowSeedFallback?: boolean } = {},
+): Promise<FashionStore> {
+  const allowSeedFallback = options.allowSeedFallback ?? false;
   const settings = migrateSettings(parsed.settings);
-  const products = (Array.isArray(parsed.products) ? parsed.products : rawSeedProducts).map((p) =>
-    migrateProduct(p, settings),
-  );
+
+  let products: Product[];
+  if (Array.isArray(parsed.products)) {
+    products = parsed.products.map((p) => migrateProduct(p, settings));
+  } else if (allowSeedFallback) {
+    products = rawSeedProducts.map((p) => migrateProduct(p, settings));
+  } else {
+    throw new Error("[fashion-store] store file exists but products array is missing or invalid");
+  }
+
   return {
     settings,
     categories: Array.isArray(parsed.categories) ? parsed.categories : defaultCategories,
     products,
-    customers: parsed.customers ?? [],
-    orders: (parsed.orders ?? []).map(migrateOrder),
+    customers: Array.isArray(parsed.customers) ? parsed.customers : [],
+    orders: Array.isArray(parsed.orders) ? parsed.orders.map(migrateOrder) : [],
     coupons: Array.isArray(parsed.coupons) ? parsed.coupons : defaultCoupons,
-    reviews: parsed.reviews ?? [],
-    userNotifications: parsed.userNotifications ?? [],
-    adminNotifications: parsed.adminNotifications ?? [],
+    reviews: Array.isArray(parsed.reviews) ? parsed.reviews : [],
+    userNotifications: Array.isArray(parsed.userNotifications) ? parsed.userNotifications : [],
+    adminNotifications: Array.isArray(parsed.adminNotifications) ? parsed.adminNotifications : [],
     adminPasswordHash:
       parsed.adminPasswordHash || (await bcrypt.hash(defaultAdminPassword(), 12)),
   };
@@ -370,30 +381,51 @@ async function ensureStore(): Promise<FashionStore> {
     const parsed = await readStoreJson();
     const beforeHero = parsed.settings?.heroTitle;
     const beforeFooter = parsed.settings?.footerText;
-    const store = await buildStoreFromParsed(parsed);
+    const priorCounts = {
+      products: Array.isArray(parsed.products) ? parsed.products.length : 0,
+      orders: Array.isArray(parsed.orders) ? parsed.orders.length : 0,
+      customers: Array.isArray(parsed.customers) ? parsed.customers.length : 0,
+    };
+    const store = await buildStoreFromParsed(parsed, { allowSeedFallback: false });
     if (building) return store;
     if (
       (beforeHero && beforeHero !== store.settings.heroTitle) ||
       (beforeFooter && beforeFooter !== store.settings.footerText)
     ) {
-      await writeStore(store);
+      await writeStore(store, priorCounts);
     }
-    if (purgeExpired(store)) await writeStore(store);
-    if (normalizeProductSlugs(store)) await writeStore(store);
-    if (await syncAdminPasswordHash(store)) await writeStore(store);
+    if (purgeExpired(store)) await writeStore(store, priorCounts);
+    if (normalizeProductSlugs(store)) await writeStore(store, priorCounts);
+    if (await syncAdminPasswordHash(store)) await writeStore(store, priorCounts);
     return store;
   } catch (error) {
     if (building) {
       console.warn("[fashion-store] build-time store read failed, using defaults", error);
-      return createInitialStore();
+      return buildStoreFromParsed({}, { allowSeedFallback: true });
     }
     console.error("[fashion-store] failed to load store — refusing to reset data", error);
     throw new Error("Store data could not be loaded. Check DATA_DIR volume mount.");
   }
 }
 
-async function writeStore(store: FashionStore): Promise<void> {
+async function writeStore(
+  store: FashionStore,
+  priorCounts?: { products: number; orders: number; customers: number },
+): Promise<void> {
   if (isNextBuild()) return;
+
+  if (priorCounts) {
+    if (priorCounts.products > 0 && store.products.length === 0) {
+      throw new Error("[fashion-store] refused to write empty products over existing catalog");
+    }
+    if (priorCounts.orders > 0 && store.orders.length === 0) {
+      throw new Error("[fashion-store] refused to write empty orders over existing orders");
+    }
+    if (priorCounts.customers > 0 && store.customers.length === 0) {
+      throw new Error("[fashion-store] refused to write empty customers over existing customers");
+    }
+  }
+
   await mkdir(dataDir(), { recursive: true });
   const primary = storePath();
   const temp = storeTempPath();
@@ -423,11 +455,18 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 export async function updateStoreSettings(partial: Partial<StoreSettings>): Promise<StoreSettings> {
   const store = await ensureStore();
   const current = store.settings;
+  const next: StoreSettings = { ...current };
+
+  for (const [key, value] of Object.entries(partial) as [keyof StoreSettings, StoreSettings[keyof StoreSettings]][]) {
+    if (value === undefined) continue;
+    (next as Record<string, unknown>)[key as string] = value;
+  }
+
   store.settings = {
-    ...current,
-    ...partial,
+    ...next,
     deliveryRules: partial.deliveryRules ?? current.deliveryRules,
-    promoBanners: partial.promoBanners ?? current.promoBanners ?? [],
+    promoBanners:
+      partial.promoBanners !== undefined ? partial.promoBanners : current.promoBanners ?? [],
     availableSizes: partial.availableSizes ?? current.availableSizes,
     aboutPillars: partial.aboutPillars ?? current.aboutPillars,
     aboutPillarsEn: partial.aboutPillarsEn ?? current.aboutPillarsEn,

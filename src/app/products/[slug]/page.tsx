@@ -6,6 +6,7 @@ import { ProductGalleryCarousel } from "@/components/fashion/ProductGalleryCarou
 import { ProductPageDetails } from "@/components/fashion/ProductPageDetails";
 import { ProductReviews } from "@/components/fashion/ProductReviews";
 import { getCategory } from "@/lib/fashion/categories-server";
+import { getProductImages } from "@/lib/fashion/product-images";
 import { getProductBySlug, getRelatedProducts } from "@/lib/fashion/store";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function ProductPage({ params }: Props) {
       <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <ProductGalleryCarousel
-            images={product.imageUrls?.length ? product.imageUrls : [product.imageUrl]}
+            images={getProductImages(product)}
             alt={product.nameBn}
             className="h-[22rem] sm:h-[28rem] lg:h-[34rem]"
           />

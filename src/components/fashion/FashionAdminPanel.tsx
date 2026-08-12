@@ -414,7 +414,16 @@ export function FashionAdminPanel() {
 
   async function saveSettings() {
     if (!settings) return;
-    await fetch("/api/fashion/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
+    const res = await fetch("/api/fashion/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showSuccess("সেভ ব্যর্থ", data.error ?? "সেটিংস সেভ করা যায়নি", "rose");
+      return;
+    }
     showSuccess("সফল!", "ওয়েবসাইট সেটিংস সেভ হয়েছে", "gold");
     await load();
   }
