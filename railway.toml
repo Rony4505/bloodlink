@@ -1,9 +1,8 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
-# BloodLink service: APP_MODE=bloodlink (Dockerfile default)
-# Smart craft service: set build/runtime APP_MODE=fashion + NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.com
-# See SMARTCRAFT_DEPLOY.md
+# Smart craft Railway service uses this repo — fashion Dockerfile avoids BloodLink Postgres copy failures.
+# BloodLink Railway service: override in service Settings → Build → Dockerfile Path = Dockerfile
+dockerfilePath = "Dockerfile.fashion"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
