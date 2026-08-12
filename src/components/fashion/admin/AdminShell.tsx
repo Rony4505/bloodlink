@@ -107,6 +107,7 @@ export function AdminConfirmModal({
   title,
   message,
   confirmLabel = "নিশ্চিত করুন",
+  cancelLabel = "বাতিল",
   theme = "ocean",
 }: {
   open: boolean;
@@ -115,6 +116,7 @@ export function AdminConfirmModal({
   title: string;
   message: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   theme?: AdminTheme;
 }) {
   if (!open) return null;
@@ -131,7 +133,7 @@ export function AdminConfirmModal({
             onClick={onClose}
             className="flex-1 rounded-full border border-black/10 bg-white/70 px-4 py-3 text-sm font-semibold"
           >
-            বাতিল
+            {cancelLabel}
           </button>
           <button
             type="button"

@@ -1231,7 +1231,7 @@ export function FashionAdminPanel() {
       ) : null}
 
       <AdminConfirmModal open={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} onConfirm={confirmOrderStatus}
-        title="স্ট্যাটাস নিশ্চিত করুন" message={pendingStatus ? `${copy.orderStatus[pendingStatus.status]}?` : ""} confirmLabel="হ্যাঁ" theme="ocean" />
+        title="ট্র্যাকিং স্ট্যাটাস পরিবর্তন?" message={pendingStatus ? `আপনি কি "${copy.orderStatus[pendingStatus.status]}" স্ট্যাটাস সেট করতে চান?` : ""} confirmLabel="হ্যাঁ" cancelLabel="না" theme="ocean" />
       <AdminConfirmModal open={Boolean(pendingDeleteProduct)} onClose={() => setPendingDeleteProduct(null)} onConfirm={confirmDeleteProduct}
         title="প্রোডাক্ট মুছবেন?" message={pendingDeleteProduct ? `${pendingDeleteProduct.nameBn} স্থায়ীভাবে মুছে ফেলা হবে।` : ""} confirmLabel="মুছুন" theme="rose" />
 
@@ -1284,14 +1284,17 @@ export function FashionAdminLogin() {
   const [username, setUsername] = useState("founder");
   const [password, setPassword] = useState("");
   const [channel, setChannel] = useState<"email" | "phone">("email");
-  const [step, setStep] = useState<"creds" | "otp">("creds");
+  const [mode, setMode] = useState<"login" | "forgot" | "forgot-otp" | "forgot-reset">("login");
+  const [forgotIntent, setForgotIntent] = useState<"password" | "username">("password");
   const [otp, setOtp] = useState("");
   const [debugOtp, setDebugOtp] = useState("");
   const [targetHint, setTargetHint] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [recoveredUsername, setRecoveredUsername] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function checkCreds(event: FormEvent) {
+  async function loginSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
@@ -1299,46 +1302,81 @@ export function FashionAdminLogin() {
       const res = await fetch("/api/fashion/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "credentials", username, password }),
+        body: JSON.stringify({ action: "login", username, password }),
       });
       if (!res.ok) {
         setError(locale === "bn" ? "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়" : "Incorrect username or password");
         setLoading(false);
         return;
       }
-      const otpRes = await fetch("/api/fashion/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send-otp", username, password, channel }),
-      });
-      const data = await otpRes.json();
-      if (!otpRes.ok) {
-        // Fallback: if OTP channel not configured, complete login with password
-        const fallback = await fetch("/api/fashion/admin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "login-direct", username, password }),
-        });
-        setLoading(false);
-        if (fallback.ok) {
-          router.push("/store-admin");
-          router.refresh();
-          return;
-        }
-        setError(data.error || "OTP পাঠানো যায়নি — Settings-এ admin email/phone সেট করুন");
-        return;
-      }
-      setDebugOtp(String(data.debugOtp || ""));
-      setOtp(String(data.debugOtp || ""));
-      setTargetHint(data.targetHint || "");
-      setStep("otp");
+      router.push("/store-admin");
+      router.refresh();
     } catch {
       setError(locale === "bn" ? "নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন" : "Network error — try again");
     }
     setLoading(false);
   }
 
-  async function verifyOtpSubmit(event: FormEvent) {
+  async function sendForgotOtp(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/fashion/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "forgot-send-otp", channel }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "OTP পাঠানো যায়নি");
+        setLoading(false);
+        return;
+      }
+      setDebugOtp(String(data.debugOtp || ""));
+      setOtp(String(data.debugOtp || ""));
+      setTargetHint(data.targetHint || "");
+      setMode("forgot-otp");
+    } catch {
+      setError(locale === "bn" ? "নেটওয়ার্ক সমস্যা" : "Network error");
+    }
+    setLoading(false);
+  }
+
+  async function submitForgotOtp(event: FormEvent) {
+    event.preventDefault();
+    if (forgotIntent === "username") {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch("/api/fashion/admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "forgot-recover-username",
+            channel,
+            code: otp,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "OTP সঠিক নয়");
+          setLoading(false);
+          return;
+        }
+        setRecoveredUsername(data.username || "");
+        setLoading(false);
+        return;
+      } catch {
+        setError(locale === "bn" ? "নেটওয়ার্ক সমস্যা" : "Network error");
+        setLoading(false);
+        return;
+      }
+    }
+    setMode("forgot-reset");
+  }
+
+  async function resetAdminPassword(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
@@ -1347,21 +1385,23 @@ export function FashionAdminLogin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "verify-otp",
-          username,
-          password,
+          action: "forgot-reset-password",
           channel,
           code: otp,
+          newPassword,
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || (locale === "bn" ? "OTP সঠিক নয়" : "Invalid OTP"));
+        setError(data.error || "রিসেট ব্যর্থ");
         setLoading(false);
         return;
       }
-      router.push("/store-admin");
-      router.refresh();
+      setPassword(newPassword);
+      setMode("login");
+      setError("");
+      setLoading(false);
+      alert(locale === "bn" ? "পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে — লগইন করুন" : "Password updated — please log in");
     } catch {
       setError(locale === "bn" ? "নেটওয়ার্ক সমস্যা" : "Network error");
       setLoading(false);
@@ -1374,11 +1414,12 @@ export function FashionAdminLogin() {
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">{fc.admin.loginTitle}</h1>
         <p className="mt-2 text-sm text-[#7a5c50]">
           {locale === "bn"
-            ? "Username + পাসওয়ার্ড → তারপর OTP দিয়ে লগইন"
-            : "Username + password → then verify with OTP"}
+            ? "Username + পাসওয়ার্ড দিয়ে লগইন করুন"
+            : "Log in with username and password"}
         </p>
-        {step === "creds" ? (
-          <form onSubmit={checkCreds} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+
+        {mode === "login" ? (
+          <form onSubmit={loginSubmit} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
             {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
             <label className="block">
               <span className="text-sm text-[#9b7766]">Username</span>
@@ -1396,81 +1437,80 @@ export function FashionAdminLogin() {
               onChange={setPassword}
               required
             />
+            <FashionButton type="submit" disabled={loading}>
+              {loading ? "..." : locale === "bn" ? "লগইন" : "Log in"}
+            </FashionButton>
+            <div className="flex flex-col gap-2 text-sm font-semibold text-[#8f624e]">
+              <button type="button" onClick={() => { setForgotIntent("password"); setMode("forgot"); setError(""); }}>
+                পাসওয়ার্ড ভুলে গেছেন?
+              </button>
+              <button type="button" onClick={() => { setForgotIntent("username"); setRecoveredUsername(""); setMode("forgot"); setError(""); }}>
+                Username ভুলে গেছেন?
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {mode === "forgot" ? (
+          <form onSubmit={sendForgotOtp} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+            <p className="text-sm text-[#6f554a]">
+              {forgotIntent === "username"
+                ? "Admin Settings-এ সেট করা email/phone-এ OTP পাঠান — username দেখতে পাবেন"
+                : "Admin Settings-এ সেট করা email/phone-এ OTP পাঠান — নতুন পাসওয়ার্ড সেট করুন"}
+            </p>
             <div>
-              <p className="mb-2 text-sm text-[#9b7766]">
-                {locale === "bn" ? "OTP কোথায় পাঠাবেন?" : "Send OTP via"}
-              </p>
+              <p className="mb-2 text-sm text-[#9b7766]">OTP কোথায় পাঠাবেন?</p>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setChannel("email")}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    channel === "email"
-                      ? "bg-[#8f624e] text-white"
-                      : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"
-                  }`}
-                >
-                  Gmail
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannel("phone")}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    channel === "phone"
-                      ? "bg-[#8f624e] text-white"
-                      : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"
-                  }`}
-                >
-                  Phone
-                </button>
+                <button type="button" onClick={() => setChannel("email")} className={`rounded-full px-4 py-2 text-sm font-semibold ${channel === "email" ? "bg-[#8f624e] text-white" : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"}`}>Gmail</button>
+                <button type="button" onClick={() => setChannel("phone")} className={`rounded-full px-4 py-2 text-sm font-semibold ${channel === "phone" ? "bg-[#8f624e] text-white" : "border border-[#c9a890] bg-[#f3ebe4] text-[#1c1412]"}`}>Phone</button>
               </div>
             </div>
             <FashionButton type="submit" disabled={loading}>
-              {loading ? "..." : locale === "bn" ? "পরবর্তী · OTP পাঠান" : "Next · Send OTP"}
+              {loading ? "..." : "OTP পাঠান"}
             </FashionButton>
-          </form>
-        ) : (
-          <form onSubmit={verifyOtpSubmit} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
-            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-            <p className="text-sm text-[#6f554a]">
-              OTP পাঠানো হয়েছে: <strong>{targetHint || channel}</strong>
-            </p>
-            {debugOtp ? (
-              <p className="rounded-xl border border-[#e8cc80] bg-[#fffbf0] px-4 py-3 text-center text-lg font-bold tracking-[0.35em] text-[#6b5420]">
-                {debugOtp}
-              </p>
-            ) : null}
-            <p className="text-xs text-[#9b7766]">
-              {locale === "bn"
-                ? "উপরের কোডটি নিচে লিখুন (ডেমোতে OTP এখানে দেখানো হয়)"
-                : "Enter the code above (demo shows OTP here)"}
-            </p>
-            <label className="block">
-              <span className="text-sm text-[#9b7766]">OTP</span>
-              <input
-                className="field mt-1 tracking-[0.35em]"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                maxLength={6}
-                inputMode="numeric"
-              />
-            </label>
-            <FashionButton type="submit" disabled={loading}>
-              {loading ? "..." : locale === "bn" ? "লগইন সম্পন্ন করুন" : "Complete login"}
-            </FashionButton>
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#8f624e]"
-              onClick={() => {
-                setStep("creds");
-                setError("");
-              }}
-            >
-              ← Back
+            <button type="button" className="text-sm font-semibold text-[#8f624e]" onClick={() => setMode("login")}>
+              ← লগইনে ফিরে যান
             </button>
           </form>
-        )}
+        ) : null}
+
+        {mode === "forgot-otp" ? (
+          <form onSubmit={submitForgotOtp} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+            {recoveredUsername ? (
+              <div className="rounded-xl border border-[#a8c8ef] bg-[#eef6ff] px-4 py-3 text-center">
+                <p className="text-sm text-[#6f554a]">আপনার Admin Username:</p>
+                <p className="mt-1 text-2xl font-bold text-[#3d6a9e]">{recoveredUsername}</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-[#6f554a]">OTP পাঠানো হয়েছে: <strong>{targetHint || channel}</strong></p>
+                {debugOtp ? (
+                  <p className="rounded-xl border border-[#e8cc80] bg-[#fffbf0] px-4 py-3 text-center text-lg font-bold tracking-[0.35em] text-[#6b5420]">{debugOtp}</p>
+                ) : null}
+                <label className="block">
+                  <span className="text-sm text-[#9b7766]">OTP</span>
+                  <input className="field mt-1 tracking-[0.35em]" value={otp} onChange={(e) => setOtp(e.target.value)} required maxLength={6} inputMode="numeric" />
+                </label>
+                <FashionButton type="submit">পরবর্তী</FashionButton>
+              </>
+            )}
+            <button type="button" className="text-sm font-semibold text-[#8f624e]" onClick={() => setMode("login")}>
+              ← লগইনে ফিরে যান
+            </button>
+          </form>
+        ) : null}
+
+        {mode === "forgot-reset" ? (
+          <form onSubmit={resetAdminPassword} className="mt-8 space-y-4 rounded-[2rem] border border-[#e8c4b0]/50 bg-white/80 p-6">
+            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+            <PasswordField label="নতুন পাসওয়ার্ড" value={newPassword} onChange={setNewPassword} required />
+            <FashionButton type="submit" disabled={loading}>
+              {loading ? "..." : "পাসওয়ার্ড সেট করুন"}
+            </FashionButton>
+          </form>
+        ) : null}
       </section>
     </AdminShell>
   );

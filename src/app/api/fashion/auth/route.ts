@@ -8,7 +8,11 @@ import {
   sanitizeCustomer,
 } from "@/lib/fashion/customer-auth";
 import { issueOtp, verifyOtp } from "@/lib/fashion/otp";
-import { findCustomerByEmail } from "@/lib/fashion/store";
+import {
+  findCustomerByEmail,
+  findCustomerByPhone,
+  updateCustomerPassword,
+} from "@/lib/fashion/store";
 import { fashionDataDir } from "@/lib/fashion/paths";
 
 type PendingReg = {
@@ -138,6 +142,61 @@ export async function POST(request: Request) {
     if (body.action === "login") {
       const customer = await loginCustomer(body.email, body.password);
       return NextResponse.json({ customer: sanitizeCustomer(customer) });
+    }
+
+    if (body.action === "forgot-send-otp") {
+      const email = String(body.email ?? "").trim().toLowerCase();
+      const phone = String(body.phone ?? "").trim();
+      const channel = body.channel === "phone" ? "phone" : "email";
+      const customer =
+        channel === "phone" ? await findCustomerByPhone(phone) : await findCustomerByEmail(email);
+      if (!customer) {
+        return NextResponse.json(
+          { error: "এই ইমেইল/ফোন দিয়ে কোনো অ্যাকাউন্ট নেই" },
+          { status: 404 },
+        );
+      }
+      const target = channel === "phone" ? customer.phone : customer.email;
+      const { code } = await issueOtp({
+        purpose: "customer-reset",
+        channel,
+        target,
+      });
+      return NextResponse.json({
+        ok: true,
+        channel,
+        email: customer.email,
+        targetHint:
+          channel === "email"
+            ? customer.email.replace(/(.{2}).+(@.+)/, "$1***$2")
+            : `***${customer.phone.slice(-4)}`,
+        debugOtp: code,
+      });
+    }
+
+    if (body.action === "forgot-reset") {
+      const email = String(body.email ?? "").trim().toLowerCase();
+      const customer = await findCustomerByEmail(email);
+      if (!customer) {
+        return NextResponse.json({ error: "অ্যাকাউন্ট পাওয়া যায়নি" }, { status: 404 });
+      }
+      const channel = body.channel === "phone" ? "phone" : "email";
+      const target = channel === "phone" ? customer.phone : customer.email;
+      const ok = await verifyOtp({
+        purpose: "customer-reset",
+        target,
+        code: body.code ?? "",
+      });
+      if (!ok) {
+        return NextResponse.json({ error: "OTP সঠিক নয় বা মেয়াদ শেষ" }, { status: 400 });
+      }
+      const newPassword = String(body.newPassword ?? "");
+      if (newPassword.length < 6) {
+        return NextResponse.json({ error: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষর" }, { status: 400 });
+      }
+      await updateCustomerPassword(customer.id, newPassword);
+      const loggedIn = await loginCustomer(customer.email, newPassword);
+      return NextResponse.json({ customer: sanitizeCustomer(loggedIn) });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

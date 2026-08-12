@@ -67,6 +67,14 @@ export default function CartPage() {
                   </div>
                 </article>
               ))}
+              <div className="mt-8 rounded-[2rem] border border-[#e8c4b0]/40 bg-[#faf4f0] p-6 text-center lg:hidden">
+                <p className="text-sm text-[#6f554a]">অর্ডার সম্পন্ন করতে নিচের বাটনে ক্লিক করুন</p>
+                <div className="mt-4">
+                  <FashionButton href="/checkout" className="w-full justify-center">
+                    অর্ডার কনফার্ম করুন
+                  </FashionButton>
+                </div>
+              </div>
             </div>
 
             <aside className="rounded-[2rem] border border-black/6 bg-[#2b1d19] p-6 text-white shadow-[0_30px_90px_rgba(48,27,20,0.18)]">
@@ -81,6 +89,9 @@ export default function CartPage() {
               <p className="mt-4 text-sm text-white/60">{copy.cart.freeShipping}</p>
               <div className="mt-8 flex flex-col gap-3">
                 <FashionButton href="/checkout">{copy.actions.checkout}</FashionButton>
+                <FashionButton href="/checkout" variant="secondary">
+                  অর্ডার কনফার্ম করুন
+                </FashionButton>
                 <FashionButton href="/collections" variant="secondary">{copy.actions.continueShopping}</FashionButton>
               </div>
             </aside>
