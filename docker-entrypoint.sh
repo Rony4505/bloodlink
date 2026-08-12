@@ -82,6 +82,20 @@ fi
 
 echo "[bloodlink] DATA_DIR=${DATA_DIR}"
 
+APP_MODE_VAL="${APP_MODE:-${NEXT_PUBLIC_APP_MODE:-}}"
+if [ "$APP_MODE_VAL" = "fashion" ]; then
+  FASHION_STORE="${DATA_DIR}/fashion-store.json"
+  FASHION_PROBE="${DATA_DIR}/.volume_probe"
+  date -Iseconds >> "$FASHION_PROBE" 2>/dev/null || true
+  if [ -f "$FASHION_STORE" ]; then
+    echo "[fashion] store file present at ${FASHION_STORE}"
+  elif [ -d "${DATA_DIR}/backups" ] && [ "$(ls -A "${DATA_DIR}/backups" 2>/dev/null | wc -l)" -gt 0 ]; then
+    echo "[fashion] no primary store yet — rotating backups exist under ${DATA_DIR}/backups"
+  else
+    echo "[fashion] WARNING: no store file at ${FASHION_STORE} — mount Railway Volume at /app/data or data resets on redeploy"
+  fi
+fi
+
 if [ -f /app/.build-id ]; then
   export BUILD_ID="$(tr -d '\r\n' < /app/.build-id)"
   echo "[bloodlink] BUILD_ID=${BUILD_ID}"

@@ -1,6 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  FASHION_CAROUSEL_INTERVAL_MS,
+  FASHION_CAROUSEL_TRANSITION_CLASS,
+} from "@/lib/fashion/carousel-config";
 import { getProductImages } from "@/lib/fashion/product-images";
 import type { Product } from "@/lib/fashion/types";
 import { ProductImage } from "./ProductImage";
@@ -9,21 +13,38 @@ function SlideDots({
   count,
   index,
   onSelect,
-  compact,
+  variant = "overlay",
 }: {
   count: number;
   index: number;
   onSelect: (i: number) => void;
-  compact?: boolean;
+  variant?: "overlay" | "bar";
 }) {
+  if (count <= 1) return null;
+
+  if (variant === "bar") {
+    return (
+      <div className="flex justify-center gap-1.5 border-t border-black/5 bg-white/80 py-2">
+        {Array.from({ length: count }, (_, imageIndex) => (
+          <button
+            key={imageIndex}
+            type="button"
+            aria-label={`Image ${imageIndex + 1}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(imageIndex);
+            }}
+            className={`h-2 rounded-full transition-all ${
+              imageIndex === index ? "w-5 bg-[#9d6b8a]" : "w-2 bg-[#c9a890]"
+            }`}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        compact
-          ? "absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5"
-          : "flex justify-center gap-1.5 border-t border-black/5 bg-white/80 py-2"
-      }
-    >
+    <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
       {Array.from({ length: count }, (_, imageIndex) => (
         <button
           key={imageIndex}
@@ -33,14 +54,8 @@ function SlideDots({
             event.stopPropagation();
             onSelect(imageIndex);
           }}
-          className={`rounded-full transition-all ${
-            imageIndex === index
-              ? compact
-                ? "h-1.5 w-3 bg-[#9d6b8a]"
-                : "h-2 w-5 bg-[#9d6b8a]"
-              : compact
-                ? "h-1.5 w-1.5 bg-white/80"
-                : "h-2 w-2 bg-[#c9a890]"
+          className={`h-1.5 rounded-full transition-all ${
+            imageIndex === index ? "w-5 bg-white shadow-sm" : "w-1.5 bg-white/50"
           }`}
         />
       ))}
@@ -57,6 +72,7 @@ function ImageSlides({
   showArrows,
   onImageClick,
   onSwipe,
+  onPauseChange,
 }: {
   images: string[];
   alt: string;
@@ -66,32 +82,39 @@ function ImageSlides({
   showArrows?: boolean;
   onImageClick?: () => void;
   onSwipe?: (delta: number) => void;
+  onPauseChange?: (paused: boolean) => void;
 }) {
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const touchStartX = useRef(0);
+
+  function go(delta: number) {
+    onIndexChange((index + delta + images.length) % images.length);
+  }
 
   return (
     <div
       className={`relative h-full w-full overflow-hidden ${onImageClick ? "cursor-zoom-in" : ""} ${className ?? ""}`}
-      onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)}
+      onMouseEnter={() => onPauseChange?.(true)}
+      onMouseLeave={() => onPauseChange?.(false)}
+      onFocus={() => onPauseChange?.(true)}
+      onBlur={() => onPauseChange?.(false)}
+      onTouchStart={(event) => {
+        onPauseChange?.(true);
+        touchStartX.current = event.touches[0]?.clientX ?? 0;
+      }}
       onTouchEnd={(event) => {
-        if (touchStartX === null || !onSwipe) return;
-        const delta = (event.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
-        if (Math.abs(delta) > 40) onSwipe(delta < 0 ? 1 : -1);
-        setTouchStartX(null);
+        onPauseChange?.(false);
+        if (!onSwipe) return;
+        const diff = touchStartX.current - (event.changedTouches[0]?.clientX ?? touchStartX.current);
+        if (Math.abs(diff) > 40) go(diff > 0 ? 1 : -1);
       }}
       onClick={onImageClick}
     >
       <div
-        className="flex h-full w-full transition-transform duration-700 ease-in-out will-change-transform"
-        style={{
-          transform:
-            images.length > 1
-              ? `translateX(-${(index * 100) / images.length}%)`
-              : undefined,
-        }}
+        className={`flex h-full ${FASHION_CAROUSEL_TRANSITION_CLASS}`}
+        style={{ transform: `translateX(-${index * 100}%)` }}
       >
         {images.map((src, imageIndex) => (
-          <div key={`${src}-${imageIndex}`} className="h-full min-w-full flex-[0_0_100%] shrink-0">
+          <div key={`${src}-${imageIndex}`} className="relative h-full w-full shrink-0">
             <ProductImage
               src={src}
               alt={`${alt} ${imageIndex + 1}`}
@@ -107,10 +130,10 @@ function ImageSlides({
           <button
             type="button"
             aria-label="Previous image"
-            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-3 py-2 text-lg shadow-md"
+            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/85 px-3 py-2 text-sm font-bold shadow-md"
             onClick={(event) => {
               event.stopPropagation();
-              onIndexChange(Math.max(0, index - 1));
+              go(-1);
             }}
           >
             ‹
@@ -118,21 +141,25 @@ function ImageSlides({
           <button
             type="button"
             aria-label="Next image"
-            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-3 py-2 text-lg shadow-md"
+            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/85 px-3 py-2 text-sm font-bold shadow-md"
             onClick={(event) => {
               event.stopPropagation();
-              onIndexChange(Math.min(images.length - 1, index + 1));
+              go(1);
             }}
           >
             ›
           </button>
         </>
       ) : null}
+
+      {images.length > 1 ? (
+        <span className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-black/45 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+          {index + 1}/{images.length}
+        </span>
+      ) : null}
     </div>
   );
 }
-
-const AUTO_SCROLL_MS = 2000;
 
 function useAutoGallery(images: string[], intervalMs: number, enabled: boolean) {
   const [index, setIndex] = useState(0);
@@ -172,7 +199,12 @@ export function ProductGalleryCarousel({
   className?: string;
 }) {
   const [lightbox, setLightbox] = useState(false);
-  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, !lightbox);
+  const [paused, setPaused] = useState(false);
+  const { index, setIndex, step } = useAutoGallery(
+    images,
+    FASHION_CAROUSEL_INTERVAL_MS,
+    !lightbox && !paused,
+  );
 
   useEffect(() => {
     if (!lightbox) return;
@@ -214,8 +246,9 @@ export function ProductGalleryCarousel({
           showArrows
           onImageClick={() => setLightbox(true)}
           onSwipe={step}
+          onPauseChange={setPaused}
         />
-        <SlideDots count={images.length} index={index} onSelect={setIndex} />
+        <SlideDots count={images.length} index={index} onSelect={setIndex} variant="bar" />
       </div>
       {lightbox ? (
         <LightboxViewer images={images} alt={alt} startIndex={index} onClose={() => setLightbox(false)} />
@@ -234,7 +267,12 @@ export function ProductCardGallery({
   className?: string;
 }) {
   const images = getProductImages(product);
-  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, true);
+  const [paused, setPaused] = useState(false);
+  const { index, setIndex, step } = useAutoGallery(
+    images,
+    FASHION_CAROUSEL_INTERVAL_MS,
+    !paused,
+  );
 
   if (images.length <= 1) {
     return <ProductImage src={images[0] ?? ""} alt={alt} className={className} />;
@@ -249,8 +287,9 @@ export function ProductCardGallery({
         onIndexChange={setIndex}
         className="h-full"
         onSwipe={step}
+        onPauseChange={setPaused}
       />
-      <SlideDots count={images.length} index={index} onSelect={setIndex} compact />
+      <SlideDots count={images.length} index={index} onSelect={setIndex} variant="overlay" />
     </div>
   );
 }
@@ -275,8 +314,8 @@ function LightboxViewer({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
-      if (event.key === "ArrowRight") setIndex((i) => Math.min(images.length - 1, i + 1));
-      if (event.key === "ArrowLeft") setIndex((i) => Math.max(0, i - 1));
+      if (event.key === "ArrowRight") setIndex((i) => (i + 1) % images.length);
+      if (event.key === "ArrowLeft") setIndex((i) => (i - 1 + images.length) % images.length);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -305,11 +344,9 @@ function LightboxViewer({
           onIndexChange={setIndex}
           className="h-full"
           showArrows
-          onSwipe={(delta) =>
-            setIndex((i) => Math.max(0, Math.min(images.length - 1, i + delta)))
-          }
+          onSwipe={(delta) => setIndex((i) => (i + delta + images.length) % images.length)}
         />
-        <SlideDots count={images.length} index={index} onSelect={setIndex} compact />
+        <SlideDots count={images.length} index={index} onSelect={setIndex} variant="overlay" />
       </div>
     </div>
   );

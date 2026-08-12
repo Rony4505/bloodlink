@@ -116,6 +116,9 @@ export function SettingsEditor({
 }) {
   const { fc } = useFashionCopy();
   const [tab, setTab] = useState<SettingsTab>("brand");
+  const [backupFile, setBackupFile] = useState<File | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupMsg, setBackupMsg] = useState("");
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "brand", label: fc.admin.settingsBrand },
@@ -127,6 +130,51 @@ export function SettingsEditor({
     { id: "seo", label: fc.admin.settingsSeo },
     { id: "sizes", label: fc.admin.settingsSizes },
   ];
+
+  async function downloadBackup() {
+    setBackupBusy(true);
+    setBackupMsg("");
+    try {
+      const res = await fetch("/api/fashion/backup");
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const stamp = new Date().toISOString().slice(0, 10);
+      const anchor = document.createElement("a");
+      anchor.href = URL.createObjectURL(blob);
+      anchor.download = `smartcraft-backup-${stamp}.json`;
+      anchor.click();
+      URL.revokeObjectURL(anchor.href);
+      setBackupMsg("ব্যাকআপ ডাউনলোড হয়েছে");
+    } catch {
+      setBackupMsg("ব্যাকআপ ডাউনলোড ব্যর্থ");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function restoreBackup() {
+    if (!backupFile) return;
+    if (!window.confirm("ব্যাকআপ রিস্টোর করলে বর্তমান সব ডেটা replace হবে। চালিয়ে যাবেন?")) return;
+    setBackupBusy(true);
+    setBackupMsg("");
+    try {
+      const text = await backupFile.text();
+      const payload = JSON.parse(text);
+      const res = await fetch("/api/fashion/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "restore failed");
+      setBackupMsg(`রিস্টোর সফল — ${data.productCount ?? 0} প্রোডাক্ট, ${data.orderCount ?? 0} অর্ডার`);
+      setBackupFile(null);
+    } catch (error) {
+      setBackupMsg(error instanceof Error ? error.message : "ব্যাকআপ রিস্টোর ব্যর্থ");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
 
   function patch<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) {
     setSettings({ ...settings, [key]: value });
@@ -645,6 +693,33 @@ export function SettingsEditor({
           </div>
         </div>
       ) : null}
+
+      <div className="mt-8 space-y-3 rounded-2xl border border-[#e8c4b0]/50 bg-[#fff8f4] p-4">
+        <p className="text-sm font-semibold text-[#5b4339]">ডেটা ব্যাকআপ (redeploy-safe)</p>
+        <p className="text-xs leading-6 text-[#8b6456]">
+          Railway Volume <code className="rounded bg-white px-1">/app/data</code> mount করুন। প্রতিটি save-এ
+          automatic backup তৈরি হয়। redeploy-এর আগে manual backup নিন।
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <FashionButton variant="secondary" disabled={backupBusy} onClick={downloadBackup}>
+            ব্যাকআপ ডাউনলোড
+          </FashionButton>
+          <label className="inline-flex cursor-pointer items-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[#5b4339]">
+            ব্যাকআপ ফাইল বেছে নিন
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <FashionButton variant="secondary" disabled={backupBusy || !backupFile} onClick={restoreBackup}>
+            রিস্টোর
+          </FashionButton>
+        </div>
+        {backupFile ? <p className="text-xs text-[#6f554a]">নির্বাচিত: {backupFile.name}</p> : null}
+        {backupMsg ? <p className="text-sm font-medium text-[#8f624e]">{backupMsg}</p> : null}
+      </div>
 
       <div className="sticky bottom-0 border-t border-black/5 bg-white/80 pt-4 backdrop-blur">
         <FashionButton onClick={onSave}>{fc.admin.settingsSaveAll}</FashionButton>
