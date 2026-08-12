@@ -50,5 +50,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|.*\\..*).*)"],
+  // Do not skip paths like /bloodlinkbd.admin.rony4505 — only skip real static assets.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|txt|xml|json|map)$).*)",
+  ],
 };
