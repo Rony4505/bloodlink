@@ -12,6 +12,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV DATA_DIR=/tmp/fashion-build
 ENV APP_MODE=fashion
 ENV NEXT_PUBLIC_APP_MODE=fashion
 ENV NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.up.railway.app
