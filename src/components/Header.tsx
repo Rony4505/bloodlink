@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
+import { BLOODLINK_OWNER_PATH } from "@/lib/bloodlink-admin-path";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 export function Header() {
@@ -66,7 +67,7 @@ export function Header() {
           </Link>
           {isAdmin ? (
             <Link
-              href="/owner-hq-7f3m"
+              href={BLOODLINK_OWNER_PATH}
               className="rounded-full px-3 py-2 transition hover:bg-white/10"
             >
               {t.admin}
