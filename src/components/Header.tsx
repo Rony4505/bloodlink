@@ -4,24 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
-import { BLOODLINK_OWNER_PATH } from "@/lib/bloodlink-admin-path";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 export function Header({ compact = false }: { compact?: boolean }) {
   const { t, toggleLocale } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((data) => setLoggedIn(Boolean(data.donor)))
       .catch(() => setLoggedIn(false));
-
-    fetch("/api/admin/me")
-      .then((r) => r.json())
-      .then((data) => setIsAdmin(Boolean(data.admin)))
-      .catch(() => setIsAdmin(false));
   }, []);
 
   async function logout() {
@@ -94,14 +87,6 @@ export function Header({ compact = false }: { compact?: boolean }) {
               {t.bannerPageHome}
             </Link>
           )}
-          {isAdmin && !compact ? (
-            <Link
-              href={BLOODLINK_OWNER_PATH}
-              className="rounded-full px-3 py-2 transition hover:bg-white/10"
-            >
-              {t.admin}
-            </Link>
-          ) : null}
           {!compact && loggedIn ? (
             <>
               <NotificationBell />
