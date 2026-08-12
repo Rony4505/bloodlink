@@ -6,6 +6,8 @@ export const copy = {
     about: "আমাদের গল্প",
     contact: "যোগাযোগ",
     track: "ট্র্যাক অর্ডার",
+    myProduct: "আমার প্রোডাক্ট",
+    myOrders: "আমার অর্ডার",
     cart: "কার্ট",
     account: "অ্যাকাউন্ট",
     login: "লগইন",
@@ -62,7 +64,7 @@ export const copy = {
   account: {
     loginTitle: "আপনার অ্যাকাউন্টে লগইন করুন",
     registerTitle: "নতুন অ্যাকাউন্ট তৈরি করুন",
-    dashboardTitle: "আমার অ্যাকাউন্ট",
+    dashboardTitle: "আমার প্রোডাক্ট",
     ordersTitle: "আমার অর্ডার",
     noOrders: "এখনো কোনো অর্ডার নেই।",
     notificationsTitle: "নোটিফিকেশন",

@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
         template: "%s | Smart craft corner",
       },
       description:
-        "Smart craft corner is a luxury yet effortless women's fashion destination for Bangladesh, featuring premium festive and everyday edits with nationwide delivery.",
+        "Smart craft corner — premium women's fashion for Bangladesh. Curated collections, festive and everyday wear, with nationwide delivery.",
       keywords: [
         "Smart craft corner",
         "Bangladesh womens fashion",

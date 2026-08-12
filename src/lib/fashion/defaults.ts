@@ -10,14 +10,14 @@ export const defaultSettings: StoreSettings = {
     { id: "d1", district: "Dhaka", fee: 80, minOrderForFree: 7000, active: true },
     { id: "d2", district: "*", fee: 150, minOrderForFree: 10000, active: true },
   ],
-  heroTitle: "সহজ luxury, refined style, modern Bangladesh.",
-  heroTitleEn: "Effortless luxury, refined style, modern Bangladesh.",
-  heroSubtitle: "বাংলাদেশি নারীদের জন্য curated premium fashion destination",
-  heroSubtitleEn: "A curated premium fashion destination for Bangladeshi women",
+  heroTitle: "প্রিমিয়াম ফ্যাশন, আপনার স্টাইলে।",
+  heroTitleEn: "Premium fashion, your way.",
+  heroSubtitle: "বাংলাদেশি নারীদের জন্য কিউরেটেড কালেকশন",
+  heroSubtitleEn: "Curated collections for Bangladeshi women",
   heroDescription:
-    "Smart craft corner এমন একটি e-commerce experience যেখানে premium fabric, soft color palette, festive elegance, আর daily sophistication—সবকিছু একসাথে পাওয়া যায়।",
+    "Smart craft corner-এ premium fabric, soft colors, festive ও daily wear—সব এক জায়গায়।",
   heroDescriptionEn:
-    "Smart craft corner is an e-commerce experience where premium fabric, a soft color palette, festive elegance, and daily sophistication come together.",
+    "Smart craft corner brings premium fabric, soft colors, and festive or daily wear in one place.",
   heroCtaPrimaryLabel: "কালেকশন দেখুন",
   heroCtaPrimaryLabelEn: "Shop collections",
   heroCtaPrimaryHref: "/collections",
@@ -41,9 +41,9 @@ export const defaultSettings: StoreSettings = {
   facebookUrl: "",
   instagramUrl: "",
   footerText:
-    "বাংলাদেশি নারীদের জন্য curated luxury fashion—effortless browsing, premium presentation, এবং trusted delivery experience।",
+    "বাংলাদেশি নারীদের জন্য কিউরেটেড প্রিমিয়াম ফ্যাশন—সহজ অর্ডার, সুন্দর কালেকশন, এবং নির্ভরযোগ্য ডেলিভারি।",
   footerTextEn:
-    "Curated luxury fashion for Bangladeshi women—effortless browsing, premium presentation, and trusted delivery.",
+    "Curated premium fashion for Bangladeshi women—easy ordering, beautiful collections, and reliable delivery.",
   aboutTitle: "বাংলাদেশি নারীদের জন্য স্বাভাবিক লাক্সারি",
   aboutTitleEn: "Luxury that feels natural for Bangladeshi women",
   aboutSubtitle: "আমাদের গল্প",
