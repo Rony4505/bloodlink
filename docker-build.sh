@@ -8,10 +8,18 @@ NEXT_PUBLIC_APP_MODE="${NEXT_PUBLIC_APP_MODE:-$APP_MODE}"
 NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://bloodlinkbd.org}"
 
 case "${RAILWAY_SERVICE_NAME:-}" in
-  *craft*|*Craft*|smart-craft-corner)
+  *craft*|*Craft*|smart-craft-corner|*smartcraft*|*Smartcraft*)
     APP_MODE=fashion
     NEXT_PUBLIC_APP_MODE=fashion
     NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://smartcraftcorner.up.railway.app}"
+    ;;
+esac
+
+# Fallback when service name is generic but site URL is Smart craft.
+case "${NEXT_PUBLIC_SITE_URL:-}" in
+  *smartcraftcorner*)
+    APP_MODE=fashion
+    NEXT_PUBLIC_APP_MODE=fashion
     ;;
 esac
 
