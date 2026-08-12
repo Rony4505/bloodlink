@@ -454,6 +454,11 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 
 export async function updateStoreSettings(partial: Partial<StoreSettings>): Promise<StoreSettings> {
   const store = await ensureStore();
+  const priorCounts = {
+    products: store.products.length,
+    orders: store.orders.length,
+    customers: store.customers.length,
+  };
   const current = store.settings;
   const next: StoreSettings = { ...current };
 
@@ -477,7 +482,7 @@ export async function updateStoreSettings(partial: Partial<StoreSettings>): Prom
     faqsEn: partial.faqsEn ?? current.faqsEn,
   };
   purgeExpired(store);
-  await writeStore(store);
+  await writeStore(store, priorCounts);
   return store.settings;
 }
 
@@ -581,6 +586,11 @@ function resolveProductPrice(input: ProductInput, settings: StoreSettings): Prod
     colors: input.colors,
     tone: input.tone,
     imageUrl: input.imageUrl,
+    imageUrls: input.imageUrls?.length
+      ? input.imageUrls.filter(Boolean)
+      : input.imageUrl
+        ? [input.imageUrl]
+        : [],
     stock,
     featured: input.featured,
     inStock: stock > 0,

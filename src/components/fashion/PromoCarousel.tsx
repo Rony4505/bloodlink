@@ -6,6 +6,7 @@ import type { CarouselSlide } from "@/lib/fashion/carousel-slides";
 import type { Coupon, Product } from "@/lib/fashion/types";
 import { formatBdt } from "@/lib/fashion/format";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
+import { FashionModalPortal } from "./FashionModalPortal";
 
 export function PromoCarousel({
   slides,
@@ -138,8 +139,11 @@ export function PromoCarousel({
       ) : null}
 
       {selectedCoupon ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#2b1d19]/50 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-[2rem] border border-[#e8c4b0]/60 bg-white p-6 shadow-2xl">
+        <FashionModalPortal open onBackdropClick={() => setSelectedCoupon(null)}>
+          <div
+            className="w-full max-w-md rounded-[2rem] border border-[#e8c4b0]/60 bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#9b7766]">
@@ -210,7 +214,7 @@ export function PromoCarousel({
               {fc.close}
             </button>
           </div>
-        </div>
+        </FashionModalPortal>
       ) : null}
     </section>
   );
