@@ -53,6 +53,32 @@ Do **not** put fashion env vars as the site mode on BloodLink.
 - Username: `founder`
 - Password: `rony4505` (or your `FASHION_ADMIN_PASSWORD`)
 
+## Important: which GitHub repo is connected?
+
+Railway Smart craft service must deploy from **`Rony4505/bloodlink`** (where UX updates are merged).
+
+If your service still points at **`Rony4505/smart-craft-corner`**, that repo is an old snapshot — live will not show new changes until you either:
+
+### Option A — Switch Railway to bloodlink (recommended)
+
+1. Railway → Smart craft service → **Settings → Source**
+2. Connect repo **`Rony4505/bloodlink`**, branch **`main`**
+3. **Settings → Build** → Dockerfile Path = **`Dockerfile.fashion`**
+   (or Config-as-code = **`railway.smartcraft.toml`**)
+4. **Deployments → Redeploy**
+
+### Option B — Update smart-craft-corner repo from bloodlink
+
+On your computer (logged into GitHub):
+
+```bash
+git clone https://github.com/Rony4505/bloodlink.git
+cd bloodlink
+git push https://github.com/Rony4505/smart-craft-corner.git main:main
+```
+
+Then Railway → **Redeploy** (Dockerfile path can stay `Dockerfile` in that repo).
+
 ## Redeploy after code changes
 
 Smart craft is a **separate Railway service** from BloodLink. Pushing to GitHub updates BloodLink automatically only if that service is connected; **Smart craft must be redeployed manually** unless its service also has GitHub auto-deploy on `main`.
