@@ -1,8 +1,9 @@
+# BloodLink deploy config — use root Dockerfile (not Dockerfile.fashion).
+# Smart craft Railway service should override dockerfilePath to Dockerfile.fashion in service settings.
+
 [build]
 builder = "DOCKERFILE"
-# Smart craft Railway service uses this repo — fashion Dockerfile avoids BloodLink Postgres copy failures.
-# BloodLink Railway service: override in service Settings → Build → Dockerfile Path = Dockerfile
-dockerfilePath = "Dockerfile.fashion"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
