@@ -16,11 +16,10 @@ ENV DATA_DIR=/tmp/fashion-build
 ENV APP_MODE=fashion
 ENV NEXT_PUBLIC_APP_MODE=fashion
 ENV NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.up.railway.app
-ARG BUILD_ID=unknown
-ENV BUILD_ID=${BUILD_ID}
+ARG RAILWAY_GIT_COMMIT_SHA=unknown
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build && test -d .next/standalone
+RUN npm run build && test -d .next/standalone && printf '%s' "$RAILWAY_GIT_COMMIT_SHA" > /app/.build-id
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -31,7 +30,8 @@ ENV APP_MODE=fashion
 ENV NEXT_PUBLIC_APP_MODE=fashion
 ENV NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.up.railway.app
 ARG BUILD_ID=unknown
-ENV BUILD_ID=${BUILD_ID}
+ARG RAILWAY_GIT_COMMIT_SHA=unknown
+ENV BUILD_ID=${RAILWAY_GIT_COMMIT_SHA:-${BUILD_ID}}
 
 RUN apk add --no-cache su-exec \
   && addgroup -S nodejs && adduser -S nextjs -G nodejs \
@@ -41,6 +41,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/.build-id ./.build-id
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
