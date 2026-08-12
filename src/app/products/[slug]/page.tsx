@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FashionShell } from "@/components/fashion/FashionShell";
 import { ProductGrid } from "@/components/fashion/ProductGrid";
-import { ProductImage } from "@/components/fashion/ProductImage";
+import { ProductGalleryCarousel } from "@/components/fashion/ProductGalleryCarousel";
 import { ProductPageDetails } from "@/components/fashion/ProductPageDetails";
 import { ProductReviews } from "@/components/fashion/ProductReviews";
 import { getCategory } from "@/lib/fashion/categories-server";
@@ -37,7 +37,11 @@ export default async function ProductPage({ params }: Props) {
     <FashionShell>
       <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <ProductImage src={product.imageUrl} alt={product.nameBn} className="h-[34rem]" priority />
+          <ProductGalleryCarousel
+            images={product.imageUrls?.length ? product.imageUrls : [product.imageUrl]}
+            alt={product.nameBn}
+            className="h-[22rem] sm:h-[28rem] lg:h-[34rem]"
+          />
           <ProductPageDetails product={product} categoryTitle={category?.titleBn} />
         </div>
 

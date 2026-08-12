@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { access, copyFile, mkdir, readFile, rename, writeFile } from "fs/promises";
 import bcrypt from "bcryptjs";
 import { computeSellPrice, getEffectivePrice } from "./pricing";
 import { defaultCategories, defaultSettings } from "./defaults";
@@ -54,6 +54,64 @@ function dataDir(): string {
 
 function storePath(): string {
   return fashionStorePath();
+}
+
+function storeBackupPath(): string {
+  return `${storePath()}.bak`;
+}
+
+function storeTempPath(): string {
+  return `${storePath()}.tmp`;
+}
+
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readStoreJson(): Promise<Partial<FashionStore>> {
+  const primary = storePath();
+  try {
+    const raw = await readFile(primary, "utf8");
+    return JSON.parse(raw) as Partial<FashionStore>;
+  } catch (error) {
+    const backup = storeBackupPath();
+    if (await fileExists(backup)) {
+      try {
+        const raw = await readFile(backup, "utf8");
+        const parsed = JSON.parse(raw) as Partial<FashionStore>;
+        console.warn("[fashion-store] recovered from backup after primary read failed");
+        return parsed;
+      } catch {
+        /* fall through */
+      }
+    }
+    throw error;
+  }
+}
+
+async function buildStoreFromParsed(parsed: Partial<FashionStore>): Promise<FashionStore> {
+  const settings = migrateSettings(parsed.settings);
+  const products = (Array.isArray(parsed.products) ? parsed.products : rawSeedProducts).map((p) =>
+    migrateProduct(p, settings),
+  );
+  return {
+    settings,
+    categories: Array.isArray(parsed.categories) ? parsed.categories : defaultCategories,
+    products,
+    customers: parsed.customers ?? [],
+    orders: (parsed.orders ?? []).map(migrateOrder),
+    coupons: Array.isArray(parsed.coupons) ? parsed.coupons : defaultCoupons,
+    reviews: parsed.reviews ?? [],
+    userNotifications: parsed.userNotifications ?? [],
+    adminNotifications: parsed.adminNotifications ?? [],
+    adminPasswordHash:
+      parsed.adminPasswordHash || (await bcrypt.hash(defaultAdminPassword(), 12)),
+  };
 }
 
 function isExpired(iso?: string): boolean {
@@ -152,6 +210,11 @@ function migrateProduct(product: Partial<Product>, settings: StoreSettings): Pro
     colors: product.colors ?? [{ name: "Default", hex: "#f8efe9" }],
     tone: product.tone ?? "bg-[#f8efe9]",
     imageUrl: product.imageUrl!,
+    imageUrls: product.imageUrls?.length
+      ? product.imageUrls
+      : product.imageUrl
+        ? [product.imageUrl]
+        : [],
     stock,
     featured: product.featured,
     inStock: stock > 0,
@@ -251,33 +314,10 @@ function migrateOrder(order: Partial<FashionOrder>): FashionOrder {
 }
 
 async function ensureStore(): Promise<FashionStore> {
-  try {
-    const raw = await readFile(storePath(), "utf8");
-    const parsed = JSON.parse(raw) as Partial<FashionStore>;
-    const settings = migrateSettings(parsed.settings);
-    const products = (parsed.products?.length ? parsed.products : rawSeedProducts).map((p) =>
-      migrateProduct(p, settings),
-    );
-    const store: FashionStore = {
-      settings,
-      categories: parsed.categories?.length ? parsed.categories : defaultCategories,
-      products,
-      customers: parsed.customers ?? [],
-      orders: (parsed.orders ?? []).map(migrateOrder),
-      coupons: parsed.coupons?.length ? parsed.coupons : defaultCoupons,
-      reviews: parsed.reviews ?? [],
-      userNotifications: parsed.userNotifications ?? [],
-      adminNotifications: parsed.adminNotifications ?? [],
-      adminPasswordHash:
-        parsed.adminPasswordHash ||
-        (await bcrypt.hash(defaultAdminPassword(), 12)),
-    };
-    if (purgeExpired(store)) await writeStore(store);
-    if (normalizeProductSlugs(store)) await writeStore(store);
-    if (await syncAdminPasswordHash(store)) await writeStore(store);
-    return store;
-  } catch {
-    await mkdir(dataDir(), { recursive: true });
+  await mkdir(dataDir(), { recursive: true });
+  const primary = storePath();
+
+  if (!(await fileExists(primary))) {
     const settings = defaultSettings;
     const initial: FashionStore = {
       settings,
@@ -294,11 +334,30 @@ async function ensureStore(): Promise<FashionStore> {
     await writeStore(initial);
     return initial;
   }
+
+  try {
+    const parsed = await readStoreJson();
+    const store = await buildStoreFromParsed(parsed);
+    if (purgeExpired(store)) await writeStore(store);
+    if (normalizeProductSlugs(store)) await writeStore(store);
+    if (await syncAdminPasswordHash(store)) await writeStore(store);
+    return store;
+  } catch (error) {
+    console.error("[fashion-store] failed to load store — refusing to reset data", error);
+    throw new Error("Store data could not be loaded. Check DATA_DIR volume mount.");
+  }
 }
 
 async function writeStore(store: FashionStore): Promise<void> {
   await mkdir(dataDir(), { recursive: true });
-  await writeFile(storePath(), JSON.stringify(store, null, 2), "utf8");
+  const primary = storePath();
+  const temp = storeTempPath();
+  const payload = JSON.stringify(store, null, 2);
+  await writeFile(temp, payload, "utf8");
+  if (await fileExists(primary)) {
+    await copyFile(primary, storeBackupPath());
+  }
+  await rename(temp, primary);
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
@@ -706,6 +765,39 @@ export async function findCustomerByEmail(email: string): Promise<FashionCustome
   const customers = await listCustomers();
   return customers.find(
     (customer) => customer.email.toLowerCase() === email.trim().toLowerCase(),
+  );
+}
+
+export async function findCustomerByPhone(phone: string): Promise<FashionCustomer | undefined> {
+  const normalized = phone.trim().replace(/\s+/g, "");
+  const customers = await listCustomers();
+  return customers.find((customer) => customer.phone.replace(/\s+/g, "") === normalized);
+}
+
+export async function updateCustomerPassword(
+  customerId: string,
+  newPassword: string,
+): Promise<boolean> {
+  const store = await ensureStore();
+  const customer = store.customers.find((c) => c.id === customerId);
+  if (!customer) return false;
+  customer.passwordHash = await bcrypt.hash(newPassword, 12);
+  await writeStore(store);
+  return true;
+}
+
+export async function updateAdminPassword(newPassword: string): Promise<void> {
+  const store = await ensureStore();
+  store.adminPasswordHash = await bcrypt.hash(newPassword, 12);
+  await writeStore(store);
+}
+
+export async function getAdminUsername(): Promise<string> {
+  const store = await ensureStore();
+  return (
+    store.settings.adminUsername?.trim() ||
+    process.env.FASHION_ADMIN_USERNAME?.trim() ||
+    "founder"
   );
 }
 

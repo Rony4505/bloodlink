@@ -20,21 +20,21 @@ export function ProductCard({ product }: { product: Product }) {
     <article className="group overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_24px_80px_rgba(48,27,20,0.06)] transition hover:-translate-y-1">
       <Link href={`/products/${product.slug}`} className="block">
         <div className={`relative ${product.tone}`}>
-          <ProductImage src={product.imageUrl} alt={title} className="h-72 rounded-none" />
+          <ProductImage src={product.imageUrl} alt={title} className="h-40 rounded-none sm:h-56 md:h-72" />
           {(product.offerActive ? product.offerLabel : product.label) ? (
             <div className="absolute right-5 top-5 rounded-full bg-[linear-gradient(135deg,#2b1d19,#8b6456)] px-3 py-1 text-xs font-semibold text-[#f4d4c2] shadow-sm">
               {product.offerActive ? product.offerLabel ?? "অফার" : product.label}
             </div>
           ) : null}
         </div>
-        <div className="p-6">
-          <div className="flex items-start justify-between gap-4">
+        <div className="p-3 sm:p-6">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div>
-              <h3 className="font-[family-name:var(--font-display)] text-2xl font-bold">{title}</h3>
-              <p className="mt-1 text-sm text-[#8b6456]">{subtitle}</p>
+              <h3 className="font-[family-name:var(--font-display)] text-base font-bold leading-snug sm:text-2xl">{title}</h3>
+              <p className="mt-0.5 hidden text-sm text-[#8b6456] sm:block">{subtitle}</p>
             </div>
-            <div className="text-right">
-              <p className="text-base font-semibold text-[#8f624e]">
+            <div className="text-left sm:text-right">
+              <p className="text-sm font-semibold text-[#8f624e] sm:text-base">
                 {formatBdt(price)}
               </p>
               {showStrike && strikePrice ? (
@@ -44,7 +44,7 @@ export function ProductCard({ product }: { product: Product }) {
               ) : null}
             </div>
           </div>
-          <p className="mt-3 line-clamp-2 text-sm leading-7 text-[#6c5247]">{description}</p>
+          <p className="mt-2 line-clamp-2 hidden text-sm leading-7 text-[#6c5247] sm:block">{description}</p>
         </div>
       </Link>
     </article>

@@ -15,5 +15,14 @@ export async function GET() {
     getActivePromoBanners(),
     listPublicCoupons(),
   ]);
-  return NextResponse.json({ settings, offers, newProducts, banners, coupons });
+  const promoFingerprint = [
+    ...coupons.map((c) => `c:${c.id}:${c.code}`),
+    ...offers.map((p) => `o:${p.id}`),
+    ...newProducts.filter((p) => p.offerActive).map((p) => `p:${p.id}`),
+    ...banners.map((b) => `b:${b.id}`),
+  ]
+    .sort()
+    .join("|");
+
+  return NextResponse.json({ settings, offers, newProducts, banners, coupons, promoFingerprint });
 }
