@@ -1,0 +1,11 @@
+# Use this config when Smart craft Railway service connects to the bloodlink repo.
+# In Railway: Settings → Build → Config-as-code path = railway.smartcraft.toml
+# OR manually set Dockerfile Path = Dockerfile.fashion
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.fashion"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
