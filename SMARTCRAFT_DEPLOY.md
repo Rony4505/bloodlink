@@ -53,8 +53,12 @@ Do **not** put fashion env vars as the site mode on BloodLink.
 - Username: `founder`
 - Password: `rony4505` (or your `FASHION_ADMIN_PASSWORD`)
 
-## Check
+## Redeploy after code changes
 
-- https://bloodlinkbd.org → BloodLink only (`/shop` must 404)
-- https://smartcraftcorner.com → Smart craft corner home
-- https://smartcraftcorner.com/find → 404 (no BloodLink pages)
+Smart craft is a **separate Railway service** from BloodLink. Pushing to GitHub updates BloodLink automatically only if that service is connected; **Smart craft must be redeployed manually** unless its service also has GitHub auto-deploy on `main`.
+
+1. Railway → project → **smart-craft-corner** (or your fashion service name)
+2. **Settings → Build** → Dockerfile Path = `Dockerfile.fashion`
+3. **Deployments** → **Redeploy** (latest commit on `main`)
+4. Verify: `https://smartcraftcorner.up.railway.app/api/health` should show `"appMode":"fashion"` and a recent `buildId`
+
