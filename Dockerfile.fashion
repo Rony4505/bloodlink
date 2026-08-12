@@ -1,5 +1,5 @@
-# Smart craft corner only — use this Dockerfile path in Railway service settings.
-# BloodLink service keeps using the root Dockerfile.
+# Smart craft: set Settings → Build → Dockerfile Path = Dockerfile.fashion
+# Redeploy this service after merging UX changes (separate from BloodLink service).
 
 FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
@@ -16,6 +16,8 @@ ENV DATA_DIR=/tmp/fashion-build
 ENV APP_MODE=fashion
 ENV NEXT_PUBLIC_APP_MODE=fashion
 ENV NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.up.railway.app
+ARG BUILD_ID=unknown
+ENV BUILD_ID=${BUILD_ID}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build && test -d .next/standalone
@@ -28,6 +30,8 @@ ENV DATA_DIR=/app/data
 ENV APP_MODE=fashion
 ENV NEXT_PUBLIC_APP_MODE=fashion
 ENV NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.up.railway.app
+ARG BUILD_ID=unknown
+ENV BUILD_ID=${BUILD_ID}
 
 RUN apk add --no-cache su-exec \
   && addgroup -S nodejs && adduser -S nextjs -G nodejs \
