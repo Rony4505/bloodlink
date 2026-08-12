@@ -53,7 +53,7 @@ export async function FashionHomePage() {
         <div className="relative z-20 mx-auto max-w-7xl px-5 pb-16 pt-14 md:px-8 md:pb-24 md:pt-16">
           <FashionHeader variant="light" />
 
-          <div className="relative z-0 mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
+          <div className="relative mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
             <PromoCarousel slides={carouselSlides} coupons={displayCoupons} products={products} />
           </div>
 

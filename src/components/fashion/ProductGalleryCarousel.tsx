@@ -82,11 +82,16 @@ function ImageSlides({
       onClick={onImageClick}
     >
       <div
-        className="flex h-full transition-transform duration-700 ease-in-out will-change-transform"
-        style={{ transform: `translateX(-${index * 100}%)` }}
+        className="flex h-full w-full transition-transform duration-700 ease-in-out will-change-transform"
+        style={{
+          transform:
+            images.length > 1
+              ? `translateX(-${(index * 100) / images.length}%)`
+              : undefined,
+        }}
       >
         {images.map((src, imageIndex) => (
-          <div key={`${src}-${imageIndex}`} className="h-full w-full shrink-0">
+          <div key={`${src}-${imageIndex}`} className="h-full min-w-full flex-[0_0_100%] shrink-0">
             <ProductImage
               src={src}
               alt={`${alt} ${imageIndex + 1}`}
@@ -127,29 +132,20 @@ function ImageSlides({
   );
 }
 
+const AUTO_SCROLL_MS = 2000;
+
 function useAutoGallery(images: string[], intervalMs: number, enabled: boolean) {
   const [index, setIndex] = useState(0);
-  const [direction, setDirection] = useState<1 | -1>(1);
 
   useEffect(() => {
     setIndex(0);
-    setDirection(1);
   }, [images]);
 
   const step = useCallback(
     (delta: number) => {
       setIndex((current) => {
-        const next = current + delta;
-        if (next >= images.length - 1) {
-          setDirection(-1);
-          return images.length - 1;
-        }
-        if (next <= 0) {
-          setDirection(1);
-          return 0;
-        }
-        setDirection(delta > 0 ? 1 : -1);
-        return next;
+        if (!images.length) return 0;
+        return (current + delta + images.length) % images.length;
       });
     },
     [images.length],
@@ -157,9 +153,11 @@ function useAutoGallery(images: string[], intervalMs: number, enabled: boolean) 
 
   useEffect(() => {
     if (!enabled || images.length <= 1) return;
-    const id = window.setInterval(() => step(direction), intervalMs);
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % images.length);
+    }, intervalMs);
     return () => window.clearInterval(id);
-  }, [direction, enabled, images.length, intervalMs, step]);
+  }, [enabled, images.length, intervalMs]);
 
   return { index, setIndex, step };
 }
@@ -174,7 +172,7 @@ export function ProductGalleryCarousel({
   className?: string;
 }) {
   const [lightbox, setLightbox] = useState(false);
-  const { index, setIndex, step } = useAutoGallery(images, 3200, !lightbox);
+  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, !lightbox);
 
   useEffect(() => {
     if (!lightbox) return;
@@ -236,14 +234,14 @@ export function ProductCardGallery({
   className?: string;
 }) {
   const images = getProductImages(product);
-  const { index, setIndex, step } = useAutoGallery(images, 2800, true);
+  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, true);
 
   if (images.length <= 1) {
     return <ProductImage src={images[0] ?? ""} alt={alt} className={className} />;
   }
 
   return (
-    <div className={`overflow-hidden rounded-none ${className}`}>
+    <div className={`relative overflow-hidden rounded-none ${className}`}>
       <ImageSlides
         images={images}
         alt={alt}

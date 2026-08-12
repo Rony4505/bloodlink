@@ -5,6 +5,20 @@ import Link from "next/link";
 import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
 import type { Coupon, Product } from "@/lib/fashion/types";
+import { FashionModalPortal } from "./FashionModalPortal";
+
+function uniqueProducts(...lists: Product[][]): Product[] {
+  const seen = new Set<string>();
+  const merged: Product[] = [];
+  for (const list of lists) {
+    for (const product of list) {
+      if (seen.has(product.id)) continue;
+      seen.add(product.id);
+      merged.push(product);
+    }
+  }
+  return merged;
+}
 
 type PopupData = {
   offers: Product[];
@@ -57,13 +71,16 @@ export function SiteEntryPopup() {
 
   if (!open || !data) return null;
 
-  const productItems = [...data.offers, ...data.newProducts].slice(0, 3);
+  const productItems = uniqueProducts(data.offers, data.newProducts).slice(0, 3);
   const coupons = data.coupons.slice(0, 4);
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-        <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-[#d4b896]/30 bg-[linear-gradient(165deg,#fffaf7,#f5e8dc)] p-6 shadow-2xl">
+      <FashionModalPortal open={open} onBackdropClick={() => setOpen(false)}>
+        <div
+          className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-[#d4b896]/30 bg-[linear-gradient(165deg,#fffaf7,#f5e8dc)] p-6 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#9b7766]">
@@ -141,11 +158,14 @@ export function SiteEntryPopup() {
             </div>
           ) : null}
         </div>
-      </div>
+      </FashionModalPortal>
 
       {selectedCoupon ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-[#d4b896]/40 bg-white p-6 shadow-2xl">
+        <FashionModalPortal open onBackdropClick={() => setSelectedCoupon(null)}>
+          <div
+            className="w-full max-w-md rounded-[2rem] border border-[#d4b896]/40 bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[#2b1d19]">
                 {selectedCoupon.code}
@@ -191,7 +211,7 @@ export function SiteEntryPopup() {
               কেনাকাটা শুরু করুন
             </Link>
           </div>
-        </div>
+        </FashionModalPortal>
       ) : null}
     </>
   );
