@@ -217,6 +217,18 @@ export const dictionaries = {
     storageNotReady: "Postgres not connected yet — data can reset on deploy",
     storageVolumeTip:
       "Also keep a Volume on bloodlink mounted at /app/data so this saved URL survives redeploys.",
+    backupTitle: "Backup & restore",
+    backupBody:
+      "Download a full copy of donor data to your phone or computer. If Postgres is deleted later, upload this file here to restore everything.",
+    backupDownload: "Download backup now",
+    backupRestoreLabel: "Restore from backup file",
+    backupRestoreHint:
+      "Choose a bloodlink-backup-*.json file you saved earlier. This replaces live data with the backup.",
+    backupRestoreButton: "Restore backup",
+    backupRestoreSuccess: "Backup restored successfully.",
+    backupRestoreFailed: "Could not restore backup.",
+    backupRotatingHint:
+      "The server also keeps automatic copies on the Volume (/app/data/backups) every few hours.",
     futureFeatures: "Future platform options",
     futureFeaturesBody:
       "Turn these on when you are ready. They stay in Settings until you launch each service.",
@@ -509,6 +521,18 @@ export const dictionaries = {
     storageNotReady: "Postgres এখনো কানেক্ট হয়নি — ডিপ্লয়ে ডেটা রিসেট হতে পারে",
     storageVolumeTip:
       "bloodlink সার্ভিসে Volume রাখুন, mount path: /app/data — তাহলে সেভ করা URL redeploy-এও থাকবে।",
+    backupTitle: "ব্যাকআপ ও রিস্টোর",
+    backupBody:
+      "ডোনার ডেটার পুরো কপি ফোন/কম্পিউটারে ডাউনলোড করুন। পরে Postgres delete হলেও এই ফাইল আপলোড করে সব ফিরিয়ে আনতে পারবেন।",
+    backupDownload: "এখনই ব্যাকআপ ডাউনলোড",
+    backupRestoreLabel: "ব্যাকআপ ফাইল থেকে রিস্টোর",
+    backupRestoreHint:
+      "আগে সেভ করা bloodlink-backup-*.json ফাইল বেছে নিন। এতে live ডেটা ব্যাকআপ দিয়ে replace হবে।",
+    backupRestoreButton: "ব্যাকআপ রিস্টোর",
+    backupRestoreSuccess: "ব্যাকআপ সফলভাবে রিস্টোর হয়েছে।",
+    backupRestoreFailed: "ব্যাকআপ রিস্টোর করা যায়নি।",
+    backupRotatingHint:
+      "সার্ভার Volume-এ (/app/data/backups) প্রতি কয়েক ঘণ্টায় automatic backup-ও রাখে।",
     futureFeatures: "ভবিষ্যৎ প্ল্যাটফর্ম অপশন",
     futureFeaturesBody:
       "প্রস্তুত হলে চালু করুন। প্রতিটি সার্ভিস লঞ্চের আগে Settings-এ সংরক্ষিত থাকবে।",

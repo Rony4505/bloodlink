@@ -97,6 +97,8 @@ export function AdminPanel() {
   const [storageBackend, setStorageBackend] = useState("file");
   const [storageHost, setStorageHost] = useState("");
   const [storageSaving, setStorageSaving] = useState(false);
+  const [backupRestoring, setBackupRestoring] = useState(false);
+  const [backupFile, setBackupFile] = useState<File | null>(null);
   const [platformOptions, setPlatformOptions] = useState({
     hospitalAccess: { enabled: false, notes: "" },
     orgAds: { enabled: false, notes: "" },
@@ -425,6 +427,66 @@ export function AdminPanel() {
       setSettingsMsg(t.errorGeneric);
     } finally {
       setStorageSaving(false);
+    }
+  }
+
+  async function downloadBackup() {
+    setSettingsMsg("");
+    try {
+      const res = await fetch("/api/admin/backup");
+      if (!res.ok) {
+        setSettingsMsg(t.backupRestoreFailed);
+        return;
+      }
+      const blob = await res.blob();
+      const stamp = new Date().toISOString().slice(0, 10);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `bloodlink-backup-${stamp}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setSettingsMsg(t.backupDownload);
+    } catch {
+      setSettingsMsg(t.backupRestoreFailed);
+    }
+  }
+
+  async function restoreBackup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!backupFile) return;
+    if (
+      !window.confirm(
+        "Restore this backup? Current live data will be replaced with the backup file.",
+      )
+    ) {
+      return;
+    }
+    setBackupRestoring(true);
+    setSettingsMsg("");
+    try {
+      const text = await backupFile.text();
+      const payload = JSON.parse(text);
+      const res = await fetch("/api/admin/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSettingsMsg(data.error || t.backupRestoreFailed);
+        return;
+      }
+      setSettingsMsg(
+        `${t.backupRestoreSuccess} (${data.donorCount ?? 0} donors)`,
+      );
+      setBackupFile(null);
+      await loadData();
+      await loadStorage();
+    } catch {
+      setSettingsMsg(t.backupRestoreFailed);
+    } finally {
+      setBackupRestoring(false);
     }
   }
 
@@ -824,6 +886,46 @@ export function AdminPanel() {
                 disabled={storageSaving}
               >
                 {storageSaving ? t.loading : t.storageSave}
+              </button>
+            </form>
+          </section>
+
+          <section className="space-y-3 rounded-2xl border border-[var(--line)] bg-white/80 p-5">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
+              {t.backupTitle}
+            </h2>
+            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+              {t.backupBody}
+            </p>
+            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+              {t.backupRotatingHint}
+            </p>
+            <button
+              type="button"
+              onClick={() => void downloadBackup()}
+              className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood-deep)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+            >
+              {t.backupDownload}
+            </button>
+            <form onSubmit={restoreBackup} className="space-y-3 border-t border-[var(--line)] pt-4">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">{t.backupRestoreLabel}</span>
+                <input
+                  className="field"
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
+                />
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  {t.backupRestoreHint}
+                </span>
+              </label>
+              <button
+                type="submit"
+                className="inline-flex w-full items-center justify-center rounded-full border border-[var(--blood-deep)] px-5 py-3 font-semibold text-[var(--blood-deep)] transition hover:bg-[color-mix(in_oklab,var(--blood)_8%,white)] disabled:opacity-55"
+                disabled={backupRestoring || !backupFile}
+              >
+                {backupRestoring ? t.loading : t.backupRestoreButton}
               </button>
             </form>
           </section>
