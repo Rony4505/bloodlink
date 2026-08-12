@@ -363,8 +363,12 @@ export function FashionAdminPanel() {
     const data = await res.json();
     setUploading(false);
     if (!data.url) return;
-    if (target === "product") setForm((c) => ({ ...c, imageUrl: data.url }));
-    else if (target === "banner" && settings && bannerId) {
+    if (target === "product") {
+      setForm((c) => {
+        const urls = [...(c.imageUrls ?? (c.imageUrl ? [c.imageUrl] : [])), data.url];
+        return { ...c, imageUrl: urls[0] ?? data.url, imageUrls: urls };
+      });
+    } else if (target === "banner" && settings && bannerId) {
       setSettings({ ...settings, promoBanners: (settings.promoBanners ?? []).map((b) => b.id === bannerId ? { ...b, imageUrl: data.url } : b) });
     }
   }
@@ -742,21 +746,42 @@ export function FashionAdminPanel() {
       {/* Order Detail Popup */}
       {selectedOrder ? (
         <div className="fixed inset-0 z-[85] flex items-center justify-center bg-[#2b1d19]/55 p-4 backdrop-blur-md">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-[#a8c8ef]/60 bg-[linear-gradient(145deg,#eef6ff,#f8fbff)] p-6 shadow-2xl">
+          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-[#a8c8ef]/60 bg-[linear-gradient(145deg,#eef6ff,#f8fbff)] p-6 shadow-2xl">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold">{selectedOrder.customerName}</h2>
                 <p className="text-sm text-[#3d6a9e]">Tracking: <strong>{selectedOrder.trackingNumber}</strong></p>
                 <p className="text-xs text-[#6f554a]">{selectedOrder.id} · {selectedOrder.phone}</p>
               </div>
-              <button type="button" onClick={() => setSelectedOrder(null)} className="rounded-full bg-white/80 px-3 py-1 text-sm font-semibold">✕</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingStatus(null);
+                  setSelectedOrder(null);
+                }}
+                className="rounded-full bg-white/80 px-3 py-1 text-sm font-semibold"
+              >
+                ✕
+              </button>
             </div>
             <p className="mt-3 text-sm">{selectedOrder.address}, {selectedOrder.district}</p>
             <p className="mt-2 font-semibold">{copy.orderStatus[selectedOrder.status]} · {formatBdt(selectedOrder.total)}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#3d6a9e]">ট্র্যাকিং স্ট্যাটাস</p>
+            <div className="mt-2 flex flex-wrap gap-2">
               {statusOptions.map((st) => (
-                <button key={st} type="button" onClick={() => setPendingStatus({ orderId: selectedOrder.id, status: st })}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${selectedOrder.status === st ? "bg-[#a8c8ef] text-[#3d6a9e]" : "bg-white border border-black/8"}`}>
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => {
+                    if (selectedOrder.status === st) return;
+                    setPendingStatus({ orderId: selectedOrder.id, status: st });
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    selectedOrder.status === st
+                      ? "bg-[#a8c8ef] text-[#3d6a9e] ring-2 ring-[#3d6a9e]/30"
+                      : "bg-white border border-black/8 hover:border-[#a8c8ef]"
+                  }`}
+                >
                   {copy.orderStatus[st]}
                 </button>
               ))}
@@ -769,6 +794,35 @@ export function FashionAdminPanel() {
             <div className="mt-4">
               <FashionButton variant="secondary" onClick={() => setInvoiceOrder(selectedOrder)}>Invoice দেখুন</FashionButton>
             </div>
+
+            {pendingStatus?.orderId === selectedOrder.id ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[2rem] bg-[#1a2840]/50 p-4 backdrop-blur-[3px]">
+                <div className="w-full max-w-sm rounded-2xl border border-[#a8c8ef]/70 bg-white p-5 shadow-2xl">
+                  <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-[#2b1d19]">
+                    স্ট্যাটাস নিশ্চিত করুন
+                  </h3>
+                  <p className="mt-2 text-sm leading-7 text-[#6f554a]">
+                    আপনি কি <strong>{copy.orderStatus[pendingStatus.status]}</strong> স্ট্যাটাস সেট করতে চান?
+                  </p>
+                  <div className="mt-5 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPendingStatus(null)}
+                      className="flex-1 rounded-full border border-black/10 bg-[#faf4f0] px-4 py-3 text-sm font-semibold"
+                    >
+                      না
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void confirmOrderStatus()}
+                      className="flex-1 rounded-full bg-[linear-gradient(135deg,#a8c8ef,#7eb0e8)] px-4 py-3 text-sm font-semibold text-[#1a3a5c] shadow-md"
+                    >
+                      হ্যাঁ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -1223,15 +1277,38 @@ export function FashionAdminPanel() {
                 <input className="field" type="number" placeholder="ছাড় %" value={form.offerDiscountPercent ?? ""} onChange={(e) => setForm((c) => ({ ...c, offerDiscountPercent: Number(e.target.value) || undefined }))} />
               </div>
             ) : null}
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUpload(f, "product"); }} />
-            <FashionButton type="button" variant="secondary" onClick={() => fileRef.current?.click()} disabled={uploading}>{copy.actions.upload}</FashionButton>
+            <div className="rounded-2xl border border-black/6 bg-white/80 p-4">
+              <p className="text-sm font-semibold text-[#9b7766]">প্রোডাক্ট ছবি (একাধিক যোগ করুন)</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(form.imageUrls?.length ? form.imageUrls : form.imageUrl ? [form.imageUrl] : []).map((url, index) => (
+                  <div key={`${url}-${index}`} className="relative">
+                    <img src={url} alt="" className="h-20 w-20 rounded-xl border border-black/8 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((c) => {
+                          const current = c.imageUrls ?? (c.imageUrl ? [c.imageUrl] : []);
+                          const next = current.filter((_, i) => i !== index);
+                          return { ...c, imageUrls: next, imageUrl: next[0] ?? "" };
+                        });
+                      }}
+                      className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleUpload(f, "product"); e.target.value = ""; }} />
+              <FashionButton type="button" variant="secondary" className="mt-3" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                {uploading ? "আপলোড..." : "+ ছবি যোগ করুন"}
+              </FashionButton>
+            </div>
             <FashionButton type="submit">{copy.actions.save}</FashionButton>
           </form>
         </div>
       ) : null}
 
-      <AdminConfirmModal open={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} onConfirm={confirmOrderStatus}
-        title="ট্র্যাকিং স্ট্যাটাস পরিবর্তন?" message={pendingStatus ? `আপনি কি "${copy.orderStatus[pendingStatus.status]}" স্ট্যাটাস সেট করতে চান?` : ""} confirmLabel="হ্যাঁ" cancelLabel="না" theme="ocean" />
       <AdminConfirmModal open={Boolean(pendingDeleteProduct)} onClose={() => setPendingDeleteProduct(null)} onConfirm={confirmDeleteProduct}
         title="প্রোডাক্ট মুছবেন?" message={pendingDeleteProduct ? `${pendingDeleteProduct.nameBn} স্থায়ীভাবে মুছে ফেলা হবে।` : ""} confirmLabel="মুছুন" theme="rose" />
 

@@ -10,7 +10,23 @@ type PopupData = {
   offers: Product[];
   newProducts: Product[];
   coupons: Coupon[];
+  promoFingerprint: string;
 };
+
+function buildFingerprint(payload: {
+  offers?: Product[];
+  newProducts?: Product[];
+  coupons?: Coupon[];
+  banners?: { id: string }[];
+}): string {
+  const parts = [
+    ...(payload.coupons ?? []).map((c) => `c:${c.id}:${c.code}`),
+    ...(payload.offers ?? []).map((p) => `o:${p.id}`),
+    ...(payload.newProducts ?? []).filter((p) => p.offerActive).map((p) => `p:${p.id}`),
+    ...(payload.banners ?? []).map((b) => `b:${b.id}`),
+  ];
+  return parts.sort().join("|");
+}
 
 export function SiteEntryPopup() {
   const [data, setData] = useState<PopupData | null>(null);
@@ -18,20 +34,23 @@ export function SiteEntryPopup() {
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
 
   useEffect(() => {
-    const seen = sessionStorage.getItem("scc_popup_seen");
-    if (seen) return;
-
     fetch("/api/fashion/storefront")
       .then((r) => r.json())
       .then((payload) => {
         const offers = payload.offers ?? [];
         const newProducts = payload.newProducts ?? [];
         const coupons = payload.coupons ?? [];
-        if (offers.length || newProducts.length || coupons.length) {
-          setData({ offers, newProducts, coupons });
-          setOpen(true);
-          sessionStorage.setItem("scc_popup_seen", "1");
-        }
+        const promoFingerprint =
+          payload.promoFingerprint ?? buildFingerprint({ ...payload, offers, newProducts, coupons });
+
+        if (!offers.length && !newProducts.length && !coupons.length) return;
+
+        const seen = localStorage.getItem("scc_popup_fp");
+        if (seen === promoFingerprint) return;
+
+        setData({ offers, newProducts, coupons, promoFingerprint });
+        setOpen(true);
+        localStorage.setItem("scc_popup_fp", promoFingerprint);
       })
       .catch(() => undefined);
   }, []);
@@ -148,7 +167,7 @@ export function SiteEntryPopup() {
               <p className="mt-2 text-sm leading-7 text-[#6f554a]">{selectedCoupon.description}</p>
             ) : (
               <p className="mt-2 text-sm text-[#6f554a]">
-                চেকআউটে কুপন কোড ব্যবহার করুন: <strong>{selectedCoupon.code}</strong>
+                কার্টে কুপন কোড ব্যবহার করুন: <strong>{selectedCoupon.code}</strong>
               </p>
             )}
             {selectedCoupon.minOrder ? (

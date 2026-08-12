@@ -41,10 +41,10 @@ export async function FashionHomePage() {
       <TopLanguageBar />
       <ChatSupportWidget />
       <AnnouncementBar settings={settings} />
-      <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(circle_at_top_left,#fff6ef,transparent_35%),linear-gradient(135deg,#2c1d1a_0%,#4f342f_48%,#b88b74_100%)]">
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_38%,rgba(255,255,255,0.12)_100%)]" />
-        <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/20 blur-3xl" />
-        <div className="hero-drift pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[#f8e5d6]/10 blur-3xl" />
+      <section className="relative overflow-hidden border-b border-black/5 bg-[radial-gradient(ellipse_at_18%_12%,rgba(255,236,220,0.42),transparent_48%),radial-gradient(ellipse_at_88%_88%,rgba(212,168,154,0.35),transparent_42%),linear-gradient(128deg,#1a1528_0%,#3d2855_36%,#9d6b8a_68%,#f3e6d8_100%)]">
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.1),transparent_42%,rgba(255,248,240,0.14)_100%)]" />
+        <div className="hero-orb pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-[#f4d4c2]/25 blur-3xl" />
+        <div className="hero-drift pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[#c9a0a0]/20 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl px-5 pb-16 pt-14 text-white md:px-8 md:pb-24 md:pt-16">
           <FashionHeader variant="dark" />

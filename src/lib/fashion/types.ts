@@ -161,6 +161,7 @@ export type Product = {
   colors: ProductColor[];
   tone: string;
   imageUrl: string;
+  imageUrls?: string[];
   stock: number;
   featured?: boolean;
   inStock: boolean;

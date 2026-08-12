@@ -40,7 +40,7 @@ export function HomeHeroActions({
 
   return (
     <div className="pt-14 text-white md:pt-16">
-      <span className="inline-flex rounded-full border border-white/25 bg-[#2b1d19]/35 px-4 py-2 text-sm font-medium text-white backdrop-blur">
+      <span className="inline-flex rounded-full border border-white/30 bg-white/12 px-4 py-2 text-sm font-medium text-white backdrop-blur">
         {heroSubtitle}
       </span>
       <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold text-white md:text-7xl">
