@@ -7,9 +7,9 @@ export function uploadsDir(): string {
     configured && configured.trim()
       ? path.isAbsolute(configured)
         ? configured
-        : path.join(process.cwd(), configured)
-      : path.join(process.cwd(), "data");
-  const dir = path.join(base, "uploads");
+        : path.join(/* turbopackIgnore: true */ process.cwd(), configured)
+      : path.join(/* turbopackIgnore: true */ process.cwd(), "data");
+  const dir = path.join(/* turbopackIgnore: true */ base, "uploads");
   mkdirSync(dir, { recursive: true });
   return dir;
 }

@@ -12,9 +12,9 @@ function dataDir(): string {
   if (configured && configured.trim()) {
     return path.isAbsolute(configured)
       ? configured
-      : path.join(process.cwd(), configured);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), configured);
   }
-  return path.join(process.cwd(), "data");
+  return path.join(/* turbopackIgnore: true */ process.cwd(), "data");
 }
 
 function persistUrlPath(): string {
