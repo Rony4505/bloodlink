@@ -1,5 +1,15 @@
 import { randomUUID } from "crypto";
-import { access, copyFile, mkdir, readFile, rename, writeFile } from "fs/promises";
+import {
+  access,
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from "fs/promises";
 import path from "path";
 import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
@@ -85,9 +95,13 @@ const dataDir = configuredDataDir
 const dbPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.json");
 const bakPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.bak.json");
 const tmpPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.tmp.json");
+const backupsDir = path.join(/* turbopackIgnore: true */ dataDir, "backups");
+const MAX_ROTATING_BACKUPS = 30;
+const ROTATING_BACKUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let writeQueue: Promise<void> = Promise.resolve();
 let loggedStoragePath = false;
+let lastRotatingBackupAt = 0;
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -321,6 +335,35 @@ async function ensureDb(): Promise<DatabaseShape> {
   return empty;
 }
 
+async function pruneRotatingBackups(): Promise<void> {
+  try {
+    const names = (await readdir(backupsDir))
+      .filter((name) => name.startsWith("bloodlink-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names.slice(MAX_ROTATING_BACKUPS)) {
+      await unlink(path.join(backupsDir, name)).catch(() => undefined);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function writeRotatingBackup(db: DatabaseShape): Promise<void> {
+  const now = Date.now();
+  if (now - lastRotatingBackupAt < ROTATING_BACKUP_INTERVAL_MS) return;
+  lastRotatingBackupAt = now;
+  try {
+    await mkdir(backupsDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = path.join(backupsDir, `bloodlink-${stamp}.json`);
+    await writeFile(backupPath, JSON.stringify(db, null, 2), "utf8");
+    await pruneRotatingBackups();
+  } catch (err) {
+    console.error("[bloodlink] rotating backup failed:", err);
+  }
+}
+
 async function persistToFile(db: DatabaseShape): Promise<void> {
   await mkdir(dataDir, { recursive: true });
   if (await fileExists(dbPath)) {
@@ -340,6 +383,7 @@ async function persistToFile(db: DatabaseShape): Promise<void> {
   }
   await writeFile(tmpPath, JSON.stringify(db, null, 2), "utf8");
   await rename(tmpPath, dbPath);
+  await writeRotatingBackup(db);
 }
 
 async function persist(db: DatabaseShape): Promise<void> {
@@ -396,6 +440,20 @@ export async function getStorageHealth() {
   const entrypointFlag = runtimeDbFlag();
   const backend =
     usingPostgres && pgOk ? "postgres" : usingPostgres ? "file-fallback" : "file";
+  let rotatingBackupCount = 0;
+  let latestRotatingBackupAt: string | null = null;
+  try {
+    const names = (await readdir(backupsDir)).filter(
+      (name) => name.startsWith("bloodlink-") && name.endsWith(".json"),
+    );
+    rotatingBackupCount = names.length;
+    if (names.length) {
+      const latest = names.sort().at(-1)!;
+      latestRotatingBackupAt = (await stat(path.join(backupsDir, latest))).mtime.toISOString();
+    }
+  } catch {
+    /* ignore */
+  }
   return {
     ok: readable,
     backend,
@@ -406,6 +464,8 @@ export async function getStorageHealth() {
     dbPath,
     mainExists,
     bakExists,
+    rotatingBackupCount,
+    latestRotatingBackupAt,
     postgresOk: pgOk,
     donorCount,
     persistentHint:
@@ -872,6 +932,11 @@ export async function getPrivacyContent(): Promise<{
 }> {
   const admin = await getAdminSettings();
   return { bn: admin.privacyBn, en: admin.privacyEn };
+}
+
+/** Full database snapshot for admin download / disaster recovery. */
+export async function exportDatabaseSnapshot(): Promise<DatabaseShape> {
+  return ensureDb();
 }
 
 /** Admin recovery: import a bloodlink.json / store backup blob. */
