@@ -80,8 +80,8 @@ const configuredDataDir = process.env.DATA_DIR;
 const dataDir = configuredDataDir
   ? path.isAbsolute(configuredDataDir)
     ? configuredDataDir
-    : path.join(process.cwd(), configuredDataDir)
-  : path.join(process.cwd(), "data");
+    : path.join(/* turbopackIgnore: true */ process.cwd(), configuredDataDir)
+  : path.join(/* turbopackIgnore: true */ process.cwd(), "data");
 const dbPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.json");
 const bakPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.bak.json");
 const tmpPath = path.join(/* turbopackIgnore: true */ dataDir, "bloodlink.tmp.json");

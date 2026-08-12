@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     let diskOk = false;
     try {
       const dir = uploadsDir();
-      await writeFile(path.join(dir, name), buffer);
+      await writeFile(path.join(/* turbopackIgnore: true */ dir, name), buffer);
       diskOk = true;
     } catch (err) {
       console.error("[bloodlink] disk upload failed", err);
