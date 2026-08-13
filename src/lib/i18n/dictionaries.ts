@@ -305,7 +305,8 @@ export const dictionaries = {
     saveAppearance: "Save homepage & branding",
     bloodGroupStatsTitle: "Blood groups",
     bloodGroupStatsSub:
-      "See how many registered donors are available or unavailable in each blood group.",
+      "Tap a blood drop to see every registered donor in that group — available and unavailable.",
+    donorsInGroup: "{group} donors",
     selectArea: "Select area / upazila",
     settingsMenuHint: "Tap an option to open it in a popup.",
     savedPopupTitle: "Saved",
@@ -617,7 +618,8 @@ export const dictionaries = {
     saveAppearance: "হোমপেজ ও ব্র্যান্ডিং সেভ",
     bloodGroupStatsTitle: "ব্লাড গ্রুপ",
     bloodGroupStatsSub:
-      "প্রতিটি ব্লাড গ্রুপে কতজন রেজিস্টার্ড ডোনার অ্যাভেইলেবল/অ্যাভেইলেবল নয় — দেখুন।",
+      "ব্লাড ড্রপে ক্লিক করলে সেই গ্রুপের সব রেজিস্টার্ড ডোনার দেখাবে — available ও unavailable।",
+    donorsInGroup: "{group} গ্রুপের ডোনার",
     selectArea: "এলাকা / উপজেলা বেছে নিন",
     settingsMenuHint: "অপশনে ক্লিক করলে পপআপে খুলবে।",
     savedPopupTitle: "সেভ হয়েছে",
