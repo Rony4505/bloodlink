@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AboutContent } from "@/components/AboutContent";
 import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
-import { HomeDonors } from "@/components/HomeDonors";
+import { HomeBloodGroupStats, HomeDonorTotals } from "@/components/HomeBloodGroupStats";
 import { OrgBanners } from "@/components/OrgBanners";
 import { SafetyWarnings } from "@/components/SafetyWarnings";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
@@ -86,12 +86,14 @@ export function HomePage() {
               {t.requestBlood}
             </Link>
           </div>
+          <HomeDonorTotals />
         </div>
       </section>
 
+      {/* Advertisements — always below hero */}
       <OrgBanners page="home" placement="after-hero" />
-      <HomeDonors />
-      <OrgBanners page="home" placement="mid-content" />
+
+      <HomeBloodGroupStats />
 
       <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-20 md:px-8">
         <div className="mx-auto max-w-6xl">
@@ -153,6 +155,7 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* Advertisements — always above footer */}
       <OrgBanners page="home" placement="before-footer" />
       <SiteFooter />
     </div>
