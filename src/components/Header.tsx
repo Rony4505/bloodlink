@@ -67,12 +67,6 @@ export function Header({ compact = false }: { compact?: boolean }) {
             {t.requestBlood}
           </Link>
           <Link
-            href="/about"
-            className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 lg:inline"
-          >
-            {t.about}
-          </Link>
-          <Link
             href="/warnings"
             className="hidden rounded-full px-3 py-2 transition hover:bg-white/10 lg:inline"
           >

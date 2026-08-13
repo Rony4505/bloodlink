@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
+import { areasForDistrict } from "@/lib/district-areas";
 import { BLOOD_GROUPS, DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
@@ -31,6 +32,8 @@ export function RegisterForm() {
     lastDonationDate: "",
     bloodIssue: "",
   });
+
+  const areaOptions = areasForDistrict(form.district);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +113,15 @@ export function RegisterForm() {
               <select
                 className="field"
                 value={form.district}
-                onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))}
+                onChange={(e) => {
+                  const district = e.target.value;
+                  const areas = areasForDistrict(district);
+                  setForm((f) => ({
+                    ...f,
+                    district,
+                    area: areas.includes(f.area) ? f.area : "",
+                  }));
+                }}
               >
                 {DISTRICTS.map((d) => (
                   <option key={d} value={d}>
@@ -122,13 +133,19 @@ export function RegisterForm() {
           </div>
           <label className="block text-sm">
             <span className="mb-1 block font-medium">{t.area}</span>
-            <input
+            <select
               className="field"
-              type="text"
               value={form.area}
               onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
               required
-            />
+            >
+              <option value="">{t.selectArea}</option>
+              {areaOptions.map((area) => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+            </select>
           </label>
         </section>
 

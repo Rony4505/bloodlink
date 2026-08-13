@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminPopup, AdminSettingsPanel } from "@/components/AdminPopup";
 import { PasswordField } from "@/components/PasswordField";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { defaultSiteAppearance } from "@/lib/site-cms";
@@ -77,6 +78,10 @@ export function AdminPanel() {
     totalRequests: 0,
   });
   const [tab, setTab] = useState<"donors" | "settings">("donors");
+  const [settingsPanel, setSettingsPanel] = useState<
+    null | "storage" | "backup" | "features" | "appearance" | "ads" | "privacy" | "credentials" | "verify"
+  >(null);
+  const [savePopup, setSavePopup] = useState(false);
 
   const [settingsUser, setSettingsUser] = useState("");
   const [privacyBn, setPrivacyBn] = useState("");
@@ -92,6 +97,10 @@ export function AdminPanel() {
   const [phoneCode, setPhoneCode] = useState("");
   const [tempCodes, setTempCodes] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
+  function flashSaved(message?: string) {
+    setSettingsMsg(message || t.saved);
+    setSavePopup(true);
+  }
   const [databaseUrl, setDatabaseUrl] = useState("");
   const [storageReady, setStorageReady] = useState(false);
   const [storageBackend, setStorageBackend] = useState("file");
@@ -109,9 +118,9 @@ export function AdminPanel() {
     title: "",
     imageUrl: "",
     linkUrl: "",
-    size: "md" as BannerSize,
-    page: "home" as BannerPage,
-    placement: "mid-content" as BannerPlacement,
+    size: "leaderboard" as BannerSize,
+    page: "all" as BannerPage,
+    placement: "after-hero" as BannerPlacement,
   });
   const [bannerUploading, setBannerUploading] = useState(false);
   const [siteAppearance, setSiteAppearance] = useState<SiteAppearance>(
@@ -203,7 +212,7 @@ export function AdminPanel() {
     }
     const data = await res.json();
     setBanners(data.banners || next);
-    setSettingsMsg(t.saved);
+    flashSaved(t.saved);
   }
 
   async function addBanner(e: React.FormEvent) {
@@ -227,9 +236,9 @@ export function AdminPanel() {
       title: "",
       imageUrl: "",
       linkUrl: "",
-      size: "md",
-      page: "home",
-      placement: "mid-content",
+      size: "leaderboard",
+      page: "all",
+      placement: "after-hero",
     });
     setBanners(next);
     await saveBanners(next);
@@ -252,7 +261,7 @@ export function AdminPanel() {
     }
     const data = await res.json();
     if (data.siteAppearance) setSiteAppearance(data.siteAppearance);
-    setSettingsMsg(t.saved);
+    flashSaved(t.saved);
     reloadAppearance();
   }
 
@@ -302,7 +311,7 @@ export function AdminPanel() {
       }
       const saveData = await saveRes.json();
       if (saveData.siteAppearance) setSiteAppearance(saveData.siteAppearance);
-      setSettingsMsg(t.uploadSaved);
+      flashSaved(t.uploadSaved);
       reloadAppearance();
     } catch {
       setSettingsMsg(t.uploadFailed);
@@ -377,7 +386,7 @@ export function AdminPanel() {
         platformOptions,
       }),
     });
-    setSettingsMsg(res.ok ? t.saved : t.errorGeneric);
+    if (res.ok) flashSaved(t.saved); else setSettingsMsg(t.errorGeneric);
   }
 
   async function loadStorage() {
@@ -419,6 +428,7 @@ export function AdminPanel() {
             ? `${t.storageReady} (${data.activeHost})`
             : t.storageReady,
         );
+        setSavePopup(true);
         await loadData();
       } else {
         setSettingsMsg(data.error || t.storageNotReady);
@@ -446,7 +456,7 @@ export function AdminPanel() {
       anchor.download = `bloodlink-backup-${stamp}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setSettingsMsg(t.backupDownload);
+      flashSaved(t.backupDownload);
     } catch {
       setSettingsMsg(t.backupRestoreFailed);
     }
@@ -480,6 +490,7 @@ export function AdminPanel() {
       setSettingsMsg(
         `${t.backupRestoreSuccess} (${data.donorCount ?? 0} donors)`,
       );
+      setSavePopup(true);
       setBackupFile(null);
       await loadData();
       await loadStorage();
@@ -507,7 +518,7 @@ export function AdminPanel() {
         return;
       }
       setBannerDraft((d) => ({ ...d, imageUrl: data.url || "" }));
-      setSettingsMsg(t.saved);
+      flashSaved(t.saved);
     } catch {
       setSettingsMsg(t.errorGeneric);
     } finally {
@@ -575,7 +586,7 @@ export function AdminPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ privacyBn, privacyEn }),
     });
-    setSettingsMsg(res.ok ? t.saved : t.errorGeneric);
+    if (res.ok) flashSaved(t.saved); else setSettingsMsg(t.errorGeneric);
   }
 
   async function saveCredentials(e: React.FormEvent) {
@@ -596,7 +607,7 @@ export function AdminPanel() {
       setSettingsMsg(data.error || t.errorGeneric);
       return;
     }
-    setSettingsMsg(t.saved);
+    flashSaved(t.saved);
     setCurrentPassword("");
     setNewPassword("");
     await loadSettings();
@@ -623,7 +634,7 @@ export function AdminPanel() {
     if (data.emailCode) bits.push(`Email code: ${data.emailCode}`);
     if (data.phoneCode) bits.push(`Phone code: ${data.phoneCode}`);
     setTempCodes(bits.join(" | "));
-    setSettingsMsg(t.saved);
+    flashSaved(t.saved);
     await loadSettings();
   }
 
@@ -636,6 +647,7 @@ export function AdminPanel() {
     });
     const data = await res.json();
     setSettingsMsg(res.ok ? t.saved : data.error || t.errorGeneric);
+    if (res.ok) setSavePopup(true);
     await loadSettings();
   }
 
@@ -841,7 +853,39 @@ export function AdminPanel() {
         </>
       ) : (
         <div className="space-y-6">
-          <section className="space-y-3 rounded-2xl border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_50%,#f3ebe4_100%)] p-5">
+          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">{t.settingsMenuHint}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([
+              ["storage", t.storageSetup],
+              ["backup", t.backupTitle],
+              ["features", t.futureFeatures],
+              ["appearance", t.siteAppearance],
+              ["ads", t.orgBanners],
+              ["privacy", t.adminPrivacy],
+              ["credentials", t.changeCredentials],
+              ["verify", t.verifyContacts],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSettingsPanel(id)}
+                className="rounded-2xl border border-[var(--line)] bg-white/90 px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
+                  {label}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-[var(--sage)]">{t.openSettings} →</p>
+              </button>
+            ))}
+          </div>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "storage"}
+            title={t.storageSetup}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
               {t.storageSetup}
             </h2>
@@ -888,9 +932,18 @@ export function AdminPanel() {
                 {storageSaving ? t.loading : t.storageSave}
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="space-y-3 rounded-2xl border border-[var(--line)] bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "backup"}
+            title={t.backupTitle}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
               {t.backupTitle}
             </h2>
@@ -928,9 +981,18 @@ export function AdminPanel() {
                 {backupRestoring ? t.loading : t.backupRestoreButton}
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "features"}
+            title={t.futureFeatures}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.futureFeatures}
             </h2>
@@ -989,9 +1051,18 @@ export function AdminPanel() {
                 {t.saveChanges}
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "appearance"}
+            title={t.siteAppearance}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.siteAppearance}
             </h2>
@@ -1189,9 +1260,18 @@ export function AdminPanel() {
                 {t.saveAppearance}
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "ads"}
+            title={t.orgBanners}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.orgBanners}
             </h2>
@@ -1241,26 +1321,7 @@ export function AdminPanel() {
                   setBannerDraft((d) => ({ ...d, linkUrl: e.target.value }))
                 }
               />
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">{t.bannerSize}</span>
-                <select
-                  className="field"
-                  value={bannerDraft.size}
-                  onChange={(e) =>
-                    setBannerDraft((d) => ({
-                      ...d,
-                      size: e.target.value as BannerSize,
-                    }))
-                  }
-                >
-                  <option value="sm">{t.bannerSizeSm}</option>
-                  <option value="md">{t.bannerSizeMd}</option>
-                  <option value="lg">{t.bannerSizeLg}</option>
-                  <option value="leaderboard">{t.bannerSizeLeaderboard}</option>
-                  <option value="square">{t.bannerSizeSquare}</option>
-                </select>
-              </label>
-              <label className="block text-sm">
+              <label className="block text-sm md:col-span-3">
                 <span className="mb-1 block font-medium">{t.bannerPage}</span>
                 <select
                   className="field"
@@ -1279,30 +1340,16 @@ export function AdminPanel() {
                   <option value="ambulance">{t.bannerPageAmbulance}</option>
                   <option value="all">{t.bannerPageAll}</option>
                 </select>
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">{t.bannerPlacement}</span>
-                <select
-                  className="field"
-                  value={bannerDraft.placement}
-                  onChange={(e) =>
-                    setBannerDraft((d) => ({
-                      ...d,
-                      placement: e.target.value as BannerPlacement,
-                    }))
-                  }
-                >
-                  <option value="after-hero">{t.bannerPlaceAfterHero}</option>
-                  <option value="mid-content">{t.bannerPlaceMid}</option>
-                  <option value="before-footer">{t.bannerPlaceFooter}</option>
-                </select>
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  {t.orgBannersHint}
+                </span>
               </label>
               {bannerDraft.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={bannerDraft.imageUrl}
                   alt=""
-                  className="h-16 max-w-[220px] object-contain md:col-span-3"
+                  className="aspect-[820/312] w-full max-w-xl object-cover md:col-span-3"
                 />
               ) : null}
               <button type="submit" className="btn-primary md:col-span-3">
@@ -1318,7 +1365,7 @@ export function AdminPanel() {
                   <div>
                     <span className="font-medium">{b.title}</span>
                     <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                      {b.size} · {(b.pages || []).join(", ")} · {b.placement}
+                      {(b.pages || []).join(", ")} · cover · dual placement
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -1353,9 +1400,18 @@ export function AdminPanel() {
                 </li>
               ))}
             </ul>
-          </section>
+          </div>
 
-          <section className="space-y-3 rounded-2xl bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "privacy"}
+            title={t.adminPrivacy}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.adminPrivacy}
             </h2>
@@ -1378,9 +1434,18 @@ export function AdminPanel() {
             <button type="button" className="btn-primary" onClick={savePrivacy}>
               {t.saveChanges}
             </button>
-          </section>
+          </div>
 
-          <section className="rounded-2xl bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "credentials"}
+            title={t.changeCredentials}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.changeCredentials}
             </h2>
@@ -1413,9 +1478,18 @@ export function AdminPanel() {
                 {t.saveChanges}
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="rounded-2xl bg-white/80 p-5">
+          
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "verify"}
+            title={t.verifyContacts}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.verifyContacts}
             </h2>
@@ -1476,11 +1550,16 @@ export function AdminPanel() {
                 </button>
               </div>
             </div>
-          </section>
+          </div>
+          </AdminSettingsPanel>
 
-          {settingsMsg ? (
-            <p className="text-sm text-[var(--sage)]">{settingsMsg}</p>
-          ) : null}
+          <AdminPopup
+            open={savePopup}
+            title={t.savedPopupTitle}
+            body={settingsMsg || t.savedPopupBody}
+            confirmLabel={t.close}
+            onClose={() => setSavePopup(false)}
+          />
         </div>
       )}
     </div>
