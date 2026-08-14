@@ -4,8 +4,13 @@ import { useEffect, useState } from "react";
 import { AdminPopup, AdminSettingsPanel } from "@/components/AdminPopup";
 import { PasswordField } from "@/components/PasswordField";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
-import { defaultSiteAppearance } from "@/lib/site-cms";
 import { useLocale } from "@/lib/i18n/locale-context";
+import {
+  AD_BANNER_ASPECT,
+  AD_BANNER_HEIGHT,
+  AD_BANNER_WIDTH,
+  defaultSiteAppearance,
+} from "@/lib/site-cms";
 import type {
   BannerPage,
   BannerPlacement,
@@ -1278,6 +1283,23 @@ export function AdminPanel() {
             <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {t.orgBannersHint}
             </p>
+            <div
+              className="rounded-xl border border-[color-mix(in_oklab,var(--accent)_35%,white)] bg-[color-mix(in_oklab,var(--accent)_8%,white)] p-4 text-sm"
+              role="note"
+            >
+              <p className="font-semibold text-[var(--ink)]">{t.orgBannerSizeTitle}</p>
+              <ul className="mt-2 space-y-1 text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+                <li>
+                  <span className="font-medium">{t.orgBannerSizeDimensions}</span>
+                  <span className="ml-2 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    ({AD_BANNER_WIDTH}×{AD_BANNER_HEIGHT} px · {AD_BANNER_ASPECT})
+                  </span>
+                </li>
+                <li>{t.orgBannerSizeRatio}</li>
+                <li>{t.orgBannerSizeDisplay}</li>
+                <li>{t.orgBannerSizeFormats}</li>
+              </ul>
+            </div>
             <form onSubmit={addBanner} className="grid gap-3 md:grid-cols-3">
               <input
                 className="field md:col-span-3"
@@ -1303,7 +1325,11 @@ export function AdminPanel() {
                 />
                 {bannerUploading ? (
                   <span className="mt-1 block text-xs">{t.bannerUploading}</span>
-                ) : null}
+                ) : (
+                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    {t.orgBannerSizeDimensions} · {t.orgBannerSizeRatio}
+                  </span>
+                )}
               </label>
               <input
                 className="field"
@@ -1341,7 +1367,7 @@ export function AdminPanel() {
                   <option value="all">{t.bannerPageAll}</option>
                 </select>
                 <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                  {t.orgBannersHint}
+                  {t.orgBannerSizeDisplay}
                 </span>
               </label>
               {bannerDraft.imageUrl ? (

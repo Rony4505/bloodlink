@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { BannerPage, OrgBanner } from "@/lib/types";
 
 type Props = {
@@ -16,6 +17,7 @@ const INTERVAL_MS = 3000;
  * Scrolls smoothly every 3s, ping-pong left↔right when multiple ads exist.
  */
 export function OrgBanners({ page }: Props) {
+  const { t } = useLocale();
   const [banners, setBanners] = useState<OrgBanner[]>([]);
   const [index, setIndex] = useState(0);
   const directionRef = useRef<1 | -1>(1);
@@ -56,7 +58,23 @@ export function OrgBanners({ page }: Props) {
   if (!banners.length) return null;
 
   return (
-    <section className="w-full border-y border-[var(--line)] bg-[#f4ece6]">
+    <section
+      aria-label={t.orgBannerPublicLabel}
+      className="w-full border-y border-[var(--line)] bg-[#f4ece6]"
+    >
+      <div className="flex items-center justify-between border-b border-[color-mix(in_oklab,var(--line)_80%,var(--ink)_20%)] bg-[color-mix(in_oklab,#f4ece6_70%,white)] px-4 py-2 sm:px-6">
+        <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+          <span
+            aria-hidden
+            className="inline-block h-2 w-2 rounded-full bg-[var(--accent)]"
+          />
+          {t.orgBannerPublicLabel}
+        </span>
+        <span className="rounded-full border border-[color-mix(in_oklab,var(--ink)_18%,white)] bg-white/70 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+          {t.orgBannerSponsored}
+        </span>
+      </div>
+
       <div className="relative w-full overflow-hidden">
         <div
           className="flex transition-transform duration-700 ease-in-out will-change-transform"
@@ -89,13 +107,14 @@ export function OrgBanners({ page }: Props) {
                 key={b.id}
                 href={b.linkUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="sponsored noopener noreferrer"
                 className="block w-full shrink-0"
+                aria-label={`${t.orgBannerPublicLabel}: ${b.title}`}
               >
                 {frame}
               </a>
             ) : (
-              <div key={b.id} className="w-full shrink-0">
+              <div key={b.id} className="w-full shrink-0" role="group" aria-label={b.title}>
                 {frame}
               </div>
             );

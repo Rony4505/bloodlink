@@ -34,6 +34,11 @@ export const BANNER_PLACEMENTS: BannerPlacement[] = [
   "before-footer",
 ];
 
+/** Facebook-cover-style full-width advertisement dimensions shown in admin + public UI. */
+export const AD_BANNER_WIDTH = 820;
+export const AD_BANNER_HEIGHT = 312;
+export const AD_BANNER_ASPECT = `${AD_BANNER_WIDTH}/${AD_BANNER_HEIGHT}` as const;
+
 export const BANNER_SIZE_CLASS: Record<BannerSize, string> = {
   sm: "h-12 max-w-[160px]",
   md: "h-16 max-w-[220px]",
