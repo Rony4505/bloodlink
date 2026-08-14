@@ -2,6 +2,9 @@
 
 Free humanitarian platform to help people in Bangladesh find blood donors by blood group and location.
 
+> **Mudi POS (মুদি POS):** This repo also contains a grocery store POS at **`/pos`**.  
+> See **[MUDI_POS.md](./MUDI_POS.md)** for full docs. Run `npm run dev` → `http://localhost:3000/pos`
+
 ## Features
 
 - Bangla / English language toggle

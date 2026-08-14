@@ -1,0 +1,37 @@
+---
+description: Mudi POS (মুদি দোকান POS) — Bangladesh grocery point-of-sale. Read before editing POS code.
+globs:
+  - src/lib/mudidokan/**
+  - src/components/mudidokan/**
+  - src/app/pos/**
+  - MUDI_POS.md
+  - mudi-pos.project.json
+---
+
+# Mudi POS (মুদি POS)
+
+This repo contains **Mudi POS** — a simple Bengali grocery store POS.
+
+## Must read first
+- `MUDI_POS.md` — full feature list and file map
+- `mudi-pos.project.json` — machine-readable project manifest
+
+## Entry point
+- **URL:** `/pos`
+- **Page:** `src/app/pos/page.tsx`
+- **Main component:** `src/components/mudidokan/MudidokanPos.tsx`
+
+## Code layout (do not mix with BloodLink/Fashion)
+- Logic: `src/lib/mudidokan/`
+- UI: `src/components/mudidokan/`
+- Data: browser `localStorage` key `mudidokan-pos-v2` — no server DB
+
+## Conventions
+- UI language: **Bangla**
+- Currency: **৳ (BDT)**
+- Weight input: **grams** (user types grams; price per kg/liter)
+- Admin tabs (পণ্য, হিসাব): password `1234` by default
+- Keep POS changes scoped to `mudidokan` paths unless user asks otherwise
+
+## When user says "Mudi POS" / "মুদি POS"
+They mean this project at `/pos`, not BloodLink or Fashion shop features.
