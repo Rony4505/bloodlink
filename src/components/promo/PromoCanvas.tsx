@@ -8,25 +8,33 @@ type PromoCanvasProps = {
   currentTime: number;
   sceneId: PromoSceneId;
   sceneProgress: number;
-  active: boolean;
+  playing: boolean;
 };
 
 export function PromoCanvas({
   currentTime,
   sceneId,
   sceneProgress: progress,
-  active,
 }: PromoCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PromoSceneRenderer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const stateRef = useRef({ currentTime, sceneId, progress });
+
+  stateRef.current = { currentTime, sceneId, progress };
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const renderer = new PromoSceneRenderer(canvas);
-    rendererRef.current = renderer;
+    let renderer: PromoSceneRenderer;
+    try {
+      renderer = new PromoSceneRenderer(canvas);
+      rendererRef.current = renderer;
+    } catch (err) {
+      console.error("Promo WebGL init failed:", err);
+      return;
+    }
 
     const resize = () => {
       const el = containerRef.current;
@@ -36,17 +44,21 @@ export function PromoCanvas({
     resize();
     window.addEventListener("resize", resize);
 
+    let raf = 0;
+    const loop = () => {
+      const s = stateRef.current;
+      renderer.update(s.currentTime, s.sceneId, s.progress);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
     return () => {
       window.removeEventListener("resize", resize);
+      cancelAnimationFrame(raf);
       renderer.dispose();
       rendererRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    rendererRef.current?.update(currentTime, sceneId, progress);
-  }, [active, currentTime, sceneId, progress]);
 
   return (
     <div ref={containerRef} className="promo-canvas-wrap">

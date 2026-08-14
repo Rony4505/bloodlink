@@ -89,7 +89,11 @@ export function PromoExperience() {
   }, []);
 
   const handleStart = async () => {
-    await ensureAudio();
+    try {
+      await ensureAudio();
+    } catch {
+      // Audio is optional — promo visuals should still play
+    }
     setShowStart(false);
     timeRef.current = 0;
     setCurrentTime(0);
@@ -98,18 +102,30 @@ export function PromoExperience() {
 
   const handlePlayPause = async () => {
     if (showStart) {
-      await handleStart();
+      void handleStart();
       return;
     }
-    if (!playing) await ensureAudio();
+    if (!playing) {
+      try {
+        await ensureAudio();
+      } catch {
+        // continue without audio
+      }
+    }
     setPlaying((p) => !p);
   };
 
   const handleRestart = async () => {
-    await ensureAudio();
+    try {
+      await ensureAudio();
+    } catch {
+      // continue without audio
+    }
     setShowStart(false);
+    lastTickRef.current = 0;
     timeRef.current = 0;
     setCurrentTime(0);
+    playingRef.current = true;
     setPlaying(true);
   };
 
@@ -131,7 +147,7 @@ export function PromoExperience() {
           currentTime={currentTime}
           sceneId={scene.id}
           sceneProgress={progress}
-          active={!showStart}
+          playing={playing && !showStart}
         />
         <PromoOverlay
           currentTime={currentTime}
