@@ -7,3 +7,20 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+---
+
+# Mudi POS (মুদি POS)
+
+This repository includes **Mudi POS** — a standalone Bengali grocery Point of Sale.
+
+| Resource | Path |
+|----------|------|
+| **Docs** | `MUDI_POS.md` |
+| **Manifest** | `mudi-pos.project.json` |
+| **URL** | `/pos` |
+| **Code** | `src/lib/mudidokan/`, `src/components/mudidokan/` |
+
+When the user asks for **Mudi POS**, **মুদি POS**, or **mudidokan POS**, read `MUDI_POS.md` first and work only in the mudidokan paths unless they ask to integrate elsewhere.
+
+Run: `npm run dev` → open `http://localhost:3000/pos`

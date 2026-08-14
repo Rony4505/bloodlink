@@ -1,0 +1,16 @@
+{
+  "name": "Mudi POS",
+  "nameBn": "মুদি POS",
+  "description": "বাংলাদেশের মুদি দোকানের জন্য সহজ Point of Sale (POS) — বাংলা UI, গ্রাম ওজন, বারকোড, বাকি, হিসাব, লাভ।",
+  "urlPath": "/pos",
+  "docs": "MUDI_POS.md",
+  "codePrefix": "src/lib/mudidokan",
+  "componentsPrefix": "src/components/mudidokan",
+  "page": "src/app/pos/page.tsx",
+  "storageKey": "mudidokan-pos-v2",
+  "defaultAdminPassword": "1234",
+  "language": "bn",
+  "currency": "BDT",
+  "standalone": true,
+  "notes": "POS is client-only (localStorage). Does not depend on BloodLink or Fashion app modes."
+}
