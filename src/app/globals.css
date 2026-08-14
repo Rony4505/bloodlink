@@ -83,6 +83,26 @@ a {
   }
 }
 
+/* Mudidokan POS receipt print */
+@media print {
+  body:has(#pos-receipt) * {
+    visibility: hidden;
+  }
+  #pos-receipt,
+  #pos-receipt * {
+    visibility: visible;
+  }
+  #pos-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 8mm;
+    font-size: 12px;
+    display: block !important;
+  }
+}
+
 .animate-rise {
   animation: rise 0.8s ease both;
 }
