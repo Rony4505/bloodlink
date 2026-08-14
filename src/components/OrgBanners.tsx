@@ -13,7 +13,7 @@ type Props = {
 const INTERVAL_MS = 3000;
 
 /**
- * Full-bleed Facebook-cover-style advertisement carousel.
+ * Full-bleed wide advertisement carousel (820×150).
  * Scrolls smoothly every 3s, ping-pong left↔right when multiple ads exist.
  */
 export function OrgBanners({ page }: Props) {
@@ -97,7 +97,7 @@ export function OrgBanners({ page }: Props) {
             );
 
             const frame = (
-              <div className="aspect-[820/312] w-full min-h-[7.5rem] sm:min-h-[9.5rem] md:min-h-[12rem]">
+              <div className="aspect-[820/150] w-full min-h-[3.5rem] sm:min-h-[4.5rem] md:min-h-[5.5rem]">
                 {inner}
               </div>
             );
