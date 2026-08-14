@@ -134,6 +134,20 @@ export function findProductByBarcode(products: Product[], code: string): Product
   return products.find((p) => p.barcode && p.barcode === trimmed);
 }
 
+export function productNameKey(name: string): string {
+  return cleanProductName(name).trim().toLowerCase();
+}
+
+export function findProductByName(
+  products: Product[],
+  name: string,
+  excludeId?: string,
+): Product | undefined {
+  const key = productNameKey(name);
+  if (!key) return undefined;
+  return products.find((p) => p.id !== excludeId && productNameKey(p.name) === key);
+}
+
 export function addProduct(
   data: PosData,
   input: {
@@ -156,6 +170,39 @@ export function addProduct(
     barcode: input.barcode?.trim() || undefined,
   };
   const next = { ...data, products: [...data.products, product] };
+  savePosData(next);
+  return next;
+}
+
+export function updateProduct(
+  data: PosData,
+  productId: string,
+  input: {
+    name: string;
+    price: number;
+    cost: number;
+    unit: string;
+    color: string;
+    barcode?: string;
+  },
+): PosData {
+  const price = Math.max(0, Math.round(input.price));
+  const next = {
+    ...data,
+    products: data.products.map((p) =>
+      p.id === productId
+        ? {
+            ...p,
+            name: cleanProductName(input.name),
+            price,
+            cost: Math.max(0, Math.round(input.cost || price * 0.85)),
+            unit: input.unit.trim() || "পিস",
+            color: input.color || "#E8F5E9",
+            barcode: input.barcode?.trim() || undefined,
+          }
+        : p,
+    ),
+  };
   savePosData(next);
   return next;
 }

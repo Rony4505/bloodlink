@@ -22,12 +22,14 @@ import {
   collectionReportForDate,
   collectionsTotalForDate,
   findProductByBarcode,
+  findProductByName,
   loadPosData,
   productReportForDate,
   profitForDate,
   recordSale,
   removeProduct,
   salesForDate,
+  updateProduct,
   updateShopName,
 } from "@/lib/mudidokan/storage";
 import type { CartLine, PosData, Product, Sale } from "@/lib/mudidokan/types";
@@ -79,6 +81,32 @@ export function MudidokanPos() {
   const [newUnit, setNewUnit] = useState("পিস");
   const [newColor, setNewColor] = useState(PRODUCT_COLOR_PRESETS[0]);
   const [newBarcode, setNewBarcode] = useState("");
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const duplicateProduct = useMemo(() => {
+    if (!data || !newName.trim()) return null;
+    return findProductByName(data.products, newName, editingProductId ?? undefined) ?? null;
+  }, [data, newName, editingProductId]);
+
+  function resetProductForm() {
+    setEditingProductId(null);
+    setNewName("");
+    setNewPrice("");
+    setNewCost("");
+    setNewUnit("পিস");
+    setNewColor(PRODUCT_COLOR_PRESETS[0]);
+    setNewBarcode("");
+  }
+
+  function startEditProduct(product: Product) {
+    setEditingProductId(product.id);
+    setNewName(product.name);
+    setNewPrice(String(product.price));
+    setNewCost(String(product.cost));
+    setNewUnit(product.unit);
+    setNewColor(product.color);
+    setNewBarcode(product.barcode ?? "");
+  }
 
   useEffect(() => {
     setData(loadPosData());
@@ -274,7 +302,7 @@ export function MudidokanPos() {
     [data, detailSale],
   );
 
-  const handleAddProduct = useCallback(() => {
+  const handleSaveProduct = useCallback(() => {
     if (!data) return;
     const price = Number(newPrice);
     const cost = Number(newCost);
@@ -282,31 +310,39 @@ export function MudidokanPos() {
       setToast("নাম ও দাম দিন");
       return;
     }
-    setData(
-      addProduct(data, {
-        name: newName,
-        price,
-        cost: cost || Math.round(price * 0.85),
-        unit: newUnit,
-        color: newColor,
-        barcode: newBarcode || undefined,
-      }),
-    );
-    setNewName("");
-    setNewPrice("");
-    setNewCost("");
-    setNewBarcode("");
-    setToast("পণ্য যোগ হয়েছে");
-  }, [data, newName, newPrice, newCost, newUnit, newColor, newBarcode]);
+    if (findProductByName(data.products, newName, editingProductId ?? undefined)) {
+      setToast("একই নামের পণ্য আগে থেকেই আছে!");
+      return;
+    }
+
+    const input = {
+      name: newName,
+      price,
+      cost: cost || Math.round(price * 0.85),
+      unit: newUnit,
+      color: newColor,
+      barcode: newBarcode || undefined,
+    };
+
+    if (editingProductId) {
+      setData(updateProduct(data, editingProductId, input));
+      setToast("পণ্য আপডেট হয়েছে");
+    } else {
+      setData(addProduct(data, input));
+      setToast("পণ্য যোগ হয়েছে");
+    }
+    resetProductForm();
+  }, [data, newName, newPrice, newCost, newUnit, newColor, newBarcode, editingProductId]);
 
   const handleRemoveProduct = useCallback(
     (id: string) => {
       if (!data) return;
       if (!confirm("এই পণ্য মুছবেন?")) return;
       setData(removeProduct(data, id));
+      if (editingProductId === id) resetProductForm();
       setToast("পণ্য মুছে ফেলা হয়েছে");
     },
-    [data],
+    [data, editingProductId],
   );
 
   const tryOpenTab = useCallback(
@@ -470,15 +506,26 @@ export function MudidokanPos() {
 
           {tab === "products" && adminUnlocked && (
             <section className="mx-auto max-w-lg rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-lg font-bold">নতুন পণ্য যোগ করুন</h2>
+              <h2 className="mb-4 text-lg font-bold">
+                {editingProductId ? "পণ্য সম্পাদনা" : "নতুন পণ্য যোগ করুন"}
+              </h2>
               <div className="space-y-3">
                 <input
                   type="text"
                   placeholder="পণ্যের নাম"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full rounded-xl border border-emerald-200 px-4 py-3 outline-none"
+                  className={`w-full rounded-xl border px-4 py-3 outline-none ${
+                    duplicateProduct
+                      ? "border-amber-400 bg-amber-50 focus:border-amber-500"
+                      : "border-emerald-200 focus:border-emerald-500"
+                  }`}
                 />
+                {duplicateProduct && (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                    ⚠️ &quot;{duplicateProduct.name}&quot; নামে পণ্য আগে থেকেই আছে
+                  </p>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="number"
@@ -522,19 +569,38 @@ export function MudidokanPos() {
                     />
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddProduct}
-                  className="w-full rounded-xl bg-emerald-600 py-3 font-bold text-white"
-                >
-                  যোগ করুন
-                </button>
+                <div className={`grid gap-2 ${editingProductId ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {editingProductId && (
+                    <button
+                      type="button"
+                      onClick={resetProductForm}
+                      className="rounded-xl border border-slate-200 py-3 font-semibold text-slate-600"
+                    >
+                      বাতিল
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSaveProduct}
+                    disabled={!!duplicateProduct}
+                    className={`rounded-xl py-3 font-bold text-white disabled:opacity-40 ${
+                      editingProductId ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"
+                    }`}
+                  >
+                    {editingProductId ? "সংরক্ষণ" : "যোগ করুন"}
+                  </button>
+                </div>
               </div>
 
               <h3 className="mb-2 mt-8 font-bold">সব পণ্য</h3>
               <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
                 {data.products.map((p) => (
-                  <li key={p.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                  <li
+                    key={p.id}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2 ${
+                      editingProductId === p.id ? "bg-emerald-50 ring-2 ring-emerald-300" : "bg-slate-50"
+                    }`}
+                  >
                     <span
                       className="h-8 w-8 shrink-0 rounded-lg border"
                       style={{ backgroundColor: p.color }}
@@ -545,6 +611,13 @@ export function MudidokanPos() {
                         বিক্রি {formatTaka(p.price)} · ক্রয় {formatTaka(p.cost)} / {p.unit}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => startEditProduct(p)}
+                      className="text-sm font-medium text-emerald-700 hover:underline"
+                    >
+                      এডিট
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleRemoveProduct(p.id)}
