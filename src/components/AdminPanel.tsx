@@ -1375,7 +1375,7 @@ export function AdminPanel() {
                 <img
                   src={bannerDraft.imageUrl}
                   alt=""
-                  className="aspect-[820/312] w-full max-w-xl object-cover md:col-span-3"
+                  className="aspect-[820/150] w-full max-w-xl object-cover md:col-span-3"
                 />
               ) : null}
               <button type="submit" className="btn-primary md:col-span-3">
@@ -1391,7 +1391,7 @@ export function AdminPanel() {
                   <div>
                     <span className="font-medium">{b.title}</span>
                     <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                      {(b.pages || []).join(", ")} · cover · dual placement
+                      {(b.pages || []).join(", ")} · 820×150 · dual placement
                     </p>
                   </div>
                   <div className="flex gap-2">

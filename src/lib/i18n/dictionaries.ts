@@ -258,8 +258,8 @@ export const dictionaries = {
     orgBannersHint:
       "Add advertisements. They always appear below the hero and above the footer, and auto-scroll every 3 seconds.",
     orgBannerSizeTitle: "Recommended banner image size",
-    orgBannerSizeDimensions: "820 × 312 pixels",
-    orgBannerSizeRatio: "Aspect ratio 2.63:1 (Facebook cover)",
+    orgBannerSizeDimensions: "820 × 150 pixels",
+    orgBannerSizeRatio: "Aspect ratio 5.47:1 (wide banner)",
     orgBannerSizeDisplay: "Displays full width on the site; height scales with screen size",
     orgBannerSizeFormats: "Formats: JPG, PNG, WebP, or GIF",
     orgBannerPublicLabel: "Advertisement",
@@ -578,8 +578,8 @@ export const dictionaries = {
     orgBannersHint:
       "বিজ্ঞাপন যোগ করুন। সবসময় হিরোর নিচে ও ফুটারের উপরে দেখাবে, এবং প্রতি ৩ সেকেন্ডে স্ক্রল করবে।",
     orgBannerSizeTitle: "ব্যানার ইমেজের সুপারিশকৃত সাইজ",
-    orgBannerSizeDimensions: "৮২০ × ৩১২ পিক্সেল",
-    orgBannerSizeRatio: "আকৃতি ২.৬৩:১ (Facebook cover)",
+    orgBannerSizeDimensions: "৮২০ × ১৫০ পিক্সেল",
+    orgBannerSizeRatio: "আকৃতি ৫.৪৭:১ (চওড়া ব্যানার)",
     orgBannerSizeDisplay: "সাইটে পুরো প্রস্থে দেখাবে; উচ্চতা স্ক্রিন অনুযায়ী স্কেল হবে",
     orgBannerSizeFormats: "ফরম্যাট: JPG, PNG, WebP, বা GIF",
     orgBannerPublicLabel: "বিজ্ঞাপন",
