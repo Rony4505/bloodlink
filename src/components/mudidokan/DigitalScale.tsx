@@ -9,8 +9,7 @@ type Props = {
 };
 
 export function DigitalScale({ scale }: Props) {
-  const displayKg = scale.weightKg;
-  const manualInput = displayKg > 0 ? displayKg.toFixed(3) : "";
+  const grams = scale.weightGrams;
 
   return (
     <div className="rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-800 to-slate-900 p-4 text-white shadow-inner">
@@ -21,11 +20,19 @@ export function DigitalScale({ scale }: Props) {
         </span>
       </div>
 
-      <div className="rounded-xl bg-black/60 px-4 py-3 text-center font-mono">
-        <span className="text-4xl font-bold tracking-widest text-emerald-400">
-          {displayKg.toFixed(3)}
-        </span>
-        <span className="ml-2 text-lg text-slate-400">kg</span>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-black/60 px-3 py-3 text-center font-mono">
+          <p className="text-[10px] text-slate-500">kg</p>
+          <p className="text-2xl font-bold tracking-wider text-emerald-400">
+            {scale.weightKg.toFixed(3)}
+          </p>
+        </div>
+        <div className="rounded-xl bg-black/60 px-3 py-3 text-center font-mono">
+          <p className="text-[10px] text-slate-500">gram</p>
+          <p className="text-2xl font-bold tracking-wider text-emerald-400">
+            {grams.toLocaleString("bn-BD")}
+          </p>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -54,18 +61,32 @@ export function DigitalScale({ scale }: Props) {
         </button>
       </div>
 
-      <label className="mt-3 block">
-        <span className="text-xs text-slate-400">ম্যানুয়াল ওজন (kg)</span>
-        <input
-          type="number"
-          step="0.001"
-          min="0"
-          placeholder="0.000"
-          value={scale.manualMode ? manualInput : ""}
-          onChange={(e) => scale.setManualWeight(Number(e.target.value) || 0)}
-          className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 font-mono text-emerald-300 outline-none focus:border-emerald-500"
-        />
-      </label>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-[10px] text-slate-400">kg লিখুন</span>
+          <input
+            type="number"
+            step="0.001"
+            min="0"
+            placeholder="0.000"
+            value={scale.manualMode && scale.weightKg > 0 ? scale.weightKg.toFixed(3) : ""}
+            onChange={(e) => scale.setManualWeightKg(Number(e.target.value) || 0)}
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 font-mono text-sm text-emerald-300 outline-none focus:border-emerald-500"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[10px] text-slate-400">gram লিখুন</span>
+          <input
+            type="number"
+            step="1"
+            min="0"
+            placeholder="0"
+            value={scale.manualMode && grams > 0 ? grams : ""}
+            onChange={(e) => scale.setManualWeightGrams(Number(e.target.value) || 0)}
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 py-2 font-mono text-sm text-emerald-300 outline-none focus:border-emerald-500"
+          />
+        </label>
+      </div>
 
       {scale.error && (
         <p className="mt-2 text-xs text-amber-300">{scale.error}</p>
@@ -79,4 +100,10 @@ export function weightPricePreview(pricePerUnit: number, weightKg: number, unit:
   const displayWeight = unit === "গ্রাম" ? weightKg * 1000 : weightKg;
   const amount = Math.round(pricePerUnit * weightInKg(displayWeight, unit));
   return formatTakaDecimal(amount);
+}
+
+export function weightPriceAmount(pricePerUnit: number, weightKg: number, unit: string): number {
+  if (weightKg <= 0) return 0;
+  const displayWeight = unit === "গ্রাম" ? weightKg * 1000 : weightKg;
+  return Math.round(pricePerUnit * weightInKg(displayWeight, unit));
 }

@@ -2,6 +2,7 @@ export type Product = {
   id: string;
   name: string;
   price: number;
+  cost: number;
   unit: string;
   color: string;
   barcode?: string;
@@ -40,6 +41,7 @@ export type Sale = {
 
 export type PosSettings = {
   shopName: string;
+  adminPassword: string;
 };
 
 export type PosData = {

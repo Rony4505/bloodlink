@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DigitalScale, weightPricePreview } from "@/components/mudidokan/DigitalScale";
-import { DueDetailsModal } from "@/components/mudidokan/DueDetailsModal";
-import { InvoicePreviewModal } from "@/components/mudidokan/InvoicePreviewModal";
+import {
+  DigitalScale,
+  weightPriceAmount,
+} from "@/components/mudidokan/DigitalScale";
+import { InvoiceDetailsModal } from "@/components/mudidokan/InvoiceDetailsModal";
+import { PosLockModal } from "@/components/mudidokan/PosLockModal";
 import { ReceiptContent } from "@/components/mudidokan/ReceiptContent";
 import {
   cartTotal,
@@ -18,9 +21,12 @@ import { PRODUCT_COLOR_PRESETS } from "@/lib/mudidokan/seed";
 import {
   addProduct,
   collectDue,
+  collectionReportForDate,
+  collectionsTotalForDate,
   findProductByBarcode,
   loadPosData,
   productReportForDate,
+  profitForDate,
   recordSale,
   removeProduct,
   salesForDate,
@@ -32,6 +38,7 @@ import { formatWeightDisplay, isWeightUnit } from "@/lib/mudidokan/units";
 
 type Tab = "sell" | "products" | "report";
 type ReportTab = "sales" | "products";
+type LockTarget = "products" | "report" | null;
 
 function newLineId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -42,28 +49,11 @@ function weightForProduct(scaleKg: number, unit: string): number {
   return scaleKg;
 }
 
-function buildDraftSale(
-  cart: CartLine[],
-  paid: number,
-  customerName: string,
-  customerPhone: string,
-  invoiceNo: string,
-): Sale {
-  const total = cartTotal(cart);
-  const due = Math.max(0, total - paid);
-  return {
-    id: "draft",
-    invoiceNo,
-    items: cart,
-    total,
-    paid,
-    change: Math.max(0, paid - total),
-    due,
-    customerName: customerName.trim() || undefined,
-    customerPhone: customerPhone.trim() || undefined,
-    collections: [],
-    createdAt: new Date().toISOString(),
-  };
+function selectedProductPrice(product: Product, scaleKg: number): number {
+  if (isWeightUnit(product.unit)) {
+    return weightPriceAmount(product.price, scaleKg, product.unit);
+  }
+  return product.price;
 }
 
 export function MudidokanPos() {
@@ -72,15 +62,20 @@ export function MudidokanPos() {
   const [tab, setTab] = useState<Tab>("sell");
   const [reportTab, setReportTab] = useState<ReportTab>("sales");
   const [reportDate, setReportDate] = useState(todayKey());
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [lockTarget, setLockTarget] = useState<LockTarget>(null);
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [search, setSearch] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [paidInput, setPaidInput] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [previewSale, setPreviewSale] = useState<Sale | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [detailSale, setDetailSale] = useState<Sale | null>(null);
   const [printSale, setPrintSale] = useState<Sale | null>(null);
-  const [dueSale, setDueSale] = useState<Sale | null>(null);
   const [toast, setToast] = useState("");
   const barcodeRef = useRef<HTMLInputElement>(null);
   const scanBufferRef = useRef("");
@@ -88,6 +83,7 @@ export function MudidokanPos() {
 
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
+  const [newCost, setNewCost] = useState("");
   const [newUnit, setNewUnit] = useState("পিস");
   const [newColor, setNewColor] = useState(PRODUCT_COLOR_PRESETS[0]);
   const [newBarcode, setNewBarcode] = useState("");
@@ -106,6 +102,11 @@ export function MudidokanPos() {
   const paid = paidInput ? Number(paidInput) : 0;
   const change = Math.max(0, paid - total);
   const dueAmount = Math.max(0, total - paid);
+
+  const selectedPrice = useMemo(() => {
+    if (!selectedProduct) return 0;
+    return selectedProductPrice(selectedProduct, scale.weightKg);
+  }, [selectedProduct, scale.weightKg]);
 
   const filteredProducts = useMemo(() => {
     if (!data) return [];
@@ -130,18 +131,21 @@ export function MudidokanPos() {
     () => dateSales.reduce((s, sale) => s + sale.due, 0),
     [dateSales],
   );
+  const dateCollections = useMemo(
+    () => (data ? collectionsTotalForDate(data, reportDate) : 0),
+    [data, reportDate],
+  );
+  const dateProfit = useMemo(
+    () => (data ? profitForDate(data, reportDate) : 0),
+    [data, reportDate],
+  );
   const productReport = useMemo(
     () => (data ? productReportForDate(data, reportDate) : []),
     [data, reportDate],
   );
-
-  const todaySales = useMemo(
-    () => (data ? salesForDate(data, todayKey()) : []),
-    [data],
-  );
-  const todayTotal = useMemo(
-    () => todaySales.reduce((s, sale) => s + sale.total, 0),
-    [todaySales],
+  const collectionRows = useMemo(
+    () => (data ? collectionReportForDate(data, reportDate) : []),
+    [data, reportDate],
   );
 
   const addToCart = useCallback(
@@ -189,9 +193,18 @@ export function MudidokanPos() {
           },
         ];
       });
+      setToast(`${product.name} যোগ হয়েছে`);
     },
     [scale.weightKg],
   );
+
+  const addSelectedToCart = useCallback(() => {
+    if (!selectedProduct) {
+      setToast("পণ্য সিলেক্ট করুন");
+      return;
+    }
+    addToCart(selectedProduct);
+  }, [selectedProduct, addToCart]);
 
   const addByBarcode = useCallback(
     (code: string) => {
@@ -201,6 +214,7 @@ export function MudidokanPos() {
         setToast("কোড মিলছে না");
         return;
       }
+      setSelectedProduct(product);
       addToCart(product);
     },
     [data, addToCart],
@@ -256,57 +270,42 @@ export function MudidokanPos() {
     setPaidInput("");
     setCustomerName("");
     setCustomerPhone("");
+    setCheckoutOpen(false);
   }, []);
 
-  const openPreview = useCallback(() => {
+  const completeSale = useCallback(() => {
     if (!data || cart.length === 0) return;
-    const draft = buildDraftSale(
-      cart,
+    const { data: next, sale } = recordSale(data, {
+      items: cart,
       paid,
       customerName,
       customerPhone,
-      String(data.invoiceCounter + 1).padStart(4, "0"),
-    );
-    setPreviewSale(draft);
-  }, [data, cart, paid, customerName, customerPhone]);
-
-  const confirmPrint = useCallback(() => {
-    if (!data || !previewSale) return;
-    const { data: next, sale } = recordSale(data, {
-      items: previewSale.items,
-      paid: previewSale.paid,
-      customerName: previewSale.customerName,
-      customerPhone: previewSale.customerPhone,
     });
     setData(next);
-    setPrintSale(sale);
-    setPreviewSale(null);
+    setLastSale(sale);
     clearCart();
     setToast("বিক্রি সম্পন্ন!");
-    setTimeout(() => window.print(), 200);
-  }, [data, previewSale, clearCart]);
+  }, [data, cart, paid, customerName, customerPhone, clearCart]);
 
   const handleCollectDue = useCallback(
     (amount: number, note?: string) => {
-      if (!data || !dueSale) return;
-      const result = collectDue(data, dueSale.id, amount, note);
+      if (!data || !detailSale) return;
+      const result = collectDue(data, detailSale.id, amount, note);
       if (!result) {
         setToast("সংগ্রহ হয়নি");
         return;
       }
       setData(result.data);
-      setDueSale(result.sale);
+      setDetailSale(result.sale);
       setToast("বাকি সংগ্রহ হয়েছে");
-      if (result.sale.due <= 0) {
-        setTimeout(() => setDueSale(null), 800);
-      }
     },
-    [data, dueSale],
+    [data, detailSale],
   );
 
   const handleAddProduct = useCallback(() => {
     if (!data) return;
     const price = Number(newPrice);
+    const cost = Number(newCost);
     if (!newName.trim() || !price || price <= 0) {
       setToast("নাম ও দাম দিন");
       return;
@@ -315,6 +314,7 @@ export function MudidokanPos() {
       addProduct(data, {
         name: newName,
         price,
+        cost: cost || Math.round(price * 0.85),
         unit: newUnit,
         color: newColor,
         barcode: newBarcode || undefined,
@@ -322,9 +322,10 @@ export function MudidokanPos() {
     );
     setNewName("");
     setNewPrice("");
+    setNewCost("");
     setNewBarcode("");
     setToast("পণ্য যোগ হয়েছে");
-  }, [data, newName, newPrice, newUnit, newColor, newBarcode]);
+  }, [data, newName, newPrice, newCost, newUnit, newColor, newBarcode]);
 
   const handleRemoveProduct = useCallback(
     (id: string) => {
@@ -334,6 +335,21 @@ export function MudidokanPos() {
       setToast("পণ্য মুছে ফেলা হয়েছে");
     },
     [data],
+  );
+
+  const tryOpenTab = useCallback(
+    (next: Tab) => {
+      if (next === "sell") {
+        setTab("sell");
+        return;
+      }
+      if (adminUnlocked) {
+        setTab(next);
+        return;
+      }
+      setLockTarget(next === "products" ? "products" : "report");
+    },
+    [adminUnlocked],
   );
 
   if (!data) {
@@ -349,37 +365,32 @@ export function MudidokanPos() {
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white text-slate-900">
         <header className="sticky top-0 z-20 border-b border-emerald-200/80 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div>
-              <input
-                type="text"
-                value={data.settings.shopName}
-                onChange={(e) => setData(updateShopName(data, e.target.value))}
-                className="w-full max-w-xs border-none bg-transparent text-xl font-bold text-emerald-900 outline-none"
-                aria-label="দোকানের নাম"
-              />
-              <p className="text-sm text-emerald-700">
-                আজকের বিক্রি: {formatTaka(todayTotal)} ({todaySales.length}টি)
-              </p>
-            </div>
+            <input
+              type="text"
+              value={data.settings.shopName}
+              onChange={(e) => setData(updateShopName(data, e.target.value))}
+              className="max-w-xs border-none bg-transparent text-xl font-bold text-emerald-900 outline-none"
+              aria-label="দোকানের নাম"
+            />
             <nav className="flex gap-2">
               {(
                 [
-                  ["sell", "বিক্রি"],
-                  ["products", "পণ্য"],
-                  ["report", "হিসাব"],
+                  ["sell", "বিক্রি", false],
+                  ["products", "পণ্য 🔒", true],
+                  ["report", "হিসাব 🔒", true],
                 ] as const
-              ).map(([key, label]) => (
+              ).map(([key, label, locked]) => (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setTab(key)}
+                  onClick={() => tryOpenTab(key)}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                     tab === key
                       ? "bg-emerald-600 text-white shadow-md"
                       : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                   }`}
                 >
-                  {label}
+                  {locked && adminUnlocked ? label.replace(" 🔒", "") : label}
                 </button>
               ))}
             </nav>
@@ -388,9 +399,40 @@ export function MudidokanPos() {
 
         <main className="mx-auto max-w-7xl px-4 py-4">
           {tab === "sell" && (
-            <div className="grid gap-4 xl:grid-cols-[240px_1fr_340px]">
-              <aside className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-[260px_1fr_320px]">
+              <aside className="space-y-3">
+                <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    সিলেক্ট পণ্য
+                  </p>
+                  {selectedProduct ? (
+                    <>
+                      <p className="mt-1 text-lg font-bold text-emerald-900">
+                        {selectedProduct.name}
+                      </p>
+                      <p className="mt-2 text-3xl font-bold text-emerald-700">
+                        {formatTaka(selectedPrice)}
+                      </p>
+                      {isWeightUnit(selectedProduct.unit) && (
+                        <p className="text-xs text-emerald-600">
+                          {scale.weightKg.toFixed(3)} kg · {scale.weightGrams} gram
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={addSelectedToCart}
+                        className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
+                      >
+                        বিলে যোগ করুন
+                      </button>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500">পণ্য সিলেক্ট করুন</p>
+                  )}
+                </div>
+
                 <DigitalScale scale={scale} />
+
                 <div className="rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm">
                   <label className="block text-sm font-semibold text-emerald-900">
                     বারকোড / কোড
@@ -399,7 +441,7 @@ export function MudidokanPos() {
                     <input
                       ref={barcodeRef}
                       type="text"
-                      placeholder="স্ক্যান বা কোড লিখুন"
+                      placeholder="স্ক্যান বা কোড"
                       value={barcodeInput}
                       onChange={(e) => setBarcodeInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -408,7 +450,7 @@ export function MudidokanPos() {
                           setBarcodeInput("");
                         }
                       }}
-                      className="min-w-0 flex-1 rounded-xl border border-emerald-200 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                      className="min-w-0 flex-1 rounded-xl border border-emerald-200 px-3 py-2 text-sm outline-none"
                     />
                     <button
                       type="button"
@@ -421,9 +463,6 @@ export function MudidokanPos() {
                       OK
                     </button>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    স্ক্যানার দিয়ে স্ক্যান করুন অথবা কোড লিখে Enter
-                  </p>
                 </div>
               </aside>
 
@@ -433,58 +472,43 @@ export function MudidokanPos() {
                   placeholder="পণ্য খুঁজুন..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="mb-4 w-full rounded-xl border border-emerald-200 px-4 py-3 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                  className="mb-4 w-full rounded-xl border border-emerald-200 px-4 py-3 text-base outline-none focus:border-emerald-500"
                 />
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {filteredProducts.map((product) => {
-                    const isWeight = isWeightUnit(product.unit);
-                    const livePrice =
-                      isWeight && scale.weightKg > 0
-                        ? weightPricePreview(product.price, scale.weightKg, product.unit)
-                        : null;
+                    const isSelected = selectedProduct?.id === product.id;
                     const textColor = textOnColor(product.color);
                     return (
                       <button
                         key={product.id}
                         type="button"
-                        onClick={() => addToCart(product)}
+                        onClick={() => setSelectedProduct(product)}
                         style={{
                           backgroundColor: product.color,
                           color: textColor,
-                          borderColor: `${textColor}22`,
+                          borderColor: isSelected ? "#059669" : `${textColor}22`,
                         }}
-                        className="flex min-h-[96px] flex-col items-start justify-between rounded-xl border-2 p-3 text-left shadow-sm transition hover:brightness-95 active:scale-[0.98]"
+                        className={`flex min-h-[88px] flex-col items-start justify-between rounded-xl border-2 p-3 text-left shadow-sm transition hover:brightness-95 active:scale-[0.98] ${
+                          isSelected ? "ring-2 ring-emerald-500 ring-offset-2" : ""
+                        }`}
                       >
                         <span className="line-clamp-2 text-sm font-bold leading-snug">
                           {product.name}
                         </span>
-                        <div className="mt-1 w-full">
-                          <span className="text-base font-bold">
-                            {formatTaka(product.price)}/{product.unit}
-                          </span>
-                          {livePrice && (
-                            <p className="mt-0.5 text-xs font-semibold opacity-90">
-                              ওজন: {scale.weightKg.toFixed(3)} kg = {livePrice}
-                            </p>
-                          )}
-                          {product.barcode && (
-                            <p className="text-[10px] opacity-70">#{product.barcode}</p>
-                          )}
-                        </div>
+                        <span className="mt-1 text-base font-bold">
+                          {formatTaka(product.price)}/{product.unit}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
-                {filteredProducts.length === 0 && (
-                  <p className="py-8 text-center text-slate-500">কোনো পণ্য পাওয়া যায়নি</p>
-                )}
               </section>
 
-              <aside className="flex flex-col rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)]">
+              <aside className="flex flex-col rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm xl:sticky xl:top-24">
                 <h2 className="mb-3 text-lg font-bold text-emerald-900">বিল</h2>
-                <div className="flex-1 space-y-2 overflow-y-auto">
+                <div className="mb-3 max-h-[40vh] space-y-2 overflow-y-auto">
                   {cart.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-slate-500">পণ্যে ক্লিক করুন</p>
+                    <p className="py-4 text-center text-sm text-slate-500">খালি</p>
                   ) : (
                     cart.map((line) => (
                       <div
@@ -495,8 +519,8 @@ export function MudidokanPos() {
                           <p className="truncate text-sm font-medium">{line.name}</p>
                           <p className="text-xs text-slate-500">
                             {line.weight != null
-                              ? `${formatTaka(line.price)}/${line.unit} · ${formatWeightDisplay(line.weight, line.unit)}`
-                              : `${formatTaka(line.price)} × ${line.qty}`}
+                              ? formatWeightDisplay(line.weight, line.unit)
+                              : `× ${line.qty}`}
                           </p>
                         </div>
                         {line.weight == null ? (
@@ -504,15 +528,15 @@ export function MudidokanPos() {
                             <button
                               type="button"
                               onClick={() => updateQty(line.lineId, -1)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-lg font-bold shadow-sm"
+                              className="flex h-7 w-7 items-center justify-center rounded bg-white text-sm font-bold"
                             >
                               −
                             </button>
-                            <span className="w-5 text-center text-sm font-bold">{line.qty}</span>
+                            <span className="w-4 text-center text-xs font-bold">{line.qty}</span>
                             <button
                               type="button"
                               onClick={() => updateQty(line.lineId, 1)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-lg font-bold text-white"
+                              className="flex h-7 w-7 items-center justify-center rounded bg-emerald-600 text-sm font-bold text-white"
                             >
                               +
                             </button>
@@ -521,12 +545,12 @@ export function MudidokanPos() {
                           <button
                             type="button"
                             onClick={() => removeLine(line.lineId)}
-                            className="rounded-lg px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                            className="text-xs text-red-600"
                           >
                             মুছুন
                           </button>
                         )}
-                        <span className="w-16 text-right text-sm font-bold">
+                        <span className="w-14 text-right text-sm font-bold">
                           {formatTaka(lineTotal(line))}
                         </span>
                       </div>
@@ -534,78 +558,97 @@ export function MudidokanPos() {
                   )}
                 </div>
 
-                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                  <div className="flex items-center justify-between text-xl font-bold">
-                    <span>মোট</span>
-                    <span className="text-emerald-700">{formatTaka(total)}</span>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => cart.length > 0 && setCheckoutOpen((v) => !v)}
+                  disabled={cart.length === 0}
+                  className="flex w-full items-center justify-between rounded-xl bg-emerald-600 px-4 py-3 text-left font-bold text-white disabled:opacity-40"
+                >
+                  <span>মোট (Total)</span>
+                  <span className="text-xl">{formatTaka(total)}</span>
+                </button>
 
-                  <label className="block">
-                    <span className="text-sm font-medium text-slate-600">গ্রাহক দিয়েছে</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      placeholder="০"
-                      value={paidInput}
-                      onChange={(e) => setPaidInput(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-emerald-200 px-4 py-3 text-lg font-semibold outline-none focus:border-emerald-500"
-                    />
-                  </label>
+                {checkoutOpen && cart.length > 0 && (
+                  <div className="mt-3 space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+                    <button
+                      type="button"
+                      onClick={completeSale}
+                      className="w-full rounded-xl bg-emerald-700 py-3 text-base font-bold text-white shadow-lg hover:bg-emerald-800"
+                    >
+                      বিক্রি সম্পন্ন
+                    </button>
 
-                  {paidInput && change > 0 && (
-                    <div className="flex justify-between rounded-xl bg-amber-50 px-3 py-2 font-semibold text-amber-900">
-                      <span>ফেরত</span>
-                      <span>{formatTaka(change)}</span>
-                    </div>
-                  )}
+                    <label className="block">
+                      <span className="text-xs font-medium text-slate-600">গ্রাহক দিয়েছে</span>
+                      <input
+                        type="number"
+                        placeholder="০"
+                        value={paidInput}
+                        onChange={(e) => setPaidInput(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-emerald-200 px-3 py-2 text-lg font-semibold outline-none"
+                      />
+                    </label>
 
-                  {dueAmount > 0 && (
-                    <>
-                      <div className="flex justify-between rounded-xl bg-red-50 px-3 py-2 font-semibold text-red-700">
-                        <span>বাকি</span>
-                        <span>{formatTaka(dueAmount)}</span>
+                    {paidInput && change > 0 && (
+                      <div className="flex justify-between text-sm font-semibold text-amber-800">
+                        <span>ফেরত</span>
+                        <span>{formatTaka(change)}</span>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="গ্রাহকের নাম (বাকির জন্য)"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full rounded-xl border border-red-200 px-3 py-2 text-sm outline-none"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="মোবাইল (ঐচ্ছিক)"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none"
-                      />
-                    </>
-                  )}
+                    )}
 
-                  <div className="grid grid-cols-2 gap-2">
+                    {dueAmount > 0 && (
+                      <>
+                        <div className="flex justify-between text-sm font-semibold text-red-700">
+                          <span>বাকি</span>
+                          <span>{formatTaka(dueAmount)}</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="গ্রাহকের নাম"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="w-full rounded-xl border border-red-200 px-3 py-2 text-sm outline-none"
+                        />
+                        <input
+                          type="tel"
+                          placeholder="মোবাইল"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none"
+                        />
+                      </>
+                    )}
+
                     <button
                       type="button"
                       onClick={clearCart}
-                      disabled={cart.length === 0}
-                      className="rounded-xl border border-slate-200 py-3 font-semibold text-slate-600 disabled:opacity-40"
+                      className="w-full text-center text-xs text-slate-500 hover:text-red-600"
                     >
-                      খালি
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openPreview}
-                      disabled={cart.length === 0}
-                      className="rounded-xl bg-emerald-600 py-3 font-bold text-white shadow-lg hover:bg-emerald-700 disabled:opacity-40"
-                    >
-                      ইনভয়েস দেখুন
+                      বিল খালি করুন
                     </button>
                   </div>
-                </div>
+                )}
+
+                {lastSale && !cart.length && (
+                  <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3">
+                    <p className="text-xs text-slate-500">সর্বশেষ বিক্রি #{lastSale.invoiceNo}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrintSale(lastSale);
+                        setTimeout(() => window.print(), 100);
+                      }}
+                      className="mt-2 w-full rounded-xl border border-emerald-300 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                    >
+                      ইনভয়েস প্রিন্ট
+                    </button>
+                  </div>
+                )}
               </aside>
             </div>
           )}
 
-          {tab === "products" && (
+          {tab === "products" && adminUnlocked && (
             <section className="mx-auto max-w-lg rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
               <h2 className="mb-4 text-lg font-bold">নতুন পণ্য যোগ করুন</h2>
               <div className="space-y-3">
@@ -614,20 +657,27 @@ export function MudidokanPos() {
                   placeholder="পণ্যের নাম"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full rounded-xl border border-emerald-200 px-4 py-3 outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-emerald-200 px-4 py-3 outline-none"
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <input
                     type="number"
-                    placeholder="দাম (৳)"
+                    placeholder="বিক্রয় দাম"
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    className="rounded-xl border border-emerald-200 px-4 py-3 outline-none focus:border-emerald-500"
+                    className="rounded-xl border border-emerald-200 px-3 py-3 outline-none"
+                  />
+                  <input
+                    type="number"
+                    placeholder="ক্রয় দাম"
+                    value={newCost}
+                    onChange={(e) => setNewCost(e.target.value)}
+                    className="rounded-xl border border-emerald-200 px-3 py-3 outline-none"
                   />
                   <select
                     value={newUnit}
                     onChange={(e) => setNewUnit(e.target.value)}
-                    className="rounded-xl border border-emerald-200 px-4 py-3 outline-none"
+                    className="rounded-xl border border-emerald-200 px-3 py-3 outline-none"
                   >
                     {["পিস", "কেজি", "লিটার", "প্যাকেট", "হালি", "গ্রাম"].map((u) => (
                       <option key={u} value={u}>{u}</option>
@@ -636,63 +686,49 @@ export function MudidokanPos() {
                 </div>
                 <input
                   type="text"
-                  placeholder="বারকোড (ঐচ্ছিক)"
+                  placeholder="বারকোড"
                   value={newBarcode}
                   onChange={(e) => setNewBarcode(e.target.value)}
                   className="w-full rounded-xl border border-emerald-200 px-4 py-3 outline-none"
                 />
-                <div>
-                  <p className="mb-2 text-sm font-medium">রঙ</p>
-                  <div className="flex flex-wrap gap-2">
-                    {PRODUCT_COLOR_PRESETS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setNewColor(c)}
-                        style={{ backgroundColor: c }}
-                        className={`h-9 w-9 rounded-full border-2 ${newColor === c ? "border-emerald-600 ring-2 ring-emerald-300" : "border-slate-200"}`}
-                        aria-label={c}
-                      />
-                    ))}
-                    <input
-                      type="color"
-                      value={newColor}
-                      onChange={(e) => setNewColor(e.target.value)}
-                      className="h-9 w-12 cursor-pointer rounded-lg border border-slate-200"
+                <div className="flex flex-wrap gap-2">
+                  {PRODUCT_COLOR_PRESETS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewColor(c)}
+                      style={{ backgroundColor: c }}
+                      className={`h-9 w-9 rounded-full border-2 ${newColor === c ? "border-emerald-600" : "border-slate-200"}`}
                     />
-                  </div>
+                  ))}
                 </div>
                 <button
                   type="button"
                   onClick={handleAddProduct}
-                  className="w-full rounded-xl bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-700"
+                  className="w-full rounded-xl bg-emerald-600 py-3 font-bold text-white"
                 >
                   যোগ করুন
                 </button>
               </div>
 
-              <h3 className="mb-2 mt-8 font-bold">সব পণ্য ({data.products.length})</h3>
+              <h3 className="mb-2 mt-8 font-bold">সব পণ্য</h3>
               <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
                 {data.products.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2"
-                  >
+                  <li key={p.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
                     <span
-                      className="h-8 w-8 shrink-0 rounded-lg border border-slate-200"
+                      className="h-8 w-8 shrink-0 rounded-lg border"
                       style={{ backgroundColor: p.color }}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">{p.name}</p>
                       <p className="text-sm text-slate-500">
-                        {formatTaka(p.price)} / {p.unit}
-                        {p.barcode ? ` · #${p.barcode}` : ""}
+                        বিক্রি {formatTaka(p.price)} · ক্রয় {formatTaka(p.cost)} / {p.unit}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveProduct(p.id)}
-                      className="rounded-lg px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+                      className="text-sm text-red-600"
                     >
                       মুছুন
                     </button>
@@ -702,7 +738,7 @@ export function MudidokanPos() {
             </section>
           )}
 
-          {tab === "report" && (
+          {tab === "report" && adminUnlocked && (
             <section className="space-y-4">
               <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
                 <label className="flex items-center gap-2 text-sm font-medium">
@@ -738,19 +774,41 @@ export function MudidokanPos() {
               </div>
 
               {reportTab === "sales" && (
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl bg-emerald-50 p-4">
                     <p className="text-sm text-emerald-700">মোট বিক্রি</p>
-                    <p className="text-2xl font-bold text-emerald-900">{formatTaka(dateTotal)}</p>
+                    <p className="text-2xl font-bold">{formatTaka(dateTotal)}</p>
                   </div>
-                  <div className="rounded-xl bg-emerald-50 p-4">
-                    <p className="text-sm text-emerald-700">বিল সংখ্যা</p>
-                    <p className="text-2xl font-bold text-emerald-900">{dateSales.length}টি</p>
+                  <div className="rounded-xl bg-blue-50 p-4">
+                    <p className="text-sm text-blue-700">আজকের লাভ</p>
+                    <p className="text-2xl font-bold text-blue-900">{formatTaka(dateProfit)}</p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50 p-4">
+                    <p className="text-sm text-amber-700">বাকি সংগ্রহ (এই দিন)</p>
+                    <p className="text-2xl font-bold text-amber-900">{formatTaka(dateCollections)}</p>
                   </div>
                   <div className="rounded-xl bg-red-50 p-4">
                     <p className="text-sm text-red-600">মোট বাকি</p>
                     <p className="text-2xl font-bold text-red-700">{formatTaka(dateDueTotal)}</p>
                   </div>
+                </div>
+              )}
+
+              {reportTab === "sales" && collectionRows.length > 0 && (
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
+                  <h3 className="mb-2 font-bold text-amber-900">এই দিনে বাকি সংগ্রহ</h3>
+                  <ul className="space-y-1 text-sm">
+                    {collectionRows.map((row) => (
+                      <li key={`${row.saleId}-${row.createdAt}`} className="flex justify-between">
+                        <span>
+                          #{row.invoiceNo}
+                          {row.customerName ? ` · ${row.customerName}` : ""} ·{" "}
+                          {formatTime(row.createdAt)}
+                        </span>
+                        <span className="font-bold">{formatTaka(row.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
@@ -794,47 +852,29 @@ export function MudidokanPos() {
                     {[...dateSales].reverse().map((sale) => (
                       <li
                         key={sale.id}
-                        className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 transition hover:bg-slate-50 ${
-                          sale.due > 0 ? "border-red-200 bg-red-50/50" : "border-slate-100"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setDetailSale(sale)}
+                        onKeyDown={(e) => e.key === "Enter" && setDetailSale(sale)}
+                        className={`cursor-pointer rounded-xl border px-3 py-2 transition hover:bg-slate-50 ${
+                          sale.due > 0 ? "border-red-200 bg-red-50/40" : "border-slate-100"
                         }`}
-                        onClick={() => {
-                          if (sale.due > 0) setDueSale(sale);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && sale.due > 0) setDueSale(sale);
-                        }}
-                        role={sale.due > 0 ? "button" : undefined}
-                        tabIndex={sale.due > 0 ? 0 : undefined}
                       >
-                        <div>
-                          <p className="font-medium">
-                            #{sale.invoiceNo} · {formatTaka(sale.total)}
-                            {sale.due > 0 && (
-                              <span className="ml-2 text-sm text-red-600">
-                                বাকি {formatTaka(sale.due)}
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {formatTime(sale.createdAt)} · {sale.items.length}টি পণ্য
-                            {sale.customerName ? ` · ${sale.customerName}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {sale.due > 0 && (
-                            <span className="text-xs font-medium text-red-600">বাকি দেখুন</span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPrintSale(sale);
-                              setTimeout(() => window.print(), 100);
-                            }}
-                            className="text-sm font-medium text-emerald-700 hover:underline"
-                          >
-                            রসিদ
-                          </button>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">
+                              #{sale.invoiceNo} · {formatTaka(sale.total)}
+                              {sale.due > 0 && (
+                                <span className="ml-2 text-sm text-red-600">
+                                  বাকি {formatTaka(sale.due)}
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {formatTime(sale.createdAt)} · {sale.items.length}টি পণ্য
+                            </p>
+                          </div>
+                          <span className="text-xs text-emerald-700">বিস্তারিত →</span>
                         </div>
                       </li>
                     ))}
@@ -851,20 +891,28 @@ export function MudidokanPos() {
           </div>
         )}
 
-        {previewSale && (
-          <InvoicePreviewModal
-            sale={previewSale}
-            shopName={data.settings.shopName}
-            onClose={() => setPreviewSale(null)}
-            onPrint={confirmPrint}
+        {lockTarget && data && (
+          <PosLockModal
+            data={data}
+            tabLabel={lockTarget === "products" ? "পণ্য" : "হিসাব"}
+            onUnlock={() => {
+              setAdminUnlocked(true);
+              setTab(lockTarget);
+            }}
+            onClose={() => setLockTarget(null)}
           />
         )}
 
-        {dueSale && (
-          <DueDetailsModal
-            sale={dueSale}
-            onClose={() => setDueSale(null)}
-            onCollect={handleCollectDue}
+        {detailSale && (
+          <InvoiceDetailsModal
+            sale={detailSale}
+            shopName={data.settings.shopName}
+            onClose={() => setDetailSale(null)}
+            onPrint={() => {
+              setPrintSale(detailSale);
+              setTimeout(() => window.print(), 100);
+            }}
+            onCollect={detailSale.due > 0 ? handleCollectDue : undefined}
           />
         )}
 

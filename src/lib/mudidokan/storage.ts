@@ -1,8 +1,9 @@
 "use client";
 
 import { cartTotal, lineTotal } from "./format";
-import { DEFAULT_PRODUCTS, DEFAULT_SETTINGS } from "./seed";
+import { cleanProductName, DEFAULT_PRODUCTS, DEFAULT_SETTINGS } from "./seed";
 import type { CartLine, DueCollection, PosData, Product, Sale } from "./types";
+import { isWeightUnit, weightInKg } from "./units";
 
 const STORAGE_KEY = "mudidokan-pos-v2";
 const LEGACY_KEY = "mudidokan-pos-v1";
@@ -11,23 +12,31 @@ function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function dateKeyFromIso(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+}
+
 function normalizeProduct(raw: Partial<Product> & { id: string }): Product {
   const fallback = DEFAULT_PRODUCTS.find((p) => p.id === raw.id);
+  const price = raw.price ?? fallback?.price ?? 0;
   return {
     id: raw.id,
-    name: raw.name ?? fallback?.name ?? "পণ্য",
-    price: raw.price ?? fallback?.price ?? 0,
+    name: cleanProductName(raw.name ?? fallback?.name ?? "পণ্য"),
+    price,
+    cost: raw.cost ?? fallback?.cost ?? Math.round(price * 0.85),
     unit: raw.unit ?? fallback?.unit ?? "পিস",
     color: raw.color ?? fallback?.color ?? "#E8F5E9",
     barcode: raw.barcode ?? fallback?.barcode,
   };
 }
 
-function normalizeCartLine(raw: Partial<CartLine> & { productId: string; name: string; price: number; unit: string }): CartLine {
+function normalizeCartLine(
+  raw: Partial<CartLine> & { productId: string; name: string; price: number; unit: string },
+): CartLine {
   return {
     lineId: raw.lineId ?? newId(),
     productId: raw.productId,
-    name: raw.name,
+    name: cleanProductName(raw.name),
     price: raw.price,
     unit: raw.unit,
     qty: raw.qty ?? 1,
@@ -35,7 +44,10 @@ function normalizeCartLine(raw: Partial<CartLine> & { productId: string; name: s
   };
 }
 
-function normalizeSale(raw: Partial<Sale> & { id: string; items: CartLine[]; total: number; createdAt: string }, index: number): Sale {
+function normalizeSale(
+  raw: Partial<Sale> & { id: string; items: CartLine[]; total: number; createdAt: string },
+  index: number,
+): Sale {
   const paid = raw.paid ?? raw.total;
   const due = raw.due ?? Math.max(0, raw.total - paid);
   return {
@@ -59,9 +71,7 @@ function migrateLegacy(raw: string): PosData | null {
     if (!parsed.products?.length) return null;
     return {
       products: parsed.products.map((p) => normalizeProduct(p as Product)),
-      sales: (parsed.sales ?? []).map((s, i) =>
-        normalizeSale(s as Sale, i),
-      ),
+      sales: (parsed.sales ?? []).map((s, i) => normalizeSale(s as Sale, i)),
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       invoiceCounter: parsed.sales?.length ?? 0,
     };
@@ -105,6 +115,19 @@ export function savePosData(data: PosData): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+export function verifyAdminPassword(data: PosData, password: string): boolean {
+  return password === data.settings.adminPassword;
+}
+
+export function updateAdminPassword(data: PosData, password: string): PosData {
+  const next = {
+    ...data,
+    settings: { ...data.settings, adminPassword: password.trim() || DEFAULT_SETTINGS.adminPassword },
+  };
+  savePosData(next);
+  return next;
+}
+
 export function findProductByBarcode(products: Product[], code: string): Product | undefined {
   const trimmed = code.trim();
   if (!trimmed) return undefined;
@@ -113,12 +136,21 @@ export function findProductByBarcode(products: Product[], code: string): Product
 
 export function addProduct(
   data: PosData,
-  input: { name: string; price: number; unit: string; color: string; barcode?: string },
+  input: {
+    name: string;
+    price: number;
+    cost: number;
+    unit: string;
+    color: string;
+    barcode?: string;
+  },
 ): PosData {
+  const price = Math.max(0, Math.round(input.price));
   const product: Product = {
     id: newId(),
-    name: input.name.trim(),
-    price: Math.max(0, Math.round(input.price)),
+    name: cleanProductName(input.name),
+    price,
+    cost: Math.max(0, Math.round(input.cost || price * 0.85)),
     unit: input.unit.trim() || "পিস",
     color: input.color || "#E8F5E9",
     barcode: input.barcode?.trim() || undefined,
@@ -210,10 +242,41 @@ export function collectDue(
 }
 
 export function salesForDate(data: PosData, dateKey: string): Sale[] {
-  return data.sales.filter((s) => {
-    const key = new Date(s.createdAt).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
-    return key === dateKey;
-  });
+  return data.sales.filter((s) => dateKeyFromIso(s.createdAt) === dateKey);
+}
+
+export function collectionsForDate(data: PosData, dateKey: string): DueCollection[] {
+  const rows: DueCollection[] = [];
+  for (const sale of data.sales) {
+    for (const c of sale.collections) {
+      if (dateKeyFromIso(c.createdAt) === dateKey) rows.push(c);
+    }
+  }
+  return rows;
+}
+
+export function collectionsTotalForDate(data: PosData, dateKey: string): number {
+  return collectionsForDate(data, dateKey).reduce((s, c) => s + c.amount, 0);
+}
+
+export function lineCost(line: CartLine, product: Product | undefined): number {
+  if (!product) return 0;
+  if (line.weight != null && isWeightUnit(line.unit)) {
+    return Math.round(product.cost * weightInKg(line.weight, line.unit));
+  }
+  return product.cost * line.qty;
+}
+
+export function profitForDate(data: PosData, dateKey: string): number {
+  let revenue = 0;
+  let cost = 0;
+  for (const sale of salesForDate(data, dateKey)) {
+    for (const line of sale.items) {
+      revenue += lineTotal(line);
+      cost += lineCost(line, data.products.find((p) => p.id === line.productId));
+    }
+  }
+  return revenue - cost;
 }
 
 export type ProductReportRow = {
@@ -248,4 +311,30 @@ export function productReportForDate(data: PosData, dateKey: string): ProductRep
     }
   }
   return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+}
+
+export type CollectionReportRow = {
+  saleId: string;
+  invoiceNo: string;
+  customerName?: string;
+  amount: number;
+  createdAt: string;
+};
+
+export function collectionReportForDate(data: PosData, dateKey: string): CollectionReportRow[] {
+  const rows: CollectionReportRow[] = [];
+  for (const sale of data.sales) {
+    for (const c of sale.collections) {
+      if (dateKeyFromIso(c.createdAt) === dateKey) {
+        rows.push({
+          saleId: sale.id,
+          invoiceNo: sale.invoiceNo,
+          customerName: sale.customerName,
+          amount: c.amount,
+          createdAt: c.createdAt,
+        });
+      }
+    }
+  }
+  return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

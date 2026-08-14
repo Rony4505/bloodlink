@@ -8,18 +8,22 @@ function parseWeightFromLine(text: string): number | null {
   if (!match) return null;
   const value = parseFloat(match[0].replace(",", "."));
   if (!Number.isFinite(value) || value < 0) return null;
-  // Gram scales sometimes send grams — if value > 50 assume grams
+  if (text.toLowerCase().includes("g") && !text.toLowerCase().includes("kg")) {
+    return value / 1000;
+  }
   if (value > 50 && !text.toLowerCase().includes("kg")) return value / 1000;
   return value;
 }
 
 export type WeightScaleState = {
   weightKg: number;
+  weightGrams: number;
   connected: boolean;
   connecting: boolean;
   error: string | null;
   manualMode: boolean;
-  setManualWeight: (kg: number) => void;
+  setManualWeightKg: (kg: number) => void;
+  setManualWeightGrams: (grams: number) => void;
   connect: () => Promise<void>;
   disconnect: () => void;
   tare: () => void;
@@ -91,9 +95,14 @@ export function useWeightScale(): WeightScaleState {
     }
   }, [readLoop]);
 
-  const setManualWeight = useCallback((kg: number) => {
+  const setManualWeightKg = useCallback((kg: number) => {
     setManualMode(true);
     setWeightKg(Math.max(0, kg));
+  }, []);
+
+  const setManualWeightGrams = useCallback((grams: number) => {
+    setManualMode(true);
+    setWeightKg(Math.max(0, grams) / 1000);
   }, []);
 
   const tare = useCallback(() => {
@@ -104,11 +113,13 @@ export function useWeightScale(): WeightScaleState {
 
   return {
     weightKg,
+    weightGrams: Math.round(weightKg * 1000),
     connected,
     connecting,
     error,
     manualMode,
-    setManualWeight,
+    setManualWeightKg,
+    setManualWeightGrams,
     connect,
     disconnect,
     tare,
