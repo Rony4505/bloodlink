@@ -8,29 +8,32 @@ function parseWeightFromLine(text: string): number | null {
   if (!match) return null;
   const value = parseFloat(match[0].replace(",", "."));
   if (!Number.isFinite(value) || value < 0) return null;
-  if (text.toLowerCase().includes("g") && !text.toLowerCase().includes("kg")) {
-    return value / 1000;
+  if (text.toLowerCase().includes("kg") && !text.toLowerCase().includes("g")) {
+    return Math.round(value * 1000);
   }
-  if (value > 50 && !text.toLowerCase().includes("kg")) return value / 1000;
-  return value;
+  if (value < 50 && text.toLowerCase().includes("kg")) {
+    return Math.round(value * 1000);
+  }
+  if (value > 0 && value < 50 && !text.toLowerCase().includes("g")) {
+    return Math.round(value * 1000);
+  }
+  return Math.round(value);
 }
 
 export type WeightScaleState = {
-  weightKg: number;
   weightGrams: number;
   connected: boolean;
   connecting: boolean;
   error: string | null;
   manualMode: boolean;
-  setManualWeightKg: (kg: number) => void;
-  setManualWeightGrams: (grams: number) => void;
+  setWeightGrams: (grams: number) => void;
   connect: () => Promise<void>;
   disconnect: () => void;
   tare: () => void;
 };
 
 export function useWeightScale(): WeightScaleState {
-  const [weightKg, setWeightKg] = useState(0);
+  const [weightGrams, setWeightGramsState] = useState(0);
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +64,8 @@ export function useWeightScale(): WeightScaleState {
         const parts = bufferRef.current.split(/\r|\n/);
         bufferRef.current = parts.pop() ?? "";
         for (const line of parts) {
-          const w = parseWeightFromLine(line);
-          if (w != null) setWeightKg(w);
+          const g = parseWeightFromLine(line);
+          if (g != null) setWeightGramsState(g);
         }
       }
     } catch {
@@ -75,7 +78,7 @@ export function useWeightScale(): WeightScaleState {
   const connect = useCallback(async () => {
     if (typeof navigator === "undefined" || !("serial" in navigator)) {
       setManualMode(true);
-      setError("ব্রাউজারে স্কেল সাপোর্ট নেই — ম্যানুয়াল ওজন ব্যবহার করুন");
+      setError("ব্রাউজারে স্কেল সাপোর্ট নেই — নিচে ওজন লিখুন");
       return;
     }
     setConnecting(true);
@@ -95,31 +98,24 @@ export function useWeightScale(): WeightScaleState {
     }
   }, [readLoop]);
 
-  const setManualWeightKg = useCallback((kg: number) => {
+  const setWeightGrams = useCallback((grams: number) => {
     setManualMode(true);
-    setWeightKg(Math.max(0, kg));
-  }, []);
-
-  const setManualWeightGrams = useCallback((grams: number) => {
-    setManualMode(true);
-    setWeightKg(Math.max(0, grams) / 1000);
+    setWeightGramsState(Math.max(0, Math.round(grams)));
   }, []);
 
   const tare = useCallback(() => {
-    setWeightKg(0);
+    setWeightGramsState(0);
   }, []);
 
   useEffect(() => () => disconnect(), [disconnect]);
 
   return {
-    weightKg,
-    weightGrams: Math.round(weightKg * 1000),
+    weightGrams,
     connected,
     connecting,
     error,
     manualMode,
-    setManualWeightKg,
-    setManualWeightGrams,
+    setWeightGrams,
     connect,
     disconnect,
     tare,
