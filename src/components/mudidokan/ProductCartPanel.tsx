@@ -37,20 +37,27 @@ export function ProductCartPanel({ cart, total, onOpenCheckout, onRemoveLine }: 
                 <th className="pb-1 font-semibold">দাম</th>
                 <th className="pb-1 font-semibold">Wt/Pcs</th>
                 <th className="pb-1 text-right font-semibold">মোট</th>
+                <th className="pb-1 w-7" aria-label="মুছুন" />
               </tr>
             </thead>
             <tbody>
               {cart.map((line) => (
-                <tr
-                  key={line.lineId}
-                  className="border-b border-slate-50 align-top"
-                  onDoubleClick={() => onRemoveLine(line.lineId)}
-                >
-                  <td className="max-w-[72px] truncate py-1.5 pr-1 font-medium">{line.name}</td>
+                <tr key={line.lineId} className="border-b border-slate-50 align-top">
+                  <td className="max-w-[64px] truncate py-1.5 pr-1 font-medium">{line.name}</td>
                   <td className="whitespace-nowrap py-1.5 pr-1">{formatTaka(line.price)}</td>
                   <td className="whitespace-nowrap py-1.5 pr-1">{qtyLabel(line)}</td>
                   <td className="whitespace-nowrap py-1.5 text-right font-bold">
                     {formatTaka(lineTotal(line))}
+                  </td>
+                  <td className="py-1 pl-1 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onRemoveLine(line.lineId)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-red-500 hover:bg-red-50"
+                      aria-label={`${line.name} মুছুন`}
+                    >
+                      ×
+                    </button>
                   </td>
                 </tr>
               ))}

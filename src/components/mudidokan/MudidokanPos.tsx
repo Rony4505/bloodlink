@@ -155,6 +155,7 @@ export function MudidokanPos() {
             weight: w,
           },
         ]);
+        scale.tare();
         setToast(`${product.name} যোগ হয়েছে`);
         return;
       }
@@ -182,7 +183,7 @@ export function MudidokanPos() {
       });
       setToast(`${product.name} যোগ হয়েছে`);
     },
-    [scale.weightGrams],
+    [scale],
   );
 
   const addByBarcode = useCallback(
