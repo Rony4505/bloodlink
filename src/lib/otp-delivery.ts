@@ -1,12 +1,10 @@
 /**
  * OTP delivery for donor registration.
- * Prefer sms.bd (Alpha):
- * - SMS_NET_BD_API_KEY (from sms.bd panel → API)
- * - optional SMS_NET_BD_SENDER_ID (masking only; leave empty for non-masking)
+ * Registration uses Gmail OTP via:
+ * - RESEND_API_KEY (+ optional OTP_FROM_EMAIL)
+ * - or SMTP_WEBHOOK_URL
  *
- * Fallback webhook:
- * - SMS_WEBHOOK_URL (POST JSON { to, message })
- *
+ * SMS (sms.bd) remains available for other flows if configured.
  * Registration must never return OTP codes in API responses.
  */
 

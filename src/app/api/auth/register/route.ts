@@ -15,22 +15,22 @@ import {
   findPendingRegistration,
   updatePendingRegistration,
 } from "@/lib/db";
-import { deliverSmsOtp } from "@/lib/otp-delivery";
+import { deliverEmailOtp } from "@/lib/otp-delivery";
 import {
-  isPhonePlaceholderEmail,
   normalizeRegisterInput,
   registerConfirmSchema,
   registerResendSchema,
   registerSchema,
 } from "@/lib/validations";
 
-function maskPhoneLight(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 4) return "***";
-  return `${digits.slice(0, 2)}***${digits.slice(-3)}`;
+function maskEmail(email: string): string {
+  const [user, domain] = email.split("@");
+  if (!user || !domain) return "***";
+  const visible = user.slice(0, Math.min(2, user.length));
+  return `${visible}***@${domain}`;
 }
 
-/** Step 1: validate form, send phone OTP only (never return codes in JSON). */
+/** Step 1: validate form, send Gmail OTP only (never return codes in JSON). */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -58,10 +58,7 @@ async function startRegistration(body: unknown) {
   }
 
   const data = normalizeRegisterInput(parsed.data);
-  if (
-    !isPhonePlaceholderEmail(data.email) &&
-    (await findDonorByEmail(data.email))
-  ) {
+  if (await findDonorByEmail(data.email)) {
     return NextResponse.json(
       { error: "An account with this email already exists" },
       { status: 409 },
@@ -74,7 +71,7 @@ async function startRegistration(body: unknown) {
     );
   }
 
-  const phoneCode = makeCode();
+  const emailCode = makeCode();
   const passwordHash = await hashPassword(data.password);
 
   const pending = await createPendingRegistration({
@@ -94,21 +91,21 @@ async function startRegistration(body: unknown) {
           ? 1
           : 0,
     bloodIssue: data.bloodIssue,
-    emailCodeHash: "",
-    phoneCodeHash: hashCode(phoneCode),
+    emailCodeHash: hashCode(emailCode),
+    phoneCodeHash: "",
   });
 
-  // Never allowInline — OTP must only go to the phone, never in the API body.
-  const smsDelivery = await deliverSmsOtp(data.phone, phoneCode, {
+  // Never allowInline — OTP must only go to Gmail, never in the API body.
+  const emailDelivery = await deliverEmailOtp(data.email, emailCode, {
     allowInline: false,
   });
 
-  if (!smsDelivery.delivered || smsDelivery.mode !== "sms") {
+  if (!emailDelivery.delivered || emailDelivery.mode !== "email") {
     await deletePendingRegistration(pending.id);
     return NextResponse.json(
       {
         error:
-          "Could not send SMS OTP. Set SMS_NET_BD_API_KEY from sms.bd (API page) on Railway — codes are never shown on the website.",
+          "Could not send Gmail OTP. Set RESEND_API_KEY (and OTP_FROM_EMAIL) on Railway — codes are never shown on the website.",
       },
       { status: 503 },
     );
@@ -118,10 +115,10 @@ async function startRegistration(body: unknown) {
     ok: true,
     step: "verify",
     pendingId: pending.id,
-    phoneMasked: maskPhoneLight(data.phone),
+    emailMasked: maskEmail(data.email),
     expiresInMinutes: 15,
-    phoneDelivery: "sms",
-    note: "Enter the OTP sent to your mobile to create your account.",
+    emailDelivery: "email",
+    note: "Enter the OTP sent to your Gmail to create your verified donor account.",
   });
 }
 
@@ -139,18 +136,15 @@ async function confirmRegistration(body: unknown) {
     );
   }
 
-  const phoneOk = hashCode(parsed.data.phoneCode) === pending.phoneCodeHash;
-  if (!phoneOk) {
+  const emailOk = hashCode(parsed.data.emailCode) === pending.emailCodeHash;
+  if (!emailOk) {
     return NextResponse.json(
-      { error: "Incorrect mobile verification code" },
+      { error: "Incorrect Gmail verification code" },
       { status: 400 },
     );
   }
 
-  if (
-    !isPhonePlaceholderEmail(pending.email) &&
-    (await findDonorByEmail(pending.email))
-  ) {
+  if (await findDonorByEmail(pending.email)) {
     await deletePendingRegistration(pending.id);
     return NextResponse.json(
       { error: "An account with this email already exists" },
@@ -177,8 +171,8 @@ async function confirmRegistration(body: unknown) {
     lastDonationDate: pending.lastDonationDate,
     donationCount: pending.donationCount,
     bloodIssue: pending.bloodIssue,
-    emailVerified: false,
-    phoneVerified: true,
+    emailVerified: true,
+    phoneVerified: false,
     pendingEmailCodeHash: null,
     pendingPhoneCodeHash: null,
     pendingResetCodeHash: null,
@@ -210,29 +204,29 @@ async function resendCodes(body: unknown) {
     );
   }
 
-  const phoneCode = makeCode();
-  const delivery = await deliverSmsOtp(pending.phone, phoneCode, {
+  const emailCode = makeCode();
+  const delivery = await deliverEmailOtp(pending.email, emailCode, {
     allowInline: false,
   });
-  if (!delivery.delivered || delivery.mode !== "sms") {
+  if (!delivery.delivered || delivery.mode !== "email") {
     return NextResponse.json(
       {
         error:
-          "Could not resend SMS OTP. Check SMS_NET_BD_API_KEY on Railway — codes are never shown on the website.",
+          "Could not resend Gmail OTP. Check RESEND_API_KEY on Railway — codes are never shown on the website.",
       },
       { status: 503 },
     );
   }
 
   await updatePendingRegistration(pending.id, {
-    phoneCodeHash: hashCode(phoneCode),
+    emailCodeHash: hashCode(emailCode),
     expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
   });
 
   return NextResponse.json({
     ok: true,
     pendingId: pending.id,
-    phoneMasked: maskPhoneLight(pending.phone),
-    phoneDelivery: "sms",
+    emailMasked: maskEmail(pending.email),
+    emailDelivery: "email",
   });
 }
