@@ -65,8 +65,18 @@ export function AdminVolunteersPanel() {
   const [activityDraft, setActivityDraft] = useState(emptyActivity);
   const [selectedId, setSelectedId] = useState<string>("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [portalUrl, setPortalUrl] = useState("https://bloodlinkbd.org/volunteer/login");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const configured = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+    const origin = configured || window.location.origin.replace(/\/$/, "");
+    setPortalUrl(`${origin}/volunteer/login`);
+  }, []);
 
   async function load() {
     const res = await fetch("/api/admin/volunteers");
@@ -79,6 +89,17 @@ export function AdminVolunteersPanel() {
   useEffect(() => {
     void load();
   }, []);
+
+  async function copyPortalUrl() {
+    try {
+      await navigator.clipboard.writeText(portalUrl);
+      setCopied(true);
+      setMessage(t.volunteerUrlCopied);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt(t.volunteerCopyUrl, portalUrl);
+    }
+  }
 
   async function addVolunteer(e: React.FormEvent) {
     e.preventDefault();
@@ -122,6 +143,7 @@ export function AdminVolunteersPanel() {
     }
     setLoading(true);
     setError("");
+    setMessage("");
     try {
       const res = await fetch("/api/admin/volunteers", {
         method: "PATCH",
@@ -133,6 +155,42 @@ export function AdminVolunteersPanel() {
         setError(data.error || t.errorGeneric);
         return;
       }
+      setMessage(t.volunteerPasswordChanged);
+      await load();
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function changeUsername(v: VolunteerRow) {
+    const next = window.prompt(t.volunteerChangeUsernamePrompt, v.username || "");
+    if (next == null) return;
+    const username = next.trim().toLowerCase();
+    if (username.length < 3) {
+      setError(t.volunteerUsernameShort);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/volunteers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "volunteer", id: v.id, username }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(
+          String(data.error || "").includes("taken")
+            ? t.volunteerUsernameTaken
+            : data.error || t.errorGeneric,
+        );
+        return;
+      }
+      setMessage(t.volunteerUsernameChanged);
       await load();
     } catch {
       setError(t.errorGeneric);
@@ -207,6 +265,40 @@ export function AdminVolunteersPanel() {
 
   return (
     <div className="space-y-5">
+      <div className="rounded-2xl border border-[color-mix(in_oklab,#2f6b4f_35%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-5 py-4">
+        <h2 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
+          {t.volunteerPortalUrlTitle}
+        </h2>
+        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+          {t.volunteerPortalUrlHint}
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            className="field flex-1 font-mono text-sm"
+            readOnly
+            value={portalUrl}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void copyPortalUrl()}
+            >
+              {copied ? t.volunteerUrlCopied : t.volunteerCopyUrl}
+            </button>
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost inline-flex items-center"
+            >
+              {t.volunteerOpenUrl}
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
         <span>
           {t.volunteerTotal}: <strong>{stats.total}</strong>
@@ -417,6 +509,7 @@ export function AdminVolunteersPanel() {
       </div>
 
       {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+      {message ? <p className="text-sm text-[#245a40]">{message}</p> : null}
 
       <section className="rounded-2xl bg-white/80 p-5">
         <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
@@ -473,6 +566,13 @@ export function AdminVolunteersPanel() {
                       onClick={() => void toggleEnabled(v)}
                     >
                       {v.enabled ? t.volunteerDisable : t.volunteerEnable}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      onClick={() => void changeUsername(v)}
+                    >
+                      {t.volunteerChangeUsername}
                     </button>
                     <button
                       type="button"
