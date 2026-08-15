@@ -223,6 +223,8 @@ function normalizeVolunteer(
     district: String(raw.district || "").trim(),
     role: String(raw.role || "").trim(),
     notes: String(raw.notes || "").trim(),
+    username: String(raw.username || "").trim().toLowerCase(),
+    passwordHash: String(raw.passwordHash || ""),
     enabled: raw.enabled !== false,
     createdAt: String(raw.createdAt || new Date().toISOString()),
     updatedAt: String(raw.updatedAt || raw.createdAt || new Date().toISOString()),
@@ -247,8 +249,26 @@ function normalizeVolunteerActivity(
     activityType: String(raw.activityType || "other").trim() || "other",
     status,
     activityDate: String(raw.activityDate || "").slice(0, 10),
+    volunteerNote: String(raw.volunteerNote || "").trim(),
     createdAt: String(raw.createdAt || new Date().toISOString()),
     updatedAt: String(raw.updatedAt || raw.createdAt || new Date().toISOString()),
+  };
+}
+
+export function toPublicVolunteer(v: Volunteer) {
+  return {
+    id: v.id,
+    name: v.name,
+    phone: v.phone,
+    email: v.email,
+    district: v.district,
+    role: v.role,
+    notes: v.notes,
+    username: v.username,
+    hasLogin: Boolean(v.username && v.passwordHash),
+    enabled: v.enabled,
+    createdAt: v.createdAt,
+    updatedAt: v.updatedAt,
   };
 }
 
@@ -1212,6 +1232,24 @@ export async function listVolunteers(): Promise<Volunteer[]> {
     .sort((a, b) => a!.name.localeCompare(b!.name)) as Volunteer[];
 }
 
+export async function findVolunteerById(id: string): Promise<Volunteer | null> {
+  const db = await ensureDb();
+  const found = (db.volunteers || []).find((v) => v.id === id);
+  return found ? normalizeVolunteer(found) : null;
+}
+
+export async function findVolunteerByUsername(
+  username: string,
+): Promise<Volunteer | null> {
+  const db = await ensureDb();
+  const key = username.trim().toLowerCase();
+  if (!key) return null;
+  const found = (db.volunteers || []).find(
+    (v) => String(v.username || "").toLowerCase() === key,
+  );
+  return found ? normalizeVolunteer(found) : null;
+}
+
 export async function listVolunteerActivities(
   volunteerId?: string,
 ): Promise<VolunteerActivity[]> {
@@ -1231,15 +1269,26 @@ export async function createVolunteer(
   input: Omit<Volunteer, "id" | "createdAt" | "updatedAt">,
 ): Promise<Volunteer> {
   return withWrite(async (db) => {
+    const username = String(input.username || "").trim().toLowerCase();
+    if (!username) throw new Error("Username required");
+    if (!input.passwordHash) throw new Error("Password required");
+    db.volunteers = db.volunteers || [];
+    if (
+      db.volunteers.some(
+        (v) => String(v.username || "").toLowerCase() === username,
+      )
+    ) {
+      throw new Error("Username already taken");
+    }
     const now = new Date().toISOString();
     const volunteer = normalizeVolunteer({
       ...input,
+      username,
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
     });
     if (!volunteer) throw new Error("Invalid volunteer");
-    db.volunteers = db.volunteers || [];
     db.volunteers.push(volunteer);
     await persist(db);
     return volunteer;
@@ -1251,7 +1300,15 @@ export async function updateVolunteer(
   patch: Partial<
     Pick<
       Volunteer,
-      "name" | "phone" | "email" | "district" | "role" | "notes" | "enabled"
+      | "name"
+      | "phone"
+      | "email"
+      | "district"
+      | "role"
+      | "notes"
+      | "enabled"
+      | "username"
+      | "passwordHash"
     >
   >,
 ): Promise<Volunteer | null> {
@@ -1259,9 +1316,21 @@ export async function updateVolunteer(
     db.volunteers = db.volunteers || [];
     const index = db.volunteers.findIndex((v) => v.id === id);
     if (index === -1) return null;
+    if (patch.username) {
+      const key = patch.username.trim().toLowerCase();
+      const clash = db.volunteers.some(
+        (v, i) =>
+          i !== index && String(v.username || "").toLowerCase() === key,
+      );
+      if (clash) throw new Error("Username already taken");
+    }
     const merged = normalizeVolunteer({
       ...db.volunteers[index],
       ...patch,
+      username:
+        patch.username !== undefined
+          ? patch.username.trim().toLowerCase()
+          : db.volunteers[index].username,
       updatedAt: new Date().toISOString(),
     });
     if (!merged) return null;
@@ -1310,7 +1379,12 @@ export async function updateVolunteerActivity(
   patch: Partial<
     Pick<
       VolunteerActivity,
-      "title" | "description" | "activityType" | "status" | "activityDate"
+      | "title"
+      | "description"
+      | "activityType"
+      | "status"
+      | "activityDate"
+      | "volunteerNote"
     >
   >,
 ): Promise<VolunteerActivity | null> {

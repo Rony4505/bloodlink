@@ -12,6 +12,7 @@ type Activity = {
   activityType: string;
   status: "planned" | "in_progress" | "done";
   activityDate: string;
+  volunteerNote?: string;
 };
 
 type VolunteerRow = {
@@ -22,6 +23,8 @@ type VolunteerRow = {
   district: string;
   role: string;
   notes: string;
+  username: string;
+  hasLogin: boolean;
   enabled: boolean;
   activityCount: number;
   doneCount: number;
@@ -36,6 +39,8 @@ const emptyVolunteer = {
   district: "Dhaka",
   role: "",
   notes: "",
+  username: "",
+  password: "",
 };
 
 const emptyActivity: {
@@ -106,6 +111,34 @@ export function AdminVolunteersPanel() {
       body: JSON.stringify({ kind: "volunteer", id: v.id, enabled: !v.enabled }),
     });
     await load();
+  }
+
+  async function resetPassword(v: VolunteerRow) {
+    const password = window.prompt(t.volunteerResetPasswordPrompt, "");
+    if (!password) return;
+    if (password.length < 6) {
+      setError(t.volunteerPasswordShort);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/volunteers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "volunteer", id: v.id, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      await load();
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function removeVolunteer(id: string) {
@@ -210,6 +243,38 @@ export function AdminVolunteersPanel() {
               required
             />
           </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.volunteerUsername}</span>
+              <input
+                className="field"
+                value={draft.username}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, username: e.target.value }))
+                }
+                placeholder="volunteer1"
+                required
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.password}</span>
+              <input
+                className="field"
+                type="password"
+                value={draft.password}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, password: e.target.value }))
+                }
+                required
+                minLength={6}
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+            {t.volunteerCredHint}
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-medium">{t.phone}</span>
@@ -376,9 +441,11 @@ export function AdminVolunteersPanel() {
                       ) : null}
                     </p>
                     <p>
-                      {v.district}
+                      {v.username
+                        ? `${t.volunteerUsername}: ${v.username}`
+                        : t.volunteerNoLogin}
+                      {v.district ? ` · ${v.district}` : ""}
                       {v.phone ? ` · ${v.phone}` : ""}
-                      {v.email ? ` · ${v.email}` : ""}
                     </p>
                     <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
                       {t.volunteerWorkSummary
@@ -406,6 +473,13 @@ export function AdminVolunteersPanel() {
                       onClick={() => void toggleEnabled(v)}
                     >
                       {v.enabled ? t.volunteerDisable : t.volunteerEnable}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      onClick={() => void resetPassword(v)}
+                    >
+                      {t.volunteerResetPassword}
                     </button>
                     <button
                       type="button"
@@ -459,6 +533,11 @@ export function AdminVolunteersPanel() {
                             {a.activityType}
                             {a.description ? ` — ${a.description}` : ""}
                           </p>
+                          {a.volunteerNote ? (
+                            <p className="mt-1 text-[11px] text-[color-mix(in_oklab,#2f6b4f_80%,black)]">
+                              {t.volunteerProgressNote}: {a.volunteerNote}
+                            </p>
+                          ) : null}
                         </li>
                       ))
                     )}

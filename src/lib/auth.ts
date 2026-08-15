@@ -5,14 +5,16 @@ import { cookies } from "next/headers";
 import { getNextEligibleDate, isDonorAvailable } from "./availability";
 import {
   findDonorById,
+  findVolunteerById,
   getAdminSettings,
   getRatingStats,
   updateAdminSettings,
 } from "./db";
-import type { Donor } from "./types";
+import type { Donor, Volunteer } from "./types";
 
 const DONOR_COOKIE = "bloodlink_session";
 const ADMIN_COOKIE = "bloodlink_admin";
+const VOLUNTEER_COOKIE = "bloodlink_volunteer";
 const SESSION_DAYS = 7;
 
 function getSecret() {
@@ -136,6 +138,61 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function createVolunteerSession(volunteerId: string): Promise<void> {
+  const token = await new SignJWT({ sub: volunteerId, role: "volunteer" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${SESSION_DAYS}d`)
+    .sign(getSecret());
+
+  const jar = await cookies();
+  jar.set(VOLUNTEER_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+  });
+}
+
+export async function clearVolunteerSession(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(VOLUNTEER_COOKIE);
+}
+
+export async function getCurrentVolunteer(): Promise<Volunteer | null> {
+  const jar = await cookies();
+  const token = jar.get(VOLUNTEER_COOKIE)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    if (payload.role !== "volunteer") return null;
+    const id = typeof payload.sub === "string" ? payload.sub : null;
+    if (!id) return null;
+    const volunteer = await findVolunteerById(id);
+    if (!volunteer || !volunteer.enabled) return null;
+    return volunteer;
+  } catch {
+    return null;
+  }
+}
+
+export function toSafeVolunteer(volunteer: Volunteer) {
+  return {
+    id: volunteer.id,
+    name: volunteer.name,
+    phone: volunteer.phone,
+    email: volunteer.email,
+    district: volunteer.district,
+    role: volunteer.role,
+    notes: volunteer.notes,
+    username: volunteer.username,
+    enabled: volunteer.enabled,
+    createdAt: volunteer.createdAt,
+    updatedAt: volunteer.updatedAt,
+  };
 }
 
 export function hashIp(ip: string): string {
