@@ -46,6 +46,7 @@ import type {
   Donor,
   Gender,
   PendingRegistration,
+  PendingSuccessStory,
   PlatformOptions,
   PostUrgency,
   Rating,
@@ -211,6 +212,23 @@ function normalizePendingRegistration(
   };
 }
 
+function normalizePendingSuccessStory(
+  raw: Partial<PendingSuccessStory> | null | undefined,
+): PendingSuccessStory | null {
+  if (!raw?.id || !raw.name) return null;
+  const quoteEn = String(raw.quoteEn || "").trim();
+  const quoteBn = String(raw.quoteBn || "").trim();
+  if (!quoteEn && !quoteBn) return null;
+  return {
+    id: String(raw.id),
+    name: String(raw.name).trim(),
+    handle: String(raw.handle || "").trim(),
+    quoteEn,
+    quoteBn,
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+  };
+}
+
 function normalizeVolunteer(
   raw: Partial<Volunteer> | null | undefined,
 ): Volunteer | null {
@@ -285,6 +303,9 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
     pendingRegistrations: (parsed.pendingRegistrations ?? [])
       .map((p) => normalizePendingRegistration(p))
       .filter(Boolean) as PendingRegistration[],
+    pendingSuccessStories: (parsed.pendingSuccessStories ?? [])
+      .map((s) => normalizePendingSuccessStory(s))
+      .filter(Boolean) as PendingSuccessStory[],
     volunteers: (parsed.volunteers ?? [])
       .map((v) => normalizeVolunteer(v))
       .filter(Boolean) as Volunteer[],
@@ -350,6 +371,7 @@ async function createEmptyDb(): Promise<DatabaseShape> {
     posts: [],
     notifications: [],
     pendingRegistrations: [],
+    pendingSuccessStories: [],
     volunteers: [],
     volunteerActivities: [],
     admin: await defaultAdmin(),
@@ -736,6 +758,69 @@ export async function deletePendingRegistration(id: string): Promise<void> {
       (p) => p.id !== id,
     );
     await persist(db);
+  });
+}
+
+export async function listPendingSuccessStories(): Promise<PendingSuccessStory[]> {
+  const db = await ensureDb();
+  return [...(db.pendingSuccessStories || [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+export async function createPendingSuccessStory(
+  input: Omit<PendingSuccessStory, "id" | "createdAt">,
+): Promise<PendingSuccessStory> {
+  return withWrite(async (db) => {
+    const story = normalizePendingSuccessStory({
+      ...input,
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+    });
+    if (!story) throw new Error("Invalid success story");
+    db.pendingSuccessStories = db.pendingSuccessStories || [];
+    db.pendingSuccessStories.push(story);
+    await persist(db);
+    return story;
+  });
+}
+
+export async function approvePendingSuccessStory(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return withWrite(async (db) => {
+    const list = db.pendingSuccessStories || [];
+    const index = list.findIndex((s) => s.id === id);
+    if (index === -1) return { ok: false, error: "Story not found" };
+    const pending = list[index];
+    const appearance = normalizeSiteAppearance(db.admin.siteAppearance);
+    appearance.successStories = [
+      {
+        id: pending.id,
+        name: pending.name,
+        handle: pending.handle,
+        quoteEn: pending.quoteEn || pending.quoteBn,
+        quoteBn: pending.quoteBn || pending.quoteEn,
+        enabled: true,
+      },
+      ...appearance.successStories,
+    ];
+    db.admin = { ...db.admin, siteAppearance: appearance };
+    db.pendingSuccessStories = list.filter((s) => s.id !== id);
+    await persist(db);
+    return { ok: true };
+  });
+}
+
+export async function rejectPendingSuccessStory(id: string): Promise<boolean> {
+  return withWrite(async (db) => {
+    const before = (db.pendingSuccessStories || []).length;
+    db.pendingSuccessStories = (db.pendingSuccessStories || []).filter(
+      (s) => s.id !== id,
+    );
+    if ((db.pendingSuccessStories || []).length === before) return false;
+    await persist(db);
+    return true;
   });
 }
 

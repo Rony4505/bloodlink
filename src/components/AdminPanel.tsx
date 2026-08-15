@@ -137,6 +137,42 @@ export function AdminPanel() {
   const [appearanceUploading, setAppearanceUploading] = useState<
     "logo" | "hero" | "founder" | null
   >(null);
+  const [pendingStories, setPendingStories] = useState<
+    {
+      id: string;
+      name: string;
+      handle: string;
+      quoteEn: string;
+      quoteBn: string;
+      createdAt: string;
+    }[]
+  >([]);
+
+  async function loadPendingStories() {
+    const res = await fetch("/api/admin/stories");
+    if (!res.ok) return;
+    const data = await res.json();
+    setPendingStories(Array.isArray(data.stories) ? data.stories : []);
+  }
+
+  async function decideStory(id: string, action: "approve" | "reject") {
+    const res = await fetch("/api/admin/stories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || t.errorGeneric);
+      return;
+    }
+    await loadPendingStories();
+    if (action === "approve") {
+      await loadSettings();
+      await reloadAppearance();
+      flashSaved();
+    }
+  }
 
   async function loadData() {
     const res = await fetch("/api/admin/donors");
@@ -205,6 +241,7 @@ export function AdminPanel() {
         ...data.siteAppearance,
       });
     }
+    await loadPendingStories();
   }
 
   async function saveBanners(next: OrgBanner[]) {
@@ -1279,6 +1316,58 @@ export function AdminPanel() {
                 {t.saveAppearance}
               </button>
             </form>
+
+            <div className="mt-8 space-y-3 border-t border-[var(--line)] pt-6">
+              <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
+                {t.adminPendingStories}
+              </h3>
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                {t.adminPendingStoriesHint}
+              </p>
+              {pendingStories.length === 0 ? (
+                <p className="text-sm opacity-70">{t.adminNoPendingStories}</p>
+              ) : (
+                <ul className="space-y-3">
+                  {pendingStories.map((s) => (
+                    <li
+                      key={s.id}
+                      className="rounded-xl border border-[var(--line)] bg-white/80 p-3 text-sm"
+                    >
+                      <p className="font-semibold">
+                        {s.name}
+                        {s.handle ? (
+                          <span className="ml-2 font-normal opacity-70">
+                            {s.handle}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-2 leading-relaxed">
+                        {s.quoteBn || s.quoteEn}
+                      </p>
+                      <p className="mt-1 text-xs opacity-60">
+                        {new Date(s.createdAt).toLocaleString()}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-full bg-[#2f6b4f] px-3 py-1.5 text-xs font-semibold text-white"
+                          onClick={() => void decideStory(s.id, "approve")}
+                        >
+                          {t.adminApproveStory}
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-semibold"
+                          onClick={() => void decideStory(s.id, "reject")}
+                        >
+                          {t.adminRejectStory}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           

@@ -8,7 +8,11 @@ const genderSchema = z.enum(["male", "female"]);
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email().max(120),
+  /** Optional — account verification is phone OTP only. */
+  email: z
+    .union([z.string().trim().email().max(120), z.literal("")])
+    .optional()
+    .default(""),
   phone: z
     .string()
     .trim()
@@ -25,10 +29,21 @@ export const registerSchema = z.object({
   donationCount: z.coerce.number().int().min(0).max(500).optional(),
 });
 
+/** Login with Gmail or Bangladesh mobile + password. */
 export const loginSchema = z.object({
-  email: z.string().trim().email(),
+  email: z.string().trim().min(3).max(120),
   password: z.string().min(1),
 });
+
+/** Placeholder email when the donor skips Gmail at registration. */
+export function phonePlaceholderEmail(phone: string): string {
+  const digits = normalizePhone(phone).replace(/\D/g, "");
+  return `${digits}@phone.bloodlink.local`;
+}
+
+export function isPhonePlaceholderEmail(email: string): boolean {
+  return email.toLowerCase().endsWith("@phone.bloodlink.local");
+}
 
 export const adminLoginSchema = z.object({
   username: z.string().trim().min(2).max(80),
@@ -118,13 +133,18 @@ export const postSchema = z.object({
 
 export const registerConfirmSchema = z.object({
   pendingId: z.string().uuid(),
-  emailCode: z.string().trim().min(4).max(10),
   phoneCode: z.string().trim().min(4).max(10),
 });
 
 export const registerResendSchema = z.object({
   pendingId: z.string().uuid(),
-  channel: z.enum(["email", "phone", "both"]).default("both"),
+  channel: z.enum(["phone"]).default("phone"),
+});
+
+export const successStorySubmitSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  quote: z.string().trim().min(20).max(800),
+  handle: z.string().trim().max(60).optional().default(""),
 });
 
 export const privacyUpdateSchema = z.object({
@@ -164,10 +184,14 @@ export const platformOptionsSchema = z.object({
 });
 
 export function normalizeRegisterInput(data: z.infer<typeof registerSchema>) {
+  const phone = normalizePhone(data.phone);
+  const rawEmail = String(data.email || "")
+    .trim()
+    .toLowerCase();
   return {
     ...data,
-    email: data.email.toLowerCase(),
-    phone: normalizePhone(data.phone),
+    email: rawEmail || phonePlaceholderEmail(phone),
+    phone,
     bloodIssue: data.bloodIssue || "",
     lastDonationDate:
       !data.lastDonationDate || data.lastDonationDate === ""

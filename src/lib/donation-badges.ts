@@ -19,6 +19,7 @@ export type DonationBadgeInfo = {
     | null;
 };
 
+/** Badge tiers by lifetime donation count (BloodLink / Community heroes). */
 export function getDonationBadge(count: number): DonationBadgeInfo {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n >= 25) {

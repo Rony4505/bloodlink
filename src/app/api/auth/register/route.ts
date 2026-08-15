@@ -15,20 +15,14 @@ import {
   findPendingRegistration,
   updatePendingRegistration,
 } from "@/lib/db";
-import { deliverEmailOtp, deliverSmsOtp } from "@/lib/otp-delivery";
+import { deliverSmsOtp } from "@/lib/otp-delivery";
 import {
+  isPhonePlaceholderEmail,
   normalizeRegisterInput,
   registerConfirmSchema,
   registerResendSchema,
   registerSchema,
 } from "@/lib/validations";
-
-function maskEmail(email: string): string {
-  const [user, domain] = email.split("@");
-  if (!user || !domain) return "***";
-  const visible = user.slice(0, Math.min(2, user.length));
-  return `${visible}***@${domain}`;
-}
 
 function maskPhoneLight(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -36,7 +30,7 @@ function maskPhoneLight(phone: string): string {
   return `${digits.slice(0, 2)}***${digits.slice(-3)}`;
 }
 
-/** Step 1: validate form, send Gmail + phone OTPs, hold account until confirmed. */
+/** Step 1: validate form, send phone OTP only (never return codes in JSON). */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -64,7 +58,10 @@ async function startRegistration(body: unknown) {
   }
 
   const data = normalizeRegisterInput(parsed.data);
-  if (await findDonorByEmail(data.email)) {
+  if (
+    !isPhonePlaceholderEmail(data.email) &&
+    (await findDonorByEmail(data.email))
+  ) {
     return NextResponse.json(
       { error: "An account with this email already exists" },
       { status: 409 },
@@ -77,7 +74,6 @@ async function startRegistration(body: unknown) {
     );
   }
 
-  const emailCode = makeCode();
   const phoneCode = makeCode();
   const passwordHash = await hashPassword(data.password);
 
@@ -98,19 +94,21 @@ async function startRegistration(body: unknown) {
           ? 1
           : 0,
     bloodIssue: data.bloodIssue,
-    emailCodeHash: hashCode(emailCode),
+    emailCodeHash: "",
     phoneCodeHash: hashCode(phoneCode),
   });
 
-  const emailDelivery = await deliverEmailOtp(data.email, emailCode);
-  const smsDelivery = await deliverSmsOtp(data.phone, phoneCode);
+  // Never allowInline — OTP must only go to the phone, never in the API body.
+  const smsDelivery = await deliverSmsOtp(data.phone, phoneCode, {
+    allowInline: false,
+  });
 
-  if (!emailDelivery.delivered || !smsDelivery.delivered) {
+  if (!smsDelivery.delivered || smsDelivery.mode !== "sms") {
     await deletePendingRegistration(pending.id);
     return NextResponse.json(
       {
         error:
-          "Could not send verification codes. Configure email/SMS or enable ALLOW_INLINE_OTP.",
+          "Could not send SMS OTP. Configure SMS_WEBHOOK_URL so the code reaches your mobile — codes are never shown on the website.",
       },
       { status: 503 },
     );
@@ -120,24 +118,17 @@ async function startRegistration(body: unknown) {
     ok: true,
     step: "verify",
     pendingId: pending.id,
-    emailMasked: maskEmail(data.email),
     phoneMasked: maskPhoneLight(data.phone),
     expiresInMinutes: 15,
-    emailDelivery: emailDelivery.mode,
-    phoneDelivery: smsDelivery.mode,
-    ...(emailDelivery.mode === "inline" ? { emailCode } : {}),
-    ...(smsDelivery.mode === "inline" ? { phoneCode } : {}),
-    note:
-      emailDelivery.mode === "inline" || smsDelivery.mode === "inline"
-        ? "OTP returned inline because email/SMS provider is not configured yet."
-        : "Enter the codes sent to your Gmail and mobile to create your account.",
+    phoneDelivery: "sms",
+    note: "Enter the OTP sent to your mobile to create your account.",
   });
 }
 
 async function confirmRegistration(body: unknown) {
   const parsed = registerConfirmSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid verification codes" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid verification code" }, { status: 400 });
   }
 
   const pending = await findPendingRegistration(parsed.data.pendingId);
@@ -148,19 +139,28 @@ async function confirmRegistration(body: unknown) {
     );
   }
 
-  const emailOk = hashCode(parsed.data.emailCode) === pending.emailCodeHash;
   const phoneOk = hashCode(parsed.data.phoneCode) === pending.phoneCodeHash;
-  if (!emailOk || !phoneOk) {
+  if (!phoneOk) {
     return NextResponse.json(
-      { error: "Incorrect Gmail or phone verification code" },
+      { error: "Incorrect mobile verification code" },
       { status: 400 },
     );
   }
 
-  if (await findDonorByEmail(pending.email)) {
+  if (
+    !isPhonePlaceholderEmail(pending.email) &&
+    (await findDonorByEmail(pending.email))
+  ) {
     await deletePendingRegistration(pending.id);
     return NextResponse.json(
       { error: "An account with this email already exists" },
+      { status: 409 },
+    );
+  }
+  if (await findDonorByPhone(pending.phone)) {
+    await deletePendingRegistration(pending.id);
+    return NextResponse.json(
+      { error: "An account with this phone number already exists" },
       { status: 409 },
     );
   }
@@ -177,7 +177,7 @@ async function confirmRegistration(body: unknown) {
     lastDonationDate: pending.lastDonationDate,
     donationCount: pending.donationCount,
     bloodIssue: pending.bloodIssue,
-    emailVerified: true,
+    emailVerified: false,
     phoneVerified: true,
     pendingEmailCodeHash: null,
     pendingPhoneCodeHash: null,
@@ -210,37 +210,29 @@ async function resendCodes(body: unknown) {
     );
   }
 
-  const emailCode = makeCode();
   const phoneCode = makeCode();
-  const patch: {
-    emailCodeHash?: string;
-    phoneCodeHash?: string;
-    expiresAt: string;
-  } = {
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-  };
+  const delivery = await deliverSmsOtp(pending.phone, phoneCode, {
+    allowInline: false,
+  });
+  if (!delivery.delivered || delivery.mode !== "sms") {
+    return NextResponse.json(
+      {
+        error:
+          "Could not resend SMS OTP. Check SMS_WEBHOOK_URL — codes are never shown on the website.",
+      },
+      { status: 503 },
+    );
+  }
 
-  const channel = parsed.data.channel;
-  const response: Record<string, unknown> = {
+  await updatePendingRegistration(pending.id, {
+    phoneCodeHash: hashCode(phoneCode),
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  });
+
+  return NextResponse.json({
     ok: true,
     pendingId: pending.id,
-    emailMasked: maskEmail(pending.email),
     phoneMasked: maskPhoneLight(pending.phone),
-  };
-
-  if (channel === "email" || channel === "both") {
-    patch.emailCodeHash = hashCode(emailCode);
-    const delivery = await deliverEmailOtp(pending.email, emailCode);
-    response.emailDelivery = delivery.mode;
-    if (delivery.mode === "inline") response.emailCode = emailCode;
-  }
-  if (channel === "phone" || channel === "both") {
-    patch.phoneCodeHash = hashCode(phoneCode);
-    const delivery = await deliverSmsOtp(pending.phone, phoneCode);
-    response.phoneDelivery = delivery.mode;
-    if (delivery.mode === "inline") response.phoneCode = phoneCode;
-  }
-
-  await updatePendingRegistration(pending.id, patch);
-  return NextResponse.json(response);
+    phoneDelivery: "sms",
+  });
 }

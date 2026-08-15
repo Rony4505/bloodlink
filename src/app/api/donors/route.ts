@@ -27,6 +27,7 @@ export async function GET(request: Request) {
       parsed.data.availableOnly === "true";
 
     const donors = await listDonors();
+    const createdAtById = new Map(donors.map((d) => [d.id, d.createdAt]));
     const results: PublicDonor[] = [];
 
     for (const d of donors) {
@@ -64,6 +65,10 @@ export async function GET(request: Request) {
       )
       .filter((d) => (availableOnly ? d.available : true))
       .sort((a, b) => {
+        // Newest registrations first (user request).
+        const tb = new Date(createdAtById.get(b.id) || 0).getTime();
+        const ta = new Date(createdAtById.get(a.id) || 0).getTime();
+        if (tb !== ta) return tb - ta;
         const avail = Number(b.available) - Number(a.available);
         if (avail !== 0) return avail;
         return Number(b.verified) - Number(a.verified);
