@@ -102,10 +102,14 @@ async function startRegistration(body: unknown) {
 
   if (!emailDelivery.delivered || emailDelivery.mode !== "email") {
     await deletePendingRegistration(pending.id);
+    const detail = emailDelivery.detail || "";
+    const missingKey = detail.includes("RESEND_API_KEY is missing");
     return NextResponse.json(
       {
-        error:
-          "Could not send Gmail OTP. Set RESEND_API_KEY (and OTP_FROM_EMAIL) on Railway — codes are never shown on the website.",
+        error: missingKey
+          ? "Could not send Gmail OTP. RESEND_API_KEY is not set on the Railway service that runs this website. Add it under Variables, then Redeploy."
+          : `Could not send Gmail OTP. ${detail}. Tip: with Resend free onboarding@resend.dev you can only send to your own Resend account email until you verify a domain.`,
+        detail,
       },
       { status: 503 },
     );
@@ -209,10 +213,13 @@ async function resendCodes(body: unknown) {
     allowInline: false,
   });
   if (!delivery.delivered || delivery.mode !== "email") {
+    const detail = delivery.detail || "";
     return NextResponse.json(
       {
-        error:
-          "Could not resend Gmail OTP. Check RESEND_API_KEY on Railway — codes are never shown on the website.",
+        error: detail.includes("RESEND_API_KEY is missing")
+          ? "Could not resend Gmail OTP. RESEND_API_KEY is missing on Railway."
+          : `Could not resend Gmail OTP. ${detail}`,
+        detail,
       },
       { status: 503 },
     );

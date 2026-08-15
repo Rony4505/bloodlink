@@ -35,10 +35,18 @@ function toSmsBdNumber(phone: string): string {
   return digits;
 }
 
-async function sendViaResend(to: string, subject: string, text: string): Promise<boolean> {
+async function sendViaResend(
+  to: string,
+  subject: string,
+  text: string,
+): Promise<{ ok: boolean; detail?: string }> {
   const key = process.env.RESEND_API_KEY?.trim();
-  if (!key) return false;
-  const from = process.env.OTP_FROM_EMAIL?.trim() || "BloodLink BD <onboarding@resend.dev>";
+  if (!key) {
+    return { ok: false, detail: "RESEND_API_KEY is missing on this server" };
+  }
+  const from =
+    process.env.OTP_FROM_EMAIL?.trim() ||
+    "BloodLink BD <onboarding@resend.dev>";
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -48,9 +56,29 @@ async function sendViaResend(to: string, subject: string, text: string): Promise
       },
       body: JSON.stringify({ from, to: [to], subject, text }),
     });
-    return res.ok;
+    const raw = await res.text();
+    let message = "";
+    try {
+      const parsed = JSON.parse(raw) as {
+        message?: string;
+        name?: string;
+        error?: { message?: string };
+      };
+      message =
+        parsed.message ||
+        parsed.error?.message ||
+        parsed.name ||
+        "";
+    } catch {
+      message = raw.slice(0, 180);
+    }
+    if (res.ok) return { ok: true };
+    return {
+      ok: false,
+      detail: `Resend HTTP ${res.status}${message ? `: ${message}` : ""}`,
+    };
   } catch {
-    return false;
+    return { ok: false, detail: "Resend request failed (network)" };
   }
 }
 
@@ -120,7 +148,8 @@ export async function deliverEmailOtp(
 ): Promise<OtpDeliveryResult> {
   const subject = "BloodLink BD verification code";
   const text = `Your BloodLink BD verification code is ${code}. It expires in 15 minutes. Do not share this code.`;
-  if (await sendViaResend(to, subject, text)) {
+  const resend = await sendViaResend(to, subject, text);
+  if (resend.ok) {
     return { delivered: true, mode: "email" };
   }
   if (await sendViaSmtp(to, subject, text)) {
@@ -134,7 +163,20 @@ export async function deliverEmailOtp(
       detail: "Email provider not configured; code returned for verification.",
     };
   }
-  return { delivered: false, mode: "email", detail: "Email OTP delivery failed" };
+  return {
+    delivered: false,
+    mode: "email",
+    detail: resend.detail || "Email OTP delivery failed",
+  };
+}
+
+/** Safe public status for /api/health — never exposes secrets. */
+export function getEmailOtpConfigStatus() {
+  return {
+    resendKeySet: Boolean(process.env.RESEND_API_KEY?.trim()),
+    otpFromEmailSet: Boolean(process.env.OTP_FROM_EMAIL?.trim()),
+    smtpWebhookSet: Boolean(process.env.SMTP_WEBHOOK_URL?.trim()),
+  };
 }
 
 export async function deliverSmsOtp(
