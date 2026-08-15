@@ -40,13 +40,15 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3 rounded-2xl bg-white/80 p-6">
       <label className="block text-sm">
-        <span className="mb-1 block font-medium">{t.email}</span>
+        <span className="mb-1 block font-medium">{t.loginIdentifier}</span>
         <input
           className="field"
-          type="email"
+          type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          placeholder={t.loginIdentifierHint}
           required
+          autoComplete="username"
         />
       </label>
       <PasswordField

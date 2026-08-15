@@ -33,7 +33,7 @@ export type Donor = {
   updatedAt: string;
 };
 
-/** Registration held until Gmail + phone OTP are confirmed. */
+/** Registration held until mobile OTP is confirmed. */
 export type PendingRegistration = {
   id: string;
   name: string;
@@ -47,11 +47,22 @@ export type PendingRegistration = {
   lastDonationDate: string | null;
   donationCount: number;
   bloodIssue: string;
+  /** Legacy dual-OTP field; unused for phone-only register. */
   emailCodeHash: string;
   phoneCodeHash: string;
   emailConfirmed: boolean;
   phoneConfirmed: boolean;
   expiresAt: string;
+  createdAt: string;
+};
+
+/** Public success-story submissions awaiting admin approval. */
+export type PendingSuccessStory = {
+  id: string;
+  name: string;
+  handle: string;
+  quoteEn: string;
+  quoteBn: string;
   createdAt: string;
 };
 
@@ -243,6 +254,7 @@ export type DatabaseShape = {
   posts: BloodPost[];
   notifications: AppNotification[];
   pendingRegistrations: PendingRegistration[];
+  pendingSuccessStories: PendingSuccessStory[];
   volunteers: Volunteer[];
   volunteerActivities: VolunteerActivity[];
   admin: AdminSettings;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSession, toSafeDonor, verifyPassword } from "@/lib/auth";
-import { findDonorByEmail } from "@/lib/db";
+import { findDonorByEmail, findDonorByPhone } from "@/lib/db";
+import { isValidBdPhone, normalizePhone } from "@/lib/privacy";
 import { loginSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -11,10 +12,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid login data" }, { status: 400 });
     }
 
-    const donor = await findDonorByEmail(parsed.data.email.toLowerCase());
+    const identifier = parsed.data.email.trim();
+    let donor = null;
+    if (isValidBdPhone(identifier)) {
+      donor = await findDonorByPhone(normalizePhone(identifier));
+    }
+    if (!donor) {
+      donor = await findDonorByEmail(identifier.toLowerCase());
+    }
     if (!donor) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid email/phone or password" },
         { status: 401 },
       );
     }
@@ -22,7 +30,7 @@ export async function POST(request: Request) {
     const ok = await verifyPassword(parsed.data.password, donor.passwordHash);
     if (!ok) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid email/phone or password" },
         { status: 401 },
       );
     }

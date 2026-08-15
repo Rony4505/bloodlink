@@ -21,11 +21,9 @@ export function RegisterForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState("");
-  const [emailMasked, setEmailMasked] = useState("");
   const [phoneMasked, setPhoneMasked] = useState("");
-  const [emailCode, setEmailCode] = useState("");
   const [phoneCode, setPhoneCode] = useState("");
-  const [inlineHint, setInlineHint] = useState("");
+  const [hint, setHint] = useState("");
   const [successDonor, setSuccessDonor] = useState<RegisteredDonorSummary | null>(
     null,
   );
@@ -49,7 +47,7 @@ export function RegisterForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setInlineHint("");
+    setHint("");
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -66,20 +64,9 @@ export function RegisterForm() {
         return;
       }
       setPendingId(data.pendingId);
-      setEmailMasked(data.emailMasked || form.email);
       setPhoneMasked(data.phoneMasked || form.phone);
-      if (data.emailCode || data.phoneCode) {
-        setInlineHint(
-          [
-            data.emailCode ? `${t.otpEmailCode}: ${data.emailCode}` : "",
-            data.phoneCode ? `${t.otpPhoneCode}: ${data.phoneCode}` : "",
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        );
-        if (data.emailCode) setEmailCode(String(data.emailCode));
-        if (data.phoneCode) setPhoneCode(String(data.phoneCode));
-      }
+      setPhoneCode("");
+      setHint(t.otpSentToPhone);
       setStep("otp");
     } catch {
       setError(t.errorGeneric);
@@ -99,7 +86,6 @@ export function RegisterForm() {
         body: JSON.stringify({
           action: "confirm",
           pendingId,
-          emailCode,
           phoneCode,
         }),
       });
@@ -123,27 +109,15 @@ export function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "resend", pendingId, channel: "both" }),
+        body: JSON.stringify({ action: "resend", pendingId, channel: "phone" }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || t.errorGeneric);
         return;
       }
-      if (data.emailCode || data.phoneCode) {
-        setInlineHint(
-          [
-            data.emailCode ? `${t.otpEmailCode}: ${data.emailCode}` : "",
-            data.phoneCode ? `${t.otpPhoneCode}: ${data.phoneCode}` : "",
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        );
-        if (data.emailCode) setEmailCode(String(data.emailCode));
-        if (data.phoneCode) setPhoneCode(String(data.phoneCode));
-      } else {
-        setInlineHint(t.otpResent);
-      }
+      setPhoneCode("");
+      setHint(t.otpResent);
     } catch {
       setError(t.errorGeneric);
     } finally {
@@ -160,33 +134,20 @@ export function RegisterForm() {
               {t.otpVerifyTitle}
             </h3>
             <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.otpVerifyBody
-                .replace("{email}", emailMasked)
-                .replace("{phone}", phoneMasked)}
+              {t.otpVerifyBody.replace("{phone}", phoneMasked)}
             </p>
-            {inlineHint ? (
-              <p className="mt-3 rounded-xl border border-[color-mix(in_oklab,var(--blood)_25%,white)] bg-[color-mix(in_oklab,var(--blood)_6%,white)] px-3 py-2 text-xs text-[var(--blood-deep)]">
-                {inlineHint}
+            {hint ? (
+              <p className="mt-3 rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
+                {hint}
               </p>
             ) : null}
           </div>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">{t.otpEmailCode}</span>
-            <input
-              className="field tracking-[0.3em]"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={emailCode}
-              onChange={(e) => setEmailCode(e.target.value)}
-              required
-              maxLength={10}
-            />
-          </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium">{t.otpPhoneCode}</span>
             <input
               className="field tracking-[0.3em]"
               inputMode="numeric"
+              autoComplete="one-time-code"
               value={phoneCode}
               onChange={(e) => setPhoneCode(e.target.value)}
               required
@@ -242,25 +203,41 @@ export function RegisterForm() {
           <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
             {t.personalInfo}
           </h3>
-          {(
-            [
-              ["name", t.name],
-              ["email", t.email],
-              ["phone", t.phone],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="block text-sm">
-              <span className="mb-1 block font-medium">{label}</span>
-              <input
-                className="field"
-                type={key === "email" ? "email" : "text"}
-                value={form[key]}
-                onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                placeholder={key === "phone" ? "01XXXXXXXXX" : undefined}
-                required
-              />
-            </label>
-          ))}
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.name}</span>
+            <input
+              className="field"
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              required
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">
+              {t.email}{" "}
+              <span className="font-normal text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                ({t.emailOptional})
+              </span>
+            </span>
+            <input
+              className="field"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.phone}</span>
+            <input
+              className="field"
+              type="text"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="01XXXXXXXXX"
+              required
+            />
+          </label>
           <PasswordField
             id="register-password"
             label={t.password}
