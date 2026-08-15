@@ -1,20 +1,45 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AboutContent } from "@/components/AboutContent";
 import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
-import { HomeBloodGroupStats, HomeDonorTotals } from "@/components/HomeBloodGroupStats";
-import { HomeDonors } from "@/components/HomeDonors";
-import { HomeEmergencyPosts } from "@/components/HomeEmergencyPosts";
-import { HomeImpact } from "@/components/HomeImpact";
+import { HomeDonorTotals } from "@/components/HomeBloodGroupStats";
 import { OrgBanners } from "@/components/OrgBanners";
-import { SafetyWarnings } from "@/components/SafetyWarnings";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLocale } from "@/lib/i18n/locale-context";
+
+const HomeEmergencyPosts = dynamic(
+  () =>
+    import("@/components/HomeEmergencyPosts").then((m) => m.HomeEmergencyPosts),
+  { ssr: false },
+);
+const HomeImpact = dynamic(
+  () => import("@/components/HomeImpact").then((m) => m.HomeImpact),
+  { ssr: false },
+);
+const HomeDonors = dynamic(
+  () => import("@/components/HomeDonors").then((m) => m.HomeDonors),
+  { ssr: false },
+);
+const HomeBloodGroupStats = dynamic(
+  () =>
+    import("@/components/HomeBloodGroupStats").then(
+      (m) => m.HomeBloodGroupStats,
+    ),
+  { ssr: false },
+);
+const AboutContent = dynamic(
+  () => import("@/components/AboutContent").then((m) => m.AboutContent),
+  { ssr: false },
+);
+const SafetyWarnings = dynamic(
+  () => import("@/components/SafetyWarnings").then((m) => m.SafetyWarnings),
+  { ssr: false },
+);
 
 export function HomePage() {
   const { t } = useLocale();
@@ -30,10 +55,14 @@ export function HomePage() {
     logoUrl.startsWith("/") && !logoUrl.startsWith("/api/");
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    const ctrl = new AbortController();
+    fetch("/api/auth/me", { signal: ctrl.signal })
       .then((r) => r.json())
       .then((data) => setLoggedIn(Boolean(data.donor)))
-      .catch(() => setLoggedIn(false));
+      .catch(() => {
+        if (!ctrl.signal.aborted) setLoggedIn(false);
+      });
+    return () => ctrl.abort();
   }, []);
 
   return (
@@ -66,6 +95,7 @@ export function HomePage() {
                 src={logoUrl}
                 alt={brand}
                 className="h-16 w-16 rounded-full bg-white/95 object-cover shadow-lg md:h-[88px] md:w-[88px]"
+                decoding="async"
               />
             )}
             <p className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight drop-shadow md:text-7xl">
@@ -93,7 +123,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Advertisements — always below hero */}
       <OrgBanners page="home" placement="after-hero" />
 
       <HomeEmergencyPosts />
@@ -104,7 +133,7 @@ export function HomePage() {
 
       <HomeBloodGroupStats />
 
-      <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-20 md:px-8">
+      <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-16 md:px-8 md:py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--blood-deep)] md:text-4xl">
             {t.howItWorks}
@@ -128,7 +157,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-[var(--line)] bg-white px-5 py-20 md:px-8">
+      <section className="border-t border-[var(--line)] bg-white px-5 py-16 md:px-8 md:py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--blood-deep)] md:text-4xl">
             {t.bloodSafetyTitle}
@@ -148,7 +177,7 @@ export function HomePage() {
 
       <section
         id="about"
-        className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_28%,white)] px-5 py-20 md:px-8"
+        className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_28%,white)] px-5 py-16 md:px-8 md:py-20"
       >
         <div className="mx-auto max-w-6xl">
           <AboutContent compact />
@@ -157,14 +186,13 @@ export function HomePage() {
 
       <section
         id="warnings"
-        className="border-t border-[var(--line)] bg-white px-5 py-16 md:px-8"
+        className="border-t border-[var(--line)] bg-white px-5 py-14 md:px-8 md:py-16"
       >
         <div className="mx-auto max-w-6xl">
           <SafetyWarnings />
         </div>
       </section>
 
-      {/* Advertisements — always above footer */}
       <OrgBanners page="home" placement="before-footer" />
       <SiteFooter />
     </div>

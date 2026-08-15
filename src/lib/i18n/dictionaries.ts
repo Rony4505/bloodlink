@@ -43,6 +43,8 @@ export const dictionaries = {
     nearestDonors: "Nearest donors",
     nearestDonorsSub:
       "Allow location or pick your district to see donors closest to you.",
+    nearestDonorsCta:
+      "Pick your district, then tap View all donors — donor list opens on the search page.",
     verifiedBadge: "Verified",
     donationCountLabel: "Donations",
     donationBadgeFirst: "First drop",
@@ -394,7 +396,7 @@ export const dictionaries = {
     saveAppearance: "Save homepage & branding",
     bloodGroupStatsTitle: "Blood groups",
     bloodGroupStatsSub:
-      "Tap a blood drop to see every registered donor in that group — available and unavailable.",
+      "Tap a blood drop or View all donors to open the search page and see donors.",
     donorsInGroup: "{group} donors",
     selectArea: "Select area / upazila",
     settingsMenuHint: "Tap an option to open it in a popup.",
@@ -444,6 +446,8 @@ export const dictionaries = {
     nearestDonors: "কাছাকাছি ডোনার",
     nearestDonorsSub:
       "লোকেশন অনুমতি দিন বা জেলা বেছে নিন — কাছাকাছি ডোনার দেখুন।",
+    nearestDonorsCta:
+      "জেলা বেছে নিয়ে ‘সব ডোনার দেখুন’ চাপুন — সার্চ পেজে ডোনার লিস্ট খুলবে।",
     verifiedBadge: "ভেরিফাইড",
     donationCountLabel: "রক্তদান",
     donationBadgeFirst: "প্রথম ড্রপ",
@@ -796,7 +800,7 @@ export const dictionaries = {
     saveAppearance: "হোমপেজ ও ব্র্যান্ডিং সেভ",
     bloodGroupStatsTitle: "ব্লাড গ্রুপ",
     bloodGroupStatsSub:
-      "ব্লাড ড্রপে ক্লিক করলে সেই গ্রুপের সব রেজিস্টার্ড ডোনার দেখাবে — available ও unavailable।",
+      "ব্লাড ড্রপ বা ‘সব ডোনার দেখুন’ চাপলে সার্চ পেজে ডোনার দেখাবে।",
     donorsInGroup: "{group} গ্রুপের ডোনার",
     selectArea: "এলাকা / উপজেলা বেছে নিন",
     settingsMenuHint: "অপশনে ক্লিক করলে পপআপে খুলবে।",
