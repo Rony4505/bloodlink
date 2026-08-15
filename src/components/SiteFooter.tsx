@@ -47,6 +47,9 @@ export function SiteFooter() {
           <Link href="/requests" className="underline-offset-4 hover:underline">
             {t.requestBlood}
           </Link>
+          <Link href="/volunteer/login" className="underline-offset-4 hover:underline">
+            {t.volunteerLogin}
+          </Link>
           <span className="text-[color-mix(in_oklab,var(--ink)_55%,white)]">
             {t.footerNote}
           </span>

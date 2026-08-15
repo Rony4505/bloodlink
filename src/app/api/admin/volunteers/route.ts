@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminAuthenticated } from "@/lib/auth";
+import { hashPassword, isAdminAuthenticated } from "@/lib/auth";
 import {
   createVolunteer,
   createVolunteerActivity,
@@ -7,6 +7,7 @@ import {
   deleteVolunteerActivity,
   listVolunteerActivities,
   listVolunteers,
+  toPublicVolunteer,
   updateVolunteer,
   updateVolunteerActivity,
 } from "@/lib/db";
@@ -30,7 +31,7 @@ export async function GET() {
   const withWork = volunteers.map((v) => {
     const mine = activities.filter((a) => a.volunteerId === v.id);
     return {
-      ...v,
+      ...toPublicVolunteer(v),
       activityCount: mine.length,
       doneCount: mine.filter((a) => a.status === "done").length,
       inProgressCount: mine.filter((a) => a.status === "in_progress").length,
@@ -66,7 +67,10 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const activity = await createVolunteerActivity(parsed.data);
+      const activity = await createVolunteerActivity({
+        ...parsed.data,
+        volunteerNote: "",
+      });
       return NextResponse.json({ ok: true, activity });
     }
 
@@ -77,21 +81,26 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    const passwordHash = await hashPassword(parsed.data.password);
     const volunteer = await createVolunteer({
       name: parsed.data.name,
-      phone: parsed.data.phone
-        ? normalizePhone(parsed.data.phone)
-        : "",
+      phone: parsed.data.phone ? normalizePhone(parsed.data.phone) : "",
       email: parsed.data.email || "",
       district: parsed.data.district || "",
       role: parsed.data.role,
       notes: parsed.data.notes || "",
+      username: parsed.data.username.trim().toLowerCase(),
+      passwordHash,
       enabled: parsed.data.enabled !== false,
     });
-    return NextResponse.json({ ok: true, volunteer });
+    return NextResponse.json({
+      ok: true,
+      volunteer: toPublicVolunteer(volunteer),
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("taken") ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -116,6 +125,7 @@ export async function PATCH(request: Request) {
         activityType: body.activityType,
         status: body.status,
         activityDate: body.activityDate,
+        volunteerNote: body.volunteerNote,
       });
       if (!activity) {
         return NextResponse.json({ error: "Activity not found" }, { status: 404 });
@@ -127,21 +137,34 @@ export async function PATCH(request: Request) {
     if (!id) {
       return NextResponse.json({ error: "Missing volunteer id" }, { status: 400 });
     }
-    const volunteer = await updateVolunteer(id, {
-      name: body.name,
-      phone: body.phone ? normalizePhone(String(body.phone)) : body.phone,
-      email: body.email,
-      district: body.district,
-      role: body.role,
-      notes: body.notes,
-      enabled: body.enabled,
-    });
+
+    const patch: Parameters<typeof updateVolunteer>[1] = {};
+    if (body.name !== undefined) patch.name = body.name;
+    if (body.phone !== undefined) {
+      patch.phone = body.phone ? normalizePhone(String(body.phone)) : "";
+    }
+    if (body.email !== undefined) patch.email = body.email;
+    if (body.district !== undefined) patch.district = body.district;
+    if (body.role !== undefined) patch.role = body.role;
+    if (body.notes !== undefined) patch.notes = body.notes;
+    if (body.enabled !== undefined) patch.enabled = Boolean(body.enabled);
+    if (body.username) patch.username = String(body.username).trim().toLowerCase();
+    if (body.password && String(body.password).length >= 6) {
+      patch.passwordHash = await hashPassword(String(body.password));
+    }
+
+    const volunteer = await updateVolunteer(id, patch);
     if (!volunteer) {
       return NextResponse.json({ error: "Volunteer not found" }, { status: 404 });
     }
-    return NextResponse.json({ ok: true, volunteer });
-  } catch {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({
+      ok: true,
+      volunteer: toPublicVolunteer(volunteer),
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Server error";
+    const status = message.includes("taken") ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 

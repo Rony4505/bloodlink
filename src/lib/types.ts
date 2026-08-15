@@ -111,6 +111,9 @@ export type Volunteer = {
   district: string;
   role: string;
   notes: string;
+  /** Login username set by admin (unique, lowercase). */
+  username: string;
+  passwordHash: string;
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -124,6 +127,8 @@ export type VolunteerActivity = {
   activityType: string;
   status: VolunteerActivityStatus;
   activityDate: string;
+  /** Progress notes written by the volunteer. */
+  volunteerNote: string;
   createdAt: string;
   updatedAt: string;
 };

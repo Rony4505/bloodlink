@@ -194,7 +194,40 @@ export const volunteerSchema = z.object({
   district: z.string().trim().max(80).optional().default(""),
   role: z.string().trim().min(2).max(80),
   notes: z.string().trim().max(500).optional().default(""),
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(40)
+    .regex(/^[a-zA-Z0-9._-]+$/, "Username: letters, numbers, . _ - only"),
+  password: z.string().min(6).max(72),
   enabled: z.boolean().optional().default(true),
+});
+
+export const volunteerUpdateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(2).max(80).optional(),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => !v || isValidBdPhone(v), "Valid BD phone required")
+    .optional()
+    .or(z.literal("")),
+  email: z
+    .union([z.string().trim().email().max(120), z.literal("")])
+    .optional(),
+  district: z.string().trim().max(80).optional(),
+  role: z.string().trim().min(2).max(80).optional(),
+  notes: z.string().trim().max(500).optional(),
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(40)
+    .regex(/^[a-zA-Z0-9._-]+$/)
+    .optional(),
+  password: z.string().min(6).max(72).optional().or(z.literal("")),
+  enabled: z.boolean().optional(),
 });
 
 export const volunteerActivitySchema = z.object({
@@ -204,4 +237,15 @@ export const volunteerActivitySchema = z.object({
   activityType: z.string().trim().min(2).max(60).default("other"),
   status: z.enum(["planned", "in_progress", "done"]).default("planned"),
   activityDate: z.string().date(),
+});
+
+export const volunteerLoginSchema = z.object({
+  username: z.string().trim().min(3).max(40),
+  password: z.string().min(1).max(72),
+});
+
+export const volunteerTaskUpdateSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["planned", "in_progress", "done"]).optional(),
+  volunteerNote: z.string().trim().max(1000).optional(),
 });
