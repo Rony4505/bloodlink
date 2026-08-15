@@ -22,6 +22,7 @@ export const registerSchema = z.object({
     .union([z.string().date(), z.literal(""), z.null()])
     .optional(),
   bloodIssue: z.string().trim().max(300).optional().default(""),
+  donationCount: z.coerce.number().int().min(0).max(500).optional(),
 });
 
 export const loginSchema = z.object({
@@ -39,6 +40,7 @@ export const updateDonorSchema = z.object({
     .union([z.string().date(), z.literal(""), z.null()])
     .optional(),
   bloodIssue: z.string().trim().max(300).optional(),
+  donationCount: z.coerce.number().int().min(0).max(500).optional(),
 });
 
 export const contactChangeSchema = z
@@ -171,5 +173,35 @@ export function normalizeRegisterInput(data: z.infer<typeof registerSchema>) {
       !data.lastDonationDate || data.lastDonationDate === ""
         ? null
         : data.lastDonationDate,
+    donationCount:
+      data.donationCount != null
+        ? Math.max(0, Math.floor(Number(data.donationCount) || 0))
+        : undefined,
   };
 }
+
+export const volunteerSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => !v || isValidBdPhone(v), "Valid BD phone required")
+    .optional()
+    .or(z.literal("")),
+  email: z
+    .union([z.string().trim().email().max(120), z.literal("")])
+    .optional(),
+  district: z.string().trim().max(80).optional().default(""),
+  role: z.string().trim().min(2).max(80),
+  notes: z.string().trim().max(500).optional().default(""),
+  enabled: z.boolean().optional().default(true),
+});
+
+export const volunteerActivitySchema = z.object({
+  volunteerId: z.string().uuid(),
+  title: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).optional().default(""),
+  activityType: z.string().trim().min(2).max(60).default("other"),
+  status: z.enum(["planned", "in_progress", "done"]).default("planned"),
+  activityDate: z.string().date(),
+});

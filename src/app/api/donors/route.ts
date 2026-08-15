@@ -46,6 +46,7 @@ export async function GET(request: Request) {
         nextEligibleDate: getNextEligibleDate(d.gender, d.lastDonationDate),
         phoneMasked: maskPhone(d.phone),
         bloodIssue: d.bloodIssue || "",
+        donationCount: Math.max(0, Math.floor(Number(d.donationCount) || 0)),
         avgRating: stats.avg,
         ratingCount: stats.count,
         emailVerified,

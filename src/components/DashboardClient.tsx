@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DailyReminder } from "@/components/DailyReminder";
+import { DonationBadge } from "@/components/DonationBadge";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 type Donor = {
@@ -19,6 +20,7 @@ type Donor = {
   nextEligibleDate: string | null;
   waitDays: number;
   bloodIssue: string;
+  donationCount?: number;
   avgRating: number | null;
   ratingCount: number;
 };
@@ -48,6 +50,7 @@ export function DashboardClient() {
   const router = useRouter();
   const [donor, setDonor] = useState<Donor | null>(null);
   const [lastDonationDate, setLastDonationDate] = useState("");
+  const [donationCount, setDonationCount] = useState(0);
   const [bloodIssue, setBloodIssue] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -81,6 +84,7 @@ export function DashboardClient() {
         const data = await res.json();
         setDonor(data.donor);
         setLastDonationDate(data.donor.lastDonationDate || "");
+        setDonationCount(Number(data.donor.donationCount) || 0);
         setBloodIssue(data.donor.bloodIssue || "");
         await loadContactChange();
       })
@@ -100,6 +104,7 @@ export function DashboardClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lastDonationDate: lastDonationDate || null,
+          donationCount,
           bloodIssue,
         }),
       });
@@ -110,6 +115,7 @@ export function DashboardClient() {
       }
       setDonor(data.donor);
       setLastDonationDate(data.donor.lastDonationDate || "");
+      setDonationCount(Number(data.donor.donationCount) || 0);
       setBloodIssue(data.donor.bloodIssue || "");
       setMessage(t.saved);
     } catch {
@@ -192,7 +198,11 @@ export function DashboardClient() {
                 {t.dashboardTitle}
               </p>
               <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--ink)]">
-                {donor.name}
+                {donor.name}{" "}
+                <DonationBadge count={donor.donationCount || 0} />
+              </p>
+              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                {t.donationCountLabel}: {donor.donationCount || 0}
               </p>
               <p
                 className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
@@ -333,6 +343,20 @@ export function DashboardClient() {
               type="date"
               value={lastDonationDate}
               onChange={(e) => setLastDonationDate(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+              {t.donationCountHint}
+            </span>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.donationCountField}</span>
+            <input
+              className="field"
+              type="number"
+              min={0}
+              max={500}
+              value={donationCount}
+              onChange={(e) => setDonationCount(Number(e.target.value) || 0)}
             />
           </label>
           <label className="block text-sm">

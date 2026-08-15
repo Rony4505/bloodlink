@@ -178,6 +178,7 @@ export async function toSafeDonor(donor: Donor) {
     nextEligibleDate: getNextEligibleDate(donor.gender, donor.lastDonationDate),
     waitDays: donor.gender === "female" ? 120 : 90,
     bloodIssue: donor.bloodIssue || "",
+    donationCount: Math.max(0, Math.floor(Number(donor.donationCount) || 0)),
     avgRating: stats.avg,
     ratingCount: stats.count,
     emailVerified: Boolean(donor.emailVerified),

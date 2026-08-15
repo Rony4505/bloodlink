@@ -91,6 +91,12 @@ async function startRegistration(body: unknown) {
     district: data.district,
     area: data.area,
     lastDonationDate: data.lastDonationDate,
+    donationCount:
+      data.donationCount != null
+        ? data.donationCount
+        : data.lastDonationDate
+          ? 1
+          : 0,
     bloodIssue: data.bloodIssue,
     emailCodeHash: hashCode(emailCode),
     phoneCodeHash: hashCode(phoneCode),
@@ -169,6 +175,7 @@ async function confirmRegistration(body: unknown) {
     district: pending.district,
     area: pending.area,
     lastDonationDate: pending.lastDonationDate,
+    donationCount: pending.donationCount,
     bloodIssue: pending.bloodIssue,
     emailVerified: true,
     phoneVerified: true,

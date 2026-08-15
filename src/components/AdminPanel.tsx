@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AdminPopup, AdminSettingsPanel } from "@/components/AdminPopup";
+import { AdminVolunteersPanel } from "@/components/AdminVolunteersPanel";
+import { DonationBadge } from "@/components/DonationBadge";
 import { PasswordField } from "@/components/PasswordField";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -30,6 +32,7 @@ type AdminDonor = {
   area: string;
   available: boolean;
   lastDonationDate: string | null;
+  donationCount?: number;
   nextEligibleDate: string | null;
   bloodIssue: string;
   avgRating: number | null;
@@ -82,7 +85,7 @@ export function AdminPanel() {
     availableNow: 0,
     totalRequests: 0,
   });
-  const [tab, setTab] = useState<"donors" | "settings">("donors");
+  const [tab, setTab] = useState<"donors" | "volunteers" | "settings">("donors");
   const [settingsPanel, setSettingsPanel] = useState<
     null | "storage" | "backup" | "features" | "appearance" | "ads" | "privacy" | "credentials" | "verify"
   >(null);
@@ -704,6 +707,13 @@ export function AdminPanel() {
           </button>
           <button
             type="button"
+            className={tab === "volunteers" ? "btn-primary" : "btn-ghost"}
+            onClick={() => setTab("volunteers")}
+          >
+            {t.adminVolunteers}
+          </button>
+          <button
+            type="button"
             className={tab === "settings" ? "btn-primary" : "btn-ghost"}
             onClick={() => setTab("settings")}
           >
@@ -714,6 +724,8 @@ export function AdminPanel() {
           {t.logout}
         </button>
       </div>
+
+      {tab === "volunteers" ? <AdminVolunteersPanel /> : null}
 
       {tab === "donors" ? (
         <>
@@ -749,7 +761,8 @@ export function AdminPanel() {
                   <div className="text-sm">
                     <p className="font-semibold">
                       {d.name} · {d.bloodGroup} ·{" "}
-                      {d.gender === "female" ? t.female : t.male}
+                      {d.gender === "female" ? t.female : t.male}{" "}
+                      <DonationBadge count={d.donationCount || 0} />
                     </p>
                     <p>
                       {d.phone} · {d.email}
@@ -760,6 +773,7 @@ export function AdminPanel() {
                       {d.avgRating != null
                         ? ` · ★ ${d.avgRating} (${d.ratingCount})`
                         : ""}
+                      {` · ${t.donationCountLabel}: ${d.donationCount || 0}`}
                     </p>
                     <p>
                       {t.bloodIssue}: {d.bloodIssue || t.noBloodIssue}

@@ -39,6 +39,7 @@ export function RegisterForm() {
     district: "Dhaka",
     area: "",
     lastDonationDate: "",
+    donationCount: 0,
     bloodIssue: "",
   });
 
@@ -355,6 +356,22 @@ export function RegisterForm() {
               />
             </label>
           </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.donationCountField}</span>
+            <input
+              className="field"
+              type="number"
+              min={0}
+              max={500}
+              value={form.donationCount}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  donationCount: Number(e.target.value) || 0,
+                }))
+              }
+            />
+          </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium">{t.bloodIssue}</span>
             <textarea

@@ -20,12 +20,28 @@ export async function PATCH(request: Request) {
     }
 
     const data = parsed.data;
+    const nextDate =
+      data.lastDonationDate === "" || data.lastDonationDate === null
+        ? null
+        : data.lastDonationDate === undefined
+          ? current.lastDonationDate
+          : data.lastDonationDate;
+
+    let donationCount = current.donationCount || 0;
+    if (data.donationCount != null) {
+      donationCount = Math.max(0, Math.floor(data.donationCount));
+    } else if (
+      nextDate &&
+      nextDate !== current.lastDonationDate
+    ) {
+      // New donation date recorded → count +1
+      donationCount = Math.max(donationCount, 0) + 1;
+    }
+
     const updated = await updateDonor(current.id, {
       bloodIssue: data.bloodIssue,
-      lastDonationDate:
-        data.lastDonationDate === "" || data.lastDonationDate === null
-          ? null
-          : data.lastDonationDate,
+      lastDonationDate: nextDate,
+      donationCount,
     });
 
     if (!updated) {
