@@ -152,6 +152,9 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
     pendingResetCodeHash: raw.pendingResetCodeHash ?? null,
     pendingResetChannel: (raw.pendingResetChannel as VerifyChannel | null) ?? null,
     pendingResetExpiresAt: raw.pendingResetExpiresAt ?? null,
+    createdByVolunteerId: raw.createdByVolunteerId
+      ? String(raw.createdByVolunteerId)
+      : null,
     available: isDonorAvailable(gender, lastDonationDate),
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
@@ -849,7 +852,14 @@ export async function findDonorById(id: string): Promise<Donor | null> {
 }
 
 export async function createDonor(
-  input: Omit<Donor, "id" | "createdAt" | "updatedAt" | "available"> &
+  input: Omit<
+    Donor,
+    | "id"
+    | "createdAt"
+    | "updatedAt"
+    | "available"
+    | "createdByVolunteerId"
+  > &
     Partial<
       Pick<
         Donor,
@@ -861,6 +871,7 @@ export async function createDonor(
         | "pendingResetChannel"
         | "pendingResetExpiresAt"
         | "donationCount"
+        | "createdByVolunteerId"
       >
     >,
 ): Promise<Donor> {
@@ -883,6 +894,7 @@ export async function createDonor(
       pendingResetCodeHash: input.pendingResetCodeHash ?? null,
       pendingResetChannel: input.pendingResetChannel ?? null,
       pendingResetExpiresAt: input.pendingResetExpiresAt ?? null,
+      createdByVolunteerId: input.createdByVolunteerId ?? null,
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
@@ -891,6 +903,19 @@ export async function createDonor(
     await persist(db);
     return donor;
   });
+}
+
+export async function listDonorsByVolunteer(
+  volunteerId: string,
+): Promise<Donor[]> {
+  const db = await ensureDb();
+  return db.donors
+    .map((d) => normalizeDonor(d))
+    .filter((d) => d.createdByVolunteerId === volunteerId)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 }
 
 export async function updateDonor(
@@ -916,6 +941,7 @@ export async function updateDonor(
       | "pendingResetCodeHash"
       | "pendingResetChannel"
       | "pendingResetExpiresAt"
+      | "createdByVolunteerId"
     >
   >,
 ): Promise<Donor | null> {

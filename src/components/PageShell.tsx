@@ -11,13 +11,20 @@ export function PageShell({
   subtitle,
   bannerPage,
   compactHeader = false,
+  showAds = true,
+  showStoryForm = true,
 }: {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
   bannerPage?: BannerPage;
   compactHeader?: boolean;
+  /** Org advertisement banners (default on when bannerPage is set). */
+  showAds?: boolean;
+  /** Success-story form in footer. */
+  showStoryForm?: boolean;
 }) {
+  const ads = Boolean(showAds && bannerPage);
   return (
     <div className="flex min-h-full flex-col">
       <div
@@ -38,16 +45,12 @@ export function PageShell({
           ) : null}
         </div>
       </div>
-      {bannerPage ? (
-        <OrgBanners page={bannerPage} placement="after-hero" />
-      ) : null}
+      {ads ? <OrgBanners page={bannerPage!} placement="after-hero" /> : null}
       <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 -mt-8 px-5 pb-16 md:px-8">
         {children}
       </main>
-      {bannerPage ? (
-        <OrgBanners page={bannerPage} placement="before-footer" />
-      ) : null}
-      <SiteFooter />
+      {ads ? <OrgBanners page={bannerPage!} placement="before-footer" /> : null}
+      <SiteFooter showStoryForm={showStoryForm} />
     </div>
   );
 }

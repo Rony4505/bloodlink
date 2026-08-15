@@ -263,6 +263,34 @@ export const volunteerActivitySchema = z.object({
   activityDate: z.string().date(),
 });
 
+export const volunteerDonorCreateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  phone: z
+    .string()
+    .trim()
+    .refine(isValidBdPhone, "Valid Bangladesh mobile required"),
+  gender: z.enum(["male", "female"]).default("male"),
+  bloodGroup: bloodGroupSchema,
+  district: districtSchema,
+  area: z.string().trim().min(2).max(80),
+  lastDonationDate: z
+    .union([z.string().date(), z.literal(""), z.null()])
+    .optional(),
+  donationCount: z.coerce.number().int().min(0).max(500).optional(),
+  /** Temporary password for the donor (they can log in later). */
+  tempPassword: z.string().min(8).max(72),
+});
+
+export const volunteerDonorUpdateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(2).max(80).optional(),
+  phone: z
+    .string()
+    .trim()
+    .refine(isValidBdPhone, "Valid Bangladesh mobile required")
+    .optional(),
+});
+
 export const volunteerLoginSchema = z.object({
   username: z.string().trim().min(3).max(40),
   password: z.string().min(1).max(72),
