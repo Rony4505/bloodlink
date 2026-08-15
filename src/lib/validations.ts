@@ -111,6 +111,18 @@ export const postSchema = z.object({
   hospital: z.string().trim().min(2).max(120),
   neededBy: z.string().date(),
   message: z.string().trim().min(5).max(500),
+  urgency: z.enum(["critical", "urgent", "moderate"]).default("urgent"),
+});
+
+export const registerConfirmSchema = z.object({
+  pendingId: z.string().uuid(),
+  emailCode: z.string().trim().min(4).max(10),
+  phoneCode: z.string().trim().min(4).max(10),
+});
+
+export const registerResendSchema = z.object({
+  pendingId: z.string().uuid(),
+  channel: z.enum(["email", "phone", "both"]).default("both"),
 });
 
 export const privacyUpdateSchema = z.object({

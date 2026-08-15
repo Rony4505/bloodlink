@@ -45,9 +45,14 @@ import type {
   DatabaseShape,
   Donor,
   Gender,
+  PendingRegistration,
   PlatformOptions,
+  PostUrgency,
   Rating,
+  VerifyChannel,
 } from "./types";
+import { POST_URGENCIES, resolvePostUrgency } from "./post-urgency";
+import { normalizePhone } from "./privacy";
 
 function defaultPlatformOptions(): PlatformOptions {
   return {
@@ -127,6 +132,13 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
     area: raw.area ?? "",
     lastDonationDate,
     bloodIssue: raw.bloodIssue ?? "",
+    emailVerified: Boolean(raw.emailVerified),
+    phoneVerified: Boolean(raw.phoneVerified),
+    pendingEmailCodeHash: raw.pendingEmailCodeHash ?? null,
+    pendingPhoneCodeHash: raw.pendingPhoneCodeHash ?? null,
+    pendingResetCodeHash: raw.pendingResetCodeHash ?? null,
+    pendingResetChannel: (raw.pendingResetChannel as VerifyChannel | null) ?? null,
+    pendingResetExpiresAt: raw.pendingResetExpiresAt ?? null,
     available: isDonorAvailable(gender, lastDonationDate),
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
@@ -153,6 +165,31 @@ async function defaultAdmin(): Promise<AdminSettings> {
   };
 }
 
+function normalizePendingRegistration(
+  raw: Partial<PendingRegistration> | null | undefined,
+): PendingRegistration | null {
+  if (!raw?.id || !raw.email || !raw.phone || !raw.passwordHash) return null;
+  return {
+    id: String(raw.id),
+    name: String(raw.name || ""),
+    email: String(raw.email).toLowerCase(),
+    phone: String(raw.phone),
+    passwordHash: String(raw.passwordHash),
+    gender: raw.gender === "female" ? "female" : "male",
+    bloodGroup: raw.bloodGroup || "O+",
+    district: String(raw.district || "Dhaka"),
+    area: String(raw.area || ""),
+    lastDonationDate: raw.lastDonationDate ?? null,
+    bloodIssue: String(raw.bloodIssue || ""),
+    emailCodeHash: String(raw.emailCodeHash || ""),
+    phoneCodeHash: String(raw.phoneCodeHash || ""),
+    emailConfirmed: Boolean(raw.emailConfirmed),
+    phoneConfirmed: Boolean(raw.phoneConfirmed),
+    expiresAt: String(raw.expiresAt || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+  };
+}
+
 function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): DatabaseShape {
   return {
     donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
@@ -163,6 +200,9 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
       normalizePost(p as Partial<BloodPost> & { id: string }),
     ),
     notifications: parsed.notifications ?? [],
+    pendingRegistrations: (parsed.pendingRegistrations ?? [])
+      .map((p) => normalizePendingRegistration(p))
+      .filter(Boolean) as PendingRegistration[],
     admin,
   };
 }
@@ -221,6 +261,7 @@ async function createEmptyDb(): Promise<DatabaseShape> {
     ratings: [],
     posts: [],
     notifications: [],
+    pendingRegistrations: [],
     admin: await defaultAdmin(),
   };
 }
@@ -510,6 +551,122 @@ export async function findDonorByEmail(email: string): Promise<Donor | null> {
   return donor ? normalizeDonor(donor) : null;
 }
 
+export async function findDonorByPhone(phone: string): Promise<Donor | null> {
+  const db = await ensureDb();
+  const normalized = normalizePhone(phone);
+  const donor = db.donors.find((d) => normalizePhone(d.phone) === normalized);
+  return donor ? normalizeDonor(donor) : null;
+}
+
+const PENDING_REG_TTL_MS = 15 * 60 * 1000;
+
+function purgeExpiredPending(db: DatabaseShape, now = Date.now()): number {
+  const before = db.pendingRegistrations?.length || 0;
+  db.pendingRegistrations = (db.pendingRegistrations || []).filter((p) => {
+    const exp = new Date(p.expiresAt).getTime();
+    return Number.isFinite(exp) && exp > now;
+  });
+  return before - db.pendingRegistrations.length;
+}
+
+export async function createPendingRegistration(
+  input: Omit<
+    PendingRegistration,
+    "id" | "createdAt" | "expiresAt" | "emailConfirmed" | "phoneConfirmed"
+  >,
+): Promise<PendingRegistration> {
+  return withWrite(async (db) => {
+    purgeExpiredPending(db);
+    db.pendingRegistrations = (db.pendingRegistrations || []).filter(
+      (p) =>
+        p.email.toLowerCase() !== input.email.toLowerCase() &&
+        normalizePhone(p.phone) !== normalizePhone(input.phone),
+    );
+    const now = Date.now();
+    const pending = normalizePendingRegistration({
+      ...input,
+      id: randomUUID(),
+      emailConfirmed: false,
+      phoneConfirmed: false,
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + PENDING_REG_TTL_MS).toISOString(),
+    });
+    if (!pending) throw new Error("Invalid pending registration");
+    db.pendingRegistrations.push(pending);
+    await persist(db);
+    return pending;
+  });
+}
+
+export async function findPendingRegistration(
+  id: string,
+): Promise<PendingRegistration | null> {
+  return withWrite(async (db) => {
+    const removed = purgeExpiredPending(db);
+    const found =
+      (db.pendingRegistrations || [])
+        .map((p) => normalizePendingRegistration(p))
+        .find((p) => p && p.id === id) || null;
+    if (removed > 0) await persist(db);
+    return found;
+  });
+}
+
+export async function updatePendingRegistration(
+  id: string,
+  patch: Partial<
+    Pick<
+      PendingRegistration,
+      | "emailConfirmed"
+      | "phoneConfirmed"
+      | "emailCodeHash"
+      | "phoneCodeHash"
+      | "expiresAt"
+    >
+  >,
+): Promise<PendingRegistration | null> {
+  return withWrite(async (db) => {
+    purgeExpiredPending(db);
+    const index = (db.pendingRegistrations || []).findIndex((p) => p.id === id);
+    if (index === -1) return null;
+    const merged = normalizePendingRegistration({
+      ...db.pendingRegistrations[index],
+      ...patch,
+    });
+    if (!merged) return null;
+    db.pendingRegistrations[index] = merged;
+    await persist(db);
+    return merged;
+  });
+}
+
+export async function deletePendingRegistration(id: string): Promise<void> {
+  await withWrite(async (db) => {
+    db.pendingRegistrations = (db.pendingRegistrations || []).filter(
+      (p) => p.id !== id,
+    );
+    await persist(db);
+  });
+}
+
+export async function getSiteImpactStats() {
+  const db = await ensureDb();
+  const posts = await listPosts();
+  const donors = db.donors.map((d) => normalizeDonor(d));
+  const districts = new Set(donors.map((d) => d.district).filter(Boolean));
+  const verifiedDonors = donors.filter(
+    (d) => d.emailVerified || d.phoneVerified,
+  ).length;
+  return {
+    livesHelped: db.contactRequests.length + posts.length,
+    registeredUsers: donors.length,
+    activeRequests: posts.length,
+    citiesCovered: districts.size,
+    verifiedDonors,
+    availableDonors: donors.filter((d) => d.available).length,
+  };
+}
+
 export async function findDonorById(id: string): Promise<Donor | null> {
   const db = await ensureDb();
   const donor = db.donors.find((d) => d.id === id);
@@ -517,12 +674,31 @@ export async function findDonorById(id: string): Promise<Donor | null> {
 }
 
 export async function createDonor(
-  input: Omit<Donor, "id" | "createdAt" | "updatedAt" | "available">,
+  input: Omit<Donor, "id" | "createdAt" | "updatedAt" | "available"> &
+    Partial<
+      Pick<
+        Donor,
+        | "emailVerified"
+        | "phoneVerified"
+        | "pendingEmailCodeHash"
+        | "pendingPhoneCodeHash"
+        | "pendingResetCodeHash"
+        | "pendingResetChannel"
+        | "pendingResetExpiresAt"
+      >
+    >,
 ): Promise<Donor> {
   return withWrite(async (db) => {
     const now = new Date().toISOString();
     const donor = normalizeDonor({
       ...input,
+      emailVerified: input.emailVerified ?? false,
+      phoneVerified: input.phoneVerified ?? false,
+      pendingEmailCodeHash: input.pendingEmailCodeHash ?? null,
+      pendingPhoneCodeHash: input.pendingPhoneCodeHash ?? null,
+      pendingResetCodeHash: input.pendingResetCodeHash ?? null,
+      pendingResetChannel: input.pendingResetChannel ?? null,
+      pendingResetExpiresAt: input.pendingResetExpiresAt ?? null,
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
@@ -547,6 +723,14 @@ export async function updateDonor(
       | "area"
       | "lastDonationDate"
       | "bloodIssue"
+      | "passwordHash"
+      | "emailVerified"
+      | "phoneVerified"
+      | "pendingEmailCodeHash"
+      | "pendingPhoneCodeHash"
+      | "pendingResetCodeHash"
+      | "pendingResetChannel"
+      | "pendingResetExpiresAt"
     >
   >,
 ): Promise<Donor | null> {
@@ -645,6 +829,11 @@ export async function createRating(
 const POST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function normalizePost(raw: Partial<BloodPost> & { id: string }): BloodPost {
+  const neededBy = raw.neededBy || raw.createdAt?.slice(0, 10) || "";
+  const selected =
+    POST_URGENCIES.includes(raw.urgency as PostUrgency)
+      ? (raw.urgency as PostUrgency)
+      : "urgent";
   return {
     id: raw.id,
     posterName: raw.posterName ?? "",
@@ -656,8 +845,9 @@ function normalizePost(raw: Partial<BloodPost> & { id: string }): BloodPost {
     district: raw.district ?? "Dhaka",
     area: raw.area || "",
     hospital: raw.hospital ?? "",
-    neededBy: raw.neededBy || raw.createdAt?.slice(0, 10) || "",
+    neededBy,
     message: raw.message ?? "",
+    urgency: resolvePostUrgency(selected, neededBy),
     createdAt: raw.createdAt ?? new Date().toISOString(),
   };
 }

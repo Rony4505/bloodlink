@@ -18,6 +18,7 @@ type Post = {
   hospital: string;
   neededBy: string;
   message: string;
+  urgency: "critical" | "urgent" | "moderate";
   createdAt: string;
   phoneMasked: string;
 };
@@ -34,6 +35,7 @@ const emptyForm = {
   hospital: "",
   neededBy: "",
   message: "",
+  urgency: "urgent" as "critical" | "urgent" | "moderate",
 };
 
 export default function RequestsPage() {
@@ -195,6 +197,26 @@ export default function RequestsPage() {
             />
           </label>
           <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.urgencyLabel}</span>
+            <select
+              className="field"
+              value={form.urgency}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  urgency: e.target.value as "critical" | "urgent" | "moderate",
+                })
+              }
+            >
+              <option value="critical">{t.urgencyCritical}</option>
+              <option value="urgent">{t.urgencyUrgent}</option>
+              <option value="moderate">{t.urgencyModerate}</option>
+            </select>
+            <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+              {t.urgencyHint}
+            </span>
+          </label>
+          <label className="block text-sm">
             <span className="mb-1 block font-medium">{t.message}</span>
             <textarea
               className="field min-h-24"
@@ -218,7 +240,12 @@ export default function RequestsPage() {
             posts.map((p) => (
               <article key={p.id} className="border-b border-[var(--line)] pb-3">
                 <p className="font-semibold">
-                  {p.bloodGroup} · {p.unitsNeeded} bag · {p.district}
+                  {p.urgency === "critical"
+                    ? t.urgencyCritical
+                    : p.urgency === "urgent"
+                      ? t.urgencyUrgent
+                      : t.urgencyModerate}{" "}
+                  · {p.bloodGroup} · {p.unitsNeeded} bag · {p.district}
                 </p>
                 <p className="mt-1 text-sm">
                   {p.patientName} · {p.hospital}, {p.area}

@@ -34,6 +34,7 @@ export async function GET(_request: Request, { params }: Params) {
         hospital: post.hospital,
         neededBy: post.neededBy,
         message: post.message,
+        urgency: post.urgency,
         createdAt: post.createdAt,
         phoneMasked: maskPhone(post.posterPhone),
         contactPhone: canContact ? post.posterPhone : null,

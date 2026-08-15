@@ -4,12 +4,48 @@ import type {
   BannerSize,
   OrgBanner,
   SiteAppearance,
+  SuccessStory,
 } from "./types";
 
 export const DEFAULT_HERO_BACKGROUND =
   "https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=2000&q=80";
 
 export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
+
+export function defaultSuccessStories(): SuccessStory[] {
+  return [
+    {
+      id: "story-karim",
+      name: "Karim",
+      handle: "@karim_hussain_88",
+      quoteEn:
+        "We needed blood in an emergency. Through BloodLink BD, I found a donor very quickly. Thank you everyone.",
+      quoteBn:
+        "জরুরি মুহূর্তে রক্ত দরকার ছিল। BloodLink BD-এর মাধ্যমে খুব দ্রুত ডোনার পেয়েছি। সবাইকে ধন্যবাদ।",
+      enabled: true,
+    },
+    {
+      id: "story-nasira",
+      name: "Nasira Begum",
+      handle: "@nasira_begum",
+      quoteEn:
+        "My sister needed blood for her operation. Through this platform, I easily found a blood donor.",
+      quoteBn:
+        "অপারেশনের জন্য বোনের রক্ত দরকার ছিল। এই প্ল্যাটফর্মের মাধ্যমে সহজেই রক্তদাতা পেয়েছি।",
+      enabled: true,
+    },
+    {
+      id: "story-rafiq",
+      name: "Rafiq Hasan",
+      handle: "@rafiq_feni",
+      quoteEn:
+        "Posted a need at night and got responses from nearby donors. BloodLink really works when every minute counts.",
+      quoteBn:
+        "রাতে রক্তের প্রয়োজন পোস্ট করেছিলাম, কাছাকাছি ডোনাররা সাড়া দিয়েছে। প্রতি মিনিট যখন গুরুত্বপূর্ণ, BloodLink সত্যিই কাজ করে।",
+      enabled: true,
+    },
+  ];
+}
 
 export const BANNER_SIZES: BannerSize[] = [
   "sm",
@@ -61,7 +97,31 @@ export function defaultSiteAppearance(): SiteAppearance {
     aboutBodyEn: "",
     aboutBodyBn: "",
     founderPhotoUrl: "",
+    successStories: defaultSuccessStories(),
   };
+}
+
+function normalizeSuccessStories(raw: unknown): SuccessStory[] {
+  if (!Array.isArray(raw) || raw.length === 0) return defaultSuccessStories();
+  const stories = raw
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const s = item as Partial<SuccessStory>;
+      const name = String(s.name || "").trim();
+      const quoteEn = String(s.quoteEn || "").trim();
+      const quoteBn = String(s.quoteBn || "").trim();
+      if (!name || (!quoteEn && !quoteBn)) return null;
+      return {
+        id: String(s.id || `story-${index}`),
+        name,
+        handle: String(s.handle || "").trim(),
+        quoteEn,
+        quoteBn,
+        enabled: s.enabled !== false,
+      } satisfies SuccessStory;
+    })
+    .filter(Boolean) as SuccessStory[];
+  return stories.length ? stories : defaultSuccessStories();
 }
 
 export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): SiteAppearance {
@@ -82,6 +142,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
     aboutBodyEn: String(raw.aboutBodyEn || "").trim(),
     aboutBodyBn: String(raw.aboutBodyBn || "").trim(),
     founderPhotoUrl: String(raw.founderPhotoUrl || "").trim(),
+    successStories: normalizeSuccessStories(raw.successStories),
   };
 }
 

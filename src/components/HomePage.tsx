@@ -7,6 +7,9 @@ import { AboutContent } from "@/components/AboutContent";
 import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
 import { HomeBloodGroupStats, HomeDonorTotals } from "@/components/HomeBloodGroupStats";
+import { HomeDonors } from "@/components/HomeDonors";
+import { HomeEmergencyPosts } from "@/components/HomeEmergencyPosts";
+import { HomeImpact } from "@/components/HomeImpact";
 import { OrgBanners } from "@/components/OrgBanners";
 import { SafetyWarnings } from "@/components/SafetyWarnings";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
@@ -93,7 +96,13 @@ export function HomePage() {
       {/* Advertisements — always below hero */}
       <OrgBanners page="home" placement="after-hero" />
 
+      <HomeEmergencyPosts />
+
+      <HomeDonors />
+
       <HomeBloodGroupStats />
+
+      <HomeImpact />
 
       <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-20 md:px-8">
         <div className="mx-auto max-w-6xl">

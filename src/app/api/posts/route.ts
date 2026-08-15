@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createPost, listPosts } from "@/lib/db";
+import { sortPostsByEmergency } from "@/lib/post-urgency";
 import { maskPhone, normalizePhone } from "@/lib/privacy";
 import { postSchema } from "@/lib/validations";
 
@@ -16,13 +17,14 @@ function toPublicPost(post: Awaited<ReturnType<typeof listPosts>>[number]) {
     hospital: post.hospital,
     neededBy: post.neededBy,
     message: post.message,
+    urgency: post.urgency,
     createdAt: post.createdAt,
     phoneMasked: maskPhone(post.posterPhone),
   };
 }
 
 export async function GET() {
-  const posts = await listPosts();
+  const posts = sortPostsByEmergency(await listPosts());
   return NextResponse.json({ posts: posts.map(toPublicPost) });
 }
 

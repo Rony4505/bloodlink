@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { PublicDonor } from "@/lib/types";
@@ -92,14 +93,14 @@ export function HomeDonors() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--blood-deep)] md:text-4xl">
-              {t.recentDonors}
+              {t.nearestDonors}
             </h2>
             <p className="mt-2 text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {district
                 ? `${t.donorsNearYou}: ${district}`
                 : locating
                   ? t.detectingLocation
-                  : t.recentDonorsSub}
+                  : t.nearestDonorsSub}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -136,6 +137,7 @@ export function HomeDonors() {
                   <span className="rounded-md bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
                     {d.bloodGroup}
                   </span>
+                  {d.verified ? <VerifiedBadge label={t.verifiedBadge} /> : null}
                 </div>
                 <p className="mt-2 text-sm">
                   {d.area}, {d.district}

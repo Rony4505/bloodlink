@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ContactModal } from "@/components/ContactModal";
 import { RatingModal } from "@/components/RatingModal";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { PublicDonor } from "@/lib/types";
 
@@ -47,6 +48,9 @@ export function DonorResults({ donors }: { donors: PublicDonor[] }) {
                   <span className="rounded-md bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
                     {donor.bloodGroup}
                   </span>
+                  {donor.verified ? (
+                    <VerifiedBadge label={t.verifiedBadge} />
+                  ) : null}
                   <span className="rounded-md bg-[color-mix(in_oklab,var(--ink)_8%,white)] px-2 py-0.5 text-xs font-semibold">
                     {donor.gender === "female" ? t.female : t.male}
                   </span>
