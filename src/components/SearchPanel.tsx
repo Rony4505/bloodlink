@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DonorResults } from "@/components/DonorResults";
 import { BLOOD_GROUPS, DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -8,6 +9,7 @@ import type { PublicDonor } from "@/lib/types";
 
 export function SearchPanel() {
   const { t } = useLocale();
+  const searchParams = useSearchParams();
   const [bloodGroup, setBloodGroup] = useState("");
   const [district, setDistrict] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -46,10 +48,25 @@ export function SearchPanel() {
   }
 
   useEffect(() => {
-    void runSearch();
-    // initial load only
+    const bg = searchParams.get("bloodGroup") || "";
+    const dist = searchParams.get("district") || "";
+    const avail = searchParams.get("availableOnly") === "true";
+    const validBg = BLOOD_GROUPS.includes(bg as (typeof BLOOD_GROUPS)[number])
+      ? bg
+      : "";
+    const validDist = DISTRICTS.includes(dist as (typeof DISTRICTS)[number])
+      ? dist
+      : "";
+    setBloodGroup(validBg);
+    setDistrict(validDist);
+    setAvailableOnly(avail);
+    void runSearch({
+      bloodGroup: validBg,
+      district: validDist,
+      availableOnly: avail,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="space-y-6">

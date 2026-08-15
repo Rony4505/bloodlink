@@ -12,6 +12,22 @@ type Props = {
 
 const INTERVAL_MS = 3000;
 
+const bannerCache = new Map<string, Promise<OrgBanner[]>>();
+
+function loadBanners(page: BannerPage): Promise<OrgBanner[]> {
+  const cached = bannerCache.get(page);
+  if (cached) return cached;
+  const params = new URLSearchParams({ page });
+  const promise = fetch(`/api/banners?${params}`)
+    .then((r) => r.json())
+    .then((data) =>
+      ((data.banners || []) as OrgBanner[]).filter((b) => b.enabled),
+    )
+    .catch(() => [] as OrgBanner[]);
+  bannerCache.set(page, promise);
+  return promise;
+}
+
 /**
  * Full-bleed wide advertisement carousel (820×150).
  * Scrolls smoothly every 3s, ping-pong left↔right when multiple ads exist.
@@ -23,11 +39,13 @@ export function OrgBanners({ page }: Props) {
   const directionRef = useRef<1 | -1>(1);
 
   useEffect(() => {
-    const params = new URLSearchParams({ page });
-    fetch(`/api/banners?${params}`)
-      .then((r) => r.json())
-      .then((data) => setBanners((data.banners || []).filter((b: OrgBanner) => b.enabled)))
-      .catch(() => setBanners([]));
+    let alive = true;
+    void loadBanners(page).then((list) => {
+      if (alive) setBanners(list);
+    });
+    return () => {
+      alive = false;
+    };
   }, [page]);
 
   useEffect(() => {
@@ -87,6 +105,8 @@ export function OrgBanners({ page }: Props) {
                 src={b.imageUrl}
                 alt={b.title}
                 className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(120deg,#6e1220,#1c0a0c)] px-6 text-center">
