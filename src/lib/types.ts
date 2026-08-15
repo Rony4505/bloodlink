@@ -19,6 +19,8 @@ export type Donor = {
   area: string;
   available: boolean;
   lastDonationDate: string | null;
+  /** How many times this donor has donated (self-reported / tracked). */
+  donationCount: number;
   bloodIssue: string;
   emailVerified: boolean;
   phoneVerified: boolean;
@@ -43,6 +45,7 @@ export type PendingRegistration = {
   district: string;
   area: string;
   lastDonationDate: string | null;
+  donationCount: number;
   bloodIssue: string;
   emailCodeHash: string;
   phoneCodeHash: string;
@@ -96,6 +99,33 @@ export type SuccessStory = {
   quoteEn: string;
   quoteBn: string;
   enabled: boolean;
+};
+
+export type VolunteerActivityStatus = "planned" | "in_progress" | "done";
+
+export type Volunteer = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  district: string;
+  role: string;
+  notes: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type VolunteerActivity = {
+  id: string;
+  volunteerId: string;
+  title: string;
+  description: string;
+  activityType: string;
+  status: VolunteerActivityStatus;
+  activityDate: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AppNotification = {
@@ -208,6 +238,8 @@ export type DatabaseShape = {
   posts: BloodPost[];
   notifications: AppNotification[];
   pendingRegistrations: PendingRegistration[];
+  volunteers: Volunteer[];
+  volunteerActivities: VolunteerActivity[];
   admin: AdminSettings;
 };
 
@@ -221,6 +253,7 @@ export type PublicDonor = {
   available: boolean;
   lastDonationDate: string | null;
   nextEligibleDate: string | null;
+  donationCount: number;
   phoneMasked: string;
   bloodIssue: string;
   avgRating: number | null;

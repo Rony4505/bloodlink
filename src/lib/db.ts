@@ -50,6 +50,9 @@ import type {
   PostUrgency,
   Rating,
   VerifyChannel,
+  Volunteer,
+  VolunteerActivity,
+  VolunteerActivityStatus,
 } from "./types";
 import { POST_URGENCIES, resolvePostUrgency } from "./post-urgency";
 import { normalizePhone } from "./privacy";
@@ -131,6 +134,15 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
     district: raw.district ?? "Dhaka",
     area: raw.area ?? "",
     lastDonationDate,
+    donationCount: Math.max(
+      0,
+      Math.floor(
+        Number(
+          raw.donationCount ??
+            (lastDonationDate ? 1 : 0),
+        ) || 0,
+      ),
+    ),
     bloodIssue: raw.bloodIssue ?? "",
     emailVerified: Boolean(raw.emailVerified),
     phoneVerified: Boolean(raw.phoneVerified),
@@ -180,6 +192,15 @@ function normalizePendingRegistration(
     district: String(raw.district || "Dhaka"),
     area: String(raw.area || ""),
     lastDonationDate: raw.lastDonationDate ?? null,
+    donationCount: Math.max(
+      0,
+      Math.floor(
+        Number(
+          raw.donationCount ??
+            (raw.lastDonationDate ? 1 : 0),
+        ) || 0,
+      ),
+    ),
     bloodIssue: String(raw.bloodIssue || ""),
     emailCodeHash: String(raw.emailCodeHash || ""),
     phoneCodeHash: String(raw.phoneCodeHash || ""),
@@ -187,6 +208,47 @@ function normalizePendingRegistration(
     phoneConfirmed: Boolean(raw.phoneConfirmed),
     expiresAt: String(raw.expiresAt || ""),
     createdAt: String(raw.createdAt || new Date().toISOString()),
+  };
+}
+
+function normalizeVolunteer(
+  raw: Partial<Volunteer> | null | undefined,
+): Volunteer | null {
+  if (!raw?.id || !raw.name) return null;
+  return {
+    id: String(raw.id),
+    name: String(raw.name).trim(),
+    phone: String(raw.phone || "").trim(),
+    email: String(raw.email || "").trim().toLowerCase(),
+    district: String(raw.district || "").trim(),
+    role: String(raw.role || "").trim(),
+    notes: String(raw.notes || "").trim(),
+    enabled: raw.enabled !== false,
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    updatedAt: String(raw.updatedAt || raw.createdAt || new Date().toISOString()),
+  };
+}
+
+function normalizeVolunteerActivity(
+  raw: Partial<VolunteerActivity> | null | undefined,
+): VolunteerActivity | null {
+  if (!raw?.id || !raw.volunteerId || !raw.title) return null;
+  const status: VolunteerActivityStatus =
+    raw.status === "planned" ||
+    raw.status === "in_progress" ||
+    raw.status === "done"
+      ? raw.status
+      : "planned";
+  return {
+    id: String(raw.id),
+    volunteerId: String(raw.volunteerId),
+    title: String(raw.title).trim(),
+    description: String(raw.description || "").trim(),
+    activityType: String(raw.activityType || "other").trim() || "other",
+    status,
+    activityDate: String(raw.activityDate || "").slice(0, 10),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    updatedAt: String(raw.updatedAt || raw.createdAt || new Date().toISOString()),
   };
 }
 
@@ -203,6 +265,12 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
     pendingRegistrations: (parsed.pendingRegistrations ?? [])
       .map((p) => normalizePendingRegistration(p))
       .filter(Boolean) as PendingRegistration[],
+    volunteers: (parsed.volunteers ?? [])
+      .map((v) => normalizeVolunteer(v))
+      .filter(Boolean) as Volunteer[],
+    volunteerActivities: (parsed.volunteerActivities ?? [])
+      .map((a) => normalizeVolunteerActivity(a))
+      .filter(Boolean) as VolunteerActivity[],
     admin,
   };
 }
@@ -262,6 +330,8 @@ async function createEmptyDb(): Promise<DatabaseShape> {
     posts: [],
     notifications: [],
     pendingRegistrations: [],
+    volunteers: [],
+    volunteerActivities: [],
     admin: await defaultAdmin(),
   };
 }
@@ -685,13 +755,22 @@ export async function createDonor(
         | "pendingResetCodeHash"
         | "pendingResetChannel"
         | "pendingResetExpiresAt"
+        | "donationCount"
       >
     >,
 ): Promise<Donor> {
   return withWrite(async (db) => {
     const now = new Date().toISOString();
+    const lastDonationDate = input.lastDonationDate ?? null;
+    const donationCount =
+      input.donationCount != null
+        ? Math.max(0, Math.floor(Number(input.donationCount) || 0))
+        : lastDonationDate
+          ? 1
+          : 0;
     const donor = normalizeDonor({
       ...input,
+      donationCount,
       emailVerified: input.emailVerified ?? false,
       phoneVerified: input.phoneVerified ?? false,
       pendingEmailCodeHash: input.pendingEmailCodeHash ?? null,
@@ -722,6 +801,7 @@ export async function updateDonor(
       | "district"
       | "area"
       | "lastDonationDate"
+      | "donationCount"
       | "bloodIssue"
       | "passwordHash"
       | "emailVerified"
@@ -1122,6 +1202,144 @@ export async function getPrivacyContent(): Promise<{
 }> {
   const admin = await getAdminSettings();
   return { bn: admin.privacyBn, en: admin.privacyEn };
+}
+
+export async function listVolunteers(): Promise<Volunteer[]> {
+  const db = await ensureDb();
+  return (db.volunteers || [])
+    .map((v) => normalizeVolunteer(v))
+    .filter(Boolean)
+    .sort((a, b) => a!.name.localeCompare(b!.name)) as Volunteer[];
+}
+
+export async function listVolunteerActivities(
+  volunteerId?: string,
+): Promise<VolunteerActivity[]> {
+  const db = await ensureDb();
+  return (db.volunteerActivities || [])
+    .map((a) => normalizeVolunteerActivity(a))
+    .filter((a): a is VolunteerActivity => Boolean(a))
+    .filter((a) => (volunteerId ? a.volunteerId === volunteerId : true))
+    .sort((a, b) => {
+      const byDate = (b.activityDate || "").localeCompare(a.activityDate || "");
+      if (byDate) return byDate;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+}
+
+export async function createVolunteer(
+  input: Omit<Volunteer, "id" | "createdAt" | "updatedAt">,
+): Promise<Volunteer> {
+  return withWrite(async (db) => {
+    const now = new Date().toISOString();
+    const volunteer = normalizeVolunteer({
+      ...input,
+      id: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (!volunteer) throw new Error("Invalid volunteer");
+    db.volunteers = db.volunteers || [];
+    db.volunteers.push(volunteer);
+    await persist(db);
+    return volunteer;
+  });
+}
+
+export async function updateVolunteer(
+  id: string,
+  patch: Partial<
+    Pick<
+      Volunteer,
+      "name" | "phone" | "email" | "district" | "role" | "notes" | "enabled"
+    >
+  >,
+): Promise<Volunteer | null> {
+  return withWrite(async (db) => {
+    db.volunteers = db.volunteers || [];
+    const index = db.volunteers.findIndex((v) => v.id === id);
+    if (index === -1) return null;
+    const merged = normalizeVolunteer({
+      ...db.volunteers[index],
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    });
+    if (!merged) return null;
+    db.volunteers[index] = merged;
+    await persist(db);
+    return merged;
+  });
+}
+
+export async function deleteVolunteer(id: string): Promise<boolean> {
+  return withWrite(async (db) => {
+    const before = (db.volunteers || []).length;
+    db.volunteers = (db.volunteers || []).filter((v) => v.id !== id);
+    db.volunteerActivities = (db.volunteerActivities || []).filter(
+      (a) => a.volunteerId !== id,
+    );
+    if ((db.volunteers || []).length === before) return false;
+    await persist(db);
+    return true;
+  });
+}
+
+export async function createVolunteerActivity(
+  input: Omit<VolunteerActivity, "id" | "createdAt" | "updatedAt">,
+): Promise<VolunteerActivity> {
+  return withWrite(async (db) => {
+    const exists = (db.volunteers || []).some((v) => v.id === input.volunteerId);
+    if (!exists) throw new Error("Volunteer not found");
+    const now = new Date().toISOString();
+    const activity = normalizeVolunteerActivity({
+      ...input,
+      id: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (!activity) throw new Error("Invalid activity");
+    db.volunteerActivities = db.volunteerActivities || [];
+    db.volunteerActivities.push(activity);
+    await persist(db);
+    return activity;
+  });
+}
+
+export async function updateVolunteerActivity(
+  id: string,
+  patch: Partial<
+    Pick<
+      VolunteerActivity,
+      "title" | "description" | "activityType" | "status" | "activityDate"
+    >
+  >,
+): Promise<VolunteerActivity | null> {
+  return withWrite(async (db) => {
+    db.volunteerActivities = db.volunteerActivities || [];
+    const index = db.volunteerActivities.findIndex((a) => a.id === id);
+    if (index === -1) return null;
+    const merged = normalizeVolunteerActivity({
+      ...db.volunteerActivities[index],
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    });
+    if (!merged) return null;
+    db.volunteerActivities[index] = merged;
+    await persist(db);
+    return merged;
+  });
+}
+
+export async function deleteVolunteerActivity(id: string): Promise<boolean> {
+  return withWrite(async (db) => {
+    const before = (db.volunteerActivities || []).length;
+    db.volunteerActivities = (db.volunteerActivities || []).filter(
+      (a) => a.id !== id,
+    );
+    if ((db.volunteerActivities || []).length === before) return false;
+    await persist(db);
+    return true;
+  });
 }
 
 /** Full database snapshot for admin download / disaster recovery. */

@@ -1,0 +1,474 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { DISTRICTS } from "@/lib/districts";
+import { useLocale } from "@/lib/i18n/locale-context";
+
+type Activity = {
+  id: string;
+  volunteerId: string;
+  title: string;
+  description: string;
+  activityType: string;
+  status: "planned" | "in_progress" | "done";
+  activityDate: string;
+};
+
+type VolunteerRow = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  district: string;
+  role: string;
+  notes: string;
+  enabled: boolean;
+  activityCount: number;
+  doneCount: number;
+  inProgressCount: number;
+  activities: Activity[];
+};
+
+const emptyVolunteer = {
+  name: "",
+  phone: "",
+  email: "",
+  district: "Dhaka",
+  role: "",
+  notes: "",
+};
+
+const emptyActivity: {
+  title: string;
+  description: string;
+  activityType: string;
+  status: Activity["status"];
+  activityDate: string;
+} = {
+  title: "",
+  description: "",
+  activityType: "outreach",
+  status: "planned",
+  activityDate: "",
+};
+
+export function AdminVolunteersPanel() {
+  const { t } = useLocale();
+  const [volunteers, setVolunteers] = useState<VolunteerRow[]>([]);
+  const [stats, setStats] = useState({ total: 0, active: 0, activities: 0 });
+  const [draft, setDraft] = useState(emptyVolunteer);
+  const [activityDraft, setActivityDraft] = useState(emptyActivity);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  async function load() {
+    const res = await fetch("/api/admin/volunteers");
+    if (!res.ok) return;
+    const data = await res.json();
+    setVolunteers(data.volunteers || []);
+    setStats(data.stats || { total: 0, active: 0, activities: 0 });
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function addVolunteer(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/volunteers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "volunteer", ...draft }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setDraft(emptyVolunteer);
+      await load();
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleEnabled(v: VolunteerRow) {
+    await fetch("/api/admin/volunteers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "volunteer", id: v.id, enabled: !v.enabled }),
+    });
+    await load();
+  }
+
+  async function removeVolunteer(id: string) {
+    if (!window.confirm(t.volunteerDeleteConfirm)) return;
+    await fetch(`/api/admin/volunteers?kind=volunteer&id=${id}`, {
+      method: "DELETE",
+    });
+    if (selectedId === id) setSelectedId("");
+    await load();
+  }
+
+  async function addActivity(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedId) {
+      setError(t.volunteerSelectFirst);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/volunteers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "activity",
+          volunteerId: selectedId,
+          ...activityDraft,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setActivityDraft(emptyActivity);
+      setExpandedId(selectedId);
+      await load();
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function setActivityStatus(id: string, status: Activity["status"]) {
+    await fetch("/api/admin/volunteers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "activity", id, status }),
+    });
+    await load();
+  }
+
+  async function removeActivity(id: string) {
+    await fetch(`/api/admin/volunteers?kind=activity&id=${id}`, {
+      method: "DELETE",
+    });
+    await load();
+  }
+
+  function statusLabel(status: Activity["status"]) {
+    if (status === "done") return t.volunteerStatusDone;
+    if (status === "in_progress") return t.volunteerStatusProgress;
+    return t.volunteerStatusPlanned;
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
+        <span>
+          {t.volunteerTotal}: <strong>{stats.total}</strong>
+        </span>
+        <span>
+          {t.volunteerActive}: <strong>{stats.active}</strong>
+        </span>
+        <span>
+          {t.volunteerActivities}: <strong>{stats.activities}</strong>
+        </span>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <form onSubmit={addVolunteer} className="space-y-3 rounded-2xl bg-white/80 p-5">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+            {t.volunteerAdd}
+          </h2>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.name}</span>
+            <input
+              className="field"
+              value={draft.name}
+              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+              required
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.volunteerRole}</span>
+            <input
+              className="field"
+              value={draft.role}
+              onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))}
+              placeholder={t.volunteerRoleHint}
+              required
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.phone}</span>
+              <input
+                className="field"
+                value={draft.phone}
+                onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
+                placeholder="01XXXXXXXXX"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.email}</span>
+              <input
+                className="field"
+                type="email"
+                value={draft.email}
+                onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+              />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.district}</span>
+            <select
+              className="field"
+              value={draft.district}
+              onChange={(e) => setDraft((d) => ({ ...d, district: e.target.value }))}
+            >
+              {DISTRICTS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.volunteerNotes}</span>
+            <textarea
+              className="field min-h-20"
+              value={draft.notes}
+              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+            />
+          </label>
+          <button type="submit" className="btn-primary w-full" disabled={loading}>
+            {loading ? t.loading : t.volunteerAdd}
+          </button>
+        </form>
+
+        <form onSubmit={addActivity} className="space-y-3 rounded-2xl bg-white/80 p-5">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+            {t.volunteerLogWork}
+          </h2>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.volunteer}</span>
+            <select
+              className="field"
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
+              required
+            >
+              <option value="">{t.volunteerSelect}</option>
+              {volunteers.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} · {v.role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.volunteerWorkTitle}</span>
+            <input
+              className="field"
+              value={activityDraft.title}
+              onChange={(e) =>
+                setActivityDraft((d) => ({ ...d, title: e.target.value }))
+              }
+              required
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.volunteerWorkType}</span>
+              <select
+                className="field"
+                value={activityDraft.activityType}
+                onChange={(e) =>
+                  setActivityDraft((d) => ({ ...d, activityType: e.target.value }))
+                }
+              >
+                <option value="outreach">{t.volunteerTypeOutreach}</option>
+                <option value="blood_camp">{t.volunteerTypeCamp}</option>
+                <option value="hospital">{t.volunteerTypeHospital}</option>
+                <option value="data_entry">{t.volunteerTypeData}</option>
+                <option value="other">{t.volunteerTypeOther}</option>
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.volunteerWorkDate}</span>
+              <input
+                className="field"
+                type="date"
+                value={activityDraft.activityDate}
+                onChange={(e) =>
+                  setActivityDraft((d) => ({ ...d, activityDate: e.target.value }))
+                }
+                required
+              />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.volunteerWorkStatus}</span>
+            <select
+              className="field"
+              value={activityDraft.status}
+              onChange={(e) =>
+                setActivityDraft((d) => ({
+                  ...d,
+                  status: e.target.value as Activity["status"],
+                }))
+              }
+            >
+              <option value="planned">{t.volunteerStatusPlanned}</option>
+              <option value="in_progress">{t.volunteerStatusProgress}</option>
+              <option value="done">{t.volunteerStatusDone}</option>
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.volunteerWorkDetail}</span>
+            <textarea
+              className="field min-h-20"
+              value={activityDraft.description}
+              onChange={(e) =>
+                setActivityDraft((d) => ({ ...d, description: e.target.value }))
+              }
+            />
+          </label>
+          <button type="submit" className="btn-primary w-full" disabled={loading}>
+            {loading ? t.loading : t.volunteerLogWork}
+          </button>
+        </form>
+      </div>
+
+      {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+
+      <section className="rounded-2xl bg-white/80 p-5">
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+          {t.volunteerList}
+        </h2>
+        {!volunteers.length ? (
+          <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            {t.volunteerEmpty}
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {volunteers.map((v) => (
+              <li key={v.id} className="rounded-xl border border-[var(--line)] px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="text-sm">
+                    <p className="font-semibold">
+                      {v.name} · {v.role}
+                      {!v.enabled ? (
+                        <span className="ml-2 text-xs text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                          ({t.volunteerInactive})
+                        </span>
+                      ) : null}
+                    </p>
+                    <p>
+                      {v.district}
+                      {v.phone ? ` · ${v.phone}` : ""}
+                      {v.email ? ` · ${v.email}` : ""}
+                    </p>
+                    <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                      {t.volunteerWorkSummary
+                        .replace("{total}", String(v.activityCount))
+                        .replace("{done}", String(v.doneCount))
+                        .replace("{progress}", String(v.inProgressCount))}
+                    </p>
+                    {v.notes ? <p className="mt-1 text-xs">{v.notes}</p> : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      onClick={() =>
+                        setExpandedId(expandedId === v.id ? null : v.id)
+                      }
+                    >
+                      {expandedId === v.id
+                        ? t.volunteerHideWork
+                        : t.volunteerShowWork}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      onClick={() => void toggleEnabled(v)}
+                    >
+                      {v.enabled ? t.volunteerDisable : t.volunteerEnable}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs text-[var(--blood)]"
+                      onClick={() => void removeVolunteer(v.id)}
+                    >
+                      {t.delete}
+                    </button>
+                  </div>
+                </div>
+
+                {expandedId === v.id ? (
+                  <ul className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
+                    {!v.activities.length ? (
+                      <li className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                        {t.volunteerNoWork}
+                      </li>
+                    ) : (
+                      v.activities.map((a) => (
+                        <li
+                          key={a.id}
+                          className="rounded-lg bg-[color-mix(in_oklab,var(--sand)_35%,white)] px-3 py-2 text-xs"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-semibold">
+                              {a.title} · {statusLabel(a.status)} · {a.activityDate}
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {(["planned", "in_progress", "done"] as const).map(
+                                (s) => (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5"
+                                    onClick={() => void setActivityStatus(a.id, s)}
+                                  >
+                                    {statusLabel(s)}
+                                  </button>
+                                ),
+                              )}
+                              <button
+                                type="button"
+                                className="text-[var(--blood)] underline"
+                                onClick={() => void removeActivity(a.id)}
+                              >
+                                {t.delete}
+                              </button>
+                            </div>
+                          </div>
+                          <p className="mt-1 opacity-80">
+                            {a.activityType}
+                            {a.description ? ` — ${a.description}` : ""}
+                          </p>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}

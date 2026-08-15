@@ -39,6 +39,7 @@ export async function GET() {
       available,
       lastDonationDate: d.lastDonationDate,
       nextEligibleDate: getNextEligibleDate(d.gender, d.lastDonationDate),
+      donationCount: Math.max(0, Math.floor(Number(d.donationCount) || 0)),
       bloodIssue: d.bloodIssue || "",
       avgRating: stats.avg,
       ratingCount: stats.count,

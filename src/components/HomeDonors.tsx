@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DonationBadge } from "@/components/DonationBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -138,6 +139,7 @@ export function HomeDonors() {
                     {d.bloodGroup}
                   </span>
                   {d.verified ? <VerifiedBadge label={t.verifiedBadge} /> : null}
+                  <DonationBadge count={d.donationCount || 0} />
                 </div>
                 <p className="mt-2 text-sm">
                   {d.area}, {d.district}
