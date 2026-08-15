@@ -7,6 +7,9 @@ import { AboutContent } from "@/components/AboutContent";
 import { DailyReminder } from "@/components/DailyReminder";
 import { Header } from "@/components/Header";
 import { HomeBloodGroupStats, HomeDonorTotals } from "@/components/HomeBloodGroupStats";
+import { HomeDonors } from "@/components/HomeDonors";
+import { HomeEmergencyPosts } from "@/components/HomeEmergencyPosts";
+import { HomeImpact } from "@/components/HomeImpact";
 import { OrgBanners } from "@/components/OrgBanners";
 import { SafetyWarnings } from "@/components/SafetyWarnings";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
@@ -92,6 +95,12 @@ export function HomePage() {
 
       {/* Advertisements — always below hero */}
       <OrgBanners page="home" placement="after-hero" />
+
+      <HomeEmergencyPosts />
+
+      <HomeImpact />
+
+      <HomeDonors />
 
       <HomeBloodGroupStats />
 

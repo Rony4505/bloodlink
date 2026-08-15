@@ -12,11 +12,20 @@ import {
   type RegisteredDonorSummary,
 } from "@/components/RegisterSuccessModal";
 
+type Step = "form" | "otp";
+
 export function RegisterForm() {
   const { t } = useLocale();
   const router = useRouter();
+  const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingId, setPendingId] = useState("");
+  const [emailMasked, setEmailMasked] = useState("");
+  const [phoneMasked, setPhoneMasked] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
+  const [inlineHint, setInlineHint] = useState("");
   const [successDonor, setSuccessDonor] = useState<RegisteredDonorSummary | null>(
     null,
   );
@@ -35,7 +44,50 @@ export function RegisterForm() {
 
   const areaOptions = areasForDistrict(form.district);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function sendOtps(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setInlineHint("");
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "start",
+          ...form,
+          lastDonationDate: form.lastDonationDate || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setPendingId(data.pendingId);
+      setEmailMasked(data.emailMasked || form.email);
+      setPhoneMasked(data.phoneMasked || form.phone);
+      if (data.emailCode || data.phoneCode) {
+        setInlineHint(
+          [
+            data.emailCode ? `${t.otpEmailCode}: ${data.emailCode}` : "",
+            data.phoneCode ? `${t.otpPhoneCode}: ${data.phoneCode}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        );
+        if (data.emailCode) setEmailCode(String(data.emailCode));
+        if (data.phoneCode) setPhoneCode(String(data.phoneCode));
+      }
+      setStep("otp");
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmOtps(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -44,8 +96,10 @@ export function RegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          lastDonationDate: form.lastDonationDate || null,
+          action: "confirm",
+          pendingId,
+          emailCode,
+          phoneCode,
         }),
       });
       const data = await res.json();
@@ -61,9 +115,128 @@ export function RegisterForm() {
     }
   }
 
+  async function resend() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend", pendingId, channel: "both" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      if (data.emailCode || data.phoneCode) {
+        setInlineHint(
+          [
+            data.emailCode ? `${t.otpEmailCode}: ${data.emailCode}` : "",
+            data.phoneCode ? `${t.otpPhoneCode}: ${data.phoneCode}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        );
+        if (data.emailCode) setEmailCode(String(data.emailCode));
+        if (data.phoneCode) setPhoneCode(String(data.phoneCode));
+      } else {
+        setInlineHint(t.otpResent);
+      }
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (step === "otp") {
+    return (
+      <>
+        <form onSubmit={confirmOtps} className="space-y-5 rounded-2xl bg-white/80 p-6">
+          <div>
+            <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
+              {t.otpVerifyTitle}
+            </h3>
+            <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              {t.otpVerifyBody
+                .replace("{email}", emailMasked)
+                .replace("{phone}", phoneMasked)}
+            </p>
+            {inlineHint ? (
+              <p className="mt-3 rounded-xl border border-[color-mix(in_oklab,var(--blood)_25%,white)] bg-[color-mix(in_oklab,var(--blood)_6%,white)] px-3 py-2 text-xs text-[var(--blood-deep)]">
+                {inlineHint}
+              </p>
+            ) : null}
+          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.otpEmailCode}</span>
+            <input
+              className="field tracking-[0.3em]"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={emailCode}
+              onChange={(e) => setEmailCode(e.target.value)}
+              required
+              maxLength={10}
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{t.otpPhoneCode}</span>
+            <input
+              className="field tracking-[0.3em]"
+              inputMode="numeric"
+              value={phoneCode}
+              onChange={(e) => setPhoneCode(e.target.value)}
+              required
+              maxLength={10}
+            />
+          </label>
+          {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+          <button
+            type="submit"
+            className="inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3 font-semibold text-white transition hover:bg-[#265a42] disabled:opacity-55"
+            disabled={loading}
+          >
+            {loading ? t.loading : t.otpConfirmCreate}
+          </button>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <button
+              type="button"
+              className="font-semibold text-[var(--blood-deep)] underline"
+              onClick={() => void resend()}
+              disabled={loading}
+            >
+              {t.otpResend}
+            </button>
+            <button
+              type="button"
+              className="text-[color-mix(in_oklab,var(--ink)_60%,white)] underline"
+              onClick={() => {
+                setStep("form");
+                setError("");
+              }}
+            >
+              {t.otpBack}
+            </button>
+          </div>
+        </form>
+        {successDonor ? (
+          <RegisterSuccessModal
+            donor={successDonor}
+            onContinue={() => router.push("/dashboard")}
+          />
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <>
-      <form onSubmit={onSubmit} className="space-y-5 rounded-2xl bg-white/80 p-6">
+      <form onSubmit={sendOtps} className="space-y-5 rounded-2xl bg-white/80 p-6">
+        <p className="rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
+          {t.otpRegisterNotice}
+        </p>
         <section className="space-y-3">
           <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
             {t.personalInfo}
@@ -199,7 +372,7 @@ export function RegisterForm() {
           className="inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3 font-semibold text-white transition hover:bg-[#265a42] disabled:opacity-55"
           disabled={loading}
         >
-          {loading ? t.loading : t.createAccount}
+          {loading ? t.loading : t.otpSendCodes}
         </button>
         <p className="text-center text-sm">
           {t.alreadyDonor}{" "}
@@ -208,13 +381,6 @@ export function RegisterForm() {
           </Link>
         </p>
       </form>
-
-      {successDonor ? (
-        <RegisterSuccessModal
-          donor={successDonor}
-          onContinue={() => router.push("/dashboard")}
-        />
-      ) : null}
     </>
   );
 }

@@ -2,6 +2,11 @@ export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
 
 export type Gender = "male" | "female";
 
+export type VerifyChannel = "email" | "phone";
+
+/** How urgent a blood-need post is — shown as Emergency on the homepage. */
+export type PostUrgency = "critical" | "urgent" | "moderate";
+
 export type Donor = {
   id: string;
   name: string;
@@ -15,8 +20,36 @@ export type Donor = {
   available: boolean;
   lastDonationDate: string | null;
   bloodIssue: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  pendingEmailCodeHash: string | null;
+  pendingPhoneCodeHash: string | null;
+  pendingResetCodeHash: string | null;
+  pendingResetChannel: VerifyChannel | null;
+  pendingResetExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+/** Registration held until Gmail + phone OTP are confirmed. */
+export type PendingRegistration = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  passwordHash: string;
+  gender: Gender;
+  bloodGroup: BloodGroup;
+  district: string;
+  area: string;
+  lastDonationDate: string | null;
+  bloodIssue: string;
+  emailCodeHash: string;
+  phoneCodeHash: string;
+  emailConfirmed: boolean;
+  phoneConfirmed: boolean;
+  expiresAt: string;
+  createdAt: string;
 };
 
 export type ContactRequest = {
@@ -52,7 +85,17 @@ export type BloodPost = {
   hospital: string;
   neededBy: string;
   message: string;
+  urgency: PostUrgency;
   createdAt: string;
+};
+
+export type SuccessStory = {
+  id: string;
+  name: string;
+  handle: string;
+  quoteEn: string;
+  quoteBn: string;
+  enabled: boolean;
 };
 
 export type AppNotification = {
@@ -137,6 +180,8 @@ export type SiteAppearance = {
   aboutBodyBn: string;
   /** Optional portrait of the founder shown on About. */
   founderPhotoUrl: string;
+  /** Public impact / success stories shown on the homepage. */
+  successStories: SuccessStory[];
 };
 
 export type AdminSettings = {
@@ -162,6 +207,7 @@ export type DatabaseShape = {
   ratings: Rating[];
   posts: BloodPost[];
   notifications: AppNotification[];
+  pendingRegistrations: PendingRegistration[];
   admin: AdminSettings;
 };
 
@@ -179,4 +225,7 @@ export type PublicDonor = {
   bloodIssue: string;
   avgRating: number | null;
   ratingCount: number;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  verified: boolean;
 };
