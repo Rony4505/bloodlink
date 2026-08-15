@@ -52,7 +52,7 @@ const emptyActivity: {
 } = {
   title: "",
   description: "",
-  activityType: "outreach",
+  activityType: "donor_add",
   status: "planned",
   activityDate: "",
 };
@@ -455,11 +455,35 @@ export function AdminVolunteersPanel() {
                   setActivityDraft((d) => ({ ...d, activityType: e.target.value }))
                 }
               >
-                <option value="outreach">{t.volunteerTypeOutreach}</option>
-                <option value="blood_camp">{t.volunteerTypeCamp}</option>
-                <option value="hospital">{t.volunteerTypeHospital}</option>
-                <option value="data_entry">{t.volunteerTypeData}</option>
-                <option value="other">{t.volunteerTypeOther}</option>
+                <optgroup label={t.volunteerCatEmergency}>
+                  <option value="emergency_blood">{t.volunteerTypeEmergencyBlood}</option>
+                  <option value="critical_patient">{t.volunteerTypeCriticalPatient}</option>
+                  <option value="accident_response">{t.volunteerTypeAccident}</option>
+                  <option value="disaster_relief">{t.volunteerTypeDisaster}</option>
+                  <option value="mother_child">{t.volunteerTypeMotherChild}</option>
+                  <option value="night_duty">{t.volunteerTypeNightDuty}</option>
+                  <option value="plasma_seek">{t.volunteerTypePlasma}</option>
+                </optgroup>
+                <optgroup label={t.volunteerCatHumanitarian}>
+                  <option value="hospital_liaison">{t.volunteerTypeHospital}</option>
+                  <option value="blood_camp">{t.volunteerTypeCamp}</option>
+                  <option value="thalassemia_support">{t.volunteerTypeThalassemia}</option>
+                  <option value="transport_help">{t.volunteerTypeTransport}</option>
+                  <option value="call_center">{t.volunteerTypeCallCenter}</option>
+                </optgroup>
+                <optgroup label={t.volunteerCatData}>
+                  <option value="donor_add">{t.volunteerTypeDonorAdd}</option>
+                  <option value="donor_verify">{t.volunteerTypeDonorVerify}</option>
+                  <option value="data_entry">{t.volunteerTypeData}</option>
+                </optgroup>
+                <optgroup label={t.volunteerCatOutreach}>
+                  <option value="community_outreach">{t.volunteerTypeOutreach}</option>
+                  <option value="awareness_camp">{t.volunteerTypeAwareness}</option>
+                  <option value="social_media">{t.volunteerTypeSocial}</option>
+                </optgroup>
+                <optgroup label={t.volunteerCatOther}>
+                  <option value="other">{t.volunteerTypeOther}</option>
+                </optgroup>
               </select>
             </label>
             <label className="block text-sm">

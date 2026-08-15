@@ -5,13 +5,17 @@ import { BrandMark } from "@/components/BrandMark";
 import { SuccessStoryForm } from "@/components/SuccessStoryForm";
 import { useLocale } from "@/lib/i18n/locale-context";
 
-export function SiteFooter() {
+export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }) {
   const { t } = useLocale();
   return (
     <footer className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_40%,white)] px-5 py-10 md:px-8">
       <div className="mx-auto max-w-6xl space-y-10">
-        <SuccessStoryForm />
-        <div className="flex flex-col gap-6 border-t border-[var(--line)] pt-8 md:flex-row md:items-end md:justify-between">
+        {showStoryForm ? <SuccessStoryForm /> : null}
+        <div
+          className={`flex flex-col gap-6 md:flex-row md:items-end md:justify-between ${
+            showStoryForm ? "border-t border-[var(--line)] pt-8" : ""
+          }`}
+        >
           <div>
             <BrandMark variant="dark" size="sm" />
             <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">

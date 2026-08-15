@@ -10,7 +10,8 @@ export default function VolunteerLoginPage() {
     <PageShell
       title={t.volunteerLoginTitle}
       subtitle={t.volunteerLoginSubtitle}
-      bannerPage="home"
+      showAds={false}
+      showStoryForm={false}
     >
       <div className="mx-auto max-w-md">
         <VolunteerLoginForm />

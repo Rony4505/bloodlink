@@ -29,6 +29,8 @@ export type Donor = {
   pendingResetCodeHash: string | null;
   pendingResetChannel: VerifyChannel | null;
   pendingResetExpiresAt: string | null;
+  /** Set when a volunteer created this donor from the portal. */
+  createdByVolunteerId: string | null;
   createdAt: string;
   updatedAt: string;
 };

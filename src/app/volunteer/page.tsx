@@ -10,7 +10,8 @@ export default function VolunteerPortalPage() {
     <PageShell
       title={t.volunteerPortal}
       subtitle={t.volunteerPortalHint}
-      bannerPage="home"
+      showAds={false}
+      showStoryForm={false}
     >
       <VolunteerDashboard />
     </PageShell>
