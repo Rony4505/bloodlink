@@ -21,8 +21,8 @@ export function RegisterForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState("");
-  const [phoneMasked, setPhoneMasked] = useState("");
-  const [phoneCode, setPhoneCode] = useState("");
+  const [emailMasked, setEmailMasked] = useState("");
+  const [emailCode, setEmailCode] = useState("");
   const [hint, setHint] = useState("");
   const [successDonor, setSuccessDonor] = useState<RegisteredDonorSummary | null>(
     null,
@@ -64,9 +64,9 @@ export function RegisterForm() {
         return;
       }
       setPendingId(data.pendingId);
-      setPhoneMasked(data.phoneMasked || form.phone);
-      setPhoneCode("");
-      setHint(t.otpSentToPhone);
+      setEmailMasked(data.emailMasked || form.email);
+      setEmailCode("");
+      setHint(t.otpSentToEmail);
       setStep("otp");
     } catch {
       setError(t.errorGeneric);
@@ -86,7 +86,7 @@ export function RegisterForm() {
         body: JSON.stringify({
           action: "confirm",
           pendingId,
-          phoneCode,
+          emailCode,
         }),
       });
       const data = await res.json();
@@ -109,14 +109,14 @@ export function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "resend", pendingId, channel: "phone" }),
+        body: JSON.stringify({ action: "resend", pendingId, channel: "email" }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || t.errorGeneric);
         return;
       }
-      setPhoneCode("");
+      setEmailCode("");
       setHint(t.otpResent);
     } catch {
       setError(t.errorGeneric);
@@ -134,7 +134,7 @@ export function RegisterForm() {
               {t.otpVerifyTitle}
             </h3>
             <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.otpVerifyBody.replace("{phone}", phoneMasked)}
+              {t.otpVerifyBody.replace("{email}", emailMasked)}
             </p>
             {hint ? (
               <p className="mt-3 rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
@@ -143,13 +143,13 @@ export function RegisterForm() {
             ) : null}
           </div>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium">{t.otpPhoneCode}</span>
+            <span className="mb-1 block font-medium">{t.otpEmailCode}</span>
             <input
               className="field tracking-[0.3em]"
               inputMode="numeric"
               autoComplete="one-time-code"
-              value={phoneCode}
-              onChange={(e) => setPhoneCode(e.target.value)}
+              value={emailCode}
+              onChange={(e) => setEmailCode(e.target.value)}
               required
               maxLength={10}
             />
@@ -214,17 +214,14 @@ export function RegisterForm() {
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium">
-              {t.email}{" "}
-              <span className="font-normal text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                ({t.emailOptional})
-              </span>
-            </span>
+            <span className="mb-1 block font-medium">{t.email}</span>
             <input
               className="field"
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              required
+              autoComplete="email"
             />
           </label>
           <label className="block text-sm">

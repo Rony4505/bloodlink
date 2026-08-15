@@ -8,11 +8,8 @@ const genderSchema = z.enum(["male", "female"]);
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
-  /** Optional — account verification is phone OTP only. */
-  email: z
-    .union([z.string().trim().email().max(120), z.literal("")])
-    .optional()
-    .default(""),
+  /** Required — donor verification is Gmail OTP only. */
+  email: z.string().trim().email().max(120),
   phone: z
     .string()
     .trim()
@@ -133,12 +130,12 @@ export const postSchema = z.object({
 
 export const registerConfirmSchema = z.object({
   pendingId: z.string().uuid(),
-  phoneCode: z.string().trim().min(4).max(10),
+  emailCode: z.string().trim().min(4).max(10),
 });
 
 export const registerResendSchema = z.object({
   pendingId: z.string().uuid(),
-  channel: z.enum(["phone"]).default("phone"),
+  channel: z.enum(["email"]).default("email"),
 });
 
 export const successStorySubmitSchema = z.object({
@@ -185,12 +182,9 @@ export const platformOptionsSchema = z.object({
 
 export function normalizeRegisterInput(data: z.infer<typeof registerSchema>) {
   const phone = normalizePhone(data.phone);
-  const rawEmail = String(data.email || "")
-    .trim()
-    .toLowerCase();
   return {
     ...data,
-    email: rawEmail || phonePlaceholderEmail(phone),
+    email: data.email.trim().toLowerCase(),
     phone,
     bloodIssue: data.bloodIssue || "",
     lastDonationDate:
