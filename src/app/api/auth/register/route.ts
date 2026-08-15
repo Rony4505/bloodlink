@@ -108,7 +108,7 @@ async function startRegistration(body: unknown) {
     return NextResponse.json(
       {
         error:
-          "Could not send SMS OTP. Configure SMS_WEBHOOK_URL so the code reaches your mobile — codes are never shown on the website.",
+          "Could not send SMS OTP. Set SMS_NET_BD_API_KEY from sms.bd (API page) on Railway — codes are never shown on the website.",
       },
       { status: 503 },
     );
@@ -218,7 +218,7 @@ async function resendCodes(body: unknown) {
     return NextResponse.json(
       {
         error:
-          "Could not resend SMS OTP. Check SMS_WEBHOOK_URL — codes are never shown on the website.",
+          "Could not resend SMS OTP. Check SMS_NET_BD_API_KEY on Railway — codes are never shown on the website.",
       },
       { status: 503 },
     );

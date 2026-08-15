@@ -1,11 +1,13 @@
 /**
  * OTP delivery for donor registration.
- * Configure:
- * - SMS_WEBHOOK_URL (POST JSON { to, message }) — required for registration
- * - RESEND_API_KEY / SMTP_WEBHOOK_URL — optional email (not used for register verify)
+ * Prefer sms.bd (Alpha):
+ * - SMS_NET_BD_API_KEY (from sms.bd panel → API)
+ * - optional SMS_NET_BD_SENDER_ID (masking only; leave empty for non-masking)
  *
- * Registration must never return OTP codes in API responses. Inline SMS fallback
- * is disabled for register flows so codes only reach the phone via SMS.
+ * Fallback webhook:
+ * - SMS_WEBHOOK_URL (POST JSON { to, message })
+ *
+ * Registration must never return OTP codes in API responses.
  */
 
 export type OtpDeliveryResult = {
@@ -24,6 +26,15 @@ function allowInlineOtp(): boolean {
   if (flag === "false" || flag === "0") return false;
   if (flag === "true" || flag === "1") return true;
   return true;
+}
+
+/** sms.bd accepts 01X… or 8801X… — normalize to 8801XXXXXXXXX. */
+function toSmsBdNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("880") && digits.length >= 13) return digits.slice(0, 13);
+  if (digits.startsWith("0") && digits.length === 11) return `88${digits}`;
+  if (digits.length === 10 && digits.startsWith("1")) return `880${digits}`;
+  return digits;
 }
 
 async function sendViaResend(to: string, subject: string, text: string): Promise<boolean> {
@@ -60,6 +71,50 @@ async function sendViaSmtp(to: string, subject: string, text: string): Promise<b
   }
 }
 
+/** Direct sms.bd / Alpha Net gateway (https://api.sms.net.bd/sendsms). */
+async function sendViaSmsBd(to: string, message: string): Promise<OtpDeliveryResult | null> {
+  const apiKey = process.env.SMS_NET_BD_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const payload: Record<string, string> = {
+    api_key: apiKey,
+    msg: message,
+    to: toSmsBdNumber(to),
+  };
+  const senderId = process.env.SMS_NET_BD_SENDER_ID?.trim();
+  if (senderId) payload.sender_id = senderId;
+
+  try {
+    const res = await fetch("https://api.sms.net.bd/sendsms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const raw = await res.text();
+    let data: { error?: number | string; msg?: string } = {};
+    try {
+      data = JSON.parse(raw) as { error?: number | string; msg?: string };
+    } catch {
+      // non-JSON body
+    }
+    const errCode = Number(data.error);
+    if (res.ok && errCode === 0) {
+      return { delivered: true, mode: "sms" };
+    }
+    return {
+      delivered: false,
+      mode: "sms",
+      detail: data.msg || `sms.bd error ${data.error ?? res.status}`,
+    };
+  } catch {
+    return {
+      delivered: false,
+      mode: "sms",
+      detail: "sms.bd request failed",
+    };
+  }
+}
+
 export async function deliverEmailOtp(
   to: string,
   code: string,
@@ -89,8 +144,12 @@ export async function deliverSmsOtp(
   code: string,
   options?: OtpDeliveryOptions,
 ): Promise<OtpDeliveryResult> {
-  const webhook = process.env.SMS_WEBHOOK_URL?.trim();
   const message = `BloodLink BD code: ${code}. Valid 15 minutes. Do not share.`;
+
+  const smsBd = await sendViaSmsBd(to, message);
+  if (smsBd) return smsBd;
+
+  const webhook = process.env.SMS_WEBHOOK_URL?.trim();
   if (webhook) {
     try {
       const res = await fetch(webhook, {
@@ -117,6 +176,7 @@ export async function deliverSmsOtp(
       };
     }
   }
+
   const canInline = options?.allowInline !== false && allowInlineOtp();
   if (canInline) {
     return {
@@ -128,6 +188,6 @@ export async function deliverSmsOtp(
   return {
     delivered: false,
     mode: "sms",
-    detail: "SMS_WEBHOOK_URL is not configured",
+    detail: "SMS_NET_BD_API_KEY (or SMS_WEBHOOK_URL) is not configured",
   };
 }
