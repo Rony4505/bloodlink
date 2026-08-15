@@ -136,6 +136,9 @@ export function RegisterForm() {
             <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {t.otpVerifyBody.replace("{email}", emailMasked)}
             </p>
+            <p className="mt-2 rounded-xl border border-[color-mix(in_oklab,#c9852d_35%,white)] bg-[color-mix(in_oklab,#c9852d_10%,white)] px-3 py-2 text-xs font-medium text-[#6b4a12]">
+              {t.otpExpiresHint}
+            </p>
             {hint ? (
               <p className="mt-3 rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
                 {hint}
