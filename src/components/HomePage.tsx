@@ -98,11 +98,11 @@ export function HomePage() {
 
       <HomeEmergencyPosts />
 
+      <HomeImpact />
+
       <HomeDonors />
 
       <HomeBloodGroupStats />
-
-      <HomeImpact />
 
       <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-20 md:px-8">
         <div className="mx-auto max-w-6xl">
