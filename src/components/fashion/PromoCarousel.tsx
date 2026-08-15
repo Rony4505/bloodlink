@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CarouselSlide } from "@/lib/fashion/carousel-slides";
 import type { Coupon, Product } from "@/lib/fashion/types";
 import { formatBdt } from "@/lib/fashion/format";
+import { FASHION_CAROUSEL_INTERVAL_MS, FASHION_CAROUSEL_TRANSITION_CLASS } from "@/lib/fashion/carousel-config";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { FashionModalPortal } from "./FashionModalPortal";
 
@@ -26,7 +27,7 @@ export function PromoCarousel({
     if (slides.length <= 1) return;
     const timer = window.setInterval(() => {
       setIndex((i) => (i + 1) % slides.length);
-    }, 5000);
+    }, FASHION_CAROUSEL_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [slides.length]);
 
@@ -56,7 +57,7 @@ export function PromoCarousel({
           }}
         >
           <div
-            className="flex transition-transform duration-500 ease-out"
+            className={`flex h-full ${FASHION_CAROUSEL_TRANSITION_CLASS}`}
             style={{ transform: `translateX(-${index * 100}%)` }}
           >
             {slides.map((slide) => (

@@ -28,12 +28,13 @@ AUTH_SECRET=<long-random-secret>
 DATA_DIR=/app/data
 ```
 
-5. Add a **Volume** on this service → mount path `/app/data`
+5. Add a **Volume** on this service → mount path **`/app/data`** (required — without this, products/orders/settings reset on every redeploy)
 6. **Settings → Networking → Custom Domain** → add:
    - `smartcraftcorner.com`
    - `www.smartcraftcorner.com`
-7. In your domain DNS (Namecheap / Cloudflare / etc.) add the records Railway shows
-8. Deploy / Redeploy
+7. After first deploy, open **`/api/health`** — `storage.mainExists` should be `true` and `storage.productCount` should match your catalog
+8. In your domain DNS (Namecheap / Cloudflare / etc.) add the records Railway shows
+9. Deploy / Redeploy
 
 ## BloodLink service (existing)
 

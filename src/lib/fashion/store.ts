@@ -1,4 +1,5 @@
-import { access, copyFile, mkdir, readFile, rename, writeFile } from "fs/promises";
+import { access, copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "fs/promises";
+import path from "path";
 import bcrypt from "bcryptjs";
 import { computeSellPrice, getEffectivePrice } from "./pricing";
 import { defaultCategories, defaultSettings } from "./defaults";
@@ -24,6 +25,98 @@ import { computeAnalytics } from "./analytics";
 import { generateTrackingNumber } from "./tracking";
 import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
 import { fashionDataDir, fashionStorePath } from "./paths";
+
+const FASHION_BACKUP_PREFIX = "fashion-store-";
+const MAX_FASHION_ROTATING_BACKUPS = 12;
+
+const SETTINGS_KEYS = new Set<string>([
+  "brandName",
+  "brandTagline",
+  "brandTaglineEn",
+  "defaultMarkupPercent",
+  "pricingMode",
+  "deliveryRules",
+  "heroTitle",
+  "heroTitleEn",
+  "heroSubtitle",
+  "heroSubtitleEn",
+  "heroDescription",
+  "heroDescriptionEn",
+  "heroCtaPrimaryLabel",
+  "heroCtaPrimaryLabelEn",
+  "heroCtaPrimaryHref",
+  "heroCtaSecondaryLabel",
+  "heroCtaSecondaryLabelEn",
+  "heroCtaSecondaryHref",
+  "heroStat1Value",
+  "heroStat1Label",
+  "heroStat1LabelEn",
+  "heroStat2Value",
+  "heroStat2Label",
+  "heroStat2LabelEn",
+  "heroStat3Value",
+  "heroStat3Label",
+  "heroStat3LabelEn",
+  "contactEmail",
+  "contactPhone",
+  "whatsapp",
+  "supportNote",
+  "supportNoteEn",
+  "facebookUrl",
+  "instagramUrl",
+  "footerText",
+  "footerTextEn",
+  "aboutTitle",
+  "aboutTitleEn",
+  "aboutSubtitle",
+  "aboutSubtitleEn",
+  "aboutText",
+  "aboutTextEn",
+  "aboutPillars",
+  "aboutPillarsEn",
+  "freeShippingNote",
+  "freeShippingNoteEn",
+  "announcementEnabled",
+  "announcementText",
+  "announcementTextEn",
+  "featuresTitle",
+  "featuresTitleEn",
+  "featuresBody",
+  "featuresBodyEn",
+  "serviceHighlights",
+  "serviceHighlightsEn",
+  "testimonials",
+  "faqs",
+  "faqsEn",
+  "showCouponsOnHome",
+  "showNewProducts",
+  "showOffers",
+  "showFeatures",
+  "showTestimonials",
+  "showFaq",
+  "metaTitle",
+  "metaTitleEn",
+  "metaDescription",
+  "metaDescriptionEn",
+  "promoBanners",
+  "availableSizes",
+  "websiteChatEnabled",
+  "vipMinSpend",
+  "vipDiscountPercent",
+  "vipEnabled",
+  "adminUsername",
+  "adminEmail",
+  "adminPhone",
+]);
+
+function sanitizeSettingsPartial(input: Partial<StoreSettings>): Partial<StoreSettings> {
+  const out: Partial<StoreSettings> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!SETTINGS_KEYS.has(key) || value === undefined) continue;
+    (out as Record<string, unknown>)[key] = value;
+  }
+  return out;
+}
 
 const defaultCoupons: Coupon[] = [
   {
@@ -62,6 +155,71 @@ function storeBackupPath(): string {
 
 function storeTempPath(): string {
   return `${storePath()}.tmp`;
+}
+
+function fashionBackupsDir(): string {
+  return path.join(dataDir(), "backups");
+}
+
+async function rotateFashionBackup(store: FashionStore): Promise<void> {
+  if (isNextBuild()) return;
+  try {
+    const dir = fashionBackupsDir();
+    await mkdir(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = path.join(dir, `${FASHION_BACKUP_PREFIX}${stamp}.json`);
+    await writeFile(backupPath, JSON.stringify(store, null, 2), "utf8");
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith(FASHION_BACKUP_PREFIX) && name.endsWith(".json"))
+      .sort();
+    while (names.length > MAX_FASHION_ROTATING_BACKUPS) {
+      const oldest = names.shift();
+      if (oldest) await unlink(path.join(dir, oldest)).catch(() => undefined);
+    }
+  } catch (error) {
+    console.error("[fashion-store] rotating backup failed", error);
+  }
+}
+
+async function loadFashionBackupFile(filePath: string): Promise<Partial<FashionStore> | null> {
+  try {
+    const raw = await readFile(filePath, "utf8");
+    const parsed = JSON.parse(raw) as Partial<FashionStore>;
+    if (!Array.isArray(parsed.products)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function recoverFashionStoreFromBackups(): Promise<Partial<FashionStore> | null> {
+  const sidecar = storeBackupPath();
+  if (await fileExists(sidecar)) {
+    const parsed = await loadFashionBackupFile(sidecar);
+    if (parsed) {
+      console.warn("[fashion-store] recovered from sidecar backup");
+      return parsed;
+    }
+  }
+
+  try {
+    const dir = fashionBackupsDir();
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith(FASHION_BACKUP_PREFIX) && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names) {
+      const parsed = await loadFashionBackupFile(path.join(dir, name));
+      if (parsed) {
+        console.warn(`[fashion-store] recovered from rotating backup ${name}`);
+        return parsed;
+      }
+    }
+  } catch {
+    /* no backup directory yet */
+  }
+
+  return null;
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -372,6 +530,12 @@ async function ensureStore(): Promise<FashionStore> {
   }
 
   if (!(await fileExists(primary))) {
+    const recovered = await recoverFashionStoreFromBackups();
+    if (recovered) {
+      const store = await buildStoreFromParsed(recovered, { allowSeedFallback: false });
+      if (!building) await writeStore(store);
+      return store;
+    }
     const initial = await createInitialStore();
     if (!building) await writeStore(initial);
     return initial;
@@ -436,6 +600,7 @@ async function writeStore(
       await copyFile(primary, storeBackupPath());
     }
     await rename(temp, primary);
+    await rotateFashionBackup(store);
   } catch {
     // Concurrent writers or Docker build layers can race on rename — direct write is safe enough.
     await writeFile(primary, payload, "utf8");
@@ -444,6 +609,7 @@ async function writeStore(
     } catch {
       /* ignore backup errors */
     }
+    await rotateFashionBackup(store);
   }
 }
 
@@ -461,25 +627,29 @@ export async function updateStoreSettings(partial: Partial<StoreSettings>): Prom
   };
   const current = store.settings;
   const next: StoreSettings = { ...current };
+  const safePartial = sanitizeSettingsPartial(partial);
 
-  for (const [key, value] of Object.entries(partial) as [keyof StoreSettings, StoreSettings[keyof StoreSettings]][]) {
+  for (const [key, value] of Object.entries(safePartial) as [
+    keyof StoreSettings,
+    StoreSettings[keyof StoreSettings],
+  ][]) {
     if (value === undefined) continue;
     (next as Record<string, unknown>)[key as string] = value;
   }
 
   store.settings = {
     ...next,
-    deliveryRules: partial.deliveryRules ?? current.deliveryRules,
+    deliveryRules: safePartial.deliveryRules ?? current.deliveryRules,
     promoBanners:
-      partial.promoBanners !== undefined ? partial.promoBanners : current.promoBanners ?? [],
-    availableSizes: partial.availableSizes ?? current.availableSizes,
-    aboutPillars: partial.aboutPillars ?? current.aboutPillars,
-    aboutPillarsEn: partial.aboutPillarsEn ?? current.aboutPillarsEn,
-    serviceHighlights: partial.serviceHighlights ?? current.serviceHighlights,
-    serviceHighlightsEn: partial.serviceHighlightsEn ?? current.serviceHighlightsEn,
-    testimonials: partial.testimonials ?? current.testimonials,
-    faqs: partial.faqs ?? current.faqs,
-    faqsEn: partial.faqsEn ?? current.faqsEn,
+      safePartial.promoBanners !== undefined ? safePartial.promoBanners : current.promoBanners ?? [],
+    availableSizes: safePartial.availableSizes ?? current.availableSizes,
+    aboutPillars: safePartial.aboutPillars ?? current.aboutPillars,
+    aboutPillarsEn: safePartial.aboutPillarsEn ?? current.aboutPillarsEn,
+    serviceHighlights: safePartial.serviceHighlights ?? current.serviceHighlights,
+    serviceHighlightsEn: safePartial.serviceHighlightsEn ?? current.serviceHighlightsEn,
+    testimonials: safePartial.testimonials ?? current.testimonials,
+    faqs: safePartial.faqs ?? current.faqs,
+    faqsEn: safePartial.faqsEn ?? current.faqsEn,
   };
   purgeExpired(store);
   await writeStore(store, priorCounts);
@@ -1088,4 +1258,87 @@ export async function updateOrderStatus(
 export async function getAnalytics(period: "daily" | "monthly"): Promise<AnalyticsSummary> {
   const store = await ensureStore();
   return computeAnalytics(store.orders, period);
+}
+
+export async function exportFashionStoreBackup(): Promise<FashionStore> {
+  return ensureStore();
+}
+
+export async function restoreFashionStoreFromBackup(snapshot: Partial<FashionStore>): Promise<{
+  productCount: number;
+  orderCount: number;
+}> {
+  if (!Array.isArray(snapshot.products)) {
+    throw new Error("Invalid backup: products array is required");
+  }
+  const store = await buildStoreFromParsed(snapshot, { allowSeedFallback: false });
+  const priorCounts = {
+    products: store.products.length,
+    orders: store.orders.length,
+    customers: store.customers.length,
+  };
+  await writeStore(store, priorCounts);
+  return { productCount: store.products.length, orderCount: store.orders.length };
+}
+
+export async function getFashionStorageHealth() {
+  const dir = dataDir();
+  const primary = storePath();
+  const sidecar = storeBackupPath();
+  let mainExists = false;
+  let bakExists = false;
+  let rotatingBackupCount = 0;
+  let latestRotatingBackupAt: string | null = null;
+  let productCount = 0;
+  let orderCount = 0;
+  let readable = false;
+  let error: string | null = null;
+  let recoveredFromBackup = false;
+
+  await mkdir(dir, { recursive: true });
+  mainExists = await fileExists(primary);
+  bakExists = await fileExists(sidecar);
+
+  try {
+    const names = (await readdir(fashionBackupsDir()))
+      .filter((name) => name.startsWith(FASHION_BACKUP_PREFIX) && name.endsWith(".json"))
+      .sort();
+    rotatingBackupCount = names.length;
+    if (names.length) {
+      latestRotatingBackupAt = (await stat(path.join(fashionBackupsDir(), names.at(-1)!))).mtime.toISOString();
+    }
+  } catch {
+    /* no backups yet */
+  }
+
+  try {
+    const store = await ensureStore();
+    productCount = store.products.length;
+    orderCount = store.orders.length;
+    readable = true;
+    recoveredFromBackup = !mainExists && productCount > 0;
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Fashion store unreadable";
+  }
+
+  const volumeHint =
+    mainExists || rotatingBackupCount > 0
+      ? "Fashion store file found — data should survive redeploys when Railway Volume is mounted at /app/data"
+      : "No store file yet — add a Railway Volume mounted at /app/data (see SMARTCRAFT_DEPLOY.md) or data resets on every redeploy";
+
+  return {
+    ok: readable,
+    backend: "file",
+    dataDir: dir,
+    storePath: primary,
+    mainExists,
+    bakExists,
+    rotatingBackupCount,
+    latestRotatingBackupAt,
+    productCount,
+    orderCount,
+    recoveredFromBackup,
+    persistentHint: volumeHint,
+    error,
+  };
 }
