@@ -7,6 +7,19 @@ import { useLocale } from "@/lib/i18n/locale-context";
 
 export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }) {
   const { t } = useLocale();
+
+  const links = [
+    { href: "/", label: t.bannerPageHome },
+    { href: "/find", label: t.findDonors },
+    { href: "/register", label: t.becomeDonor },
+    { href: "/requests", label: t.requestBlood },
+    { href: "/ambulance", label: t.ambulance },
+    { href: "/warnings", label: t.warningsNav },
+    { href: "/about", label: t.about },
+    { href: "/privacy", label: t.privacy },
+    { href: "/volunteer/login", label: t.volunteerLogin },
+  ] as const;
+
   return (
     <footer className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_40%,white)] px-5 py-10 md:px-8">
       <div className="mx-auto max-w-6xl space-y-10">
@@ -38,25 +51,16 @@ export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }
               </a>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <Link href="/about" className="underline-offset-4 hover:underline">
-              {t.about}
-            </Link>
-            <Link href="/warnings" className="underline-offset-4 hover:underline">
-              {t.warningsNav}
-            </Link>
-            <Link href="/privacy" className="underline-offset-4 hover:underline">
-              {t.privacy}
-            </Link>
-            <Link href="/ambulance" className="underline-offset-4 hover:underline">
-              {t.ambulance}
-            </Link>
-            <Link href="/requests" className="underline-offset-4 hover:underline">
-              {t.requestBlood}
-            </Link>
-            <Link href="/volunteer/login" className="underline-offset-4 hover:underline">
-              {t.volunteerLogin}
-            </Link>
+          <div className="flex max-w-xl flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="underline-offset-4 hover:underline"
+              >
+                {link.label}
+              </Link>
+            ))}
             <span className="text-[color-mix(in_oklab,var(--ink)_55%,white)]">
               {t.footerNote}
             </span>

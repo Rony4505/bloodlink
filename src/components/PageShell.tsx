@@ -28,9 +28,7 @@ export function PageShell({
   return (
     <div className="flex min-h-full flex-col">
       <div
-        className={`relative overflow-hidden bg-[linear-gradient(145deg,#6e1220_0%,#9b1b2e_45%,#3d1a1f_100%)] pb-16 text-white ${
-          compactHeader ? "pt-36 sm:pt-32" : "pt-28"
-        }`}
+        className={`relative overflow-hidden bg-[linear-gradient(145deg,#6e1220_0%,#9b1b2e_45%,#3d1a1f_100%)] pb-16 pt-24 text-white sm:pt-28`}
       >
         <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.25),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(214,69,80,0.45),transparent_40%)]" />
         <Header compact={compactHeader} />
