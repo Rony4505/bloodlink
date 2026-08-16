@@ -7,7 +7,7 @@ import {
   readCricketStore,
   updateCricketStore,
 } from "@/lib/cricket/store";
-import type { BallType, MatchStatus } from "@/lib/cricket/types";
+import type { BallType, GraphicKind, MatchStatus } from "@/lib/cricket/types";
 
 export const runtime = "nodejs";
 
@@ -30,6 +30,16 @@ export async function GET(_request: Request, ctx: Ctx) {
   });
 }
 
+const GRAPHIC_KINDS: GraphicKind[] = [
+  "hidden",
+  "batter",
+  "bowler",
+  "partnership",
+  "batting",
+  "bowling",
+  "teams",
+];
+
 export async function POST(request: Request, ctx: Ctx) {
   const { matchId } = await ctx.params;
   const body = (await request.json()) as {
@@ -48,6 +58,7 @@ export async function POST(request: Request, ctx: Ctx) {
     videoUrl?: string;
     status?: MatchStatus;
     title?: string;
+    graphicKind?: GraphicKind;
   };
 
   const store = await readCricketStore();
@@ -93,6 +104,14 @@ export async function POST(request: Request, ctx: Ctx) {
       if (body.status) m.status = body.status;
       if (body.title) m.title = body.title.trim();
       m.updatedAt = new Date().toISOString();
+    } else if (action === "set_graphic") {
+      const kind =
+        body.graphicKind && GRAPHIC_KINDS.includes(body.graphicKind) ? body.graphicKind : "hidden";
+      m = {
+        ...m,
+        graphic: { kind, updatedAt: new Date().toISOString() },
+        updatedAt: new Date().toISOString(),
+      };
     } else if (action === "complete") {
       m.status = "completed";
       m.updatedAt = new Date().toISOString();

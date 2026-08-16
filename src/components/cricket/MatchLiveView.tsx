@@ -47,7 +47,7 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
 
       {/* Video on top + TV-style score line flush underneath */}
       <div className="pl-broadcast-stack">
-        <VideoEmbed url={match.videoUrl} title={match.title} />
+        <VideoEmbed url={match.videoUrl} title={match.title} match={match} />
         <BroadcastScoreLine match={match} accent={accent} />
       </div>
 

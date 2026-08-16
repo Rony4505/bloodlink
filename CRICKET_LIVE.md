@@ -26,6 +26,7 @@
 
 ### দর্শক
 - লাইভ স্ট্রিমের **নিচে TV-স্টাইল স্কোর লাইন** (international match এর মতো)
+- স্ট্রিমের **ভিতরে on-video গ্রাফিক্স** (Batter / Bowler / Partnership / Team Batting / Bowling / Teams) — স্কোরার যেকোনো সময় দেখাতে/লুকাতে পারে
 - auto refresh ~2s
 - YouTube / Facebook Live ভিডিও embed
 - স্কোরকার্ড + কমেন্টারি
@@ -35,6 +36,7 @@
 - বড় বাটন: `0 1 2 3 4 6 W WD NB Bye LB`
 - Undo last ball
 - স্ট্রাইকার / নন-স্ট্রাইক / বোলার নাম
+- **স্ট্রিম গ্রাফিক্স কন্ট্রোল** (আন্তর্জাতিক স্টাইল performance overlay)
 - ২য় ইনিংস + টার্গেট
 - ভিডিও লিংক সেট + ম্যাচ লাইভ/শেষ
 

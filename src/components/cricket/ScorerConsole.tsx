@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import type { BallType, Match } from "@/lib/cricket/types";
+import type { BallType, GraphicKind, Match } from "@/lib/cricket/types";
 import { LiveScoreBoard } from "./LiveScoreBoard";
 
 const RUN_BTNS = [0, 1, 2, 3, 4, 6] as const;
+
+const GRAPHICS: { kind: GraphicKind; label: string }[] = [
+  { kind: "batter", label: "Batter" },
+  { kind: "bowler", label: "Bowler" },
+  { kind: "partnership", label: "Partnership" },
+  { kind: "batting", label: "Team Batting" },
+  { kind: "bowling", label: "Team Bowling" },
+  { kind: "teams", label: "Teams" },
+  { kind: "hidden", label: "Hide ✕" },
+];
 
 type Props = {
   matchId: string;
@@ -56,7 +66,7 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
           return;
         }
         setMatch(data.match);
-        setNote("");
+        if (body.action !== "set_graphic") setNote("");
       } catch {
         setMsg("নেটওয়ার্ক সমস্যা");
       }
@@ -66,6 +76,8 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
   function ball(type: BallType, runs: number, isWicket = false) {
     post({ action: "ball", type, runs, isWicket });
   }
+
+  const activeGraphic = match.graphic?.kind || "hidden";
 
   return (
     <div className="pl-scorer">
@@ -117,6 +129,27 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
           <button type="button" disabled={pending} onClick={() => ball("legbye", 1)}>
             LB 1
           </button>
+        </div>
+
+        <div className="pl-graphic-controls">
+          <h3>স্ট্রিম গ্রাফিক্স (আন্তর্জাতিক স্টাইল)</h3>
+          <p className="pl-muted">যেকোনো সময় লাইভ ভিডিওর ভিতরে performance দেখান / লুকান</p>
+          <div className="pl-graphic-btns">
+            {GRAPHICS.map((g) => (
+              <button
+                key={g.kind}
+                type="button"
+                className={activeGraphic === g.kind ? "on" : ""}
+                disabled={pending}
+                onClick={() => post({ action: "set_graphic", graphicKind: g.kind })}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <p className="pl-muted">
+            এখন চালু: <strong>{activeGraphic === "hidden" ? "কিছু না" : activeGraphic}</strong>
+          </p>
         </div>
 
         <label className="pl-note">

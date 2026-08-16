@@ -74,6 +74,21 @@ export type BallEvent = {
   snapshot: Innings;
 };
 
+/** On-stream graphics like international TV broadcasts */
+export type GraphicKind =
+  | "hidden"
+  | "batter"
+  | "bowler"
+  | "partnership"
+  | "batting"
+  | "bowling"
+  | "teams";
+
+export type BroadcastGraphic = {
+  kind: GraphicKind;
+  updatedAt: string;
+};
+
 export type Match = {
   id: string;
   tenantId: string;
@@ -90,6 +105,8 @@ export type Match = {
   target?: number;
   events: BallEvent[];
   commentary: { id: string; text: string; at: string }[];
+  /** Currently shown on-video graphic (scorer can change anytime) */
+  graphic?: BroadcastGraphic;
   createdAt: string;
   updatedAt: string;
 };
