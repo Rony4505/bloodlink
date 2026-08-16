@@ -1,5 +1,6 @@
 import { access, mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
+import { ensureMatchXi } from "./lineup";
 import { createEmptyStore, DEFAULT_OWNER_PIN } from "./seed";
 import type { CricketStore, Match, Tenant } from "./types";
 
@@ -17,6 +18,10 @@ async function ensureDir() {
 function normalizeStore(raw: Partial<CricketStore> | null | undefined): CricketStore {
   const base = createEmptyStore();
   if (!raw) return base;
+  const tenants = Array.isArray(raw.tenants) && raw.tenants.length > 0 ? raw.tenants : base.tenants;
+  const matches = (Array.isArray(raw.matches) ? raw.matches : base.matches).map((m) =>
+    ensureMatchXi(m as Match),
+  );
   return {
     settings: {
       ownerPin: raw.settings?.ownerPin || DEFAULT_OWNER_PIN,
@@ -24,8 +29,8 @@ function normalizeStore(raw: Partial<CricketStore> | null | undefined): CricketS
       tagline: raw.settings?.tagline || base.settings.tagline,
       contactPhone: raw.settings?.contactPhone || base.settings.contactPhone,
     },
-    tenants: Array.isArray(raw.tenants) && raw.tenants.length > 0 ? raw.tenants : base.tenants,
-    matches: Array.isArray(raw.matches) ? raw.matches : base.matches,
+    tenants,
+    matches,
   };
 }
 
@@ -68,11 +73,13 @@ export function findTenantById(store: CricketStore, id: string): Tenant | undefi
 }
 
 export function findMatch(store: CricketStore, matchId: string): Match | undefined {
-  return store.matches.find((m) => m.id === matchId);
+  const m = store.matches.find((x) => x.id === matchId);
+  return m ? ensureMatchXi(m) : undefined;
 }
 
 export function matchesForTenant(store: CricketStore, tenantId: string): Match[] {
   return store.matches
     .filter((m) => m.tenantId === tenantId)
+    .map(ensureMatchXi)
     .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
 }

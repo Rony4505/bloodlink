@@ -1,6 +1,7 @@
 "use client";
 
 import { formatOvers, formatScore, runRate } from "@/lib/cricket/format";
+import { battingXiRows, bowlingXiRows } from "@/lib/cricket/lineup";
 import type { Match } from "@/lib/cricket/types";
 
 function sr(runs: number, balls: number): string {
@@ -27,6 +28,10 @@ export function StreamGraphicOverlay({ match }: { match: Match }) {
   const bowler = inn.bowlers.find((b) => b.playerId === inn.bowlerId);
   const partnershipRuns = (striker?.runs || 0) + (nonStriker?.runs || 0);
   const partnershipBalls = (striker?.balls || 0) + (nonStriker?.balls || 0);
+
+  const batRows = battingXiRows(match, inn);
+  const bowlRows = bowlingXiRows(match, inn);
+  const extrasTotal = inn.extras.wd + inn.extras.nb + inn.extras.b + inn.extras.lb;
 
   return (
     <div className="pl-graphic-layer" aria-live="polite">
@@ -85,54 +90,117 @@ export function StreamGraphicOverlay({ match }: { match: Match }) {
           <div className="pl-graphic-pair">
             <div>
               <strong>{striker?.name || "—"} *</strong>
-              <span>
-                {striker ? `${striker.runs}(${striker.balls})` : ""}
-              </span>
+              <span>{striker ? `${striker.runs}(${striker.balls})` : ""}</span>
             </div>
             <div>
               <strong>{nonStriker?.name || "—"}</strong>
-              <span>
-                {nonStriker ? `${nonStriker.runs}(${nonStriker.balls})` : ""}
-              </span>
+              <span>{nonStriker ? `${nonStriker.runs}(${nonStriker.balls})` : ""}</span>
             </div>
           </div>
         </aside>
       ) : null}
 
       {kind === "batting" ? (
-        <aside className="pl-graphic pl-graphic-card animate-in">
-          <p className="pl-graphic-label">
-            {batting.name} — BATTING · {formatScore(inn)} ({formatOvers(inn)}) · RR {runRate(inn)}
-          </p>
-          <table>
+        <aside className="pl-graphic pl-graphic-xi animate-in">
+          <div className="pl-xi-head">
+            <div>
+              <p className="pl-graphic-label">BATTING</p>
+              <h3>{batting.name}</h3>
+            </div>
+            <div className="pl-xi-score">
+              <strong>
+                {formatScore(inn)} <small>({formatOvers(inn)} ov)</small>
+              </strong>
+              <span>RR {runRate(inn)}</span>
+            </div>
+          </div>
+          <table className="pl-xi-table">
+            <thead>
+              <tr>
+                <th>Batter</th>
+                <th>R</th>
+                <th>B</th>
+                <th>4s</th>
+                <th>6s</th>
+                <th>SR</th>
+              </tr>
+            </thead>
             <tbody>
-              {inn.batters.slice(0, 8).map((b) => (
-                <tr key={b.playerId} className={!b.out ? "on" : undefined}>
+              {batRows.map((b) => (
+                <tr
+                  key={b.playerId}
+                  className={
+                    b.status === "batting" ? "on" : b.status === "yet" ? "yet" : b.out ? "out" : undefined
+                  }
+                >
                   <td>
-                    {b.name}
-                    {!b.out ? " *" : ""}
+                    <span className="pl-xi-name">
+                      {b.name}
+                      {b.status === "batting" ? " *" : ""}
+                    </span>
+                    {b.status === "out" && b.howOut ? <small className="pl-xi-how">{b.howOut}</small> : null}
+                    {b.status === "yet" ? <small className="pl-xi-how">yet to bat</small> : null}
                   </td>
-                  <td>
-                    {b.runs}({b.balls})
-                  </td>
-                  <td>{sr(b.runs, b.balls)}</td>
+                  <td>{b.status === "yet" ? "—" : b.runs}</td>
+                  <td>{b.status === "yet" ? "—" : b.balls}</td>
+                  <td>{b.status === "yet" ? "—" : b.fours}</td>
+                  <td>{b.status === "yet" ? "—" : b.sixes}</td>
+                  <td>{b.status === "yet" ? "—" : b.strikeRate}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <div className="pl-xi-foot">
+            <span>
+              Extras {extrasTotal} (wd {inn.extras.wd}, nb {inn.extras.nb}, b {inn.extras.b}, lb {inn.extras.lb})
+            </span>
+            <strong>Total {inn.runs}/{inn.wickets}</strong>
+          </div>
         </aside>
       ) : null}
 
       {kind === "bowling" ? (
-        <aside className="pl-graphic pl-graphic-card animate-in">
-          <p className="pl-graphic-label">{bowling.name} — BOWLING</p>
-          <table>
+        <aside className="pl-graphic pl-graphic-xi animate-in">
+          <div className="pl-xi-head">
+            <div>
+              <p className="pl-graphic-label">BOWLING</p>
+              <h3>{bowling.name}</h3>
+            </div>
+            <div className="pl-xi-score">
+              <strong>vs {batting.short}</strong>
+              <span>
+                {formatScore(inn)} ({formatOvers(inn)})
+              </span>
+            </div>
+          </div>
+          <table className="pl-xi-table">
+            <thead>
+              <tr>
+                <th>Bowler</th>
+                <th>O</th>
+                <th>M</th>
+                <th>R</th>
+                <th>W</th>
+                <th>Econ</th>
+              </tr>
+            </thead>
             <tbody>
-              {inn.bowlers.slice(0, 8).map((b) => (
-                <tr key={b.playerId} className={b.playerId === inn.bowlerId ? "on" : undefined}>
-                  <td>{b.name}</td>
-                  <td>{bowlFig(b.balls, b.maidens, b.runs, b.wickets)}</td>
-                  <td>{b.balls ? ((b.runs * 6) / b.balls).toFixed(1) : "—"}</td>
+              {bowlRows.map((b) => (
+                <tr key={b.playerId} className={b.active ? "on" : !b.hasBowled ? "yet" : undefined}>
+                  <td>
+                    <span className="pl-xi-name">
+                      {b.name}
+                      {b.active ? " *" : ""}
+                    </span>
+                    {!b.hasBowled ? <small className="pl-xi-how">not bowled</small> : null}
+                  </td>
+                  <td>
+                    {Math.floor(b.balls / 6)}.{b.balls % 6}
+                  </td>
+                  <td>{b.maidens}</td>
+                  <td>{b.runs}</td>
+                  <td>{b.wickets}</td>
+                  <td>{b.economy}</td>
                 </tr>
               ))}
             </tbody>
@@ -141,30 +209,41 @@ export function StreamGraphicOverlay({ match }: { match: Match }) {
       ) : null}
 
       {kind === "teams" ? (
-        <aside className="pl-graphic pl-graphic-teams animate-in">
-          <p className="pl-graphic-label">TEAM PERFORMANCE</p>
-          <div className="pl-graphic-team-row">
-            {match.innings.map((row, idx) => {
-              const team = row.battingTeam === "a" ? match.teamA : match.teamB;
-              return (
-                <div key={idx} className={idx === match.currentInningsIndex ? "on" : undefined}>
-                  <strong>{team.short}</strong>
-                  <span className="pl-graphic-big-sm">
-                    {formatScore(row)} <small>({formatOvers(row)})</small>
-                  </span>
-                  <em>RR {runRate(row)}</em>
-                </div>
-              );
-            })}
-            {match.innings.length === 1 ? (
-              <div>
-                <strong>{bowling.short}</strong>
-                <span className="pl-graphic-big-sm">Yet to bat</span>
-                <em>{match.format}</em>
-              </div>
-            ) : null}
+        <aside className="pl-graphic pl-graphic-xi pl-graphic-split animate-in">
+          <div className="pl-xi-split">
+            <div>
+              <p className="pl-graphic-label">BATTING — {batting.short}</p>
+              <p className="pl-xi-mini-score">
+                {formatScore(inn)} ({formatOvers(inn)})
+              </p>
+              <ul className="pl-xi-mini-list">
+                {batRows.map((b) => (
+                  <li key={b.playerId} className={b.status === "batting" ? "on" : undefined}>
+                    <span>
+                      {b.name}
+                      {b.status === "batting" ? " *" : ""}
+                    </span>
+                    <strong>{b.status === "yet" ? "—" : `${b.runs}(${b.balls})`}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="pl-graphic-label">BOWLING — {bowling.short}</p>
+              <p className="pl-xi-mini-score">Bowler performance</p>
+              <ul className="pl-xi-mini-list">
+                {bowlRows.map((b) => (
+                  <li key={b.playerId} className={b.active ? "on" : undefined}>
+                    <span>
+                      {b.name}
+                      {b.active ? " *" : ""}
+                    </span>
+                    <strong>{b.hasBowled ? b.figures : "—"}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          {match.target ? <p className="pl-graphic-foot">Target {match.target}</p> : null}
         </aside>
       ) : null}
     </div>

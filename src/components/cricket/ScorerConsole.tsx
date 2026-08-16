@@ -7,12 +7,12 @@ import { LiveScoreBoard } from "./LiveScoreBoard";
 const RUN_BTNS = [0, 1, 2, 3, 4, 6] as const;
 
 const GRAPHICS: { kind: GraphicKind; label: string }[] = [
+  { kind: "batting", label: "Batting XI (11)" },
+  { kind: "bowling", label: "Bowling XI" },
+  { kind: "teams", label: "Bat + Bowl" },
   { kind: "batter", label: "Batter" },
   { kind: "bowler", label: "Bowler" },
   { kind: "partnership", label: "Partnership" },
-  { kind: "batting", label: "Team Batting" },
-  { kind: "bowling", label: "Team Bowling" },
-  { kind: "teams", label: "Teams" },
   { kind: "hidden", label: "Hide ✕" },
 ];
 

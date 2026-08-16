@@ -1,4 +1,5 @@
-import { emptyInnings, newId } from "./engine";
+import { emptyInnings } from "./engine";
+import { defaultDemoPlayers, teamPlayers } from "./lineup";
 import type { CricketStore, Match, Tenant } from "./types";
 
 export const DEFAULT_OWNER_PIN = "4505";
@@ -21,19 +22,43 @@ export function demoTenant(): Tenant {
 
 export function demoMatch(tenantId: string): Match {
   const now = new Date().toISOString();
-  const p1 = newId("p");
-  const p2 = newId("p");
-  const p3 = newId("p");
+  const players = defaultDemoPlayers();
+  const teamA = players.filter((p) => p.team === "a");
+  const teamB = players.filter((p) => p.team === "b");
   const inn = emptyInnings("a");
-  inn.strikerId = p1;
-  inn.nonStrikerId = p2;
-  inn.bowlerId = p3;
+  inn.strikerId = teamA[0]?.id;
+  inn.nonStrikerId = teamA[1]?.id;
+  inn.bowlerId = teamB[0]?.id;
   inn.batters = [
-    { playerId: p1, name: "রাফি আহমেদ", runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
-    { playerId: p2, name: "সাকিব হাসান", runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
+    {
+      playerId: teamA[0].id,
+      name: teamA[0].name,
+      runs: 0,
+      balls: 0,
+      fours: 0,
+      sixes: 0,
+      out: false,
+    },
+    {
+      playerId: teamA[1].id,
+      name: teamA[1].name,
+      runs: 0,
+      balls: 0,
+      fours: 0,
+      sixes: 0,
+      out: false,
+    },
   ];
   inn.bowlers = [
-    { playerId: p3, name: "ইমরান খান", balls: 0, runs: 0, wickets: 0, maidens: 0, dotsInOver: 0 },
+    {
+      playerId: teamB[0].id,
+      name: teamB[0].name,
+      balls: 0,
+      runs: 0,
+      wickets: 0,
+      maidens: 0,
+      dotsInOver: 0,
+    },
   ];
 
   return {
@@ -46,23 +71,18 @@ export function demoMatch(tenantId: string): Match {
     videoUrl: "",
     teamA: { name: "মিরপুর একাদশ", short: "MIR" },
     teamB: { name: "ধানমন্ডি XI", short: "DHN" },
-    players: [
-      { id: p1, name: "রাফি আহমেদ", team: "a" },
-      { id: p2, name: "সাকিব হাসান", team: "a" },
-      { id: p3, name: "ইমরান খান", team: "b" },
-      { id: newId("p"), name: "নাফিস ইকবাল", team: "a" },
-      { id: newId("p"), name: "তানভীর ইসলাম", team: "b" },
-    ],
+    players,
     innings: [inn],
     currentInningsIndex: 0,
     events: [],
     commentary: [
       {
-        id: newId("c"),
+        id: "c_demo_start",
         text: "ম্যাচ শুরুর অপেক্ষায় — স্কোরার কনসোল থেকে আপডেট করুন",
         at: now,
       },
     ],
+    graphic: { kind: "hidden", updatedAt: now },
     createdAt: now,
     updatedAt: now,
   };
@@ -81,3 +101,5 @@ export function createEmptyStore(): CricketStore {
     matches: [demoMatch(tenant.id)],
   };
 }
+
+export { teamPlayers };

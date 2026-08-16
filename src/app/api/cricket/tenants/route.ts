@@ -1,6 +1,7 @@
 import { emptyInnings, newId } from "@/lib/cricket/engine";
 import { tenantAccessOk } from "@/lib/cricket/format";
 import { fail, ok, slugify } from "@/lib/cricket/http";
+import { makeXi } from "@/lib/cricket/lineup";
 import {
   findTenantBySlug,
   matchesForTenant,
@@ -159,24 +160,60 @@ export async function POST(request: Request) {
     if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
 
     const battingFirst = body.battingFirst === "b" ? "b" : "a";
+    const teamAName = (body.teamAName || "টিম A").trim();
+    const teamBName = (body.teamBName || "টিম B").trim();
+    const players = [
+      ...makeXi(
+        Array.from({ length: 11 }, (_, i) => `${teamAName} #${i + 1}`),
+        "a",
+      ),
+      ...makeXi(
+        Array.from({ length: 11 }, (_, i) => `${teamBName} #${i + 1}`),
+        "b",
+      ),
+    ];
+    const batSide = players.filter((p) => p.team === battingFirst);
+    const bowlSide = players.filter((p) => p.team !== battingFirst);
+    const inn = emptyInnings(battingFirst);
+    if (batSide[0] && batSide[1] && bowlSide[0]) {
+      inn.strikerId = batSide[0].id;
+      inn.nonStrikerId = batSide[1].id;
+      inn.bowlerId = bowlSide[0].id;
+      inn.batters = [
+        { playerId: batSide[0].id, name: batSide[0].name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
+        { playerId: batSide[1].id, name: batSide[1].name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
+      ];
+      inn.bowlers = [
+        {
+          playerId: bowlSide[0].id,
+          name: bowlSide[0].name,
+          balls: 0,
+          runs: 0,
+          wickets: 0,
+          maidens: 0,
+          dotsInOver: 0,
+        },
+      ];
+    }
+
     const match: Match = {
       id: newId("match"),
       tenantId: tenant.id,
-      title: (body.title || `${body.teamAName} vs ${body.teamBName}`).trim(),
+      title: (body.title || `${teamAName} vs ${teamBName}`).trim(),
       format: body.format || "T20",
       status: "upcoming",
       venue: (body.venue || "").trim(),
       videoUrl: (body.videoUrl || "").trim(),
       teamA: {
-        name: (body.teamAName || "টিম A").trim(),
+        name: teamAName,
         short: (body.teamAShort || "TEA").trim().slice(0, 5).toUpperCase(),
       },
       teamB: {
-        name: (body.teamBName || "টিম B").trim(),
+        name: teamBName,
         short: (body.teamBShort || "TEB").trim().slice(0, 5).toUpperCase(),
       },
-      players: [],
-      innings: [emptyInnings(battingFirst)],
+      players,
+      innings: [inn],
       currentInningsIndex: 0,
       events: [],
       commentary: [
@@ -186,6 +223,7 @@ export async function POST(request: Request) {
           at: new Date().toISOString(),
         },
       ],
+      graphic: { kind: "hidden", updatedAt: new Date().toISOString() },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
