@@ -1,0 +1,19 @@
+{
+  "id": "pitchlive-cricket",
+  "name": "PitchLive",
+  "nameBn": "পিচলাইভ — লাইভ ক্রিকেট স্কোর",
+  "url": "/cricket",
+  "demoTenant": "/cricket/t/demo",
+  "adminUrl": "/cricket/admin",
+  "code": {
+    "lib": "src/lib/cricket/",
+    "components": "src/components/cricket/",
+    "api": "src/app/api/cricket/"
+  },
+  "docs": "CRICKET_LIVE.md",
+  "storage": "data/cricket-store.json",
+  "defaults": {
+    "ownerPin": "4505",
+    "demoPin": "1234"
+  }
+}

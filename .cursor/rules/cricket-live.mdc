@@ -1,0 +1,23 @@
+---
+description: PitchLive cricket live score rental app
+globs: src/lib/cricket/**,src/components/cricket/**,src/app/cricket/**,src/app/api/cricket/**,CRICKET_LIVE.md,cricket-live.project.json
+---
+
+# PitchLive (Cricket Live Score)
+
+## Must read first
+- `CRICKET_LIVE.md`
+- `cricket-live.project.json`
+
+## Entry
+- URL: `/cricket`
+- Demo: `/cricket/t/demo` (PIN `1234`)
+- Owner admin: `/cricket/admin` (PIN `4505`)
+
+## Layout
+- Logic: `src/lib/cricket/`
+- UI: `src/components/cricket/`
+- API: `src/app/api/cricket/`
+- Storage: `data/cricket-store.json`
+
+Keep cricket work scoped to these paths unless asked to integrate elsewhere.
