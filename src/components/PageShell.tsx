@@ -44,7 +44,11 @@ export function PageShell({
         </div>
       </div>
       {ads ? <OrgBanners page={bannerPage!} placement="after-hero" /> : null}
-      <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 -mt-8 px-5 pb-16 md:px-8">
+      <main
+        className={`relative z-10 mx-auto w-full max-w-6xl flex-1 px-5 pb-16 md:px-8 ${
+          ads ? "mt-5 md:mt-6" : "-mt-8"
+        }`}
+      >
         {children}
       </main>
       {ads ? <OrgBanners page={bannerPage!} placement="before-footer" /> : null}

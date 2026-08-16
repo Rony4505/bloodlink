@@ -697,7 +697,26 @@ export function AdminPanel() {
   }
 
   if (checking) {
-    return <p className="rounded-2xl bg-white/80 p-6">{t.loading}</p>;
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 px-5 py-4">
+          <div className="flex flex-wrap gap-2">
+            <span className="btn-primary pointer-events-none opacity-80">
+              {t.adminDonors}
+            </span>
+            <span className="btn-ghost pointer-events-none opacity-55">
+              {t.adminVolunteers}
+            </span>
+            <span className="btn-ghost pointer-events-none opacity-55">
+              {t.adminSettings}
+            </span>
+          </div>
+        </div>
+        <p className="rounded-2xl bg-white/80 p-6 text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+          {t.loading}
+        </p>
+      </div>
+    );
   }
 
   if (!authed) {

@@ -2,29 +2,38 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
-import type { BannerPage, OrgBanner } from "@/lib/types";
+import type { BannerPage, BannerPlacement, OrgBanner } from "@/lib/types";
 
 type Props = {
   page: BannerPage;
-  /** Kept for call-site compatibility; ads always show below hero & above footer. */
-  placement?: string;
+  /** Where the ad strip sits — filters banners by admin placement. */
+  placement?: BannerPlacement;
 };
 
 const INTERVAL_MS = 3000;
 
 const bannerCache = new Map<string, Promise<OrgBanner[]>>();
 
-function loadBanners(page: BannerPage): Promise<OrgBanner[]> {
-  const cached = bannerCache.get(page);
+function cacheKey(page: BannerPage, placement?: BannerPlacement) {
+  return `${page}:${placement || "any"}`;
+}
+
+function loadBanners(
+  page: BannerPage,
+  placement?: BannerPlacement,
+): Promise<OrgBanner[]> {
+  const key = cacheKey(page, placement);
+  const cached = bannerCache.get(key);
   if (cached) return cached;
   const params = new URLSearchParams({ page });
+  if (placement) params.set("placement", placement);
   const promise = fetch(`/api/banners?${params}`)
     .then((r) => r.json())
     .then((data) =>
       ((data.banners || []) as OrgBanner[]).filter((b) => b.enabled),
     )
     .catch(() => [] as OrgBanner[]);
-  bannerCache.set(page, promise);
+  bannerCache.set(key, promise);
   return promise;
 }
 
@@ -32,7 +41,7 @@ function loadBanners(page: BannerPage): Promise<OrgBanner[]> {
  * Full-bleed wide advertisement carousel (820×150).
  * Scrolls smoothly every 3s, ping-pong left↔right when multiple ads exist.
  */
-export function OrgBanners({ page }: Props) {
+export function OrgBanners({ page, placement }: Props) {
   const { t } = useLocale();
   const [banners, setBanners] = useState<OrgBanner[]>([]);
   const [index, setIndex] = useState(0);
@@ -40,13 +49,13 @@ export function OrgBanners({ page }: Props) {
 
   useEffect(() => {
     let alive = true;
-    void loadBanners(page).then((list) => {
+    void loadBanners(page, placement).then((list) => {
       if (alive) setBanners(list);
     });
     return () => {
       alive = false;
     };
-  }, [page]);
+  }, [page, placement]);
 
   useEffect(() => {
     setIndex(0);
@@ -78,7 +87,7 @@ export function OrgBanners({ page }: Props) {
   return (
     <section
       aria-label={t.orgBannerPublicLabel}
-      className="w-full border-y border-[var(--line)] bg-[#f4ece6]"
+      className="relative z-0 w-full border-y border-[var(--line)] bg-[#f4ece6]"
     >
       <div className="flex items-center justify-between border-b border-[color-mix(in_oklab,var(--line)_80%,var(--ink)_20%)] bg-[color-mix(in_oklab,#f4ece6_70%,white)] px-4 py-2 sm:px-6">
         <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[color-mix(in_oklab,var(--ink)_65%,white)]">
@@ -93,7 +102,7 @@ export function OrgBanners({ page }: Props) {
         </span>
       </div>
 
-      <div className="relative w-full overflow-hidden">
+      <div className="relative mx-auto w-full max-w-6xl overflow-hidden">
         <div
           className="flex transition-transform duration-700 ease-in-out will-change-transform"
           style={{ transform: `translateX(-${index * 100}%)` }}
@@ -104,7 +113,7 @@ export function OrgBanners({ page }: Props) {
               <img
                 src={b.imageUrl}
                 alt={b.title}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain bg-white"
                 loading="lazy"
                 decoding="async"
               />
@@ -147,7 +156,7 @@ export function OrgBanners({ page }: Props) {
               <span
                 key={b.id}
                 className={`h-1.5 rounded-full transition-all ${
-                  i === index ? "w-5 bg-white shadow" : "w-1.5 bg-white/55"
+                  i === index ? "w-5 bg-[var(--blood)] shadow" : "w-1.5 bg-[var(--blood)]/35"
                 }`}
               />
             ))}

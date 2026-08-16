@@ -7,7 +7,12 @@ import { useLocale } from "@/lib/i18n/locale-context";
 export function OwnerConsoleClient() {
   const { t } = useLocale();
   return (
-    <PageShell title={t.adminTitle} subtitle={t.adminSubtitle} compactHeader>
+    <PageShell
+      title={t.adminTitle}
+      subtitle={t.adminSubtitle}
+      compactHeader
+      showStoryForm={false}
+    >
       <AdminPanel />
     </PageShell>
   );

@@ -8,7 +8,15 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { PublicDonor } from "@/lib/types";
 
-export function DonorResults({ donors }: { donors: PublicDonor[] }) {
+export function DonorResults({
+  donors,
+  loading = false,
+  hasSearched = true,
+}: {
+  donors: PublicDonor[];
+  loading?: boolean;
+  hasSearched?: boolean;
+}) {
   const { t } = useLocale();
   const [active, setActive] = useState<PublicDonor | null>(null);
   const [ratingFor, setRatingFor] = useState<PublicDonor | null>(null);
@@ -22,6 +30,14 @@ export function DonorResults({ donors }: { donors: PublicDonor[] }) {
       })
       .catch(() => undefined);
   }, []);
+
+  if (loading || !hasSearched) {
+    return (
+      <p className="rounded-2xl bg-white/70 px-5 py-8 text-center text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+        {t.loading}
+      </p>
+    );
+  }
 
   if (!donors.length) {
     return (
