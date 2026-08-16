@@ -835,8 +835,12 @@ export async function getSiteImpactStats() {
   const verifiedDonors = donors.filter(
     (d) => d.emailVerified || d.phoneVerified,
   ).length;
+  // Admin-approved (enabled) success stories = people who received help.
+  const helpedFromStories = normalizeSiteAppearance(
+    db.admin.siteAppearance,
+  ).successStories.filter((s) => s.enabled).length;
   return {
-    livesHelped: db.contactRequests.length + posts.length,
+    livesHelped: helpedFromStories,
     registeredUsers: donors.length,
     activeRequests: posts.length,
     citiesCovered: districts.size,

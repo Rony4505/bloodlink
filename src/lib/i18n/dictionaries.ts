@@ -213,7 +213,7 @@ export const dictionaries = {
       "Critical = life-threatening / within 24 hours. Needed-by date can raise the level automatically.",
     impactTitle: "How BloodLink is working",
     impactSubtitle:
-      "Live activity from real donors, requests, and connections across Bangladesh.",
+      "Live counts from donors, requests, and admin-approved success stories across Bangladesh.",
     impactLivesHelped: "Lives helped",
     impactRegisteredUsers: "Registered donors",
     impactActiveRequests: "Active requests",
@@ -713,7 +713,7 @@ export const dictionaries = {
       "ক্রিটিক্যাল = জীবনরক্ষাকারী / ২৪ ঘণ্টার মধ্যে। প্রয়োজনের তারিখ অনুযায়ী লেভেল বাড়তে পারে।",
     impactTitle: "BloodLink কতটা কাজ করছে",
     impactSubtitle:
-      "বাংলাদেশজুড়ে আসল ডোনার, অনুরোধ ও সংযোগের লাইভ পরিসংখ্যান।",
+      "ডোনার, অনুরোধ এবং অ্যাডমিন-অনুমোদিত সফলতার গল্প থেকে লাইভ সংখ্যা।",
     impactLivesHelped: "সাহায্য পাওয়া মানুষ",
     impactRegisteredUsers: "রেজিস্টার্ড ডোনার",
     impactActiveRequests: "সক্রিয় অনুরোধ",
