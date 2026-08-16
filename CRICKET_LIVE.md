@@ -25,7 +25,8 @@
 ## ফিচার
 
 ### দর্শক
-- লাইভ স্কোরবোর্ড (auto refresh ~2s)
+- লাইভ স্ট্রিমের **নিচে TV-স্টাইল স্কোর লাইন** (international match এর মতো)
+- auto refresh ~2s
 - YouTube / Facebook Live ভিডিও embed
 - স্কোরকার্ড + কমেন্টারি
 - শেয়ারযোগ্য ম্যাচ লিংক

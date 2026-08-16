@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Match } from "@/lib/cricket/types";
-import { LiveScoreBoard } from "./LiveScoreBoard";
+import { BroadcastScoreLine } from "./BroadcastScoreLine";
 import { Scorecard } from "./Scorecard";
 import { VideoEmbed } from "./VideoEmbed";
 
@@ -17,7 +17,7 @@ type Props = {
 
 export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName }: Props) {
   const [match, setMatch] = useState(initialMatch);
-  const [tab, setTab] = useState<"live" | "card" | "comments">("live");
+  const [tab, setTab] = useState<"card" | "comments">("card");
 
   useEffect(() => {
     let alive = true;
@@ -39,21 +39,21 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
   }, [matchId]);
 
   return (
-    <div className="pl-live-page">
+    <div className="pl-live-page pl-live-broadcast">
       <header className="pl-topbar">
         <Link href={`/cricket/t/${slug}`}>{tenantName}</Link>
         <span>PitchLive</span>
       </header>
 
-      <div className="pl-live-grid">
+      {/* Video on top + TV-style score line flush underneath */}
+      <div className="pl-broadcast-stack">
         <VideoEmbed url={match.videoUrl} title={match.title} />
-        <LiveScoreBoard match={match} accent={accent} />
+        <BroadcastScoreLine match={match} accent={accent} />
       </div>
 
+      <p className="pl-broadcast-caption pl-muted">{match.title}{match.venue ? ` · ${match.venue}` : ""}</p>
+
       <div className="pl-tabs">
-        <button type="button" className={tab === "live" ? "on" : ""} onClick={() => setTab("live")}>
-          লাইভ
-        </button>
         <button type="button" className={tab === "card" ? "on" : ""} onClick={() => setTab("card")}>
           স্কোরকার্ড
         </button>
@@ -61,21 +61,6 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
           কমেন্টারি
         </button>
       </div>
-
-      {tab === "live" ? (
-        <div className="pl-card-block">
-          <h3>এই ওভার</h3>
-          <div className="pl-recent">
-            <div>
-              {(match.innings[match.currentInningsIndex]?.currentOverBalls || []).map((b, i) => (
-                <em key={`${b}-${i}`} className={b === "W" ? "is-w" : undefined}>
-                  {b}
-                </em>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {tab === "card" ? <Scorecard match={match} /> : null}
 
