@@ -14,7 +14,8 @@ export function SearchPanel() {
   const [district, setDistrict] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [donors, setDonors] = useState<PublicDonor[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState("");
 
   async function runSearch(next?: {
@@ -39,10 +40,12 @@ export function SearchPanel() {
         setDonors([]);
         return;
       }
-      setDonors(data.donors);
+      setDonors(data.donors || []);
     } catch {
       setError(t.errorGeneric);
+      setDonors([]);
     } finally {
+      setHasSearched(true);
       setLoading(false);
     }
   }
@@ -122,7 +125,7 @@ export function SearchPanel() {
         </div>
       </form>
       {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
-      <DonorResults donors={donors} />
+      <DonorResults donors={donors} loading={loading} hasSearched={hasSearched} />
     </div>
   );
 }
