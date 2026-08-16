@@ -99,6 +99,7 @@ export function createEmptyStore(): CricketStore {
     },
     tenants: [tenant],
     matches: [demoMatch(tenant.id)],
+    playerRecords: {},
   };
 }
 

@@ -84,7 +84,7 @@ export function ScorerPageClient({ slug, matchId }: { slug: string; matchId: str
           <Link href={`/cricket/t/${slug}/m/${matchId}`}>দর্শক ভিউ</Link>
           <Link href={`/cricket/t/${slug}`}>ক্লাব</Link>
         </header>
-        <ScorerConsole matchId={matchId} tenantPin={pin} accent={accent} initialMatch={match} />
+        <ScorerConsole matchId={matchId} tenantPin={pin} accent={accent} initialMatch={match} slug={slug} />
       </div>
     </div>
   );

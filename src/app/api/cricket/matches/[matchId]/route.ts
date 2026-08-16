@@ -1,13 +1,14 @@
-import { applyBall, setPlayersOnStrike, startSecondInnings, undoLastBall } from "@/lib/cricket/engine";
+import { applyBall, setMatchLineup, setPlayersOnStrike, startSecondInnings, undoLastBall } from "@/lib/cricket/engine";
 import { tenantAccessOk } from "@/lib/cricket/format";
 import { fail, ok } from "@/lib/cricket/http";
+import { normalizePlayer } from "@/lib/cricket/lineup";
 import {
   findMatch,
   findTenantById,
   readCricketStore,
   updateCricketStore,
 } from "@/lib/cricket/store";
-import type { BallType, GraphicKind, MatchStatus } from "@/lib/cricket/types";
+import type { BallType, GraphicKind, MatchStatus, Player, PlayerRole, TeamSide } from "@/lib/cricket/types";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,7 @@ export async function GET(_request: Request, ctx: Ctx) {
       name: tenant.name,
       brandColor: tenant.brandColor,
     },
+    playerRecords: store.playerRecords?.[tenant.id] || [],
   });
 }
 
@@ -38,6 +40,7 @@ const GRAPHIC_KINDS: GraphicKind[] = [
   "batting",
   "bowling",
   "teams",
+  "player",
 ];
 
 export async function POST(request: Request, ctx: Ctx) {
@@ -59,6 +62,15 @@ export async function POST(request: Request, ctx: Ctx) {
     status?: MatchStatus;
     title?: string;
     graphicKind?: GraphicKind;
+    playerId?: string;
+    nonStrikerOut?: boolean;
+    players?: Array<{
+      id?: string;
+      name: string;
+      team: TeamSide;
+      role: PlayerRole;
+      number?: number;
+    }>;
   };
 
   const store = await readCricketStore();
@@ -85,6 +97,7 @@ export async function POST(request: Request, ctx: Ctx) {
         strikerName: body.strikerName,
         nonStrikerName: body.nonStrikerName,
         bowlerName: body.bowlerName,
+        nonStrikerOut: body.nonStrikerOut,
       });
     } else if (action === "undo") {
       m = undoLastBall(m);
@@ -99,6 +112,20 @@ export async function POST(request: Request, ctx: Ctx) {
         nonStrikerName: body.nonStrikerName,
         bowlerName: body.bowlerName,
       });
+    } else if (action === "set_lineup") {
+      if (!Array.isArray(body.players) || body.players.length < 2) {
+        return;
+      }
+      const players: Player[] = body.players.map((p, i) =>
+        normalizePlayer({
+          id: p.id || `p_${p.team}_${i}_${Date.now().toString(36)}`,
+          name: (p.name || `Player ${i + 1}`).trim(),
+          team: p.team,
+          role: p.role || "batter",
+          number: p.number ?? i + 1,
+        }),
+      );
+      m = setMatchLineup(m, players);
     } else if (action === "update_meta") {
       if (typeof body.videoUrl === "string") m.videoUrl = body.videoUrl.trim();
       if (body.status) m.status = body.status;
@@ -109,7 +136,11 @@ export async function POST(request: Request, ctx: Ctx) {
         body.graphicKind && GRAPHIC_KINDS.includes(body.graphicKind) ? body.graphicKind : "hidden";
       m = {
         ...m,
-        graphic: { kind, updatedAt: new Date().toISOString() },
+        graphic: {
+          kind,
+          playerId: kind === "player" ? body.playerId : undefined,
+          updatedAt: new Date().toISOString(),
+        },
         updatedAt: new Date().toISOString(),
       };
     } else if (action === "complete") {
@@ -124,5 +155,8 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const updated = findMatch(saved, matchId);
   if (!updated) return fail("update failed", 500);
-  return ok({ match: updated });
+  return ok({
+    match: updated,
+    playerRecords: saved.playerRecords?.[tenant.id] || [],
+  });
 }

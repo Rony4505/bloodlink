@@ -1,3 +1,5 @@
+import { nextBatterFromXi } from "./lineup";
+import { newId } from "./id";
 import type {
   BallType,
   BatterStats,
@@ -8,9 +10,7 @@ import type {
   TeamSide,
 } from "./types";
 
-export function newId(prefix = "id"): string {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
+export { newId } from "./id";
 
 export function ballsPerInnings(format: MatchFormat, customOvers = 20): number {
   if (format === "T20") return 120;
@@ -71,6 +71,13 @@ function cloneInnings(innings: Innings): Innings {
   return JSON.parse(JSON.stringify(innings)) as Innings;
 }
 
+function swapStrike(innings: Innings) {
+  const s = innings.strikerId;
+  innings.strikerId = innings.nonStrikerId;
+  innings.nonStrikerId = s;
+}
+
+/** End of over: maiden check + strike change (Laws of Cricket). */
 function finishOverIfNeeded(innings: Innings) {
   if (innings.legalBalls > 0 && innings.legalBalls % 6 === 0 && innings.currentOverBalls.length > 0) {
     innings.oversLog.push(innings.currentOverBalls.join(" "));
@@ -80,10 +87,7 @@ function finishOverIfNeeded(innings: Innings) {
     }
     if (bowler) bowler.dotsInOver = 0;
     innings.currentOverBalls = [];
-    // swap strike at end of over
-    const s = innings.strikerId;
-    innings.strikerId = innings.nonStrikerId;
-    innings.nonStrikerId = s;
+    swapStrike(innings);
   }
 }
 
@@ -95,6 +99,8 @@ export type ScoreInput = {
   strikerName?: string;
   nonStrikerName?: string;
   bowlerName?: string;
+  /** If true, wicket is non-striker (run out) — new batter at non-striker end */
+  nonStrikerOut?: boolean;
 };
 
 export function applyBall(match: Match, input: ScoreInput): Match {
@@ -129,7 +135,7 @@ export function applyBall(match: Match, input: ScoreInput): Match {
   if (!inn.bowlerId) inn.bowlerId = bowlerId;
 
   const striker = ensureBatter(inn, inn.strikerId, input.strikerName || "Batsman 1");
-  ensureBatter(inn, inn.nonStrikerId, input.nonStrikerName || "Batsman 2");
+  const nonStriker = ensureBatter(inn, inn.nonStrikerId, input.nonStrikerName || "Batsman 2");
   const bowler = ensureBowler(inn, inn.bowlerId, input.bowlerName || "Bowler");
 
   const runs = Math.max(0, Math.floor(input.runs));
@@ -142,6 +148,7 @@ export function applyBall(match: Match, input: ScoreInput): Match {
     bowler.runs += 1 + runs;
     label = runs > 0 ? `WD+${runs}` : "WD";
     inn.currentOverBalls.push(label);
+    if (runs % 2 === 1) swapStrike(inn);
   } else if (input.type === "noball") {
     inn.runs += 1 + runs;
     inn.extras.nb += 1;
@@ -153,6 +160,7 @@ export function applyBall(match: Match, input: ScoreInput): Match {
     }
     label = runs > 0 ? `NB+${runs}` : "NB";
     inn.currentOverBalls.push(label);
+    if (runs % 2 === 1 && !input.isWicket) swapStrike(inn);
   } else if (input.type === "bye") {
     inn.runs += runs;
     inn.extras.b += runs;
@@ -166,18 +174,20 @@ export function applyBall(match: Match, input: ScoreInput): Match {
   } else if (input.type === "wicket" || input.isWicket) {
     legal = true;
     inn.wickets += 1;
-    striker.out = true;
-    striker.howOut = input.note || "out";
-    striker.balls += 1;
-    bowler.wickets += 1;
-    bowler.balls += 1;
-    if (runs > 0) {
-      inn.runs += runs;
-      // rare cases like runout with runs — attribute to team only
+    const dismissed = input.nonStrikerOut ? nonStriker : striker;
+    dismissed.out = true;
+    dismissed.howOut = input.note || "out";
+    if (!input.nonStrikerOut) {
+      dismissed.balls += 1;
+      bowler.wickets += 1;
+      bowler.balls += 1;
+    } else {
+      bowler.balls += 1;
+      striker.balls += 1;
     }
+    if (runs > 0) inn.runs += runs;
     label = "W";
   } else {
-    // normal run
     legal = true;
     inn.runs += runs;
     striker.runs += runs;
@@ -203,20 +213,20 @@ export function applyBall(match: Match, input: ScoreInput): Match {
     inn.currentOverBalls.push(label);
   }
 
-  inn.recentBalls = [...inn.currentOverBalls.slice(-12), ...inn.recentBalls.filter(() => false)];
-  // keep recent as last balls across overs for UI
   const flat = [...inn.oversLog.flatMap((o) => o.split(" ")), ...inn.currentOverBalls];
   inn.recentBalls = flat.slice(-18);
 
-  // rotate strike on odd runs (for legal scoring deliveries that count to batter or byes)
-  if (
-    (input.type === "run" || input.type === "bye" || input.type === "legbye" || input.type === "noball") &&
-    runs % 2 === 1 &&
-    !input.isWicket
-  ) {
-    const s = inn.strikerId;
-    inn.strikerId = inn.nonStrikerId;
-    inn.nonStrikerId = s;
+  if ((input.type === "run" || input.type === "bye" || input.type === "legbye") && runs % 2 === 1 && !input.isWicket) {
+    swapStrike(inn);
+  }
+
+  if (input.type === "wicket" || input.isWicket) {
+    const nxt = nextBatterFromXi(next, inn);
+    if (nxt) {
+      ensureBatter(inn, nxt.id, nxt.name);
+      if (input.nonStrikerOut) inn.nonStrikerId = nxt.id;
+      else inn.strikerId = nxt.id;
+    }
   }
 
   if (legal) finishOverIfNeeded(inn);
@@ -244,11 +254,7 @@ export function applyBall(match: Match, input: ScoreInput): Match {
   });
 
   if (input.note) {
-    next.commentary.unshift({
-      id: newId("c"),
-      text: input.note,
-      at: new Date().toISOString(),
-    });
+    next.commentary.unshift({ id: newId("c"), text: input.note, at: new Date().toISOString() });
   } else {
     next.commentary.unshift({
       id: newId("c"),
@@ -272,9 +278,7 @@ export function undoLastBall(match: Match): Match {
   next.currentInningsIndex = last.inningsIndex;
   next.commentary.shift();
   next.updatedAt = new Date().toISOString();
-  if (next.events.length === 0 && next.status === "live") {
-    next.status = "upcoming";
-  }
+  if (next.events.length === 0 && next.status === "live") next.status = "upcoming";
   return next;
 }
 
@@ -284,16 +288,28 @@ export function startSecondInnings(match: Match): Match {
   if (!first) return match;
   first.completed = true;
   const battingTeam: TeamSide = first.battingTeam === "a" ? "b" : "a";
-  next.innings.push(emptyInnings(battingTeam));
+  const inn = emptyInnings(battingTeam);
+  const batSide = next.players.filter((p) => p.team === battingTeam);
+  const bowlSide = next.players.filter((p) => p.team !== battingTeam);
+  if (batSide[0] && batSide[1]) {
+    inn.strikerId = batSide[0].id;
+    inn.nonStrikerId = batSide[1].id;
+    inn.batters = [
+      { playerId: batSide[0].id, name: batSide[0].name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
+      { playerId: batSide[1].id, name: batSide[1].name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
+    ];
+  }
+  const openerBowl = bowlSide.find((p) => p.role === "bowler" || p.role === "allrounder") || bowlSide[0];
+  if (openerBowl) {
+    inn.bowlerId = openerBowl.id;
+    inn.bowlers = [{ playerId: openerBowl.id, name: openerBowl.name, balls: 0, runs: 0, wickets: 0, maidens: 0, dotsInOver: 0 }];
+  }
+  next.innings.push(inn);
   next.currentInningsIndex = next.innings.length - 1;
   next.target = first.runs + 1;
   next.status = "live";
   next.updatedAt = new Date().toISOString();
-  next.commentary.unshift({
-    id: newId("c"),
-    text: `দ্বিতীয় ইনিংস শুরু — টার্গেট ${next.target}`,
-    at: new Date().toISOString(),
-  });
+  next.commentary.unshift({ id: newId("c"), text: `দ্বিতীয় ইনিংস শুরু — টার্গেট ${next.target}`, at: new Date().toISOString() });
   return next;
 }
 
@@ -304,17 +320,19 @@ export function setPlayersOnStrike(
   const next = structuredClone(match) as Match;
   const inn = next.innings[next.currentInningsIndex];
   if (!inn) return match;
-
   if (opts.strikerId) inn.strikerId = opts.strikerId;
   if (opts.nonStrikerId) inn.nonStrikerId = opts.nonStrikerId;
   if (opts.bowlerId) inn.bowlerId = opts.bowlerId;
-
   if (inn.strikerId && opts.strikerName) ensureBatter(inn, inn.strikerId, opts.strikerName).name = opts.strikerName;
-  if (inn.nonStrikerId && opts.nonStrikerName) {
-    ensureBatter(inn, inn.nonStrikerId, opts.nonStrikerName).name = opts.nonStrikerName;
-  }
+  if (inn.nonStrikerId && opts.nonStrikerName) ensureBatter(inn, inn.nonStrikerId, opts.nonStrikerName).name = opts.nonStrikerName;
   if (inn.bowlerId && opts.bowlerName) ensureBowler(inn, inn.bowlerId, opts.bowlerName).name = opts.bowlerName;
+  next.updatedAt = new Date().toISOString();
+  return next;
+}
 
+export function setMatchLineup(match: Match, players: Match["players"]): Match {
+  const next = structuredClone(match) as Match;
+  next.players = players.slice(0, 22);
   next.updatedAt = new Date().toISOString();
   return next;
 }
@@ -333,13 +351,9 @@ export function youtubeEmbedUrl(raw: string): string | null {
       if (id) return `https://www.youtube.com/embed/${id}?autoplay=1`;
       const parts = u.pathname.split("/");
       const liveIdx = parts.indexOf("live");
-      if (liveIdx >= 0 && parts[liveIdx + 1]) {
-        return `https://www.youtube.com/embed/${parts[liveIdx + 1]}?autoplay=1`;
-      }
+      if (liveIdx >= 0 && parts[liveIdx + 1]) return `https://www.youtube.com/embed/${parts[liveIdx + 1]}?autoplay=1`;
       const embedIdx = parts.indexOf("embed");
-      if (embedIdx >= 0 && parts[embedIdx + 1]) {
-        return `https://www.youtube.com/embed/${parts[embedIdx + 1]}?autoplay=1`;
-      }
+      if (embedIdx >= 0 && parts[embedIdx + 1]) return `https://www.youtube.com/embed/${parts[embedIdx + 1]}?autoplay=1`;
     }
     if (u.hostname.includes("facebook.com") || u.hostname.includes("fb.watch")) {
       return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true`;

@@ -2,6 +2,7 @@ import { access, mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
 import { ensureMatchXi } from "./lineup";
 import { createEmptyStore, DEFAULT_OWNER_PIN } from "./seed";
+import { recomputeTenantRecords } from "./stats";
 import type { CricketStore, Match, Tenant } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -22,6 +23,10 @@ function normalizeStore(raw: Partial<CricketStore> | null | undefined): CricketS
   const matches = (Array.isArray(raw.matches) ? raw.matches : base.matches).map((m) =>
     ensureMatchXi(m as Match),
   );
+  const playerRecords = raw.playerRecords || {};
+  for (const t of tenants) {
+    playerRecords[t.id] = recomputeTenantRecords(matches, t.id);
+  }
   return {
     settings: {
       ownerPin: raw.settings?.ownerPin || DEFAULT_OWNER_PIN,
@@ -31,6 +36,7 @@ function normalizeStore(raw: Partial<CricketStore> | null | undefined): CricketS
     },
     tenants,
     matches,
+    playerRecords,
   };
 }
 
@@ -40,7 +46,7 @@ export async function readCricketStore(): Promise<CricketStore> {
     const text = await readFile(STORE_PATH, "utf8");
     return normalizeStore(JSON.parse(text) as Partial<CricketStore>);
   } catch {
-    const fresh = createEmptyStore();
+    const fresh = normalizeStore(createEmptyStore());
     await writeCricketStore(fresh);
     return fresh;
   }
@@ -60,6 +66,11 @@ export async function updateCricketStore(
   const store = await readCricketStore();
   const result = mutator(store);
   const next = result || store;
+  // keep career stats fresh
+  for (const t of next.tenants) {
+    next.playerRecords = next.playerRecords || {};
+    next.playerRecords[t.id] = recomputeTenantRecords(next.matches, t.id);
+  }
   await writeCricketStore(next);
   return next;
 }

@@ -2,6 +2,7 @@ export type MatchFormat = "T20" | "ODI" | "Test" | "Custom";
 export type MatchStatus = "upcoming" | "live" | "completed";
 export type TeamSide = "a" | "b";
 export type RentalPlan = "daily" | "weekly" | "monthly" | "event";
+export type PlayerRole = "batter" | "bowler" | "allrounder" | "wk";
 
 export type BallType = "run" | "wicket" | "wide" | "noball" | "bye" | "legbye";
 
@@ -22,6 +23,9 @@ export type Player = {
   id: string;
   name: string;
   team: TeamSide;
+  role: PlayerRole;
+  /** jersey / squad no (optional) */
+  number?: number;
 };
 
 export type BatterStats = {
@@ -82,10 +86,31 @@ export type GraphicKind =
   | "partnership"
   | "batting"
   | "bowling"
-  | "teams";
+  | "teams"
+  | "player";
 
 export type BroadcastGraphic = {
   kind: GraphicKind;
+  /** For kind=player — show this player's full performance */
+  playerId?: string;
+  updatedAt: string;
+};
+
+/** Lifetime / cumulative stats across matches for a tenant */
+export type PlayerRecord = {
+  id: string;
+  name: string;
+  role: PlayerRole;
+  matches: number;
+  innings: number;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  wickets: number;
+  bowlBalls: number;
+  bowlRuns: number;
+  maidens: number;
   updatedAt: string;
 };
 
@@ -105,7 +130,6 @@ export type Match = {
   target?: number;
   events: BallEvent[];
   commentary: { id: string; text: string; at: string }[];
-  /** Currently shown on-video graphic (scorer can change anytime) */
   graphic?: BroadcastGraphic;
   createdAt: string;
   updatedAt: string;
@@ -122,4 +146,6 @@ export type CricketStore = {
   settings: PlatformSettings;
   tenants: Tenant[];
   matches: Match[];
+  /** Cumulative player performance by tenantId */
+  playerRecords: Record<string, PlayerRecord[]>;
 };

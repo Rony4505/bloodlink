@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Match } from "@/lib/cricket/types";
+import type { Match, PlayerRecord } from "@/lib/cricket/types";
 import { BroadcastScoreLine } from "./BroadcastScoreLine";
 import { Scorecard } from "./Scorecard";
 import { VideoEmbed } from "./VideoEmbed";
+import "./cricket.css";
 
 type Props = {
   matchId: string;
@@ -17,6 +18,7 @@ type Props = {
 
 export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName }: Props) {
   const [match, setMatch] = useState(initialMatch);
+  const [records, setRecords] = useState<PlayerRecord[]>([]);
   const [tab, setTab] = useState<"card" | "comments">("card");
 
   useEffect(() => {
@@ -27,10 +29,12 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
         if (!res.ok) return;
         const data = await res.json();
         if (alive && data.match) setMatch(data.match);
+        if (alive && data.playerRecords) setRecords(data.playerRecords);
       } catch {
         /* ignore */
       }
     };
+    tick();
     const id = window.setInterval(tick, 2000);
     return () => {
       alive = false;
@@ -45,13 +49,15 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
         <span>PitchLive</span>
       </header>
 
-      {/* Video on top + TV-style score line flush underneath */}
       <div className="pl-broadcast-stack">
-        <VideoEmbed url={match.videoUrl} title={match.title} match={match} />
+        <VideoEmbed url={match.videoUrl} title={match.title} match={match} records={records} />
         <BroadcastScoreLine match={match} accent={accent} />
       </div>
 
-      <p className="pl-broadcast-caption pl-muted">{match.title}{match.venue ? ` · ${match.venue}` : ""}</p>
+      <p className="pl-broadcast-caption pl-muted">
+        {match.title}
+        {match.venue ? ` · ${match.venue}` : ""}
+      </p>
 
       <div className="pl-tabs">
         <button type="button" className={tab === "card" ? "on" : ""} onClick={() => setTab("card")}>

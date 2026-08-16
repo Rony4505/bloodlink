@@ -1,14 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
+import { roleLabelBn } from "@/lib/cricket/stats";
 import type { BallType, GraphicKind, Match } from "@/lib/cricket/types";
 import { LiveScoreBoard } from "./LiveScoreBoard";
 
 const RUN_BTNS = [0, 1, 2, 3, 4, 6] as const;
 
 const GRAPHICS: { kind: GraphicKind; label: string }[] = [
-  { kind: "batting", label: "Batting XI (11)" },
-  { kind: "bowling", label: "Bowling XI" },
+  { kind: "batting", label: "Batting XI" },
+  { kind: "bowling", label: "Bowling" },
   { kind: "teams", label: "Bat + Bowl" },
   { kind: "batter", label: "Batter" },
   { kind: "bowler", label: "Bowler" },
@@ -21,9 +23,10 @@ type Props = {
   tenantPin: string;
   accent?: string;
   initialMatch: Match;
+  slug: string;
 };
 
-export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Props) {
+export function ScorerConsole({ matchId, tenantPin, accent, initialMatch, slug }: Props) {
   const [match, setMatch] = useState(initialMatch);
   const [strikerName, setStrikerName] = useState("");
   const [nonStrikerName, setNonStrikerName] = useState("");
@@ -31,6 +34,7 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
   const [videoUrl, setVideoUrl] = useState(initialMatch.videoUrl || "");
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
+  const [playerId, setPlayerId] = useState(initialMatch.players[0]?.id || "");
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -84,8 +88,17 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
       <LiveScoreBoard match={match} accent={accent} />
 
       <div className="pl-scorer-panel">
+        <div className="pl-actions-row wrap">
+          <Link className="pl-btn" href={`/cricket/t/${slug}/m/${matchId}/team`}>
+            টিম লিস্ট / প্রিন্ট
+          </Link>
+          <Link className="pl-btn ghost" href={`/cricket/t/${slug}/m/${matchId}`}>
+            দর্শক ভিউ
+          </Link>
+        </div>
+
         <h2>স্কোরার কনসোল</h2>
-        <p className="pl-muted">বড় বাটনে ট্যাপ করুন — ভুল হলে Undo চাপুন</p>
+        <p className="pl-muted">ক্রিকেট রুলস: ওভার শেষে স্ট্রাইক বদলাবে · উইকেটে নতুন ব্যাটার আসবে</p>
 
         <div className="pl-field-grid">
           <label>
@@ -132,8 +145,8 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
         </div>
 
         <div className="pl-graphic-controls">
-          <h3>স্ট্রিম গ্রাফিক্স (আন্তর্জাতিক স্টাইল)</h3>
-          <p className="pl-muted">যেকোনো সময় লাইভ ভিডিওর ভিতরে performance দেখান / লুকান</p>
+          <h3>স্ট্রিম গ্রাফিক্স</h3>
+          <p className="pl-muted">Batting XI-তে রোল দেখাবে · Bowling-এ listed bowler + part-time</p>
           <div className="pl-graphic-btns">
             {GRAPHICS.map((g) => (
               <button
@@ -147,6 +160,25 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
               </button>
             ))}
           </div>
+
+          <label className="pl-note">
+            যেকোনো প্লেয়ার পারফরম্যান্স (লাইভ)
+            <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
+              {match.players.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {roleLabelBn(p.role)} ({p.team === "a" ? match.teamA.short : match.teamB.short})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="pl-btn primary"
+            disabled={pending || !playerId}
+            onClick={() => post({ action: "set_graphic", graphicKind: "player", playerId })}
+          >
+            এই প্লেয়ার স্ট্রিমে দেখান
+          </button>
           <p className="pl-muted">
             এখন চালু: <strong>{activeGraphic === "hidden" ? "কিছু না" : activeGraphic}</strong>
           </p>
@@ -154,7 +186,7 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch }: Prop
 
         <label className="pl-note">
           কমেন্টারি (ঐচ্ছিক)
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="যেমন: ক্যাচ আউট বাউন্ডারিতে" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="যেমন: ক্যাচ আউট" />
         </label>
 
         <div className="pl-actions-row wrap">
