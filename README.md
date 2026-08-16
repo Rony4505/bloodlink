@@ -5,6 +5,9 @@ Free humanitarian platform to help people in Bangladesh find blood donors by blo
 > **Mudi POS (মুদি POS):** This repo also contains a grocery store POS at **`/pos`**.  
 > See **[MUDI_POS.md](./MUDI_POS.md)** for full docs. Run `npm run dev` → `http://localhost:3000/pos`
 
+> **PitchLive (Cricket):** Live cricket score + video rental at **`/cricket`**.  
+> See **[CRICKET_LIVE.md](./CRICKET_LIVE.md)**. Demo: `/cricket/t/demo` (PIN `1234`).
+
 ## Features
 
 - Bangla / English language toggle
