@@ -1245,6 +1245,37 @@ a.pl-btn.primary {
 .pl-modal-card { width:min(460px, 100%); background:#fff; border-radius:16px; padding:1rem; box-shadow:0 20px 50px rgba(0,0,0,0.28); }
 .pl-modal-card.small { width:min(420px, 100%); }
 .pl-modal-card h3 { margin-top:0; }
+.pl-match-summary-modal { width:min(760px, 100%); max-height:90vh; overflow-y:auto; }
+.pl-match-summary-head h2 { margin:0 0 0.35rem; }
+.pl-match-result-banner {
+  background:linear-gradient(135deg, #0B6E4F 0%, #064832 100%);
+  color:#fff;
+  border-radius:12px;
+  padding:1rem 1.2rem;
+  margin:0.75rem 0 1rem;
+}
+.pl-result-main, .pl-result-win { font-size:1.3rem; font-weight:700; margin:0; }
+.pl-result-win span { font-weight:500; opacity:0.92; }
+.pl-result-lose { margin:0.25rem 0 0; opacity:0.88; }
+.pl-result-detail { margin:0.75rem 0 0; font-size:1.02rem; }
+.pl-result-when { margin:0.5rem 0 0; opacity:0.85; font-size:0.92rem; }
+.pl-match-result-line { margin:0.2rem 0 0.5rem; color:#0B6E4F; font-weight:600; font-size:0.95rem; }
+.pl-win-cell { color:#0B6E4F; font-weight:600; }
+.pl-lose-cell { color:#8a3b2a; }
+.pl-match-report-sheet .pl-match-summary-page .pl-actions-row { margin-top:1rem; }
+.pl-tournament-setup { margin-top:1.2rem; border:1px solid rgba(11,110,79,0.18); }
+.pl-tournament-setup h2 { margin-top:0; }
+.pl-setup-form textarea { width:100%; border:1px solid var(--pl-line); border-radius:10px; padding:0.55rem 0.65rem; font:inherit; resize:vertical; }
+.pl-fixtures-panel h3 { margin:1rem 0 0.5rem; font-size:1rem; }
+.pl-fixture-draft { border:1px dashed var(--pl-line); border-radius:12px; padding:0.85rem; margin-bottom:0.75rem; background:rgba(255,255,255,0.6); }
+.pl-fixture-list { display:grid; gap:0.65rem; }
+.pl-fixture-row { display:flex; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; align-items:flex-start; border:1px solid var(--pl-line); border-radius:12px; padding:0.75rem; background:#fff; }
+.pl-tenant-desc { margin:0.25rem 0 0.5rem; font-size:1.05rem; line-height:1.45; }
+.danger-text { color:#a33; border-color:#e8c4c4; }
+@media print {
+  .pl-match-summary-backdrop { position:static; background:none; display:block; padding:0; }
+  .pl-match-summary-modal { box-shadow:none; width:100%; max-height:none; overflow:visible; }
+}
 .pl-graphic-layer { align-items:center; justify-content:center; padding:1rem; }
 @media (max-width: 900px) { .pl-live-preview-grid { grid-template-columns:1fr; } .pl-preview-card iframe { height:300px; } }
 

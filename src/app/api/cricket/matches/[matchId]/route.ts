@@ -1,4 +1,6 @@
 import { applyBall, setMatchLineup, setPlayersOnStrike, startSecondInnings, undoLastBall } from "@/lib/cricket/engine";
+import { applyFixtureUpdate, isFixtureEditable } from "@/lib/cricket/fixture";
+import { completeMatch } from "@/lib/cricket/matchResult";
 import { tenantAccessOk } from "@/lib/cricket/format";
 import { fail, ok } from "@/lib/cricket/http";
 import { normalizePlayer } from "@/lib/cricket/lineup";
@@ -14,7 +16,7 @@ import {
   readCricketStore,
   updateCricketStore,
 } from "@/lib/cricket/store";
-import type { BallType, GraphicKind, MatchStatus, Player, PlayerRole, TeamSide } from "@/lib/cricket/types";
+import type { BallType, GraphicKind, MatchFormat, MatchStatus, Player, PlayerRole, TeamSide } from "@/lib/cricket/types";
 
 export const runtime = "nodejs";
 
@@ -86,6 +88,14 @@ export async function POST(request: Request, ctx: Ctx) {
     graphicKind?: GraphicKind;
     playerId?: string;
     nonStrikerOut?: boolean;
+    winnerSide?: TeamSide | "tie" | "nr";
+    format?: MatchFormat;
+    venue?: string;
+    teamAName?: string;
+    teamAShort?: string;
+    teamBName?: string;
+    teamBShort?: string;
+    battingFirst?: TeamSide;
     players?: Array<{
       id?: string;
       name: string;
@@ -104,6 +114,10 @@ export async function POST(request: Request, ctx: Ctx) {
   if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
 
   const action = body.action || "ball";
+
+  if (action === "update_fixture" && !isFixtureEditable(match)) {
+    return fail("এই ম্যাচের fixture আর এডিট করা যাবে না — স্কোরিং শুরু হয়েছে", 400);
+  }
 
   const saved = await updateCricketStore((s) => {
     const idx = s.matches.findIndex((m) => m.id === matchId);
@@ -154,6 +168,19 @@ export async function POST(request: Request, ctx: Ctx) {
       if (body.title) m.title = body.title.trim();
       if (typeof body.scheduledAt === "string") m.scheduledAt = body.scheduledAt.trim() || undefined;
       m.updatedAt = new Date().toISOString();
+    } else if (action === "update_fixture") {
+      m = applyFixtureUpdate(m, {
+        title: body.title,
+        format: body.format,
+        venue: body.venue,
+        videoUrl: body.videoUrl,
+        teamAName: body.teamAName,
+        teamAShort: body.teamAShort,
+        teamBName: body.teamBName,
+        teamBShort: body.teamBShort,
+        battingFirst: body.battingFirst,
+        scheduledAt: body.scheduledAt,
+      });
     } else if (action === "set_graphic") {
       const kind =
         body.graphicKind && GRAPHIC_KINDS.includes(body.graphicKind) ? body.graphicKind : "hidden";
@@ -167,8 +194,7 @@ export async function POST(request: Request, ctx: Ctx) {
         updatedAt: new Date().toISOString(),
       };
     } else if (action === "complete") {
-      m.status = "completed";
-      m.updatedAt = new Date().toISOString();
+      m = completeMatch(m, { winnerSide: body.winnerSide });
     } else {
       return;
     }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { batterAverage, bowlEconomy, roleLabelBn, strikeRate } from "@/lib/cricket/stats";
-import type { PlayerRecord, PlayerTeamReport, TeamStanding } from "@/lib/cricket/types";
+import type { MatchHistoryRow, PlayerRecord, PlayerTeamReport, TeamStanding } from "@/lib/cricket/types";
 import "./cricket.css";
 
 type TenantStatsData = {
@@ -11,12 +11,13 @@ type TenantStatsData = {
   playerRecords: PlayerRecord[];
   playerTeamReports: PlayerTeamReport[];
   teamStandings: TeamStanding[];
+  matchHistory: MatchHistoryRow[];
 };
 
 export function TenantStatsPage({ slug }: { slug: string }) {
   const [data, setData] = useState<TenantStatsData | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"player" | "team">("player");
+  const [tab, setTab] = useState<"player" | "team" | "matches">("player");
   const [playerKey, setPlayerKey] = useState("");
 
   useEffect(() => {
@@ -41,8 +42,11 @@ export function TenantStatsPage({ slug }: { slug: string }) {
         </header>
         <div className="pl-sheet-toolbar no-print">
           <h1>{data?.tenant.name || "Tournament Stats"}</h1>
-          <p className="pl-muted">Player-wise এবং team-wise রিপোর্ট — প্রিন্ট / PDF করা যায়</p>
+          <p className="pl-muted">ম্যাচ ফলাফল, খেলোয়াড় ও দল রিপোর্ট — প্রিন্ট / PDF করা যায়</p>
           <div className="pl-tabs">
+            <button type="button" className={tab === "matches" ? "on" : ""} onClick={() => setTab("matches")}>
+              ম্যাচ ফলাফল
+            </button>
             <button type="button" className={tab === "player" ? "on" : ""} onClick={() => setTab("player")}>
               খেলোয়াড় রিপোর্ট
             </button>
@@ -51,13 +55,58 @@ export function TenantStatsPage({ slug }: { slug: string }) {
             </button>
           </div>
           <div className="pl-actions-row wrap">
-            <button type="button" className="pl-btn" onClick={() => window.print()}>প্রিন্ট / PDF</button>
+            <button type="button" className="pl-btn" onClick={() => window.print()}>
+              প্রিন্ট / PDF
+            </button>
           </div>
           {error ? <p className="pl-error">{error}</p> : null}
         </div>
 
-        {tab === "player" || true ? (
-          <div className={tab === "player" ? "" : "print-only"}>
+        {tab === "matches" ? (
+          <div className="pl-sheet-card">
+            <h2>ম্যাচ ফলাফল (জয় / পরাজয়)</h2>
+            <table className="pl-sheet-table">
+              <thead>
+                <tr>
+                  <th>ম্যাচ</th>
+                  <th>স্কোর</th>
+                  <th>জয়ী</th>
+                  <th>পরাজিত</th>
+                  <th>ফলাফল</th>
+                  <th className="no-print">রিপোর্ট</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.matchHistory || []).map((m) => (
+                  <tr key={m.id}>
+                    <td>
+                      {m.title}
+                      <br />
+                      <small>
+                        {m.teamA.name} vs {m.teamB.name}
+                      </small>
+                    </td>
+                    <td>{m.scoreLine}</td>
+                    <td className={m.winnerSide === "a" || m.winnerSide === "b" ? "pl-win-cell" : ""}>
+                      {m.winnerName}
+                    </td>
+                    <td className="pl-lose-cell">{m.loserName}</td>
+                    <td>{m.resultText}</td>
+                    <td className="no-print">
+                      <Link href={`/cricket/t/${slug}/m/${m.id}/report`}>দেখুন</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(data?.matchHistory || []).length === 0 ? (
+              <p className="pl-muted">এখনো কোনো সম্পন্ন ম্যাচ নেই</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {tab === "player" ? (
+          <div>
             <div className="pl-sheet-card">
               <h2>খেলোয়াড় অনুযায়ী</h2>
               <table className="pl-sheet-table">
@@ -103,7 +152,9 @@ export function TenantStatsPage({ slug }: { slug: string }) {
                   প্লেয়ার বাছুন
                   <select value={playerKey} onChange={(e) => setPlayerKey(e.target.value)}>
                     {(data?.playerTeamReports || []).map((r) => (
-                      <option key={r.key} value={r.key}>{r.name}</option>
+                      <option key={r.key} value={r.key}>
+                        {r.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -123,7 +174,9 @@ export function TenantStatsPage({ slug }: { slug: string }) {
                       <tbody>
                         {selected.vs.map((row) => (
                           <tr key={row.teamName}>
-                            <td>{row.teamName} ({row.teamShort})</td>
+                            <td>
+                              {row.teamName} ({row.teamShort})
+                            </td>
                             <td>{row.matches}</td>
                             <td>{row.runs}</td>
                             <td>{row.balls}</td>
@@ -139,44 +192,44 @@ export function TenantStatsPage({ slug }: { slug: string }) {
           </div>
         ) : null}
 
-        {tab === "team" || true ? (
-          <div className={tab === "team" ? "" : "print-only"} style={{ marginTop: "1rem" }}>
-            <div className="pl-sheet-card">
-              <h2>দল অনুযায়ী</h2>
-              <table className="pl-sheet-table">
-                <thead>
-                  <tr>
-                    <th>Team</th>
-                    <th>M</th>
-                    <th>W</th>
-                    <th>L</th>
-                    <th>T</th>
-                    <th>NR</th>
-                    <th>Runs</th>
-                    <th>Wkts</th>
-                    <th>NRR</th>
+        {tab === "team" ? (
+          <div className="pl-sheet-card">
+            <h2>দল অনুযায়ী</h2>
+            <table className="pl-sheet-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th>M</th>
+                  <th>W</th>
+                  <th>L</th>
+                  <th>T</th>
+                  <th>NR</th>
+                  <th>Runs</th>
+                  <th>Wkts</th>
+                  <th>NRR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.teamStandings || []).map((t) => (
+                  <tr key={t.name}>
+                    <td>
+                      {t.name} ({t.short})
+                    </td>
+                    <td>{t.matches}</td>
+                    <td>{t.won}</td>
+                    <td>{t.lost}</td>
+                    <td>{t.tied}</td>
+                    <td>{t.nr}</td>
+                    <td>{t.runsFor}</td>
+                    <td>{t.wicketsTaken}</td>
+                    <td>{t.nrr}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {(data?.teamStandings || []).map((t) => (
-                    <tr key={t.name}>
-                      <td>{t.name} ({t.short})</td>
-                      <td>{t.matches}</td>
-                      <td>{t.won}</td>
-                      <td>{t.lost}</td>
-                      <td>{t.tied}</td>
-                      <td>{t.nr}</td>
-                      <td>{t.runsFor}</td>
-                      <td>{t.wicketsTaken}</td>
-                      <td>{t.nrr}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {(data?.teamStandings || []).length === 0 ? (
-                <p className="pl-muted">এখনো completed ম্যাচ নেই — খেলা শেষ হলে টেবিল আসবে</p>
-              ) : null}
-            </div>
+                ))}
+              </tbody>
+            </table>
+            {(data?.teamStandings || []).length === 0 ? (
+              <p className="pl-muted">এখনো completed ম্যাচ নেই — খেলা শেষ হলে টেবিল আসবে</p>
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -169,6 +169,8 @@ function normName(name: string): string {
 
 export function matchOutcome(match: Match): "a" | "b" | "tie" | "nr" {
   if (match.status !== "completed") return "nr";
+  const stored = match.result?.winnerSide;
+  if (stored === "a" || stored === "b" || stored === "tie" || stored === "nr") return stored;
   const first = match.innings[0];
   const second = match.innings[1];
   if (!first || !second) return "nr";

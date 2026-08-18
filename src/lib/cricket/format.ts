@@ -59,6 +59,7 @@ export function matchHeadline(match: Match): string {
 
 export function resultText(match: Match): string | null {
   if (match.status !== "completed") return null;
+  if (match.result?.summaryBn) return match.result.summaryBn;
   const first = match.innings[0];
   const second = match.innings[1];
   if (!first) return "ম্যাচ শেষ";

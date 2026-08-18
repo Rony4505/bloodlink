@@ -17,6 +17,14 @@ export type Tenant = {
   active: boolean;
   brandColor: string;
   createdAt: string;
+  /** Tournament description (renter-editable). */
+  description?: string;
+  /** Default / main venue for the event. */
+  venue?: string;
+  /** ISO date — tournament start. */
+  startDate?: string;
+  /** ISO date — tournament end. */
+  endDate?: string;
 };
 
 export type Player = {
@@ -149,6 +157,34 @@ export type TeamStanding = {
   nrr: string;
 };
 
+export type MatchResult = {
+  winnerSide: TeamSide | "tie" | "nr";
+  winnerName: string;
+  loserName: string;
+  marginType: "runs" | "wickets" | "tie" | "nr" | "single";
+  margin: number;
+  summaryBn: string;
+  summaryEn: string;
+  completedAt: string;
+};
+
+export type MatchHistoryRow = {
+  id: string;
+  title: string;
+  venue: string;
+  format: MatchFormat;
+  status: MatchStatus;
+  teamA: { name: string; short: string };
+  teamB: { name: string; short: string };
+  scheduledAt?: string;
+  completedAt?: string;
+  winnerName: string;
+  loserName: string;
+  winnerSide: TeamSide | "tie" | "nr";
+  resultText: string;
+  scoreLine: string;
+};
+
 /** Lifetime / cumulative stats across matches for a tenant */
 export type PlayerRecord = {
   id: string;
@@ -186,6 +222,8 @@ export type Match = {
   graphic?: BroadcastGraphic;
   /** Kickoff time for upcoming matches (ISO). Used on stream schedule graphic. */
   scheduledAt?: string;
+  /** Stored when match is completed — winner/loser and margin. */
+  result?: MatchResult;
   createdAt: string;
   updatedAt: string;
 };

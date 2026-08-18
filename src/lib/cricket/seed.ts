@@ -16,6 +16,10 @@ export function demoTenant(): Tenant {
     expiresAt: new Date(now + 1000 * 60 * 60 * 24 * 90).toISOString(),
     active: true,
     brandColor: "#0B6E4F",
+    description: "ডেমো টুর্নামেন্ট — PitchLive ফিচার দেখুন",
+    venue: "মিরপুর অ্যামেচার গ্রাউন্ড",
+    startDate: new Date(now - 1000 * 60 * 60 * 24 * 3).toISOString().slice(0, 10),
+    endDate: new Date(now + 1000 * 60 * 60 * 24 * 14).toISOString().slice(0, 10),
     createdAt: new Date(now - 1000 * 60 * 60 * 24).toISOString(),
   };
 }

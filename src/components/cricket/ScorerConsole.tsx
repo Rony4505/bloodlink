@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { roleLabelBn } from "@/lib/cricket/stats";
-import type { BallType, GraphicKind, Match, Player } from "@/lib/cricket/types";
+import type { BallType, GraphicKind, Match, TeamSide } from "@/lib/cricket/types";
 import { LiveScoreBoard } from "./LiveScoreBoard";
+import { MatchSummary } from "./MatchSummary";
 
 const RUN_BTNS = [0, 1, 2, 3, 4, 6] as const;
 const WICKET_TYPES = [
@@ -45,6 +46,9 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch, slug }
   const [dismissal, setDismissal] = useState<(typeof WICKET_TYPES)[number]>("Bowled");
   const [dismissedPlayerId, setDismissedPlayerId] = useState("");
   const [showNextBowler, setShowNextBowler] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [winnerPick, setWinnerPick] = useState<TeamSide | "tie" | "nr" | "auto">("auto");
   const [pending, startTransition] = useTransition();
 
   const inn = match.innings[match.currentInningsIndex];
@@ -144,6 +148,24 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch, slug }
 
   const activeGraphic = match.graphic?.kind || "hidden";
 
+  function needsWinnerPick(m: Match): boolean {
+    const second = m.innings[1];
+    if (!second) return true;
+    return second.legalBalls === 0 && second.runs === 0 && !second.completed;
+  }
+
+  function confirmComplete() {
+    const body: Record<string, unknown> = { action: "complete" };
+    if (needsWinnerPick(match) && winnerPick !== "auto") {
+      body.winnerSide = winnerPick;
+    }
+    post(body, (next) => {
+      setShowComplete(false);
+      setShowSummary(true);
+      setMatch(next);
+    });
+  }
+
   return (
     <div className="pl-scorer">
       <LiveScoreBoard match={match} accent={accent} />
@@ -192,7 +214,7 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch, slug }
           <button type="button" className="pl-btn ghost" disabled={pending} onClick={savePlayers}>Apply players</button>
           <button type="button" className="pl-btn undo-hot" disabled={pending} onClick={() => post({ action: "undo" })}>Undo</button>
           <button type="button" className="pl-btn" disabled={pending || match.innings.length > 1} onClick={() => post({ action: "second_innings" })}>২য় ইনিংস</button>
-          <button type="button" className="pl-btn ghost" disabled={pending} onClick={() => post({ action: "complete" })}>ম্যাচ শেষ</button>
+          <button type="button" className="pl-btn ghost" disabled={pending} onClick={() => { setWinnerPick("auto"); setShowComplete(true); }}>ম্যাচ শেষ</button>
         </div>
 
         <div className="pl-pad pl-pad-tight">
@@ -265,6 +287,37 @@ export function ScorerConsole({ matchId, tenantPin, accent, initialMatch, slug }
             </div>
           </div>
         </div>
+      ) : null}
+
+      {showComplete ? (
+        <div className="pl-modal-backdrop">
+          <div className="pl-modal-card small">
+            <h3>ম্যাচ শেষ করবেন?</h3>
+            <p className="pl-muted">ফলাফল সেভ হবে এবং ম্যাচ সারাংশ দেখানো হবে</p>
+            {needsWinnerPick(match) ? (
+              <label className="pl-note">
+                বিজয়ী দল (এক ইনিংস / ম্যানুয়াল)
+                <select value={winnerPick} onChange={(e) => setWinnerPick(e.target.value as typeof winnerPick)}>
+                  <option value="auto">অটো (NR / এক ইনিংস)</option>
+                  <option value="a">{match.teamA.name}</option>
+                  <option value="b">{match.teamB.name}</option>
+                  <option value="tie">টাই</option>
+                  <option value="nr">ফলাফল নেই</option>
+                </select>
+              </label>
+            ) : (
+              <p className="pl-muted">দুই ইনিংসের স্কোর অনুযায়ী বিজয়ী/পরাজিত অটো হিসাব হবে</p>
+            )}
+            <div className="pl-actions-row wrap">
+              <button type="button" className="pl-btn primary" onClick={confirmComplete} disabled={pending}>নিশ্চিত — ম্যাচ শেষ</button>
+              <button type="button" className="pl-btn ghost" onClick={() => setShowComplete(false)}>বাতিল</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showSummary && match.status === "completed" ? (
+        <MatchSummary match={match} onClose={() => setShowSummary(false)} />
       ) : null}
 
       {showNextBowler ? (

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Scorecard } from "./Scorecard";
+import { MatchSummary } from "./MatchSummary";
 import type { Match, PlayerRecord } from "@/lib/cricket/types";
 import "./cricket.css";
 
@@ -21,7 +21,7 @@ export function MatchReportPage({ slug, matchId }: { slug: string; matchId: stri
 
   return (
     <div className="pl-shell">
-      <div className="pl-team-sheet">
+      <div className="pl-team-sheet pl-match-report-sheet">
         <header className="pl-topbar no-print">
           <Link href={`/cricket/t/${slug}/m/${matchId}`}>← লাইভ</Link>
           <span>ম্যাচ রিপোর্ট</span>
@@ -29,24 +29,38 @@ export function MatchReportPage({ slug, matchId }: { slug: string; matchId: stri
         {match ? (
           <>
             <div className="pl-sheet-toolbar no-print">
-              <h1>{match.title}</h1>
-              <p className="pl-muted">{match.teamA.name} vs {match.teamB.name}{match.venue ? ` · ${match.venue}` : ""}</p>
-              <div className="pl-actions-row wrap"><button type="button" className="pl-btn" onClick={() => window.print()}>প্রিন্ট / PDF</button></div>
+              <div className="pl-actions-row wrap">
+                <button type="button" className="pl-btn" onClick={() => window.print()}>
+                  প্রিন্ট / PDF
+                </button>
+              </div>
             </div>
-            <div className="pl-card-block">
-              <Scorecard match={match} />
-            </div>
+            <MatchSummary match={match} variant="page" />
             <div className="pl-sheet-card">
-              <h2>Current player totals</h2>
+              <h2>টুর্নামেন্টে প্লেয়ার মোট</h2>
               <table className="pl-sheet-table">
-                <thead><tr><th>Player</th><th>Runs</th><th>Wickets</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Runs</th>
+                    <th>Wickets</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {records.map((r) => <tr key={r.id}><td>{r.name}</td><td>{r.runs}</td><td>{r.wickets}</td></tr>)}
+                  {records.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.name}</td>
+                      <td>{r.runs}</td>
+                      <td>{r.wickets}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </>
-        ) : <p className="pl-muted">লোড হচ্ছে…</p>}
+        ) : (
+          <p className="pl-muted">লোড হচ্ছে…</p>
+        )}
       </div>
     </div>
   );

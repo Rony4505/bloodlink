@@ -1,7 +1,7 @@
-import { emptyInnings, newId } from "@/lib/cricket/engine";
+import { buildNewMatch, type FixtureInput } from "@/lib/cricket/fixture";
 import { tenantAccessOk } from "@/lib/cricket/format";
 import { fail, ok, slugify } from "@/lib/cricket/http";
-import { makeXi } from "@/lib/cricket/lineup";
+import { buildMatchHistory } from "@/lib/cricket/matchResult";
 import { buildPlayerTeamReports, buildTeamStandings } from "@/lib/cricket/stats";
 import {
   findTenantBySlug,
@@ -23,6 +23,10 @@ function publicTenant(t: Tenant) {
     expiresAt: t.expiresAt,
     active: t.active,
     contactPhone: t.contactPhone,
+    description: t.description || "",
+    venue: t.venue || "",
+    startDate: t.startDate || "",
+    endDate: t.endDate || "",
   };
 }
 
@@ -56,11 +60,13 @@ export async function GET(request: Request) {
     })),
     currentInningsIndex: m.currentInningsIndex,
     target: m.target,
+    result: m.result,
   }));
 
   return ok({
     tenant: publicTenant(tenant),
     matches,
+    matchHistory: buildMatchHistory(tenantMatches),
     playerRecords: store.playerRecords?.[tenant.id] || [],
     playerTeamReports: buildPlayerTeamReports(tenantMatches),
     teamStandings: buildTeamStandings(tenantMatches),
@@ -92,6 +98,11 @@ export async function POST(request: Request) {
     teamBShort?: string;
     battingFirst?: "a" | "b";
     scheduledAt?: string;
+    description?: string;
+    startDate?: string;
+    endDate?: string;
+    matchId?: string;
+    fixtures?: FixtureInput[];
   };
 
   const action = body.action || "create_tenant";
@@ -168,6 +179,74 @@ export async function POST(request: Request) {
     });
   }
 
+  if (action === "tenant_self_update") {
+    const store = await readCricketStore();
+    const tenant = findTenantBySlug(store, body.slug || "");
+    if (!tenant) return fail("ক্লাব পাওয়া যায়নি", 404);
+    if (!tenantAccessOk(tenant)) return fail("রেন্ট মেয়াদ শেষ বা নিষ্ক্রিয়", 403);
+    if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
+
+    const updated = await updateCricketStore((s) => {
+      const t = s.tenants.find((x) => x.id === tenant.id);
+      if (!t) return;
+      if (typeof body.name === "string" && body.name.trim()) t.name = body.name.trim();
+      if (typeof body.brandColor === "string" && body.brandColor.trim()) t.brandColor = body.brandColor.trim();
+      if (typeof body.contactPhone === "string") t.contactPhone = body.contactPhone.trim();
+      if (typeof body.description === "string") t.description = body.description.trim();
+      if (typeof body.venue === "string") t.venue = body.venue.trim();
+      if (typeof body.startDate === "string") t.startDate = body.startDate.trim() || undefined;
+      if (typeof body.endDate === "string") t.endDate = body.endDate.trim() || undefined;
+    });
+    const next = updated.tenants.find((t) => t.id === tenant.id);
+    if (!next) return fail("tenant not found", 404);
+    return ok({ tenant: publicTenant(next) });
+  }
+
+  if (action === "delete_match") {
+    const store = await readCricketStore();
+    const tenant = findTenantBySlug(store, body.slug || "");
+    if (!tenant) return fail("ক্লাব পাওয়া যায়নি", 404);
+    if (!tenantAccessOk(tenant)) return fail("রেন্ট মেয়াদ শেষ বা নিষ্ক্রিয়", 403);
+    if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
+    const matchId = (body.matchId || "").trim();
+    if (!matchId) return fail("matchId required");
+
+    const target = store.matches.find((m) => m.id === matchId && m.tenantId === tenant.id);
+    if (!target) return fail("ম্যাচ পাওয়া যায়নি", 404);
+    const balls = target.innings.reduce((n, inn) => n + inn.legalBalls, 0);
+    if (target.status === "completed" || balls > 0 || (target.events?.length || 0) > 0) {
+      return fail("শুরু বা শেষ হওয়া ম্যাচ মুছতে পারবেন না", 400);
+    }
+
+    await updateCricketStore((s) => {
+      s.matches = s.matches.filter((m) => m.id !== matchId);
+    });
+    return ok({ deleted: matchId });
+  }
+
+  if (action === "create_matches") {
+    const store = await readCricketStore();
+    const tenant = findTenantBySlug(store, body.slug || "");
+    if (!tenant) return fail("ক্লাব পাওয়া যায়নি", 404);
+    if (!tenantAccessOk(tenant)) return fail("রেন্ট মেয়াদ শেষ বা নিষ্ক্রিয়", 403);
+    if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
+    const rows = Array.isArray(body.fixtures) ? body.fixtures : [];
+    if (rows.length === 0) return fail("কমপক্ষে একটি fixture লাগবে");
+    if (rows.length > 30) return fail("একবারে সর্বোচ্চ ৩০টি fixture");
+
+    const created: Match[] = rows.map((row) =>
+      buildNewMatch(tenant.id, {
+        ...row,
+        venue: row.venue || tenant.venue,
+      }),
+    );
+
+    await updateCricketStore((s) => {
+      for (const m of created) s.matches.unshift(m);
+    });
+    return ok({ matches: created, count: created.length });
+  }
+
   if (action === "create_match") {
     const store = await readCricketStore();
     const tenant = findTenantBySlug(store, body.slug || "");
@@ -175,75 +254,18 @@ export async function POST(request: Request) {
     if (!tenantAccessOk(tenant)) return fail("রেন্ট মেয়াদ শেষ বা নিষ্ক্রিয়", 403);
     if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
 
-    const battingFirst = body.battingFirst === "b" ? "b" : "a";
-    const teamAName = (body.teamAName || "টিম A").trim();
-    const teamBName = (body.teamBName || "টিম B").trim();
-    const players = [
-      ...makeXi(
-        Array.from({ length: 11 }, (_, i) => `${teamAName} #${i + 1}`),
-        "a",
-      ),
-      ...makeXi(
-        Array.from({ length: 11 }, (_, i) => `${teamBName} #${i + 1}`),
-        "b",
-      ),
-    ];
-    const batSide = players.filter((p) => p.team === battingFirst);
-    const bowlSide = players.filter((p) => p.team !== battingFirst);
-    const inn = emptyInnings(battingFirst);
-    if (batSide[0] && batSide[1] && bowlSide[0]) {
-      inn.strikerId = batSide[0].id;
-      inn.nonStrikerId = batSide[1].id;
-      inn.bowlerId = bowlSide[0].id;
-      inn.batters = [
-        { playerId: batSide[0].id, name: batSide[0].name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
-        { playerId: batSide[1].id, name: batSide[1].name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false },
-      ];
-      inn.bowlers = [
-        {
-          playerId: bowlSide[0].id,
-          name: bowlSide[0].name,
-          balls: 0,
-          runs: 0,
-          wickets: 0,
-          maidens: 0,
-          dotsInOver: 0,
-        },
-      ];
-    }
-
-    const match: Match = {
-      id: newId("match"),
-      tenantId: tenant.id,
-      title: (body.title || `${teamAName} vs ${teamBName}`).trim(),
-      format: body.format || "T20",
-      status: "upcoming",
-      venue: (body.venue || "").trim(),
-      videoUrl: (body.videoUrl || "").trim(),
-      teamA: {
-        name: teamAName,
-        short: (body.teamAShort || "TEA").trim().slice(0, 5).toUpperCase(),
-      },
-      teamB: {
-        name: teamBName,
-        short: (body.teamBShort || "TEB").trim().slice(0, 5).toUpperCase(),
-      },
-      players,
-      innings: [inn],
-      currentInningsIndex: 0,
-      events: [],
-      commentary: [
-        {
-          id: newId("c"),
-          text: "ম্যাচ তৈরি হয়েছে — স্কোর আপডেট শুরু করুন",
-          at: new Date().toISOString(),
-        },
-      ],
-      graphic: { kind: "hidden", updatedAt: new Date().toISOString() },
-      scheduledAt: (body.scheduledAt || "").trim() || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const match = buildNewMatch(tenant.id, {
+      title: body.title,
+      format: body.format,
+      venue: body.venue || tenant.venue,
+      videoUrl: body.videoUrl,
+      teamAName: body.teamAName,
+      teamAShort: body.teamAShort,
+      teamBName: body.teamBName,
+      teamBShort: body.teamBShort,
+      battingFirst: body.battingFirst,
+      scheduledAt: body.scheduledAt,
+    });
 
     await updateCricketStore((s) => {
       s.matches.unshift(match);

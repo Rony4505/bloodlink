@@ -1,4 +1,6 @@
 import { applyBall, emptyInnings, undoLastBall } from "./engine";
+import { applyFixtureUpdate, buildNewMatch, isFixtureEditable } from "./fixture";
+import { completeMatch, computeMatchResult } from "./matchResult";
 import { buildPlayerTeamReports, buildTeamStandings, matchOutcome } from "./stats";
 import type { Match, Player } from "./types";
 
@@ -80,5 +82,28 @@ const ali = splits.find((p) => p.name === "Ali");
 assert(ali, "player team report exists");
 assert(ali!.vs.some((r) => r.teamShort === "DHN" && r.runs === 80), "Ali vs Dhanmondi runs");
 assert(ali!.vs.some((r) => r.teamShort === "DHN" && r.wickets === 2), "Ali vs Dhanmondi wickets");
+
+const withResult = completeMatch(completed);
+assert(withResult.result?.winnerSide === "a", "completeMatch stores winner");
+assert(withResult.result?.summaryBn.includes("রানে"), "completeMatch Bengali margin");
+
+const manualWin = completeMatch(miniMatch({ status: "live" }), { winnerSide: "b" });
+assert(manualWin.result?.winnerSide === "b", "manual winner on single innings");
+
+const storedOutcome: Match = {
+  ...completed,
+  result: computeMatchResult(completed),
+};
+assert(matchOutcome(storedOutcome) === "a", "matchOutcome uses stored result");
+
+const fresh = buildNewMatch("t1", { teamAName: "Alpha", teamBName: "Beta", battingFirst: "b" });
+assert(fresh.innings[0].battingTeam === "b", "batting first b");
+assert(isFixtureEditable(fresh), "new match fixture editable");
+
+const played = applyBall(fresh, { type: "run", runs: 1 });
+assert(!isFixtureEditable(played), "fixture locked after ball");
+
+const edited = applyFixtureUpdate(fresh, { title: "Final", teamAName: "Alpha XI" });
+assert(edited.title === "Final", "fixture title update");
 
 console.log("cricket selftest ok");
