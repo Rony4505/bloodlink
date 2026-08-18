@@ -21,59 +21,60 @@ export function CricketLanding() {
   }, []);
 
   const name = info?.settings.siteName || "PitchLive";
+  const demoSlug = info?.demoSlug || "demo";
 
   return (
     <div className="pl-shell">
       <section className="pl-hero">
         <div className="pl-wrap pl-hero-inner">
-          <p className="pl-brand">{name}</p>
-          <h2>ম্যাচ চলাকালীন লাইভ স্কোর আপডেট — ভিডিওসহ রেন্ট করুন</h2>
-          <p>
-            {info?.settings.tagline ||
-              "ক্লাব/টুর্নামেন্ট আয়োজকদের জন্য সহজ স্কোরার কনসোল + দর্শক পেজ।"}
-          </p>
-          <div className="pl-cta">
-            <Link className="pl-btn primary" href={`/cricket/t/${info?.demoSlug || "demo"}`}>
-              ডেমো দেখুন
-            </Link>
-            <Link className="pl-btn light" href="/cricket/admin">
-              রেন্ট অ্যাডমিন
-            </Link>
-            <a className="pl-btn light" href="#features">
-              ফিচার
-            </a>
+          <header className="pl-hero-nav">
+            <p className="pl-brand">{name}</p>
+            <nav>
+              <Link href={`/cricket/t/${demoSlug}`}>Log in</Link>
+              <Link href={`/cricket/t/${demoSlug}/m/match_demo_live`}>Demo</Link>
+              <Link href="/cricket/admin">Rent</Link>
+              <a href="#features">Fiture</a>
+            </nav>
+          </header>
+
+          <div className="pl-hero-copy">
+            <h2>Club cricket stream + scoreboard in one place</h2>
+            <p>{info?.settings.tagline || "সহজ স্কোরার, লাইভ স্ট্রিম, টিম লিস্ট, পারফরম্যান্স গ্রাফিক্স।"}</p>
+            <div className="pl-cta">
+              <Link className="pl-btn primary" href={`/cricket/t/${demoSlug}/m/match_demo_live`}>
+                Demo
+              </Link>
+              <Link className="pl-btn light" href="/cricket/admin">
+                Rent
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="pl-section pl-wrap" id="features">
         <h2>সহজ ব্যবহার, পূর্ণ ফিচার</h2>
-        <p className="pl-muted">এক হাতে স্কোর আপডেট, অন্যদিকে দর্শকরা লাইভ দেখবে।</p>
+        <p className="pl-muted">লাইভ ম্যাচ, auto team list, player performance, print report.</p>
         <ul className="pl-feature-list">
-          <li>বল-বাই-বল স্কোর (0–6, W, WD, NB, Bye, LB) + Undo</li>
-          <li>লাইভ ভিডিও (YouTube/Facebook) + স্কোর একসাথে</li>
-          <li>স্কোরকার্ড, কমেন্টারি, ২য় ইনিংস/টার্গেট</li>
-          <li>ক্লাবভেদে আলাদা লিংক — রেন্ট প্ল্যান (দৈনিক/সাপ্তাহিক/মাসিক/ইভেন্ট)</li>
-          <li>মোবাইল-ফ্রেন্ডলি স্কোরার কনসোল</li>
+          <li>বল-বাই-বল স্কোর + Undo + wicket popup</li>
+          <li>স্ট্রিমের মধ্যে player / batting / bowling performance graphic</li>
+          <li>টিম লিস্ট, রোল, blank print sheet, match report print</li>
+          <li>টুর্নামেন্টজুড়ে player performance save</li>
         </ul>
       </section>
 
       <section className="pl-section pl-wrap">
         <h2>কেমন দেখাবে</h2>
-        <p className="pl-muted">ডিজাইন প্রিভিউ — আসল সাইটও এই ফ্লোতে কাজ করে।</p>
-        <div className="pl-mock-grid">
-          <figure>
-            <img src="/cricket-mockups/mockup_pitchlive_landing.png" alt="PitchLive ল্যান্ডিং" />
-            <figcaption>ল্যান্ডিং / রেন্ট পেজ</figcaption>
-          </figure>
-          <figure>
-            <img src="/cricket-mockups/mockup_live_score_video.png" alt="লাইভ স্কোর + ভিডিও" />
-            <figcaption>দর্শক: ভিডিও + লাইভ স্কোর</figcaption>
-          </figure>
-          <figure>
-            <img src="/cricket-mockups/mockup_scorer_console.png" alt="স্কোরার কনসোল" />
-            <figcaption>স্কোরার কনসোল</figcaption>
-          </figure>
+        <p className="pl-muted">এখানে live preview আছে — website edit করলে এটাও বদলাবে।</p>
+        <div className="pl-live-preview-grid">
+          <div className="pl-preview-card">
+            <h3>Club home</h3>
+            <iframe src={`/cricket/t/${demoSlug}`} title="PitchLive club preview" />
+          </div>
+          <div className="pl-preview-card">
+            <h3>Live Match</h3>
+            <iframe src={`/cricket/t/${demoSlug}/m/match_demo_live`} title="PitchLive live preview" />
+          </div>
         </div>
       </section>
 
@@ -87,9 +88,6 @@ export function CricketLanding() {
             </Link>
           ))}
         </div>
-        <p className="pl-muted" style={{ marginTop: "1.2rem" }}>
-          যোগাযোগ: {info?.settings.contactPhone || "01XXXXXXXXX"}
-        </p>
       </section>
     </div>
   );

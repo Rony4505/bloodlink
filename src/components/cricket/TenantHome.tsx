@@ -13,6 +13,7 @@ type MatchRow = {
   venue: string;
   teamA: { name: string; short: string };
   teamB: { name: string; short: string };
+  scheduledAt?: string;
   innings: { battingTeam: "a" | "b"; runs: number; wickets: number; legalBalls: number }[];
   currentInningsIndex: number;
 };
@@ -37,6 +38,7 @@ export function TenantHome({ slug }: { slug: string }) {
   const [teamB, setTeamB] = useState("ধানমন্ডি XI");
   const [venue, setVenue] = useState("");
   const [format, setFormat] = useState("T20");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [msg, setMsg] = useState("");
 
   function load() {
@@ -93,6 +95,7 @@ export function TenantHome({ slug }: { slug: string }) {
           teamBName: teamB,
           venue,
           format,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         }),
       });
       const data = await res.json();
@@ -117,6 +120,7 @@ export function TenantHome({ slug }: { slug: string }) {
 
         <h1 style={{ margin: "0.4rem 0" }}>{tenant?.name || "ক্লাব"}</h1>
         <p className="pl-muted">লাইভ ম্যাচ দেখুন অথবা স্কোরার হিসেবে আপডেট করুন</p>
+        <p className="no-print"><Link href={`/cricket/t/${slug}/stats`}>টুর্নামেন্ট stats / রিপোর্ট →</Link></p>
 
         <div className="pl-match-list">
           {matches.map((m) => {
@@ -132,6 +136,7 @@ export function TenantHome({ slug }: { slug: string }) {
                 <p className="pl-muted" style={{ margin: "0.35rem 0" }}>
                   {m.title} · {m.format}
                   {inn ? ` · ${formatScore(inn)} (${formatOvers(inn)})` : ""}
+                  {m.scheduledAt ? ` · ${new Date(m.scheduledAt).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" })}` : ""}
                 </p>
                 <div className="pl-actions-row wrap">
                   <Link className="pl-btn primary" href={`/cricket/t/${slug}/m/${m.id}`}>
@@ -172,6 +177,10 @@ export function TenantHome({ slug }: { slug: string }) {
                 <input value={teamA} onChange={(e) => setTeamA(e.target.value)} placeholder="টিম A" />
                 <input value={teamB} onChange={(e) => setTeamB(e.target.value)} placeholder="টিম B" />
                 <input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="ভেন্যু" />
+                <label className="pl-note">
+                  Next match সময়
+                  <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+                </label>
                 <select value={format} onChange={(e) => setFormat(e.target.value)}>
                   <option value="T20">T20</option>
                   <option value="ODI">ODI</option>

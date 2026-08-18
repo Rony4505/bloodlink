@@ -8,24 +8,14 @@ import "./cricket.css";
 
 const ROLES: PlayerRole[] = ["batter", "bowler", "allrounder", "wk"];
 
-type Props = {
-  slug: string;
-  matchId: string;
-};
+type Props = { slug: string; matchId: string };
 
 function blankRow(team: TeamSide, i: number): Player {
-  return {
-    id: `tmp_${team}_${i}`,
-    name: "",
-    team,
-    role: i <= 4 ? "batter" : i === 5 ? "wk" : i === 6 ? "allrounder" : "bowler",
-    number: i + 1,
-  };
+  return { id: `tmp_${team}_${i}`, name: "", team, role: "batter", number: i + 1 };
 }
 
 function sidePlayers(match: Match | null, side: TeamSide): Player[] {
-  const list = (match?.players || []).filter((p) => p.team === side);
-  const rows = [...list];
+  const rows = [...((match?.players || []).filter((p) => p.team === side))];
   while (rows.length < 11) rows.push(blankRow(side, rows.length));
   return rows.slice(0, 11).map((p, i) => ({ ...p, number: i + 1 }));
 }
@@ -36,6 +26,7 @@ export function TeamSheetEditor({ slug, matchId }: Props) {
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [pin, setPin] = useState("");
   const [msg, setMsg] = useState("");
+  const [blankPrint, setBlankPrint] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -53,6 +44,8 @@ export function TeamSheetEditor({ slug, matchId }: Props) {
   }, [matchId, slug]);
 
   const title = useMemo(() => match?.title || "Team List", [match]);
+  const editorA = teamA;
+  const editorB = teamB;
 
   function updateRow(side: TeamSide, index: number, patch: Partial<Player>) {
     const setter = side === "a" ? setTeamA : setTeamB;
@@ -72,10 +65,7 @@ export function TeamSheetEditor({ slug, matchId }: Props) {
         body: JSON.stringify({ action: "set_lineup", tenantPin: pin, players }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setMsg(data.error || "সেভ ব্যর্থ");
-        return;
-      }
+      if (!res.ok) return setMsg(data.error || "সেভ ব্যর্থ");
       sessionStorage.setItem(`pl-pin-${slug}`, pin);
       setMatch(data.match);
       setTeamA(sidePlayers(data.match, "a"));
@@ -84,48 +74,34 @@ export function TeamSheetEditor({ slug, matchId }: Props) {
     });
   }
 
-  function TeamTable({
-    side,
-    rows,
-    heading,
-  }: {
-    side: TeamSide;
-    rows: Player[];
-    heading: string;
-  }) {
+  function TeamTable({ side, rows, heading, blank }: { side: TeamSide; rows: Player[]; heading: string; blank: boolean }) {
+    const displayRows = blank ? Array.from({ length: 11 }, (_, i) => blankRow(side, i)) : rows;
     return (
-      <section className="pl-sheet-card">
+      <section className={`pl-sheet-card${blank ? " pl-sheet-blank" : ""}`}>
         <h2>{heading}</h2>
         <table className="pl-sheet-table">
           <thead>
-            <tr>
-              <th>#</th>
-              <th>নাম</th>
-              <th>রোল</th>
-            </tr>
+            <tr><th>#</th><th>নাম</th><th>রোল</th></tr>
           </thead>
           <tbody>
-            {rows.map((p, i) => (
+            {displayRows.map((p, i) => (
               <tr key={`${side}-${i}`}>
                 <td>{i + 1}</td>
                 <td>
-                  <input
-                    value={p.name}
-                    onChange={(e) => updateRow(side, i, { name: e.target.value })}
-                    placeholder={`প্লেয়ার ${i + 1}`}
-                  />
+                  {blank ? (
+                    <span className="pl-blank-line" aria-hidden />
+                  ) : (
+                    <input value={p.name} onChange={(e) => updateRow(side, i, { name: e.target.value })} placeholder={`প্লেয়ার ${i + 1}`} />
+                  )}
                 </td>
                 <td>
-                  <select
-                    value={p.role}
-                    onChange={(e) => updateRow(side, i, { role: e.target.value as PlayerRole })}
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {roleLabelBn(r)}
-                      </option>
-                    ))}
-                  </select>
+                  {blank ? (
+                    <span className="pl-blank-line" aria-hidden />
+                  ) : (
+                    <select value={p.role} onChange={(e) => updateRow(side, i, { role: e.target.value as PlayerRole })}>
+                      {ROLES.map((r) => <option key={r} value={r}>{roleLabelBn(r)}</option>)}
+                    </select>
+                  )}
                 </td>
               </tr>
             ))}
@@ -145,25 +121,18 @@ export function TeamSheetEditor({ slug, matchId }: Props) {
 
         <div className="pl-sheet-toolbar no-print">
           <h1>{title}</h1>
-          <p className="pl-muted">ম্যাচের আগে ১১ জন + রোল সেট করুন — প্রিন্ট করে নিতে পারবেন</p>
+          <p className="pl-muted">চাইলে ফাঁকা team list প্রিন্ট করো, পরে নাম লিখে এনে এখানে update করো।</p>
           <div className="pl-form" style={{ maxWidth: 360 }}>
-            <input
-              type="password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="ক্লাব পিন"
-            />
+            <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="ক্লাব পিন" />
           </div>
+          <label className="pl-check-row">
+            <input type="checkbox" checked={blankPrint} onChange={(e) => setBlankPrint(e.target.checked)} />
+            <span>Blank print sheet (নাম + রোল দুটোই ফাঁকা)</span>
+          </label>
           <div className="pl-actions-row wrap">
-            <button type="button" className="pl-btn primary" disabled={pending} onClick={save}>
-              সেভ করুন
-            </button>
-            <button type="button" className="pl-btn" onClick={() => window.print()}>
-              প্রিন্ট / PDF
-            </button>
-            <Link className="pl-btn ghost" href={`/cricket/t/${slug}/m/${matchId}/score`}>
-              স্কোরার
-            </Link>
+            <button type="button" className="pl-btn primary" disabled={pending} onClick={save}>সেভ করুন</button>
+            <button type="button" className="pl-btn" onClick={() => window.print()}>প্রিন্ট / PDF</button>
+            <Link className="pl-btn ghost" href={`/cricket/t/${slug}/m/${matchId}/score`}>স্কোরার</Link>
           </div>
           {msg ? <p className="pl-muted">{msg}</p> : null}
         </div>
@@ -171,20 +140,12 @@ export function TeamSheetEditor({ slug, matchId }: Props) {
         <div className="pl-sheet-print-head print-only">
           <h1>PitchLive — Team List</h1>
           <h2>{title}</h2>
-          <p>
-            {match?.teamA.name} vs {match?.teamB.name}
-            {match?.venue ? ` · ${match.venue}` : ""}
-          </p>
+          <p>{match?.teamA.name} vs {match?.teamB.name}{match?.venue ? ` · ${match.venue}` : ""}</p>
         </div>
 
-        <div className="pl-sheet-grid">
-          <TeamTable side="a" rows={teamA} heading={match?.teamA.name || "টিম A"} />
-          <TeamTable side="b" rows={teamB} heading={match?.teamB.name || "টিম B"} />
-        </div>
-
-        <div className="print-only pl-sheet-sign">
-          <p>ক্যাপ্টেন ____________________ &nbsp;&nbsp; আম্পায়ার ____________________</p>
-          <p>তারিখ ____________________</p>
+        <div className={`pl-sheet-grid${blankPrint ? " pl-sheet-blank-print" : ""}`}>
+          <TeamTable side="a" rows={editorA} heading={match?.teamA.name || "টিম A"} blank={blankPrint} />
+          <TeamTable side="b" rows={editorB} heading={match?.teamB.name || "টিম B"} blank={blankPrint} />
         </div>
       </div>
     </div>

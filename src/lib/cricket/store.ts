@@ -1,7 +1,7 @@
 import { access, mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
 import { ensureMatchXi } from "./lineup";
-import { createEmptyStore, DEFAULT_OWNER_PIN } from "./seed";
+import { createEmptyStore, DEFAULT_OWNER_PIN, demoUpcomingMatch } from "./seed";
 import { recomputeTenantRecords } from "./stats";
 import type { CricketStore, Match, Tenant } from "./types";
 
@@ -23,6 +23,9 @@ function normalizeStore(raw: Partial<CricketStore> | null | undefined): CricketS
   const matches = (Array.isArray(raw.matches) ? raw.matches : base.matches).map((m) =>
     ensureMatchXi(m as Match),
   );
+  if (!matches.some((m) => m.id === "match_demo_next") && matches.some((m) => m.tenantId === "tenant_demo")) {
+    matches.push(ensureMatchXi(demoUpcomingMatch("tenant_demo")));
+  }
   const playerRecords = raw.playerRecords || {};
   for (const t of tenants) {
     playerRecords[t.id] = recomputeTenantRecords(matches, t.id);

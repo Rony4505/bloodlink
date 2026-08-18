@@ -75,3 +75,10 @@ export function resultText(match: Match): string | null {
   const margin = first.runs - second.runs;
   return `${team} ${margin} রানে জিতছে`;
 }
+
+export function formatScheduleWhen(iso?: string): string {
+  if (!iso) return "সময় নির্ধারিত হয়নি";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "সময় নির্ধারিত হয়নি";
+  return d.toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" });
+}

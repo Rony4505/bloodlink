@@ -55,6 +55,7 @@ export function LiveScoreBoard({ match, accent }: { match: Match; accent?: strin
             <p>{matchHeadline(match)}</p>
           )}
           {result ? <p className="pl-result">{result}</p> : null}
+          {inn?.freeHit ? <p className="pl-scoreline-freehit" style={{ display: "inline-block", marginTop: "0.4rem" }}>FREE HIT</p> : null}
         </div>
       </div>
 

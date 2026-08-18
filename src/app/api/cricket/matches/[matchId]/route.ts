@@ -3,8 +3,14 @@ import { tenantAccessOk } from "@/lib/cricket/format";
 import { fail, ok } from "@/lib/cricket/http";
 import { normalizePlayer } from "@/lib/cricket/lineup";
 import {
+  buildPlayerTeamReports,
+  buildTeamStandings,
+  upcomingSchedule,
+} from "@/lib/cricket/stats";
+import {
   findMatch,
   findTenantById,
+  matchesForTenant,
   readCricketStore,
   updateCricketStore,
 } from "@/lib/cricket/store";
@@ -21,6 +27,7 @@ export async function GET(_request: Request, ctx: Ctx) {
   if (!match) return fail("ম্যাচ পাওয়া যায়নি", 404);
   const tenant = findTenantById(store, match.tenantId);
   if (!tenant || !tenantAccessOk(tenant)) return fail("অ্যাক্সেস নেই", 403);
+  const tenantMatches = matchesForTenant(store, tenant.id);
   return ok({
     match,
     tenant: {
@@ -29,6 +36,9 @@ export async function GET(_request: Request, ctx: Ctx) {
       brandColor: tenant.brandColor,
     },
     playerRecords: store.playerRecords?.[tenant.id] || [],
+    playerTeamReports: buildPlayerTeamReports(tenantMatches),
+    teamStandings: buildTeamStandings(tenantMatches),
+    upcomingMatches: upcomingSchedule(tenantMatches, match.id),
   });
 }
 
@@ -41,6 +51,8 @@ const GRAPHIC_KINDS: GraphicKind[] = [
   "bowling",
   "teams",
   "player",
+  "player_teams",
+  "schedule",
 ];
 
 export async function POST(request: Request, ctx: Ctx) {
@@ -61,6 +73,7 @@ export async function POST(request: Request, ctx: Ctx) {
     videoUrl?: string;
     status?: MatchStatus;
     title?: string;
+    scheduledAt?: string;
     graphicKind?: GraphicKind;
     playerId?: string;
     nonStrikerOut?: boolean;
@@ -130,6 +143,7 @@ export async function POST(request: Request, ctx: Ctx) {
       if (typeof body.videoUrl === "string") m.videoUrl = body.videoUrl.trim();
       if (body.status) m.status = body.status;
       if (body.title) m.title = body.title.trim();
+      if (typeof body.scheduledAt === "string") m.scheduledAt = body.scheduledAt.trim() || undefined;
       m.updatedAt = new Date().toISOString();
     } else if (action === "set_graphic") {
       const kind =
@@ -138,7 +152,7 @@ export async function POST(request: Request, ctx: Ctx) {
         ...m,
         graphic: {
           kind,
-          playerId: kind === "player" ? body.playerId : undefined,
+          playerId: kind === "player" || kind === "player_teams" ? body.playerId : undefined,
           updatedAt: new Date().toISOString(),
         },
         updatedAt: new Date().toISOString(),

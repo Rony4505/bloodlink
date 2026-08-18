@@ -60,6 +60,7 @@ export function demoMatch(tenantId: string): Match {
       dotsInOver: 0,
     },
   ];
+  inn.freeHit = false;
 
   return {
     id: "match_demo_live",
@@ -88,6 +89,32 @@ export function demoMatch(tenantId: string): Match {
   };
 }
 
+export function demoUpcomingMatch(tenantId: string): Match {
+  const kickoff = new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString();
+  const match = demoMatch(tenantId);
+  return {
+    ...match,
+    id: "match_demo_next",
+    title: "ফ্রেন্ডশিপ কাপ — ৩য় স্থান",
+    status: "upcoming",
+    venue: "বসুন্ধরা স্পোর্টস সিটি",
+    teamA: { name: "উত্তরা ক্লাব", short: "UTR" },
+    teamB: { name: "বনানী টাইগার্স", short: "BAN" },
+    innings: [emptyInnings("a")],
+    events: [],
+    commentary: [
+      {
+        id: "c_demo_next",
+        text: "পরবর্তী ম্যাচ — সময় দেখুন স্ট্রিম শিডিউলে",
+        at: new Date().toISOString(),
+      },
+    ],
+    scheduledAt: kickoff,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function createEmptyStore(): CricketStore {
   const tenant = demoTenant();
   return {
@@ -98,7 +125,7 @@ export function createEmptyStore(): CricketStore {
       contactPhone: "01XXXXXXXXX",
     },
     tenants: [tenant],
-    matches: [demoMatch(tenant.id)],
+    matches: [demoMatch(tenant.id), demoUpcomingMatch(tenant.id)],
     playerRecords: {},
   };
 }

@@ -32,6 +32,7 @@ export function emptyInnings(battingTeam: TeamSide): Innings {
     oversLog: [],
     currentOverBalls: [],
     completed: false,
+    freeHit: false,
   };
 }
 
@@ -231,6 +232,14 @@ export function applyBall(match: Match, input: ScoreInput): Match {
 
   if (legal) finishOverIfNeeded(inn);
 
+  // Limited-overs: no-ball → next delivery is a FREE HIT. A wide/no-ball on
+  // the free-hit ball keeps the free hit; a legal ball consumes it.
+  if (input.type === "noball" && next.format !== "Test") {
+    inn.freeHit = true;
+  } else if (legal) {
+    inn.freeHit = false;
+  }
+
   const maxBalls = ballsPerInnings(next.format);
   if (inn.wickets >= 10 || inn.legalBalls >= maxBalls) {
     inn.completed = true;
@@ -258,7 +267,9 @@ export function applyBall(match: Match, input: ScoreInput): Match {
   } else {
     next.commentary.unshift({
       id: newId("c"),
-      text: `${label} — ${oversFromBalls(inn.legalBalls)} overs, ${inn.runs}/${inn.wickets}`,
+      text: inn.freeHit && input.type === "noball"
+        ? `${label} — পরের বল FREE HIT · ${oversFromBalls(inn.legalBalls)} overs, ${inn.runs}/${inn.wickets}`
+        : `${label} — ${oversFromBalls(inn.legalBalls)} overs, ${inn.runs}/${inn.wickets}`,
       at: new Date().toISOString(),
     });
   }

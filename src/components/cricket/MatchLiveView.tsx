@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Match, PlayerRecord } from "@/lib/cricket/types";
+import type { Match, MatchScheduleItem, PlayerRecord, PlayerTeamReport } from "@/lib/cricket/types";
 import { BroadcastScoreLine } from "./BroadcastScoreLine";
 import { Scorecard } from "./Scorecard";
 import { VideoEmbed } from "./VideoEmbed";
@@ -19,6 +19,8 @@ type Props = {
 export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName }: Props) {
   const [match, setMatch] = useState(initialMatch);
   const [records, setRecords] = useState<PlayerRecord[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<MatchScheduleItem[]>([]);
+  const [playerTeamReports, setPlayerTeamReports] = useState<PlayerTeamReport[]>([]);
   const [tab, setTab] = useState<"card" | "comments">("card");
 
   useEffect(() => {
@@ -30,6 +32,8 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
         const data = await res.json();
         if (alive && data.match) setMatch(data.match);
         if (alive && data.playerRecords) setRecords(data.playerRecords);
+        if (alive && data.upcomingMatches) setUpcomingMatches(data.upcomingMatches);
+        if (alive && data.playerTeamReports) setPlayerTeamReports(data.playerTeamReports);
       } catch {
         /* ignore */
       }
@@ -50,7 +54,14 @@ export function MatchLiveView({ matchId, slug, accent, initialMatch, tenantName 
       </header>
 
       <div className="pl-broadcast-stack">
-        <VideoEmbed url={match.videoUrl} title={match.title} match={match} records={records} />
+        <VideoEmbed
+          url={match.videoUrl}
+          title={match.title}
+          match={match}
+          records={records}
+          upcomingMatches={upcomingMatches}
+          playerTeamReports={playerTeamReports}
+        />
         <BroadcastScoreLine match={match} accent={accent} />
       </div>
 

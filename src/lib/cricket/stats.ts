@@ -1,4 +1,4 @@
-import type { Match, PlayerRecord, PlayerRole } from "./types";
+import type { Match, MatchScheduleItem, PlayerRecord, PlayerRole, PlayerTeamReport, PlayerTeamSplitRow, TeamStanding } from "./types";
 
 function emptyRecord(id: string, name: string, role: PlayerRole): PlayerRecord {
   return {
@@ -159,4 +159,249 @@ export function roleLabelBn(role: PlayerRole): string {
   if (role === "bowler") return "বোলার";
   if (role === "allrounder") return "অলরাউন্ডার";
   return "উইকেটকিপার";
+}
+
+function normName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export function matchOutcome(match: Match): "a" | "b" | "tie" | "nr" {
+  if (match.status !== "completed") return "nr";
+  const first = match.innings[0];
+  const second = match.innings[1];
+  if (!first || !second) return "nr";
+  if (second.runs > first.runs) return second.battingTeam;
+  if (second.runs < first.runs) return first.battingTeam;
+  return "tie";
+}
+
+type SplitAcc = PlayerTeamSplitRow;
+
+function emptySplit(teamName: string, teamShort: string): SplitAcc {
+  return { teamName, teamShort, matches: 0, runs: 0, balls: 0, wickets: 0, bowlBalls: 0, bowlRuns: 0 };
+}
+
+function bumpSplit(
+  map: Map<string, SplitAcc>,
+  teamName: string,
+  teamShort: string,
+  patch: Partial<SplitAcc> & { played?: boolean },
+) {
+  const key = normName(teamName) || teamName;
+  const row = map.get(key) || emptySplit(teamName, teamShort);
+  row.teamName = teamName || row.teamName;
+  row.teamShort = teamShort || row.teamShort;
+  if (patch.played) row.matches += 1;
+  row.runs += patch.runs || 0;
+  row.balls += patch.balls || 0;
+  row.wickets += patch.wickets || 0;
+  row.bowlBalls += patch.bowlBalls || 0;
+  row.bowlRuns += patch.bowlRuns || 0;
+  map.set(key, row);
+}
+
+function matchWasPlayed(match: Match): boolean {
+  if (match.status === "completed" || match.status === "live") return true;
+  return match.innings.some((inn) => inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0);
+}
+
+/** Player batting/bowling totals vs each team and while playing for each team. */
+export function buildPlayerTeamReports(matches: Match[]): PlayerTeamReport[] {
+  type Acc = {
+    key: string;
+    name: string;
+    role: PlayerRole;
+    vs: Map<string, SplitAcc>;
+    forTeams: Map<string, SplitAcc>;
+  };
+  const players = new Map<string, Acc>();
+
+  function ensurePlayer(name: string, role: PlayerRole): Acc | null {
+    const key = normName(name);
+    if (!key) return null;
+    const existing = players.get(key);
+    if (existing) {
+      existing.name = name;
+      existing.role = role || existing.role;
+      return existing;
+    }
+    const created: Acc = { key, name, role, vs: new Map(), forTeams: new Map() };
+    players.set(key, created);
+    return created;
+  }
+
+  for (const match of matches) {
+    if (!matchWasPlayed(match) && match.status === "upcoming") continue;
+    const counted = new Set<string>();
+    for (const p of match.players) {
+      const acc = ensurePlayer(p.name, p.role);
+      if (!acc) continue;
+      if (!matchWasPlayed(match)) continue;
+      if (counted.has(acc.key)) continue;
+      counted.add(acc.key);
+      const forTeam = p.team === "a" ? match.teamA : match.teamB;
+      const vsTeam = p.team === "a" ? match.teamB : match.teamA;
+      bumpSplit(acc.forTeams, forTeam.name, forTeam.short, { played: true });
+      bumpSplit(acc.vs, vsTeam.name, vsTeam.short, { played: true });
+    }
+
+    for (const inn of match.innings) {
+      const batting = inn.battingTeam === "a" ? match.teamA : match.teamB;
+      const bowling = inn.battingTeam === "a" ? match.teamB : match.teamA;
+      for (const b of inn.batters) {
+        const acc = ensurePlayer(b.name, "batter");
+        if (!acc) continue;
+        bumpSplit(acc.forTeams, batting.name, batting.short, { runs: b.runs, balls: b.balls });
+        bumpSplit(acc.vs, bowling.name, bowling.short, { runs: b.runs, balls: b.balls });
+      }
+      for (const b of inn.bowlers) {
+        const acc = ensurePlayer(b.name, "bowler");
+        if (!acc) continue;
+        bumpSplit(acc.forTeams, bowling.name, bowling.short, {
+          wickets: b.wickets,
+          bowlBalls: b.balls,
+          bowlRuns: b.runs,
+        });
+        bumpSplit(acc.vs, batting.name, batting.short, {
+          wickets: b.wickets,
+          bowlBalls: b.balls,
+          bowlRuns: b.runs,
+        });
+      }
+    }
+  }
+
+  return Array.from(players.values())
+    .map((p) => ({
+      key: p.key,
+      name: p.name,
+      role: p.role,
+      vs: Array.from(p.vs.values()).sort((a, b) => b.runs - a.runs || b.wickets - a.wickets),
+      forTeams: Array.from(p.forTeams.values()).sort((a, b) => b.runs - a.runs || b.wickets - a.wickets),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "bn"));
+}
+
+export function findPlayerTeamReport(
+  reports: PlayerTeamReport[],
+  player: { id?: string; name: string } | undefined,
+): PlayerTeamReport | undefined {
+  if (!player) return undefined;
+  const key = normName(player.name);
+  return reports.find((r) => r.key === key);
+}
+
+/** Points-table style team report for a tournament/club. */
+export function buildTeamStandings(matches: Match[]): TeamStanding[] {
+  const map = new Map<string, TeamStanding>();
+
+  function ensure(name: string, short: string): TeamStanding {
+    const key = normName(name);
+    const existing = map.get(key);
+    if (existing) {
+      if (short && !existing.short) existing.short = short;
+      return existing;
+    }
+    const created: TeamStanding = {
+      name,
+      short,
+      matches: 0,
+      won: 0,
+      lost: 0,
+      tied: 0,
+      nr: 0,
+      runsFor: 0,
+      ballsFor: 0,
+      runsAgainst: 0,
+      ballsAgainst: 0,
+      wicketsTaken: 0,
+      wicketsLost: 0,
+      nrr: "0.000",
+    };
+    map.set(key, created);
+    return created;
+  }
+
+  for (const match of matches) {
+    const a = ensure(match.teamA.name, match.teamA.short);
+    const b = ensure(match.teamB.name, match.teamB.short);
+
+    for (const inn of match.innings) {
+      const bat = inn.battingTeam === "a" ? a : b;
+      const bowl = inn.battingTeam === "a" ? b : a;
+      bat.runsFor += inn.runs;
+      bat.ballsFor += inn.legalBalls;
+      bat.wicketsLost += inn.wickets;
+      bowl.runsAgainst += inn.runs;
+      bowl.ballsAgainst += inn.legalBalls;
+      bowl.wicketsTaken += inn.wickets;
+    }
+
+    if (match.status !== "completed") continue;
+    a.matches += 1;
+    b.matches += 1;
+    const outcome = matchOutcome(match);
+    if (outcome === "a") {
+      a.won += 1;
+      b.lost += 1;
+    } else if (outcome === "b") {
+      b.won += 1;
+      a.lost += 1;
+    } else if (outcome === "tie") {
+      a.tied += 1;
+      b.tied += 1;
+    } else {
+      a.nr += 1;
+      b.nr += 1;
+    }
+  }
+
+  return Array.from(map.values())
+    .map((t) => {
+      const rf = t.ballsFor > 0 ? t.runsFor / (t.ballsFor / 6) : 0;
+      const ra = t.ballsAgainst > 0 ? t.runsAgainst / (t.ballsAgainst / 6) : 0;
+      t.nrr = (rf - ra).toFixed(3);
+      return t;
+    })
+    .sort((x, y) => y.won - x.won || Number(y.nrr) - Number(x.nrr) || x.name.localeCompare(y.name, "bn"));
+}
+
+export function toScheduleItem(match: Match): MatchScheduleItem {
+  return {
+    id: match.id,
+    title: match.title,
+    teamA: match.teamA,
+    teamB: match.teamB,
+    venue: match.venue,
+    format: match.format,
+    status: match.status,
+    scheduledAt: match.scheduledAt,
+  };
+}
+
+export function upcomingSchedule(matches: Match[], excludeId?: string): MatchScheduleItem[] {
+  return matches
+    .filter((m) => m.id !== excludeId && m.status === "upcoming")
+    .sort((a, b) => {
+      const ta = +new Date(a.scheduledAt || a.createdAt);
+      const tb = +new Date(b.scheduledAt || b.createdAt);
+      return ta - tb;
+    })
+    .map(toScheduleItem)
+    .slice(0, 5);
+}
+
+export function batterAverage(runs: number, innings: number): string {
+  if (innings <= 0) return "—";
+  return (runs / innings).toFixed(1);
+}
+
+export function strikeRate(runs: number, balls: number): string {
+  if (balls <= 0) return "—";
+  return ((runs / balls) * 100).toFixed(1);
+}
+
+export function bowlEconomy(runs: number, balls: number): string {
+  if (balls <= 0) return "—";
+  return ((runs * 6) / balls).toFixed(2);
 }

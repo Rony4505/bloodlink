@@ -1,9 +1,9 @@
 "use client";
 
-import { formatOvers, formatScore, runRate } from "@/lib/cricket/format";
+import { formatOvers, formatScheduleWhen, formatScore, runRate } from "@/lib/cricket/format";
 import { battingXiRows, bowlingXiRows } from "@/lib/cricket/lineup";
-import { roleLabel, roleLabelBn } from "@/lib/cricket/stats";
-import type { Match, PlayerRecord } from "@/lib/cricket/types";
+import { findPlayerTeamReport, roleLabel, roleLabelBn } from "@/lib/cricket/stats";
+import type { Match, MatchScheduleItem, PlayerRecord, PlayerTeamReport } from "@/lib/cricket/types";
 
 function sr(runs: number, balls: number): string {
   if (balls <= 0) return "0.0";
@@ -17,32 +17,109 @@ function bowlFig(balls: number, maidens: number, runs: number, wickets: number):
 type Props = {
   match: Match;
   records?: PlayerRecord[];
+  upcomingMatches?: MatchScheduleItem[];
+  playerTeamReports?: PlayerTeamReport[];
 };
 
 /** International-style performance graphic overlaid on the live stream */
-export function StreamGraphicOverlay({ match, records = [] }: Props) {
+export function StreamGraphicOverlay({
+  match,
+  records = [],
+  upcomingMatches = [],
+  playerTeamReports = [],
+}: Props) {
   const kind = match.graphic?.kind || "hidden";
   if (kind === "hidden") return null;
 
   const inn = match.innings[match.currentInningsIndex];
-  if (!inn) return null;
-
-  const batting = inn.battingTeam === "a" ? match.teamA : match.teamB;
-  const bowling = inn.battingTeam === "a" ? match.teamB : match.teamA;
-  const striker = inn.batters.find((b) => b.playerId === inn.strikerId);
-  const nonStriker = inn.batters.find((b) => b.playerId === inn.nonStrikerId);
-  const bowler = inn.bowlers.find((b) => b.playerId === inn.bowlerId);
+  const batting = inn ? (inn.battingTeam === "a" ? match.teamA : match.teamB) : match.teamA;
+  const bowling = inn ? (inn.battingTeam === "a" ? match.teamB : match.teamA) : match.teamB;
+  const striker = inn?.batters.find((b) => b.playerId === inn.strikerId);
+  const nonStriker = inn?.batters.find((b) => b.playerId === inn.nonStrikerId);
+  const bowler = inn?.bowlers.find((b) => b.playerId === inn.bowlerId);
   const partnershipRuns = (striker?.runs || 0) + (nonStriker?.runs || 0);
   const partnershipBalls = (striker?.balls || 0) + (nonStriker?.balls || 0);
 
-  const batRows = battingXiRows(match, inn);
-  const bowlRows = bowlingXiRows(match, inn);
-  const extrasTotal = inn.extras.wd + inn.extras.nb + inn.extras.b + inn.extras.lb;
+  const batRows = inn ? battingXiRows(match, inn) : [];
+  const bowlRows = inn ? bowlingXiRows(match, inn) : [];
+  const extrasTotal = inn ? inn.extras.wd + inn.extras.nb + inn.extras.b + inn.extras.lb : 0;
 
   const focusPlayer = match.players.find((p) => p.id === match.graphic?.playerId);
-  const focusBat = inn.batters.find((b) => b.playerId === match.graphic?.playerId);
-  const focusBowl = inn.bowlers.find((b) => b.playerId === match.graphic?.playerId);
+  const focusBat = inn?.batters.find((b) => b.playerId === match.graphic?.playerId);
+  const focusBowl = inn?.bowlers.find((b) => b.playerId === match.graphic?.playerId);
   const career = records.find((r) => r.id === match.graphic?.playerId);
+  const teamSplit = findPlayerTeamReport(playerTeamReports, focusPlayer);
+
+  if (kind === "schedule") {
+    return (
+      <div className="pl-graphic-layer" aria-live="polite">
+        <aside className="pl-graphic pl-graphic-xi pl-graphic-schedule pl-graphic-glow animate-scorecard">
+          <p className="pl-graphic-label">NEXT MATCH</p>
+          {upcomingMatches.length === 0 ? (
+            <p className="pl-graphic-note">কোনো next match schedule নেই</p>
+          ) : (
+            <ul className="pl-schedule-list">
+              {upcomingMatches.map((m, i) => (
+                <li key={m.id} className={i === 0 ? "on" : undefined}>
+                  <div>
+                    <strong>{m.teamA.short} vs {m.teamB.short}</strong>
+                    <span>{m.teamA.name} vs {m.teamB.name}</span>
+                    <small>{m.title}{m.venue ? ` · ${m.venue}` : ""} · {m.format}</small>
+                  </div>
+                  <em>{formatScheduleWhen(m.scheduledAt)}</em>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
+    );
+  }
+
+  if (kind === "player_teams" && focusPlayer) {
+    return (
+      <div className="pl-graphic-layer" aria-live="polite">
+        <aside className="pl-graphic pl-graphic-xi pl-graphic-glow animate-scorecard">
+          <p className="pl-graphic-label">PLAYER vs TEAMS</p>
+          <h3>{focusPlayer.name}</h3>
+          <p className={`pl-role-pill pl-role-${focusPlayer.role}`}>{roleLabelBn(focusPlayer.role)}</p>
+          {teamSplit && teamSplit.vs.length > 0 ? (
+            <table className="pl-xi-table">
+              <thead>
+                <tr>
+                  <th>দলের বিপক্ষে</th>
+                  <th>M</th>
+                  <th>Runs</th>
+                  <th>Wkts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamSplit.vs.map((row) => (
+                  <tr key={row.teamName}>
+                    <td>{row.teamName} <small>({row.teamShort})</small></td>
+                    <td>{row.matches}</td>
+                    <td>{row.runs}{row.balls ? ` (${row.balls})` : ""}</td>
+                    <td>{row.wickets}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="pl-graphic-note">এই টুর্নামেন্টে এখনো দলভিত্তিক রেকর্ড নেই</p>
+          )}
+          {teamSplit && teamSplit.forTeams.length > 0 ? (
+            <div className="pl-graphic-foot">
+              {teamSplit.forTeams.map((row) => (
+                <span key={row.teamName}>{row.teamShort}: {row.runs} রান, {row.wickets} উইকেট</span>
+              ))}
+            </div>
+          ) : null}
+        </aside>
+      </div>
+    );
+  }
+
+  if (!inn) return null;
 
   return (
     <div className="pl-graphic-layer" aria-live="polite">

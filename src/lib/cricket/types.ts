@@ -64,6 +64,8 @@ export type Innings = {
   oversLog: string[];
   currentOverBalls: string[];
   completed: boolean;
+  /** Next delivery is a free hit (after a no-ball in limited overs). */
+  freeHit?: boolean;
 };
 
 export type BallEvent = {
@@ -87,13 +89,62 @@ export type GraphicKind =
   | "batting"
   | "bowling"
   | "teams"
-  | "player";
+  | "player"
+  | "player_teams"
+  | "schedule";
 
 export type BroadcastGraphic = {
   kind: GraphicKind;
-  /** For kind=player — show this player's full performance */
+  /** For kind=player / player_teams — show this player's full performance */
   playerId?: string;
   updatedAt: string;
+};
+
+export type MatchScheduleItem = {
+  id: string;
+  title: string;
+  teamA: { name: string; short: string };
+  teamB: { name: string; short: string };
+  venue: string;
+  format: MatchFormat;
+  status: MatchStatus;
+  scheduledAt?: string;
+};
+
+export type PlayerTeamSplitRow = {
+  teamName: string;
+  teamShort: string;
+  matches: number;
+  runs: number;
+  balls: number;
+  wickets: number;
+  bowlBalls: number;
+  bowlRuns: number;
+};
+
+export type PlayerTeamReport = {
+  key: string;
+  name: string;
+  role: PlayerRole;
+  vs: PlayerTeamSplitRow[];
+  forTeams: PlayerTeamSplitRow[];
+};
+
+export type TeamStanding = {
+  name: string;
+  short: string;
+  matches: number;
+  won: number;
+  lost: number;
+  tied: number;
+  nr: number;
+  runsFor: number;
+  ballsFor: number;
+  runsAgainst: number;
+  ballsAgainst: number;
+  wicketsTaken: number;
+  wicketsLost: number;
+  nrr: string;
 };
 
 /** Lifetime / cumulative stats across matches for a tenant */
@@ -131,6 +182,8 @@ export type Match = {
   events: BallEvent[];
   commentary: { id: string; text: string; at: string }[];
   graphic?: BroadcastGraphic;
+  /** Kickoff time for upcoming matches (ISO). Used on stream schedule graphic. */
+  scheduledAt?: string;
   createdAt: string;
   updatedAt: string;
 };

@@ -2,6 +2,7 @@ import { emptyInnings, newId } from "@/lib/cricket/engine";
 import { tenantAccessOk } from "@/lib/cricket/format";
 import { fail, ok, slugify } from "@/lib/cricket/http";
 import { makeXi } from "@/lib/cricket/lineup";
+import { buildPlayerTeamReports, buildTeamStandings } from "@/lib/cricket/stats";
 import {
   findTenantBySlug,
   matchesForTenant,
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
   if (!tenant) return fail("ক্লাব পাওয়া যায়নি", 404);
   if (!tenantAccessOk(tenant)) return fail("রেন্ট মেয়াদ শেষ বা নিষ্ক্রিয়", 403);
 
-  const matches = matchesForTenant(store, tenant.id).map((m) => ({
+  const tenantMatches = matchesForTenant(store, tenant.id);
+  const matches = tenantMatches.map((m) => ({
     id: m.id,
     title: m.title,
     format: m.format,
@@ -44,6 +46,7 @@ export async function GET(request: Request) {
     teamA: m.teamA,
     teamB: m.teamB,
     updatedAt: m.updatedAt,
+    scheduledAt: m.scheduledAt,
     innings: m.innings.map((inn) => ({
       battingTeam: inn.battingTeam,
       runs: inn.runs,
@@ -55,7 +58,13 @@ export async function GET(request: Request) {
     target: m.target,
   }));
 
-  return ok({ tenant: publicTenant(tenant), matches });
+  return ok({
+    tenant: publicTenant(tenant),
+    matches,
+    playerRecords: store.playerRecords?.[tenant.id] || [],
+    playerTeamReports: buildPlayerTeamReports(tenantMatches),
+    teamStandings: buildTeamStandings(tenantMatches),
+  });
 }
 
 export async function POST(request: Request) {
@@ -82,6 +91,7 @@ export async function POST(request: Request) {
     teamBName?: string;
     teamBShort?: string;
     battingFirst?: "a" | "b";
+    scheduledAt?: string;
   };
 
   const action = body.action || "create_tenant";
@@ -149,7 +159,13 @@ export async function POST(request: Request) {
     if (!tenant) return fail("ক্লাব পাওয়া যায়নি", 404);
     if (!tenantAccessOk(tenant)) return fail("রেন্ট মেয়াদ শেষ বা নিষ্ক্রিয়", 403);
     if (body.tenantPin !== tenant.pin) return fail("পিন ভুল", 401);
-    return ok({ tenant: publicTenant(tenant), matches: matchesForTenant(store, tenant.id) });
+    return ok({
+      tenant: publicTenant(tenant),
+      matches: matchesForTenant(store, tenant.id),
+      playerRecords: store.playerRecords?.[tenant.id] || [],
+      playerTeamReports: buildPlayerTeamReports(matchesForTenant(store, tenant.id)),
+      teamStandings: buildTeamStandings(matchesForTenant(store, tenant.id)),
+    });
   }
 
   if (action === "create_match") {
@@ -224,6 +240,7 @@ export async function POST(request: Request) {
         },
       ],
       graphic: { kind: "hidden", updatedAt: new Date().toISOString() },
+      scheduledAt: (body.scheduledAt || "").trim() || undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

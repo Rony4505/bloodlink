@@ -36,6 +36,11 @@ export function BroadcastScoreLine({ match, accent }: { match: Match; accent?: s
         <span className={`pl-scoreline-live pl-status-${match.status}`}>
           {match.status === "live" ? "● LIVE" : statusLabel(match.status)}
         </span>
+        {inn?.freeHit ? (
+          <div className="pl-scoreline-freehit" aria-live="assertive">
+            FREE HIT
+          </div>
+        ) : null}
 
         <div className="pl-scoreline-score">
           <strong className="pl-scoreline-team">{batting.short}</strong>
@@ -77,10 +82,11 @@ export function BroadcastScoreLine({ match, accent }: { match: Match; accent?: s
         <div className="pl-scoreline-balls" aria-label="This over">
           {overBalls.length === 0 ? <em className="empty">—</em> : null}
           {overBalls.map((b, i) => (
-            <em key={`${b}-${i}`} className={b === "W" || b.startsWith("W") ? "is-w" : b === "4" || b === "6" ? "is-boundary" : undefined}>
+            <em key={`${b}-${i}`} className={b === "W" || b.startsWith("W") ? "is-w" : b === "4" || b === "6" ? "is-boundary" : b.startsWith("NB") ? "is-nb" : undefined}>
               {b}
             </em>
           ))}
+          {inn?.freeHit ? <em className="is-freehit">FH</em> : null}
         </div>
       </div>
     </div>
