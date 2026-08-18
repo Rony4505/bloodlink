@@ -93,9 +93,10 @@ export function TournamentSetup({ slug, pin, tenant, matches, onUpdated, onMsg }
   const [editDraft, setEditDraft] = useState<FixtureDraft & { matchId: string } | null>(null);
 
   useEffect(() => {
-    if (!tenant) return;
-    setDetails(tenant);
-  }, [tenant]);
+    if (typeof window === "undefined") return;
+    const tabParam = new URLSearchParams(window.location.search).get("tab");
+    if (tabParam === "fixtures" || tabParam === "details") setTab(tabParam);
+  }, []);
 
   const upcoming = useMemo(
     () =>

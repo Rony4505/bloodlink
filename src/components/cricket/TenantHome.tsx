@@ -55,8 +55,11 @@ export function TenantHome({ slug }: { slug: string }) {
   useEffect(() => {
     load();
     const saved = sessionStorage.getItem(`pl-pin-${slug}`);
-    if (saved) {
-      setPin(saved);
+    const qp = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("pin") : null;
+    const initialPin = qp || saved || "";
+    if (initialPin) {
+      setPin(initialPin);
+      if (qp) sessionStorage.setItem(`pl-pin-${slug}`, qp);
       setAuthed(true);
     }
   }, [slug]);
