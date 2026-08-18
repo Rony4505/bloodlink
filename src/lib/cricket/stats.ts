@@ -144,7 +144,9 @@ export function recomputeTenantRecords(matches: Match[], tenantId: string): Play
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => b.runs - a.runs || b.wickets - a.wickets);
+  return Array.from(map.values())
+    .filter((r) => r.matches > 0 || r.runs > 0 || r.wickets > 0 || r.balls > 0 || r.bowlBalls > 0)
+    .sort((a, b) => b.runs - a.runs || b.wickets - a.wickets);
 }
 
 export function roleLabel(role: PlayerRole): string {
@@ -323,6 +325,7 @@ export function buildTeamStandings(matches: Match[]): TeamStanding[] {
   }
 
   for (const match of matches) {
+    if (!matchWasPlayed(match) && match.status === "upcoming") continue;
     const a = ensure(match.teamA.name, match.teamA.short);
     const b = ensure(match.teamB.name, match.teamB.short);
 
