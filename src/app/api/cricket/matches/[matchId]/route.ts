@@ -28,8 +28,17 @@ export async function GET(_request: Request, ctx: Ctx) {
   const tenant = findTenantById(store, match.tenantId);
   if (!tenant || !tenantAccessOk(tenant)) return fail("অ্যাক্সেস নেই", 403);
   const tenantMatches = matchesForTenant(store, tenant.id);
+  const upcoming = upcomingSchedule(tenantMatches, match.id);
   return ok({
-    match,
+    match: {
+      ...match,
+      graphic: {
+        kind: match.graphic?.kind || "hidden",
+        playerId: match.graphic?.playerId,
+        schedule: upcoming,
+        updatedAt: match.graphic?.updatedAt || match.updatedAt,
+      },
+    },
     tenant: {
       slug: tenant.slug,
       name: tenant.name,
@@ -38,7 +47,7 @@ export async function GET(_request: Request, ctx: Ctx) {
     playerRecords: store.playerRecords?.[tenant.id] || [],
     playerTeamReports: buildPlayerTeamReports(tenantMatches),
     teamStandings: buildTeamStandings(tenantMatches),
-    upcomingMatches: upcomingSchedule(tenantMatches, match.id),
+    upcomingMatches: upcoming,
   });
 }
 

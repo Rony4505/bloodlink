@@ -14,7 +14,9 @@ export function ScorerPageClient({ slug, matchId }: { slug: string; matchId: str
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(`pl-pin-${slug}`) || "";
+    const qPin = new URLSearchParams(window.location.search).get("pin") || "";
+    const saved = qPin || sessionStorage.getItem(`pl-pin-${slug}`) || "";
+    if (qPin) sessionStorage.setItem(`pl-pin-${slug}`, qPin);
     setPin(saved);
     fetch(`/api/cricket/matches/${matchId}`)
       .then(async (r) => {

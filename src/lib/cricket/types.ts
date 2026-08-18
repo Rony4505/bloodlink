@@ -97,6 +97,8 @@ export type BroadcastGraphic = {
   kind: GraphicKind;
   /** For kind=player / player_teams — show this player's full performance */
   playerId?: string;
+  /** Filled on GET for kind=schedule */
+  schedule?: MatchScheduleItem[];
   updatedAt: string;
 };
 

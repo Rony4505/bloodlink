@@ -383,8 +383,13 @@ export function toScheduleItem(match: Match): MatchScheduleItem {
 }
 
 export function upcomingSchedule(matches: Match[], excludeId?: string): MatchScheduleItem[] {
+  const now = Date.now();
   return matches
-    .filter((m) => m.id !== excludeId && m.status === "upcoming")
+    .filter((m) => m.id !== excludeId && m.status !== "live")
+    .filter((m) => {
+      if (m.status === "upcoming") return true;
+      return Boolean(m.scheduledAt && +new Date(m.scheduledAt) > now);
+    })
     .sort((a, b) => {
       const ta = +new Date(a.scheduledAt || a.createdAt);
       const tb = +new Date(b.scheduledAt || b.createdAt);

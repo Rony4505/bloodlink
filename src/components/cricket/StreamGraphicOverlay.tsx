@@ -49,17 +49,20 @@ export function StreamGraphicOverlay({
   const focusBowl = inn?.bowlers.find((b) => b.playerId === match.graphic?.playerId);
   const career = records.find((r) => r.id === match.graphic?.playerId);
   const teamSplit = findPlayerTeamReport(playerTeamReports, focusPlayer);
+  const schedule = (upcomingMatches && upcomingMatches.length > 0)
+    ? upcomingMatches
+    : (match.graphic?.schedule || []);
 
   if (kind === "schedule") {
     return (
       <div className="pl-graphic-layer" aria-live="polite">
         <aside className="pl-graphic pl-graphic-xi pl-graphic-schedule pl-graphic-glow animate-scorecard">
           <p className="pl-graphic-label">NEXT MATCH</p>
-          {upcomingMatches.length === 0 ? (
+          {schedule.length === 0 ? (
             <p className="pl-graphic-note">কোনো next match schedule নেই</p>
           ) : (
             <ul className="pl-schedule-list">
-              {upcomingMatches.map((m, i) => (
+              {schedule.map((m, i) => (
                 <li key={m.id} className={i === 0 ? "on" : undefined}>
                   <div>
                     <strong>{m.teamA.short} vs {m.teamB.short}</strong>
