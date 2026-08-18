@@ -25,6 +25,7 @@
 ## ফিচার
 
 ### দর্শক
+- **Premium landing** (`/cricket`) — cinematic first page, live product preview, club rental CTA
 - লাইভ স্ট্রিমের **নিচে TV-স্টাইল স্কোর লাইন** (international match এর মতো)
 - **No ball** হলে স্কোরলাইনে অটো **FREE HIT** দেখায় (পরের লিগ্যাল বল পর্যন্ত)
 - স্ট্রিমের **ভিতরে on-video গ্রাফিক্স** — Batter / Bowler / Partnership / Team Batting / Bowling / Teams / **Player vs Teams** / **Next match schedule**
