@@ -63,20 +63,27 @@ export function ProductOrderPanel({ product }: { product: Product }) {
 
   const deliveryNote = useMemo(() => {
     const rules = settings?.deliveryRules?.filter((r) => r.active) ?? [];
-    const nationwide = rules.find((r) => r.district === "*");
-    const dhaka = rules.find((r) => r.district === "Dhaka");
-    const rateParts: string[] = [];
-    if (dhaka?.fee != null) {
-      rateParts.push(`ঢাকা ${formatBdt(dhaka.fee)}`);
+    if (!rules.length) return settings?.supportNote || copy.cart.freeShipping;
+
+    const defaultRule = rules.find((r) => r.district === "*");
+    const areaRules = rules.filter((r) => r.district !== "*");
+    const parts: string[] = [];
+
+    for (const rule of areaRules) {
+      const label =
+        locale === "bn" && rule.district === "Dhaka"
+          ? "ঢাকা"
+          : rule.district;
+      parts.push(`${label}: ${formatBdt(rule.fee)}`);
     }
-    if (nationwide?.fee != null) {
-      rateParts.push(`অন্যান্য জেলা ${formatBdt(nationwide.fee)}`);
+
+    if (defaultRule) {
+      const defaultLabel = locale === "bn" ? "অন্যান্য জেলা" : "Other areas";
+      parts.push(`${defaultLabel}: ${formatBdt(defaultRule.fee)}`);
     }
-    if (rateParts.length) {
-      return `ডেলিভারি রেট (Admin সেটিং): ${rateParts.join(" · ")}। Checkout-এ delivery area select করলে exact charge যোগ হবে — area select না করলে ৳0 দেখাবে।`;
-    }
-    return settings?.supportNote || copy.cart.freeShipping;
-  }, [settings]);
+
+    return parts.join(" · ");
+  }, [settings, locale]);
 
   function addToCart(redirect?: "checkout") {
     if (!inStock || quantity > product.stock) return;
