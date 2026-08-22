@@ -5,9 +5,11 @@ export function calculateDeliveryFee(
   district: string,
   subtotalAfterDiscount: number,
 ): number {
+  if (!district?.trim()) return 0;
+
   const rules = settings.deliveryRules.filter((rule) => rule.active);
   const districtRule = rules.find(
-    (rule) => rule.district.toLowerCase() === district.toLowerCase(),
+    (rule) => rule.district.toLowerCase() === district.trim().toLowerCase(),
   );
   const fallbackRule = rules.find((rule) => rule.district === "*");
   const rule = districtRule ?? fallbackRule;
