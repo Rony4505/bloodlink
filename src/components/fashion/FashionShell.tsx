@@ -1,5 +1,6 @@
 import { FashionFooter } from "./FashionFooter";
 import { FashionHeader } from "./FashionHeader";
+import { OrderBottomNav } from "./OrderBottomNav";
 import { SiteEntryPopup } from "./SiteEntryPopup";
 import { TopLanguageBar } from "./LanguageSwitcher";
 import { ChatSupportWidget } from "./ChatSupportWidget";
@@ -12,7 +13,7 @@ export function FashionShell({
   headerVariant?: "light" | "dark";
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-[#f7f7f5] text-[#241815]">
+    <div className="flex min-h-screen flex-col bg-[#f7f7f5] pb-20 text-[#241815] md:pb-0">
       <TopLanguageBar />
       <ChatSupportWidget />
       <SiteEntryPopup />
@@ -23,6 +24,7 @@ export function FashionShell({
       </div>
       <div className="flex-1">{children}</div>
       <FashionFooter />
+      <OrderBottomNav />
     </div>
   );
 }

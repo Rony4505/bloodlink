@@ -10,7 +10,7 @@ import { PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { TopLanguageBar } from "@/components/fashion/LanguageSwitcher";
 import { ChatSupportWidget } from "@/components/fashion/ChatSupportWidget";
 import { AnnouncementBar } from "@/components/fashion/AnnouncementBar";
-import { SiteEntryPopup } from "@/components/fashion/SiteEntryPopup";
+import { OrderBottomNav } from "@/components/fashion/OrderBottomNav";
 import { buildCarouselSlides } from "@/lib/fashion/carousel-slides";
 import { getCategories } from "@/lib/fashion/categories-server";
 import {
@@ -38,7 +38,7 @@ export async function FashionHomePage() {
   const displayCoupons = settings.showCouponsOnHome !== false ? coupons : [];
 
   return (
-    <main className="min-h-screen bg-[#faf8f6] text-[#4a3348]">
+    <main className="min-h-screen bg-[#faf8f6] pb-20 text-[#4a3348] md:pb-0">
       <TopLanguageBar />
       <ChatSupportWidget />
       <SiteEntryPopup />
@@ -73,6 +73,7 @@ export async function FashionHomePage() {
       <HomeStatsStrip settings={settings} />
       <HomeLowerSections settings={settings} />
       <FashionFooter />
+      <OrderBottomNav />
     </main>
   );
 }
