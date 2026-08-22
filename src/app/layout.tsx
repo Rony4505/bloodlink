@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
+import { SiteJsonLd } from "@/components/SiteJsonLd";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import { isFashionMode } from "@/lib/app-mode";
@@ -92,11 +93,12 @@ export async function generateMetadata(): Promise<Metadata> {
     ],
     alternates: { canonical: "/" },
     icons: {
+      // Prefer square PNG ≥48px for Google Search favicon (icon-192 first).
       icon: [
-        { url: "/favicon.ico", sizes: "any" },
-        { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
         { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icon", type: "image/png" },
+        { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
+        { url: "/icon", type: "image/png", sizes: "192x192" },
+        { url: "/favicon.ico", sizes: "any" },
       ],
       apple: [
         { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
@@ -113,8 +115,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [
         {
           url: "/bloodlink-logo.png",
-          width: 512,
-          height: 512,
+          width: 1024,
+          height: 1024,
           alt: "BloodLink BD logo",
         },
       ],
@@ -133,6 +135,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="bn" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
+        <SiteJsonLd />
         <LocaleProvider>
           <CartProvider>
             <SiteAppearanceProvider>{children}</SiteAppearanceProvider>
