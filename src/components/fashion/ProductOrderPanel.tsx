@@ -7,6 +7,7 @@ import { useCart } from "@/lib/fashion/cart-context";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { copy } from "@/lib/fashion/copy";
+import { formatBdt } from "@/lib/fashion/format";
 
 function formatPhoneLink(raw?: string) {
   const digits = (raw ?? "").replace(/\D/g, "");
@@ -64,10 +65,17 @@ export function ProductOrderPanel({ product }: { product: Product }) {
     const rules = settings?.deliveryRules?.filter((r) => r.active) ?? [];
     const nationwide = rules.find((r) => r.district === "*");
     const dhaka = rules.find((r) => r.district === "Dhaka");
-    const parts: string[] = [];
-    if (nationwide?.fee) parts.push(`সারা বাংলাদেশ ${nationwide.fee} টাকা ডেলিভারি চার্জ`);
-    if (dhaka?.fee) parts.push(`ঢাকার মধ্যে ${dhaka.fee} টাকা ডেলিভারি চার্জ`);
-    return parts.join(" · ") || settings?.supportNote || copy.cart.freeShipping;
+    const rateParts: string[] = [];
+    if (dhaka?.fee != null) {
+      rateParts.push(`ঢাকা ${formatBdt(dhaka.fee)}`);
+    }
+    if (nationwide?.fee != null) {
+      rateParts.push(`অন্যান্য জেলা ${formatBdt(nationwide.fee)}`);
+    }
+    if (rateParts.length) {
+      return `ডেলিভারি রেট (Admin সেটিং): ${rateParts.join(" · ")}। Checkout-এ delivery area select করলে exact charge যোগ হবে — area select না করলে ৳0 দেখাবে।`;
+    }
+    return settings?.supportNote || copy.cart.freeShipping;
   }, [settings]);
 
   function addToCart(redirect?: "checkout") {
