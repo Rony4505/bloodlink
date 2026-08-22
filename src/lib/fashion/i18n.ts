@@ -136,7 +136,21 @@ export const fashionI18n = {
       settingsPricing: "প্রাইসিং",
       settingsSeo: "SEO",
       settingsSizes: "সাইজ",
+      settingsBackup: "ব্যাকআপ",
       settingsSaveAll: "সব সেটিংস সেভ করুন",
+      backupBody:
+        "প্রোডাক্ট, অর্ডার, কাস্টমার ও সেটিংস — সব ডেটার ব্যাকআপ ডাউনলোড করুন। কম্পিউটারে সেভ রাখলে redeploy বা সমস্যায় রিস্টোর করা যাবে।",
+      backupDownload: "এখনই ব্যাকআপ ডাউনলোড",
+      backupRestoreLabel: "ব্যাকআপ ফাইল থেকে রিস্টোর",
+      backupRestoreHint:
+        "আগে সেভ করা smartcraft-backup-*.json ফাইল বেছে নিন। live ডেটা ব্যাকআপ দিয়ে replace হবে।",
+      backupRestoreButton: "ব্যাকআপ রিস্টোর",
+      backupRestoreConfirm:
+        "এই ব্যাকআপ রিস্টোর করবেন? বর্তমান live ডেটা ব্যাকআপ দিয়ে replace হবে।",
+      backupRestoreSuccess: "ব্যাকআপ সফলভাবে রিস্টোর হয়েছে",
+      backupRestoreFailed: "ব্যাকআপ রিস্টোর করা যায়নি",
+      backupRotatingHint:
+        "সার্ভার Volume-এ (/app/data/backups) প্রতিটি সেভে automatic backup রাখে — redeploy-এও ডেটা থাকবে।",
       trackSearch: "ট্র্যাকিং নম্বর দিয়ে সার্চ",
       offersSearch: "নাম / কোড / অফার / অ্যাড সার্চ",
       bangla: "বাংলা",
@@ -278,7 +292,21 @@ export const fashionI18n = {
       settingsPricing: "Pricing",
       settingsSeo: "SEO",
       settingsSizes: "Sizes",
+      settingsBackup: "Backup",
       settingsSaveAll: "Save all settings",
+      backupBody:
+        "Download a full backup of products, orders, customers, and settings. Keep a copy on your computer for disaster recovery.",
+      backupDownload: "Download backup now",
+      backupRestoreLabel: "Restore from backup file",
+      backupRestoreHint:
+        "Choose a smartcraft-backup-*.json file you saved earlier. This replaces live data with the backup.",
+      backupRestoreButton: "Restore backup",
+      backupRestoreConfirm:
+        "Restore this backup? Current live data will be replaced with the backup file.",
+      backupRestoreSuccess: "Backup restored successfully",
+      backupRestoreFailed: "Could not restore backup",
+      backupRotatingHint:
+        "The server also keeps automatic copies on the Volume (/app/data/backups) on every save.",
       trackSearch: "Search by tracking number",
       offersSearch: "Search name / code / offer / ad",
       bangla: "Bangla",
