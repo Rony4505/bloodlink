@@ -9,8 +9,12 @@ import {
   resetPgPool,
 } from "@/lib/pg-store";
 import {
+  clearSavedDatabaseUrl,
   databaseUrlHost,
+  getDatabaseUrlSource,
+  getSavedDatabaseUrl,
   hasSavedDatabaseUrl,
+  isPrivateRailwayUrl,
   normalizeDatabaseUrl,
   saveDatabaseUrl,
 } from "@/lib/runtime-env";
@@ -28,12 +32,15 @@ export async function GET() {
   const storage = await getFashionStorageHealth();
   const active = getDatabaseUrl();
   const urlConfigured = hasDatabaseUrl();
+  const urlSource = getDatabaseUrlSource();
   return NextResponse.json({
     storage,
     savedUrlOnVolume: hasSavedDatabaseUrl(),
     databaseUrlConfigured: urlConfigured,
     databaseReady: storage.backend === "postgres" && storage.postgresOk === true,
     activeHost: databaseUrlHost(active) || storage.postgresHost,
+    activeUrlSource: urlSource.source,
+    activeUrlIsPrivate: urlSource.isPrivate,
     postgresError: storage.postgresError,
     backend: storage.backend,
     productCount: storage.productCount,
@@ -60,6 +67,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (isPrivateRailwayUrl(databaseUrl)) {
+      return NextResponse.json(
+        {
+          error:
+            "railway.internal URL accept করা হয় না। Railway → Postgres → Variables → DATABASE_PUBLIC_URL (proxy.rlwy.net) copy করুন।",
+          databaseReady: false,
+          activeHost: databaseUrlHost(databaseUrl),
+        },
+        { status: 400 },
+      );
+    }
+
+    const previousSaved = getSavedDatabaseUrl();
+
     try {
       saveDatabaseUrl(databaseUrl);
     } catch (err) {
@@ -78,15 +99,31 @@ export async function POST(request: Request) {
 
     const health = await postgresFashionHealth();
     if (!health.ok) {
+      clearSavedDatabaseUrl();
+      if (previousSaved && !isPrivateRailwayUrl(previousSaved)) {
+        try {
+          saveDatabaseUrl(previousSaved);
+        } catch {
+          /* keep cleared so Railway env URL can take over */
+        }
+      }
+      await resetPgPool();
+
+      const storage = await getFashionStorageHealth();
+      const urlSource = getDatabaseUrlSource();
       return NextResponse.json(
         {
           error:
             health.error ||
             "Could not connect to Postgres. Use DATABASE_PUBLIC_URL (proxy.rlwy.net).",
           activeHost: health.host,
-          storage: await getFashionStorageHealth(),
+          storage,
           savedUrlOnVolume: hasSavedDatabaseUrl(),
-          databaseReady: false,
+          databaseReady: storage.backend === "postgres" && storage.postgresOk === true,
+          activeUrlSource: urlSource.source,
+          activeUrlIsPrivate: urlSource.isPrivate,
+          backend: storage.backend,
+          postgresError: storage.postgresError,
         },
         { status: 400 },
       );
