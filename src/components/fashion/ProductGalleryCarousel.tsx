@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getProductImages } from "@/lib/fashion/product-images";
 import type { Product } from "@/lib/fashion/types";
 import { ProductImage } from "./ProductImage";
+
+const AUTO_SCROLL_MS = 2500;
+const SLIDE_TRANSITION_MS = 700;
 
 function SlideDots({
   count,
@@ -30,6 +33,7 @@ function SlideDots({
           type="button"
           aria-label={`Image ${imageIndex + 1}`}
           onClick={(event) => {
+            event.preventDefault();
             event.stopPropagation();
             onSelect(imageIndex);
           }}
@@ -55,6 +59,7 @@ function ImageSlides({
   onIndexChange,
   className,
   showArrows,
+  compactArrows,
   onImageClick,
   onSwipe,
 }: {
@@ -64,6 +69,7 @@ function ImageSlides({
   onIndexChange: (next: number) => void;
   className?: string;
   showArrows?: boolean;
+  compactArrows?: boolean;
   onImageClick?: () => void;
   onSwipe?: (delta: number) => void;
 }) {
@@ -82,12 +88,10 @@ function ImageSlides({
       onClick={onImageClick}
     >
       <div
-        className="flex h-full w-full transition-transform duration-700 ease-in-out will-change-transform"
+        className="flex h-full w-full ease-in-out will-change-transform"
         style={{
-          transform:
-            images.length > 1
-              ? `translateX(-${(index * 100) / images.length}%)`
-              : undefined,
+          transition: `transform ${SLIDE_TRANSITION_MS}ms ease-in-out`,
+          transform: `translateX(-${index * 100}%)`,
         }}
       >
         {images.map((src, imageIndex) => (
@@ -107,8 +111,13 @@ function ImageSlides({
           <button
             type="button"
             aria-label="Previous image"
-            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-3 py-2 text-lg shadow-md"
+            className={
+              compactArrows
+                ? "absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-2 py-1 text-sm shadow-md opacity-100 transition sm:opacity-0 sm:group-hover/card-gallery:opacity-100"
+                : "absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-3 py-2 text-lg shadow-md"
+            }
             onClick={(event) => {
+              event.preventDefault();
               event.stopPropagation();
               onIndexChange(Math.max(0, index - 1));
             }}
@@ -118,8 +127,13 @@ function ImageSlides({
           <button
             type="button"
             aria-label="Next image"
-            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-3 py-2 text-lg shadow-md"
+            className={
+              compactArrows
+                ? "absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-2 py-1 text-sm shadow-md opacity-100 transition sm:opacity-0 sm:group-hover/card-gallery:opacity-100"
+                : "absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 px-3 py-2 text-lg shadow-md"
+            }
             onClick={(event) => {
+              event.preventDefault();
               event.stopPropagation();
               onIndexChange(Math.min(images.length - 1, index + 1));
             }}
@@ -132,13 +146,13 @@ function ImageSlides({
   );
 }
 
-const AUTO_SCROLL_MS = 2000;
-
-function useAutoGallery(images: string[], intervalMs: number, enabled: boolean) {
+function useAutoGallery(images: string[], intervalMs: number, enabled: boolean, pingPong = false) {
   const [index, setIndex] = useState(0);
+  const directionRef = useRef(1);
 
   useEffect(() => {
     setIndex(0);
+    directionRef.current = 1;
   }, [images]);
 
   const step = useCallback(
@@ -147,19 +161,47 @@ function useAutoGallery(images: string[], intervalMs: number, enabled: boolean) 
         if (!images.length) return 0;
         return (current + delta + images.length) % images.length;
       });
+      directionRef.current = delta >= 0 ? 1 : -1;
     },
     [images.length],
   );
 
+  const goTo = useCallback((next: number) => {
+    setIndex((current) => {
+      directionRef.current = next >= current ? 1 : -1;
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!enabled || images.length <= 1) return;
-    const id = window.setInterval(() => {
-      setIndex((current) => (current + 1) % images.length);
-    }, intervalMs);
-    return () => window.clearInterval(id);
-  }, [enabled, images.length, intervalMs]);
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
 
-  return { index, setIndex, step };
+    const id = window.setInterval(() => {
+      setIndex((current) => {
+        const last = images.length - 1;
+        if (!pingPong || last === 0) {
+          return (current + 1) % images.length;
+        }
+
+        let next = current + directionRef.current;
+        if (next >= last) {
+          directionRef.current = -1;
+          next = last;
+        } else if (next <= 0) {
+          directionRef.current = 1;
+          next = 0;
+        }
+        return next;
+      });
+    }, intervalMs);
+
+    return () => window.clearInterval(id);
+  }, [enabled, images.length, intervalMs, pingPong]);
+
+  return { index, setIndex: goTo, step };
 }
 
 export function ProductGalleryCarousel({
@@ -172,7 +214,7 @@ export function ProductGalleryCarousel({
   className?: string;
 }) {
   const [lightbox, setLightbox] = useState(false);
-  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, !lightbox);
+  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, !lightbox, true);
 
   useEffect(() => {
     if (!lightbox) return;
@@ -234,20 +276,22 @@ export function ProductCardGallery({
   className?: string;
 }) {
   const images = getProductImages(product);
-  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, true);
+  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, true, true);
 
   if (images.length <= 1) {
     return <ProductImage src={images[0] ?? ""} alt={alt} className={className} />;
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-none ${className}`}>
+    <div className={`group/card-gallery relative overflow-hidden rounded-none ${className}`}>
       <ImageSlides
         images={images}
         alt={alt}
         index={index}
         onIndexChange={setIndex}
         className="h-full"
+        showArrows
+        compactArrows
         onSwipe={step}
       />
       <SlideDots count={images.length} index={index} onSelect={setIndex} compact />
