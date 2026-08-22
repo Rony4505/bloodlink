@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getProductImages } from "@/lib/fashion/product-images";
 import type { Product } from "@/lib/fashion/types";
 import { ProductImage } from "./ProductImage";
@@ -183,11 +183,12 @@ function ThumbnailStrip({
 function useAutoGallery(images: string[], intervalMs: number, enabled: boolean, pingPong = false) {
   const [index, setIndex] = useState(0);
   const directionRef = useRef(1);
+  const imagesKey = images.join("|");
 
   useEffect(() => {
     setIndex(0);
     directionRef.current = 1;
-  }, [images]);
+  }, [imagesKey]);
 
   const step = useCallback(
     (delta: number) => {
@@ -233,7 +234,7 @@ function useAutoGallery(images: string[], intervalMs: number, enabled: boolean, 
     }, intervalMs);
 
     return () => window.clearInterval(id);
-  }, [enabled, images.length, intervalMs, pingPong]);
+  }, [enabled, images.length, imagesKey, intervalMs, pingPong]);
 
   return { index, setIndex: goTo, step };
 }
@@ -320,8 +321,11 @@ export function ProductCardGallery({
   alt: string;
   className?: string;
 }) {
-  const images = getProductImages(product);
-  const { index } = useAutoGallery(images, AUTO_SCROLL_MS, true, true);
+  const images = useMemo(
+    () => getProductImages(product),
+    [product.imageUrl, product.imageUrls?.join("|")],
+  );
+  const { index } = useAutoGallery(images, AUTO_SCROLL_MS, images.length > 1, true);
 
   if (images.length <= 1) {
     return <ProductImage src={images[0] ?? ""} alt={alt} className={className} />;
