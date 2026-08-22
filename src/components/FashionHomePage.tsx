@@ -7,6 +7,7 @@ import {
   HomeStatsStrip,
 } from "@/components/fashion/HomeLocalized";
 import { PromoCarousel } from "@/components/fashion/PromoCarousel";
+import { HomeCouponStrip } from "@/components/fashion/HomeCouponStrip";
 import { TopLanguageBar } from "@/components/fashion/LanguageSwitcher";
 import { ChatSupportWidget } from "@/components/fashion/ChatSupportWidget";
 import { AnnouncementBar } from "@/components/fashion/AnnouncementBar";
@@ -54,8 +55,15 @@ export async function FashionHomePage() {
         <div className="relative z-20 mx-auto max-w-7xl px-5 pb-16 pt-14 md:px-8 md:pb-24 md:pt-16">
           <FashionHeader variant="light" />
 
-          <div className="relative mt-6 overflow-hidden rounded-[1.5rem] border border-white/15 shadow-lg">
-            <PromoCarousel slides={carouselSlides} coupons={displayCoupons} products={products} />
+          <div className="relative mt-6 space-y-5">
+            {carouselSlides.length > 0 ? (
+              <div className="overflow-hidden rounded-[1.5rem] border border-white/20 shadow-[0_12px_40px_rgba(74,51,72,0.12)]">
+                <PromoCarousel slides={carouselSlides} />
+              </div>
+            ) : null}
+            {displayCoupons.length > 0 ? (
+              <HomeCouponStrip coupons={displayCoupons} products={products} />
+            ) : null}
           </div>
 
           <HomeHeroActions settings={settings} />
