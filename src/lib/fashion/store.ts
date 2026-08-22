@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readFile, rename, writeFile } from "fs/promises";
+import { access, copyFile, mkdir, readdir, readFile, rename, unlink, writeFile } from "fs/promises";
 import bcrypt from "bcryptjs";
 import { computeSellPrice, getEffectivePrice } from "./pricing";
 import { defaultCategories, defaultSettings } from "./defaults";
@@ -64,6 +64,71 @@ function storeTempPath(): string {
   return `${storePath()}.tmp`;
 }
 
+function rotatingBackupsDir(): string {
+  return `${dataDir()}/backups`;
+}
+
+const MAX_ROTATING_BACKUPS = 30;
+
+async function loadLatestRotatingBackup(): Promise<Partial<FashionStore> | null> {
+  try {
+    const dir = rotatingBackupsDir();
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith("fashion-store-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names) {
+      try {
+        const raw = await readFile(`${dir}/${name}`, "utf8");
+        return JSON.parse(raw) as Partial<FashionStore>;
+      } catch {
+        /* try next backup */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+async function pruneRotatingBackups(): Promise<void> {
+  try {
+    const dir = rotatingBackupsDir();
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith("fashion-store-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names.slice(MAX_ROTATING_BACKUPS)) {
+      await unlink(`${dir}/${name}`).catch(() => undefined);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function writeRotatingBackup(store: FashionStore): Promise<void> {
+  try {
+    await mkdir(rotatingBackupsDir(), { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = `${rotatingBackupsDir()}/fashion-store-${stamp}.json`;
+    await writeFile(backupPath, JSON.stringify(store, null, 2), "utf8");
+    await pruneRotatingBackups();
+  } catch (err) {
+    console.error("[fashion-store] rotating backup failed:", err);
+  }
+}
+
+async function hasAnyStoreBackup(): Promise<boolean> {
+  if (await fileExists(storeBackupPath())) return true;
+  try {
+    const dir = rotatingBackupsDir();
+    const names = await readdir(dir);
+    return names.some((name) => name.startsWith("fashion-store-") && name.endsWith(".json"));
+  } catch {
+    return false;
+  }
+}
+
 async function fileExists(path: string): Promise<boolean> {
   try {
     await access(path);
@@ -78,19 +143,24 @@ async function readStoreJson(): Promise<Partial<FashionStore>> {
   try {
     const raw = await readFile(primary, "utf8");
     return JSON.parse(raw) as Partial<FashionStore>;
-  } catch (error) {
+  } catch {
     const backup = storeBackupPath();
     if (await fileExists(backup)) {
       try {
         const raw = await readFile(backup, "utf8");
         const parsed = JSON.parse(raw) as Partial<FashionStore>;
-        console.warn("[fashion-store] recovered from backup after primary read failed");
+        console.warn("[fashion-store] recovered from .bak after primary read failed");
         return parsed;
       } catch {
         /* fall through */
       }
     }
-    throw error;
+    const rotating = await loadLatestRotatingBackup();
+    if (rotating) {
+      console.warn("[fashion-store] recovered from rotating backup after primary read failed");
+      return rotating;
+    }
+    throw new Error("[fashion-store] no readable store file");
   }
 }
 
@@ -372,6 +442,25 @@ async function ensureStore(): Promise<FashionStore> {
   }
 
   if (!(await fileExists(primary))) {
+    if (await hasAnyStoreBackup()) {
+      try {
+        const parsed = await readStoreJson();
+        const store = await buildStoreFromParsed(parsed, { allowSeedFallback: false });
+        if (!building) await writeStore(store);
+        console.warn("[fashion-store] primary missing — restored from backup");
+        return store;
+      } catch (error) {
+        if (building) {
+          console.warn("[fashion-store] build-time backup read failed, using defaults", error);
+          return buildStoreFromParsed({}, { allowSeedFallback: true });
+        }
+        console.error("[fashion-store] backup exists but could not be loaded", error);
+        throw new Error(
+          "Store backup exists but could not be loaded. Check DATA_DIR volume mount at /app/data.",
+        );
+      }
+    }
+
     const initial = await createInitialStore();
     if (!building) await writeStore(initial);
     return initial;
@@ -446,6 +535,8 @@ async function writeStore(
     }
   }
 
+  await writeRotatingBackup(store);
+
   // Marker for /api/health — survives redeploy only when Railway Volume is mounted at DATA_DIR.
   try {
     await writeFile(
@@ -456,6 +547,56 @@ async function writeStore(
   } catch {
     /* ignore marker errors */
   }
+}
+
+/** Full store snapshot for admin download / disaster recovery. */
+export async function exportStoreSnapshot(): Promise<FashionStore> {
+  return ensureStore();
+}
+
+/** Admin recovery: import a fashion-store.json backup blob. */
+export async function restoreStoreFromBackup(raw: unknown): Promise<{
+  productCount: number;
+  orderCount: number;
+  customerCount: number;
+}> {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Backup must be a JSON object");
+  }
+  const parsed = raw as Partial<FashionStore>;
+  if (!Array.isArray(parsed.products)) {
+    throw new Error("Backup missing products array");
+  }
+
+  const restored = await buildStoreFromParsed(parsed, { allowSeedFallback: false });
+  const current = await ensureStore();
+  const priorCounts = {
+    products: current.products.length,
+    orders: current.orders.length,
+    customers: current.customers.length,
+  };
+
+  if (priorCounts.orders > 0 && restored.orders.length < priorCounts.orders) {
+    throw new Error(
+      `Backup has fewer orders (${restored.orders.length}) than live data (${priorCounts.orders}). Refusing restore.`,
+    );
+  }
+  if (priorCounts.customers > 0 && restored.customers.length < priorCounts.customers) {
+    throw new Error(
+      `Backup has fewer customers (${restored.customers.length}) than live data (${priorCounts.customers}). Refusing restore.`,
+    );
+  }
+
+  if (!parsed.adminPasswordHash) {
+    restored.adminPasswordHash = current.adminPasswordHash;
+  }
+
+  await writeStore(restored, priorCounts);
+  return {
+    productCount: restored.products.length,
+    orderCount: restored.orders.length,
+    customerCount: restored.customers.length,
+  };
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
