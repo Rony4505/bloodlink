@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readFile, rename, writeFile } from "fs/promises";
+import { access, copyFile, mkdir, readdir, readFile, rename, unlink, writeFile } from "fs/promises";
 import bcrypt from "bcryptjs";
 import { computeSellPrice, getEffectivePrice } from "./pricing";
 import { defaultCategories, defaultSettings } from "./defaults";
@@ -64,6 +64,133 @@ function storeTempPath(): string {
   return `${storePath()}.tmp`;
 }
 
+function rotatingBackupsDir(): string {
+  return `${dataDir()}/backups`;
+}
+
+const MAX_ROTATING_BACKUPS = 30;
+const SEED_PRODUCT_COUNT = rawSeedProducts.length;
+
+let writeQueue: Promise<void> = Promise.resolve();
+
+type StoreCounts = { products: number; orders: number; customers: number };
+
+type WriteStoreOptions = {
+  allowShrink?: boolean;
+};
+
+async function loadLatestRotatingBackup(): Promise<Partial<FashionStore> | null> {
+  try {
+    const dir = rotatingBackupsDir();
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith("fashion-store-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names) {
+      try {
+        const raw = await readFile(`${dir}/${name}`, "utf8");
+        return JSON.parse(raw) as Partial<FashionStore>;
+      } catch {
+        /* try next backup */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+async function pruneRotatingBackups(): Promise<void> {
+  try {
+    const dir = rotatingBackupsDir();
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith("fashion-store-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names.slice(MAX_ROTATING_BACKUPS)) {
+      await unlink(`${dir}/${name}`).catch(() => undefined);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function writeRotatingBackup(store: FashionStore): Promise<void> {
+  try {
+    await mkdir(rotatingBackupsDir(), { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = `${rotatingBackupsDir()}/fashion-store-${stamp}.json`;
+    await writeFile(backupPath, JSON.stringify(store, null, 2), "utf8");
+    await pruneRotatingBackups();
+  } catch (err) {
+    console.error("[fashion-store] rotating backup failed:", err);
+  }
+}
+
+async function hasAnyStoreBackup(): Promise<boolean> {
+  if (await fileExists(storeBackupPath())) return true;
+  try {
+    const dir = rotatingBackupsDir();
+    const names = await readdir(dir);
+    return names.some((name) => name.startsWith("fashion-store-") && name.endsWith(".json"));
+  } catch {
+    return false;
+  }
+}
+
+async function readExistingCounts(): Promise<StoreCounts | null> {
+  if (!(await fileExists(storePath())) && !(await hasAnyStoreBackup())) return null;
+  try {
+    const parsed = await readStoreJson();
+    return {
+      products: Array.isArray(parsed.products) ? parsed.products.length : 0,
+      orders: Array.isArray(parsed.orders) ? parsed.orders.length : 0,
+      customers: Array.isArray(parsed.customers) ? parsed.customers.length : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function assertSafeWrite(
+  store: FashionStore,
+  existing: StoreCounts | null | undefined,
+  options?: WriteStoreOptions,
+): void {
+  if (!existing) return;
+
+  if (existing.products > 0 && store.products.length === 0) {
+    throw new Error("[fashion-store] refused to write empty products over existing catalog");
+  }
+  if (existing.orders > 0 && store.orders.length === 0) {
+    throw new Error("[fashion-store] refused to write empty orders over existing orders");
+  }
+  if (existing.customers > 0 && store.customers.length === 0) {
+    throw new Error("[fashion-store] refused to write empty customers over existing customers");
+  }
+
+  if (options?.allowShrink) return;
+
+  if (store.products.length < existing.products) {
+    throw new Error(
+      `[fashion-store] refused to shrink products from ${existing.products} to ${store.products.length}`,
+    );
+  }
+  if (existing.products > SEED_PRODUCT_COUNT && store.products.length === SEED_PRODUCT_COUNT) {
+    throw new Error("[fashion-store] refused to reset catalog to seed defaults");
+  }
+  if (store.orders.length < existing.orders) {
+    throw new Error(
+      `[fashion-store] refused to shrink orders from ${existing.orders} to ${store.orders.length}`,
+    );
+  }
+  if (store.customers.length < existing.customers) {
+    throw new Error(
+      `[fashion-store] refused to shrink customers from ${existing.customers} to ${store.customers.length}`,
+    );
+  }
+}
+
 async function fileExists(path: string): Promise<boolean> {
   try {
     await access(path);
@@ -78,19 +205,24 @@ async function readStoreJson(): Promise<Partial<FashionStore>> {
   try {
     const raw = await readFile(primary, "utf8");
     return JSON.parse(raw) as Partial<FashionStore>;
-  } catch (error) {
+  } catch {
     const backup = storeBackupPath();
     if (await fileExists(backup)) {
       try {
         const raw = await readFile(backup, "utf8");
         const parsed = JSON.parse(raw) as Partial<FashionStore>;
-        console.warn("[fashion-store] recovered from backup after primary read failed");
+        console.warn("[fashion-store] recovered from .bak after primary read failed");
         return parsed;
       } catch {
         /* fall through */
       }
     }
-    throw error;
+    const rotating = await loadLatestRotatingBackup();
+    if (rotating) {
+      console.warn("[fashion-store] recovered from rotating backup after primary read failed");
+      return rotating;
+    }
+    throw new Error("[fashion-store] no readable store file");
   }
 }
 
@@ -372,8 +504,34 @@ async function ensureStore(): Promise<FashionStore> {
   }
 
   if (!(await fileExists(primary))) {
+    if (await hasAnyStoreBackup()) {
+      try {
+        const parsed = await readStoreJson();
+        const store = await buildStoreFromParsed(parsed, { allowSeedFallback: false });
+        if (!building) await writeStore(store);
+        console.warn("[fashion-store] primary missing — restored from backup");
+        return store;
+      } catch (error) {
+        if (building) {
+          console.warn("[fashion-store] build-time backup read failed, using defaults", error);
+          return buildStoreFromParsed({}, { allowSeedFallback: true });
+        }
+        console.error("[fashion-store] backup exists but could not be loaded", error);
+        throw new Error(
+          "Store backup exists but could not be loaded. Check DATA_DIR volume mount at /app/data.",
+        );
+      }
+    }
+
     const initial = await createInitialStore();
-    if (!building) await writeStore(initial);
+    if (!building) {
+      if (await hasAnyStoreBackup()) {
+        throw new Error(
+          "[fashion-store] backup files exist — refusing to seed empty store over saved data",
+        );
+      }
+      await writeStore(initial, undefined, { allowShrink: true });
+    }
     return initial;
   }
 
@@ -410,52 +568,101 @@ async function ensureStore(): Promise<FashionStore> {
 
 async function writeStore(
   store: FashionStore,
-  priorCounts?: { products: number; orders: number; customers: number },
+  priorCounts?: StoreCounts,
+  options?: WriteStoreOptions,
 ): Promise<void> {
   if (isNextBuild()) return;
 
-  if (priorCounts) {
-    if (priorCounts.products > 0 && store.products.length === 0) {
-      throw new Error("[fashion-store] refused to write empty products over existing catalog");
-    }
-    if (priorCounts.orders > 0 && store.orders.length === 0) {
-      throw new Error("[fashion-store] refused to write empty orders over existing orders");
-    }
-    if (priorCounts.customers > 0 && store.customers.length === 0) {
-      throw new Error("[fashion-store] refused to write empty customers over existing customers");
-    }
-  }
+  const task = writeQueue.then(async () => {
+    const existing = priorCounts ?? (await readExistingCounts());
+    assertSafeWrite(store, existing, options);
 
-  await mkdir(dataDir(), { recursive: true });
-  const primary = storePath();
-  const temp = storeTempPath();
-  const payload = JSON.stringify(store, null, 2);
-  try {
-    await writeFile(temp, payload, "utf8");
-    if (await fileExists(primary)) {
-      await copyFile(primary, storeBackupPath());
-    }
-    await rename(temp, primary);
-  } catch {
-    // Concurrent writers or Docker build layers can race on rename — direct write is safe enough.
-    await writeFile(primary, payload, "utf8");
+    await mkdir(dataDir(), { recursive: true });
+    const primary = storePath();
+    const temp = storeTempPath();
+    const payload = JSON.stringify(store, null, 2);
     try {
-      await copyFile(primary, storeBackupPath());
+      await writeFile(temp, payload, "utf8");
+      if (await fileExists(primary)) {
+        await copyFile(primary, storeBackupPath());
+      }
+      await rename(temp, primary);
     } catch {
-      /* ignore backup errors */
+      // Concurrent writers or Docker build layers can race on rename — direct write is safe enough.
+      await writeFile(primary, payload, "utf8");
+      try {
+        await copyFile(primary, storeBackupPath());
+      } catch {
+        /* ignore backup errors */
+      }
     }
+
+    await writeRotatingBackup(store);
+
+    // Marker for /api/health — survives redeploy only when Railway Volume is mounted at DATA_DIR.
+    try {
+      await writeFile(
+        `${dataDir()}/.volume-mounted`,
+        new Date().toISOString(),
+        "utf8",
+      );
+    } catch {
+      /* ignore marker errors */
+    }
+  });
+
+  writeQueue = task.catch(() => undefined);
+  await task;
+}
+
+/** Full store snapshot for admin download / disaster recovery. */
+export async function exportStoreSnapshot(): Promise<FashionStore> {
+  return ensureStore();
+}
+
+/** Admin recovery: import a fashion-store.json backup blob. */
+export async function restoreStoreFromBackup(raw: unknown): Promise<{
+  productCount: number;
+  orderCount: number;
+  customerCount: number;
+}> {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Backup must be a JSON object");
+  }
+  const parsed = raw as Partial<FashionStore>;
+  if (!Array.isArray(parsed.products)) {
+    throw new Error("Backup missing products array");
   }
 
-  // Marker for /api/health — survives redeploy only when Railway Volume is mounted at DATA_DIR.
-  try {
-    await writeFile(
-      `${dataDir()}/.volume-mounted`,
-      new Date().toISOString(),
-      "utf8",
+  const restored = await buildStoreFromParsed(parsed, { allowSeedFallback: false });
+  const current = await ensureStore();
+  const priorCounts = {
+    products: current.products.length,
+    orders: current.orders.length,
+    customers: current.customers.length,
+  };
+
+  if (priorCounts.orders > 0 && restored.orders.length < priorCounts.orders) {
+    throw new Error(
+      `Backup has fewer orders (${restored.orders.length}) than live data (${priorCounts.orders}). Refusing restore.`,
     );
-  } catch {
-    /* ignore marker errors */
   }
+  if (priorCounts.customers > 0 && restored.customers.length < priorCounts.customers) {
+    throw new Error(
+      `Backup has fewer customers (${restored.customers.length}) than live data (${priorCounts.customers}). Refusing restore.`,
+    );
+  }
+
+  if (!parsed.adminPasswordHash) {
+    restored.adminPasswordHash = current.adminPasswordHash;
+  }
+
+  await writeStore(restored, priorCounts, { allowShrink: true });
+  return {
+    productCount: restored.products.length,
+    orderCount: restored.orders.length,
+    customerCount: restored.customers.length,
+  };
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
@@ -711,11 +918,16 @@ async function notifyUsersNewOffer(store: FashionStore, product: Product): Promi
 
 export async function deleteProduct(id: string): Promise<boolean> {
   const store = await ensureStore();
+  const priorCounts = {
+    products: store.products.length,
+    orders: store.orders.length,
+    customers: store.customers.length,
+  };
   const next = store.products.filter((product) => product.id !== id);
   if (next.length === store.products.length) return false;
   store.products = next;
   store.settings.promoBanners = (store.settings.promoBanners ?? []).filter((b) => b.productId !== id);
-  await writeStore(store);
+  await writeStore(store, priorCounts, { allowShrink: true });
   return true;
 }
 

@@ -17,7 +17,8 @@ type SettingsTab =
   | "home"
   | "pricing"
   | "seo"
-  | "sizes";
+  | "sizes"
+  | "backup";
 
 function Field({
   label,
@@ -116,6 +117,9 @@ export function SettingsEditor({
 }) {
   const { fc } = useFashionCopy();
   const [tab, setTab] = useState<SettingsTab>("brand");
+  const [backupFile, setBackupFile] = useState<File | null>(null);
+  const [backupRestoring, setBackupRestoring] = useState(false);
+  const [backupMessage, setBackupMessage] = useState("");
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "brand", label: fc.admin.settingsBrand },
@@ -126,7 +130,60 @@ export function SettingsEditor({
     { id: "pricing", label: fc.admin.settingsPricing },
     { id: "seo", label: fc.admin.settingsSeo },
     { id: "sizes", label: fc.admin.settingsSizes },
+    { id: "backup", label: fc.admin.settingsBackup },
   ];
+
+  async function downloadBackup() {
+    setBackupMessage("");
+    try {
+      const res = await fetch("/api/fashion/backup");
+      if (!res.ok) {
+        setBackupMessage(fc.admin.backupRestoreFailed);
+        return;
+      }
+      const blob = await res.blob();
+      const stamp = new Date().toISOString().slice(0, 10);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `smartcraft-backup-${stamp}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setBackupMessage(fc.admin.backupDownload);
+    } catch {
+      setBackupMessage(fc.admin.backupRestoreFailed);
+    }
+  }
+
+  async function restoreBackup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!backupFile) return;
+    if (!window.confirm(fc.admin.backupRestoreConfirm)) return;
+    setBackupRestoring(true);
+    setBackupMessage("");
+    try {
+      const text = await backupFile.text();
+      const payload = JSON.parse(text);
+      const res = await fetch("/api/fashion/backup/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBackupMessage(data.error || fc.admin.backupRestoreFailed);
+        return;
+      }
+      setBackupMessage(
+        `${fc.admin.backupRestoreSuccess} (${data.productCount ?? 0} products, ${data.orderCount ?? 0} orders)`,
+      );
+      setBackupFile(null);
+    } catch {
+      setBackupMessage(fc.admin.backupRestoreFailed);
+    } finally {
+      setBackupRestoring(false);
+    }
+  }
 
   function patch<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) {
     setSettings({ ...settings, [key]: value });
@@ -646,8 +703,42 @@ export function SettingsEditor({
         </div>
       ) : null}
 
+      {tab === "backup" ? (
+        <div className="space-y-4 rounded-xl border border-black/6 bg-white/70 p-4">
+          <p className="text-sm leading-relaxed text-[#5b4339]">{fc.admin.backupBody}</p>
+          <p className="text-xs leading-relaxed text-[#9b7766]">{fc.admin.backupRotatingHint}</p>
+          <FashionButton type="button" onClick={() => void downloadBackup()}>
+            {fc.admin.backupDownload}
+          </FashionButton>
+          <form onSubmit={restoreBackup} className="space-y-3 border-t border-black/6 pt-4">
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-[#3d2a24]">{fc.admin.backupRestoreLabel}</span>
+              <input
+                className="field"
+                type="file"
+                accept="application/json,.json"
+                onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
+              />
+              <span className="mt-1 block text-xs text-[#9b7766]">{fc.admin.backupRestoreHint}</span>
+            </label>
+            <FashionButton
+              type="submit"
+              variant="secondary"
+              disabled={backupRestoring || !backupFile}
+            >
+              {backupRestoring ? "..." : fc.admin.backupRestoreButton}
+            </FashionButton>
+          </form>
+          {backupMessage ? (
+            <p className="text-sm font-medium text-[#5c3d5e]">{backupMessage}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="sticky bottom-0 border-t border-black/5 bg-white/80 pt-4 backdrop-blur">
-        <FashionButton onClick={onSave}>{fc.admin.settingsSaveAll}</FashionButton>
+        {tab !== "backup" ? (
+          <FashionButton onClick={onSave}>{fc.admin.settingsSaveAll}</FashionButton>
+        ) : null}
       </div>
     </div>
   );
