@@ -16,7 +16,7 @@ const initialForm: CheckoutForm = {
   phone: "",
   email: "",
   address: "",
-  district: "Dhaka",
+  district: "",
   note: "",
   paymentMethod: "cod",
   couponCode: "",
@@ -69,7 +69,7 @@ export function CartOrderSection({
   const { items, clearCart } = useCart();
   const [form, setForm] = useState<CheckoutForm>(initialForm);
   const [submitting, setSubmitting] = useState(false);
-  const [shipping, setShipping] = useState(120);
+  const [shipping, setShipping] = useState(0);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [vipDiscount, setVipDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState("");
@@ -110,14 +110,19 @@ export function CartOrderSection({
   }, [subtotal]);
 
   useEffect(() => {
+    if (!form.district?.trim()) {
+      setShipping(0);
+      return;
+    }
+
     fetch("/api/fashion/delivery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ district: form.district, subtotal: Math.max(0, subtotal - discount) }),
     })
       .then((r) => r.json())
-      .then((data) => setShipping(data.fee ?? 120))
-      .catch(() => setShipping(120));
+      .then((data) => setShipping(Number(data.fee) || 0))
+      .catch(() => setShipping(0));
   }, [form.district, subtotal, discount]);
 
   async function applyCoupon() {
@@ -181,7 +186,13 @@ export function CartOrderSection({
           ) : null}
           <div className="flex justify-between">
             <span>{copy.cart.shipping}</span>
-            <span className="font-semibold">{shipping === 0 ? "Free" : formatBdt(shipping)}</span>
+            <span className="font-semibold">
+              {!form.district?.trim()
+                ? formatBdt(0)
+                : shipping === 0
+                  ? "Free"
+                  : formatBdt(shipping)}
+            </span>
           </div>
           <div className="flex justify-between border-t border-[#e8c4b0]/40 pt-3 text-lg font-bold text-[#2b1d19]">
             <span>{copy.cart.total}</span>
@@ -210,8 +221,10 @@ export function CartOrderSection({
               className="field mt-2"
               value={form.district}
               onChange={(e) => setForm((c) => ({ ...c, district: e.target.value }))}
-              size={Math.min(6, Math.max(4, filteredDistricts.length))}
+              required
+              size={Math.min(6, Math.max(4, filteredDistricts.length + 1))}
             >
+              <option value="">Delivery area select করুন</option>
               {filteredDistricts.map((district) => (
                 <option key={district} value={district}>
                   {district}

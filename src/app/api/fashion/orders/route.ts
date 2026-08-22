@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const form = body.form as CheckoutForm;
   const items = body.items as CartItem[];
 
-  if (!form?.name || !form.phone || !form.address || !items?.length) {
+  if (!form?.name || !form.phone || !form.address || !form.district?.trim() || !items?.length) {
     return NextResponse.json({ error: "Invalid order" }, { status: 400 });
   }
 

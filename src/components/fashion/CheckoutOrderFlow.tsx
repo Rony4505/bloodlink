@@ -21,7 +21,7 @@ const initialForm: CheckoutForm = {
   phone: "",
   email: "",
   address: "",
-  district: "Dhaka",
+  district: "",
   note: "",
   paymentMethod: "cod",
   couponCode: "",
@@ -78,7 +78,7 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
     ...readCheckoutDraft(),
   }));
   const [submitting, setSubmitting] = useState(false);
-  const [shipping, setShipping] = useState(120);
+  const [shipping, setShipping] = useState(0);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [vipDiscount, setVipDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState("");
@@ -113,14 +113,19 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
   }, [subtotal]);
 
   useEffect(() => {
+    if (!form.district?.trim()) {
+      setShipping(0);
+      return;
+    }
+
     fetch("/api/fashion/delivery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ district: form.district, subtotal: Math.max(0, subtotal - discount) }),
     })
       .then((r) => r.json())
-      .then((data) => setShipping(data.fee ?? 120))
-      .catch(() => setShipping(120));
+      .then((data) => setShipping(Number(data.fee) || 0))
+      .catch(() => setShipping(0));
   }, [form.district, subtotal, discount]);
 
   async function applyCoupon() {
@@ -190,6 +195,7 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
         subtotal={subtotal}
         shipping={shipping}
         discount={discount}
+        deliveryAreaSelected={Boolean(form.district?.trim())}
         onRemove={removeItem}
         onUpdateQuantity={updateQuantity}
       />
@@ -232,6 +238,7 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
             onChange={(e) => setForm((c) => ({ ...c, district: e.target.value }))}
             required
           >
+            <option value="">Delivery area select করুন</option>
             {districts.map((district) => (
               <option key={district} value={district}>
                 {district}

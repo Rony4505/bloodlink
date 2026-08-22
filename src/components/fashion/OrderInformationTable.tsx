@@ -11,6 +11,7 @@ export function OrderInformationTable({
   subtotal,
   shipping,
   discount = 0,
+  deliveryAreaSelected = false,
   onRemove,
   onUpdateQuantity,
 }: {
@@ -18,6 +19,7 @@ export function OrderInformationTable({
   subtotal: number;
   shipping: number;
   discount?: number;
+  deliveryAreaSelected?: boolean;
   onRemove: (key: string) => void;
   onUpdateQuantity: (key: string, quantity: number) => void;
 }) {
@@ -125,7 +127,11 @@ export function OrderInformationTable({
                 {copy.cart.shipping}
               </td>
               <td className="px-4 py-2 text-right font-semibold">
-                {shipping === 0 ? "Free" : formatBdt(shipping)}
+                {!deliveryAreaSelected
+                  ? formatBdt(0)
+                  : shipping === 0
+                    ? "Free"
+                    : formatBdt(shipping)}
               </td>
             </tr>
             <tr className="bg-[#faf0f5]">
