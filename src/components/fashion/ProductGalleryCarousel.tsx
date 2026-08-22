@@ -276,25 +276,92 @@ export function ProductCardGallery({
   className?: string;
 }) {
   const images = getProductImages(product);
-  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, true, true);
+  const [locked, setLocked] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const { index: previewIndex, setIndex: setPreviewIndex, step } = useAutoGallery(
+    images,
+    AUTO_SCROLL_MS,
+    !locked,
+    true,
+  );
+
+  const selectImage = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0, Math.min(images.length - 1, next));
+      setSelectedIndex(clamped);
+      setPreviewIndex(clamped);
+      setLocked(true);
+    },
+    [images.length, setPreviewIndex],
+  );
+
+  useEffect(() => {
+    setLocked(false);
+    setSelectedIndex(0);
+  }, [images.join("|")]);
 
   if (images.length <= 1) {
     return <ProductImage src={images[0] ?? ""} alt={alt} className={className} />;
   }
 
+  if (!locked) {
+    return (
+      <div
+        className={`group/card-gallery relative overflow-hidden rounded-none ${className}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <ImageSlides
+          images={images}
+          alt={alt}
+          index={previewIndex}
+          onIndexChange={selectImage}
+          className="h-full"
+          showArrows
+          compactArrows
+          onSwipe={(delta) => {
+            const next = (previewIndex + delta + images.length) % images.length;
+            selectImage(next);
+          }}
+          onImageClick={() => selectImage(previewIndex)}
+        />
+        <SlideDots count={images.length} index={previewIndex} onSelect={selectImage} compact />
+      </div>
+    );
+  }
+
+  const mainSrc = images[selectedIndex] ?? images[0];
+  const thumbImages = images
+    .map((src, imageIndex) => ({ src, imageIndex }))
+    .filter(({ imageIndex }) => imageIndex !== selectedIndex);
+
   return (
-    <div className={`group/card-gallery relative overflow-hidden rounded-none ${className}`}>
-      <ImageSlides
-        images={images}
-        alt={alt}
-        index={index}
-        onIndexChange={setIndex}
-        className="h-full"
-        showArrows
-        compactArrows
-        onSwipe={step}
-      />
-      <SlideDots count={images.length} index={index} onSelect={setIndex} compact />
+    <div
+      className={`flex flex-col overflow-hidden rounded-none bg-[#f6ece6] ${className}`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="relative min-h-0 flex-1">
+        <ProductImage src={mainSrc} alt={`${alt} ${selectedIndex + 1}`} className="h-full rounded-none" />
+      </div>
+      {thumbImages.length > 0 ? (
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-black/5 bg-white/95 p-1.5 sm:p-2">
+          {thumbImages.map(({ src, imageIndex }) => (
+            <button
+              key={`${src}-${imageIndex}`}
+              type="button"
+              aria-label={`View image ${imageIndex + 1}`}
+              className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border-2 border-[#e8c4b0]/60 transition hover:border-[#9d6b8a] sm:h-12 sm:w-12"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setSelectedIndex(imageIndex);
+                setPreviewIndex(imageIndex);
+              }}
+            >
+              <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-md" />
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
