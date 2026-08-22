@@ -146,6 +146,40 @@ function ImageSlides({
   );
 }
 
+function ThumbnailStrip({
+  images,
+  alt,
+  selectedIndex,
+  onSelect,
+}: {
+  images: string[];
+  alt: string;
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const thumbImages = images
+    .map((src, imageIndex) => ({ src, imageIndex }))
+    .filter(({ imageIndex }) => imageIndex !== selectedIndex);
+
+  if (thumbImages.length === 0) return null;
+
+  return (
+    <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-black/5 bg-white/95 p-2 sm:p-3">
+      {thumbImages.map(({ src, imageIndex }) => (
+        <button
+          key={`${src}-${imageIndex}`}
+          type="button"
+          aria-label={`View image ${imageIndex + 1}`}
+          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-[#e8c4b0]/60 transition hover:border-[#9d6b8a] sm:h-16 sm:w-16"
+          onClick={() => onSelect(imageIndex)}
+        >
+          <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-lg" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function useAutoGallery(images: string[], intervalMs: number, enabled: boolean, pingPong = false) {
   const [index, setIndex] = useState(0);
   const directionRef = useRef(1);
@@ -204,6 +238,7 @@ function useAutoGallery(images: string[], intervalMs: number, enabled: boolean, 
   return { index, setIndex: goTo, step };
 }
 
+/** Product page: one main image with smaller thumbnails below (no auto ping-pong). */
 export function ProductGalleryCarousel({
   images,
   alt,
@@ -213,19 +248,12 @@ export function ProductGalleryCarousel({
   alt: string;
   className?: string;
 }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
-  const { index, setIndex, step } = useAutoGallery(images, AUTO_SCROLL_MS, !lightbox, true);
 
   useEffect(() => {
-    if (!lightbox) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setLightbox(false);
-      if (event.key === "ArrowRight") step(1);
-      if (event.key === "ArrowLeft") step(-1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightbox, step]);
+    setSelectedIndex(0);
+  }, [images.join("|")]);
 
   if (!images.length) {
     return <ProductImage src="" alt={alt} className={className} priority />;
@@ -244,28 +272,45 @@ export function ProductGalleryCarousel({
     );
   }
 
+  const mainSrc = images[selectedIndex] ?? images[0];
+
   return (
     <>
-      <div className={`overflow-hidden rounded-[2rem] border border-black/6 bg-[#faf4f0] ${className}`}>
-        <ImageSlides
+      <div
+        className={`flex flex-col overflow-hidden rounded-[2rem] border border-black/6 bg-[#faf4f0] ${className}`}
+      >
+        <button
+          type="button"
+          className="relative min-h-0 flex-1 cursor-zoom-in"
+          onClick={() => setLightbox(true)}
+        >
+          <ProductImage
+            src={mainSrc}
+            alt={`${alt} ${selectedIndex + 1}`}
+            className="h-full rounded-none"
+            priority={selectedIndex === 0}
+          />
+        </button>
+        <ThumbnailStrip
           images={images}
           alt={alt}
-          index={index}
-          onIndexChange={setIndex}
-          className="h-full"
-          showArrows
-          onImageClick={() => setLightbox(true)}
-          onSwipe={step}
+          selectedIndex={selectedIndex}
+          onSelect={setSelectedIndex}
         />
-        <SlideDots count={images.length} index={index} onSelect={setIndex} />
       </div>
       {lightbox ? (
-        <LightboxViewer images={images} alt={alt} startIndex={index} onClose={() => setLightbox(false)} />
+        <LightboxViewer
+          images={images}
+          alt={alt}
+          startIndex={selectedIndex}
+          onClose={() => setLightbox(false)}
+        />
       ) : null}
     </>
   );
 }
 
+/** Home page cards: auto ping-pong only — click card to open product page. */
 export function ProductCardGallery({
   product,
   alt,
@@ -276,92 +321,15 @@ export function ProductCardGallery({
   className?: string;
 }) {
   const images = getProductImages(product);
-  const [locked, setLocked] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const { index: previewIndex, setIndex: setPreviewIndex, step } = useAutoGallery(
-    images,
-    AUTO_SCROLL_MS,
-    !locked,
-    true,
-  );
-
-  const selectImage = useCallback(
-    (next: number) => {
-      const clamped = Math.max(0, Math.min(images.length - 1, next));
-      setSelectedIndex(clamped);
-      setPreviewIndex(clamped);
-      setLocked(true);
-    },
-    [images.length, setPreviewIndex],
-  );
-
-  useEffect(() => {
-    setLocked(false);
-    setSelectedIndex(0);
-  }, [images.join("|")]);
+  const { index } = useAutoGallery(images, AUTO_SCROLL_MS, true, true);
 
   if (images.length <= 1) {
     return <ProductImage src={images[0] ?? ""} alt={alt} className={className} />;
   }
 
-  if (!locked) {
-    return (
-      <div
-        className={`group/card-gallery relative overflow-hidden rounded-none ${className}`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <ImageSlides
-          images={images}
-          alt={alt}
-          index={previewIndex}
-          onIndexChange={selectImage}
-          className="h-full"
-          showArrows
-          compactArrows
-          onSwipe={(delta) => {
-            const next = (previewIndex + delta + images.length) % images.length;
-            selectImage(next);
-          }}
-          onImageClick={() => selectImage(previewIndex)}
-        />
-        <SlideDots count={images.length} index={previewIndex} onSelect={selectImage} compact />
-      </div>
-    );
-  }
-
-  const mainSrc = images[selectedIndex] ?? images[0];
-  const thumbImages = images
-    .map((src, imageIndex) => ({ src, imageIndex }))
-    .filter(({ imageIndex }) => imageIndex !== selectedIndex);
-
   return (
-    <div
-      className={`flex flex-col overflow-hidden rounded-none bg-[#f6ece6] ${className}`}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div className="relative min-h-0 flex-1">
-        <ProductImage src={mainSrc} alt={`${alt} ${selectedIndex + 1}`} className="h-full rounded-none" />
-      </div>
-      {thumbImages.length > 0 ? (
-        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-black/5 bg-white/95 p-1.5 sm:p-2">
-          {thumbImages.map(({ src, imageIndex }) => (
-            <button
-              key={`${src}-${imageIndex}`}
-              type="button"
-              aria-label={`View image ${imageIndex + 1}`}
-              className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border-2 border-[#e8c4b0]/60 transition hover:border-[#9d6b8a] sm:h-12 sm:w-12"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setSelectedIndex(imageIndex);
-                setPreviewIndex(imageIndex);
-              }}
-            >
-              <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-md" />
-            </button>
-          ))}
-        </div>
-      ) : null}
+    <div className={`relative overflow-hidden rounded-none ${className}`}>
+      <ImageSlides images={images} alt={alt} index={index} onIndexChange={() => {}} className="h-full" />
     </div>
   );
 }
