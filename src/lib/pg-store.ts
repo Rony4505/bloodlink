@@ -5,10 +5,12 @@ import {
   runtimeDbUrl,
 } from "./runtime-env";
 import type { DatabaseShape } from "./types";
+import type { FashionStore } from "./fashion/types";
 
 let pool: Pool | null = null;
 let poolUrl: string | null = null;
 let tableReady: Promise<void> | null = null;
+let fashionTableReady: Promise<void> | null = null;
 
 export function getDatabaseUrl(): string {
   return runtimeDbUrl();
@@ -56,6 +58,169 @@ function getPool(): Pool {
     tableReady = null;
   }
   return pool;
+}
+
+async function ensureFashionTable(): Promise<void> {
+  if (!fashionTableReady) {
+    fashionTableReady = (async () => {
+      await ensureTable();
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS fashion_store (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          data JSONB NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+    })().catch((err) => {
+      fashionTableReady = null;
+      throw err;
+    });
+  }
+  await fashionTableReady;
+}
+
+function fashionCountsFromRow(data: Partial<FashionStore> | null | undefined): {
+  products: number;
+  orders: number;
+  customers: number;
+} {
+  return {
+    products: Array.isArray(data?.products) ? data.products.length : 0,
+    orders: Array.isArray(data?.orders) ? data.orders.length : 0,
+    customers: Array.isArray(data?.customers) ? data.customers.length : 0,
+  };
+}
+
+export async function loadFashionStoreFromPostgres(): Promise<FashionStore | null> {
+  await ensureFashionTable();
+  const result = await getPool().query<{ data: FashionStore }>(
+    "SELECT data FROM fashion_store WHERE id = 1",
+  );
+  const row = result.rows[0];
+  if (!row?.data) return null;
+  return row.data;
+}
+
+export async function loadFashionStoreCountsFromPostgres(): Promise<{
+  products: number;
+  orders: number;
+  customers: number;
+} | null> {
+  await ensureFashionTable();
+  const result = await getPool().query<{
+    product_count: number;
+    order_count: number;
+    customer_count: number;
+  }>(
+    `SELECT
+      COALESCE(jsonb_array_length(data->'products'), 0)::int AS product_count,
+      COALESCE(jsonb_array_length(data->'orders'), 0)::int AS order_count,
+      COALESCE(jsonb_array_length(data->'customers'), 0)::int AS customer_count
+     FROM fashion_store WHERE id = 1`,
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    products: row.product_count,
+    orders: row.order_count,
+    customers: row.customer_count,
+  };
+}
+
+export async function saveFashionStoreToPostgres(
+  store: FashionStore,
+  options: { allowShrink?: boolean; seedProductCount?: number } = {},
+): Promise<void> {
+  await ensureFashionTable();
+  const existing = await loadFashionStoreCountsFromPostgres();
+  const next = fashionCountsFromRow(store);
+  const seedCount = options.seedProductCount ?? 0;
+
+  if (existing) {
+    if (existing.products > 0 && next.products === 0) {
+      throw new Error(
+        `[fashion-store] Refusing to overwrite Postgres products (${existing.products}) with empty data`,
+      );
+    }
+    if (existing.orders > 0 && next.orders === 0) {
+      throw new Error(
+        `[fashion-store] Refusing to overwrite Postgres orders (${existing.orders}) with empty data`,
+      );
+    }
+    if (existing.customers > 0 && next.customers === 0) {
+      throw new Error(
+        `[fashion-store] Refusing to overwrite Postgres customers (${existing.customers}) with empty data`,
+      );
+    }
+    if (!options.allowShrink) {
+      if (next.products < existing.products) {
+        throw new Error(
+          `[fashion-store] Refusing to shrink Postgres products from ${existing.products} to ${next.products}`,
+        );
+      }
+      if (
+        seedCount > 0 &&
+        existing.products > seedCount &&
+        next.products === seedCount
+      ) {
+        throw new Error("[fashion-store] Refusing to reset Postgres catalog to seed defaults");
+      }
+      if (next.orders < existing.orders) {
+        throw new Error(
+          `[fashion-store] Refusing to shrink Postgres orders from ${existing.orders} to ${next.orders}`,
+        );
+      }
+      if (next.customers < existing.customers) {
+        throw new Error(
+          `[fashion-store] Refusing to shrink Postgres customers from ${existing.customers} to ${next.customers}`,
+        );
+      }
+    }
+  }
+
+  await getPool().query(
+    `
+      INSERT INTO fashion_store (id, data, updated_at)
+      VALUES (1, $1::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET data = EXCLUDED.data,
+          updated_at = NOW()
+    `,
+    [JSON.stringify(store)],
+  );
+}
+
+export async function postgresFashionHealth(): Promise<{
+  ok: boolean;
+  error: string | null;
+  host: string;
+  productCount: number | null;
+  orderCount: number | null;
+  customerCount: number | null;
+}> {
+  const base = await postgresHealth();
+  if (!base.ok) {
+    return { ...base, productCount: null, orderCount: null, customerCount: null };
+  }
+  try {
+    const counts = await loadFashionStoreCountsFromPostgres();
+    return {
+      ...base,
+      productCount: counts?.products ?? 0,
+      orderCount: counts?.orders ?? 0,
+      customerCount: counts?.customers ?? 0,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Postgres fashion store error";
+    return {
+      ok: false,
+      error: message,
+      host: base.host,
+      productCount: null,
+      orderCount: null,
+      customerCount: null,
+    };
+  }
 }
 
 async function ensureTable(): Promise<void> {

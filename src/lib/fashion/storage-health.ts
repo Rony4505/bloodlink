@@ -1,5 +1,6 @@
 import { access, readFile, readdir, stat } from "fs/promises";
 import { fashionDataDir, fashionStorePath, fashionUploadDir } from "./paths";
+import { hasDatabaseUrl, postgresFashionHealth } from "../pg-store";
 
 async function fileExists(path: string): Promise<boolean> {
   try {
@@ -12,7 +13,7 @@ async function fileExists(path: string): Promise<boolean> {
 
 export type FashionStorageHealth = {
   ok: boolean;
-  backend: "file";
+  backend: "postgres" | "file" | "file-fallback";
   dataDir: string;
   storePath: string;
   storeExists: boolean;
@@ -26,11 +27,14 @@ export type FashionStorageHealth = {
   orderCount: number | null;
   customerCount: number | null;
   volumeMounted: boolean | null;
+  postgresOk: boolean | null;
+  postgresHost: string | null;
+  postgresError: string | null;
   persistentHint: string;
   error: string | null;
 };
 
-/** Read-only health snapshot for Smart Craft store files on DATA_DIR (Railway Volume). */
+/** Read-only health snapshot for Smart Craft store (Postgres primary, file mirror + backups). */
 export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
   const dataDir = fashionDataDir();
   const storePath = fashionStorePath();
@@ -48,6 +52,9 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
   let orderCount: number | null = null;
   let customerCount: number | null = null;
   let volumeMounted: boolean | null = null;
+  let postgresOk: boolean | null = null;
+  let postgresHost: string | null = null;
+  let postgresError: string | null = null;
   let error: string | null = null;
 
   storeExists = await fileExists(storePath);
@@ -88,23 +95,45 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
     }
   }
 
-  let persistentHint: string;
-  if (volumeMounted) {
-    persistentHint =
-      "Railway Volume marker found at /app/data — store data should survive redeploys. Automatic backups are kept in /app/data/backups.";
-  } else if (storeExists) {
-    persistentHint =
-      "Store file exists but no volume marker. Add a Railway Volume mounted at /app/data, redeploy, then save once in admin to confirm persistence.";
-  } else {
-    persistentHint =
-      "No store file yet. Add a Railway Volume at /app/data before editing products — otherwise redeploy resets to seed data.";
+  if (hasDatabaseUrl()) {
+    const pg = await postgresFashionHealth();
+    postgresOk = pg.ok;
+    postgresHost = pg.host || null;
+    postgresError = pg.error;
+    if (pg.ok) {
+      productCount = pg.productCount;
+      orderCount = pg.orderCount;
+      customerCount = pg.customerCount;
+    } else if (!error) {
+      error = pg.error;
+    }
   }
 
-  const ok = error === null;
+  let backend: FashionStorageHealth["backend"] = "file";
+  if (hasDatabaseUrl()) {
+    backend = postgresOk ? "postgres" : "file-fallback";
+  }
+
+  let persistentHint: string;
+  if (backend === "postgres" && postgresOk) {
+    persistentHint =
+      "Postgres is active — products, orders, and settings survive redeploys. File mirror + /app/data/backups kept as extra safety.";
+  } else if (volumeMounted) {
+    persistentHint =
+      "File storage on Railway Volume at /app/data. Add Postgres (recommended) via Admin → Backup → Database URL for permanent storage.";
+  } else if (storeExists) {
+    persistentHint =
+      "Store file exists but no volume marker. Mount Volume at /app/data and add Postgres so redeploy never wipes data.";
+  } else {
+    persistentHint =
+      "No store file yet. Add Railway Postgres + Volume at /app/data before editing products.";
+  }
+
+  const ok = error === null && (backend !== "postgres" || postgresOk === true);
 
   return {
     ok,
-    backend: "file",
+    backend,
     dataDir,
     storePath,
     storeExists,
@@ -118,6 +147,9 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
     orderCount,
     customerCount,
     volumeMounted,
+    postgresOk,
+    postgresHost,
+    postgresError,
     persistentHint,
     error,
   };

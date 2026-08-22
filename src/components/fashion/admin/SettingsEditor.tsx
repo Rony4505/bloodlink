@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type {
@@ -120,6 +120,9 @@ export function SettingsEditor({
   const [backupFile, setBackupFile] = useState<File | null>(null);
   const [backupRestoring, setBackupRestoring] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
+  const [databaseUrl, setDatabaseUrl] = useState("");
+  const [storageSaving, setStorageSaving] = useState(false);
+  const [databaseReady, setDatabaseReady] = useState(false);
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "brand", label: fc.admin.settingsBrand },
@@ -152,6 +155,36 @@ export function SettingsEditor({
       setBackupMessage(fc.admin.backupDownload);
     } catch {
       setBackupMessage(fc.admin.backupRestoreFailed);
+    }
+  }
+
+  async function saveDatabaseStorage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!databaseUrl.trim()) return;
+    setStorageSaving(true);
+    setBackupMessage("");
+    try {
+      const res = await fetch("/api/fashion/admin/storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ databaseUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBackupMessage(data.error || fc.admin.postgresSaveFailed);
+        setDatabaseReady(false);
+        return;
+      }
+      setDatabaseReady(Boolean(data.databaseReady));
+      setBackupMessage(
+        data.databaseReady
+          ? `${fc.admin.postgresSaveSuccess} (${data.productCount ?? 0} products)`
+          : data.error || fc.admin.postgresSaveFailed,
+      );
+    } catch {
+      setBackupMessage(fc.admin.postgresSaveFailed);
+    } finally {
+      setStorageSaving(false);
     }
   }
 
@@ -188,6 +221,14 @@ export function SettingsEditor({
   function patch<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) {
     setSettings({ ...settings, [key]: value });
   }
+
+  useEffect(() => {
+    if (tab !== "backup") return;
+    fetch("/api/fashion/admin/storage")
+      .then((r) => r.json())
+      .then((data) => setDatabaseReady(Boolean(data.databaseReady)))
+      .catch(() => setDatabaseReady(false));
+  }, [tab]);
 
   function updatePillar(index: number, key: keyof AboutPillar, value: string, lang: "bn" | "en") {
     if (lang === "en") {
@@ -705,6 +746,28 @@ export function SettingsEditor({
 
       {tab === "backup" ? (
         <div className="space-y-4 rounded-xl border border-black/6 bg-white/70 p-4">
+          <div className="space-y-3 rounded-xl border border-[#c9a0b8]/40 bg-[#fff8fc] p-4">
+            <p className="text-sm font-semibold text-[#5c3d5e]">{fc.admin.postgresTitle}</p>
+            <p className="text-xs leading-relaxed text-[#8a7490]">{fc.admin.postgresBody}</p>
+            {databaseReady ? (
+              <p className="text-sm font-semibold text-[#2f6b4f]">{fc.admin.postgresReady}</p>
+            ) : null}
+            <form onSubmit={saveDatabaseStorage} className="space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-[#3d2a24]">{fc.admin.postgresLabel}</span>
+                <input
+                  className="field font-mono text-xs"
+                  value={databaseUrl}
+                  onChange={(e) => setDatabaseUrl(e.target.value)}
+                  placeholder="postgresql://user:pass@host:port/railway"
+                />
+              </label>
+              <FashionButton type="submit" variant="secondary" disabled={storageSaving || !databaseUrl.trim()}>
+                {storageSaving ? "..." : fc.admin.postgresSave}
+              </FashionButton>
+            </form>
+          </div>
+
           <p className="text-sm leading-relaxed text-[#5b4339]">{fc.admin.backupBody}</p>
           <p className="text-xs leading-relaxed text-[#9b7766]">{fc.admin.backupRotatingHint}</p>
           <FashionButton type="button" onClick={() => void downloadBackup()}>

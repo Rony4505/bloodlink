@@ -19,7 +19,7 @@ ENV NEXT_PUBLIC_SITE_URL=https://smartcraftcorner.up.railway.app
 ARG RAILWAY_GIT_COMMIT_SHA=unknown
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build && test -d .next/standalone && printf '%s' "$RAILWAY_GIT_COMMIT_SHA" > /app/.build-id
+RUN chmod +x docker-build.sh && ./docker-build.sh
 
 FROM node:22-alpine AS runner
 WORKDIR /app
