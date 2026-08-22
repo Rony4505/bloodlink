@@ -11,6 +11,7 @@ import { TopLanguageBar } from "@/components/fashion/LanguageSwitcher";
 import { ChatSupportWidget } from "@/components/fashion/ChatSupportWidget";
 import { AnnouncementBar } from "@/components/fashion/AnnouncementBar";
 import { OrderBottomNav } from "@/components/fashion/OrderBottomNav";
+import { SiteEntryPopup } from "@/components/fashion/SiteEntryPopup";
 import { buildCarouselSlides } from "@/lib/fashion/carousel-slides";
 import { getCategories } from "@/lib/fashion/categories-server";
 import {

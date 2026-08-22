@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { getStorageHealth } from "@/lib/db";
+import { getFashionStorageHealth } from "@/lib/fashion/storage-health";
+import { isFashionMode } from "@/lib/app-mode";
 import { getEmailOtpConfigStatus } from "@/lib/otp-delivery";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const storage = await getStorageHealth();
+  const fashion = isFashionMode();
+  const storage = fashion ? await getFashionStorageHealth() : await getStorageHealth();
   const emailOtp = getEmailOtpConfigStatus();
   return NextResponse.json(
     {
