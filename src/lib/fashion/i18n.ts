@@ -166,6 +166,11 @@ export const fashionI18n = {
       postgresStatusHost: "Host",
       postgresStatusProducts: "Products",
       postgresStatusChecking: "Postgres status check হচ্ছে...",
+      postgresStatusPasteUntested:
+        "নতুন URL paste হয়েছে — এখনো test হয়নি। Connect চাপুন; না চাপলে নিচের status পুরনো active URL-এর",
+      postgresStatusActiveSource: "Active source",
+      postgresRejectInternal:
+        "railway.internal URL accept হয় না — DATABASE_PUBLIC_URL (proxy.rlwy.net) use করুন",
       postgresInvalidUrlHint: "railway.internal URL কাজ নাও করতে পারে — DATABASE_PUBLIC_URL (proxy.rlwy.net) use করুন",
       trackSearch: "ট্র্যাকিং নম্বর দিয়ে সার্চ",
       offersSearch: "নাম / কোড / অফার / অ্যাড সার্চ",
@@ -338,6 +343,11 @@ export const fashionI18n = {
       postgresStatusHost: "Host",
       postgresStatusProducts: "Products",
       postgresStatusChecking: "Checking Postgres status...",
+      postgresStatusPasteUntested:
+        "New URL pasted but not tested yet — click Connect. Until then, status below is for the current active URL.",
+      postgresStatusActiveSource: "Active source",
+      postgresRejectInternal:
+        "railway.internal URLs are not accepted — use DATABASE_PUBLIC_URL (proxy.rlwy.net)",
       postgresInvalidUrlHint: "railway.internal may not work — use DATABASE_PUBLIC_URL (proxy.rlwy.net)",
       trackSearch: "Search by tracking number",
       offersSearch: "Search name / code / offer / ad",

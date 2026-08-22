@@ -176,6 +176,44 @@ export function hasSavedDatabaseUrl(): boolean {
   return readSavedUrl().length > 0 || Boolean(urlOverride);
 }
 
+/** URL persisted by admin paste (volume/tmp), not Railway env injection. */
+export function getSavedDatabaseUrl(): string {
+  return readSavedUrl();
+}
+
+export type DatabaseUrlSource =
+  | "memory"
+  | "volume"
+  | "tmp"
+  | "railway-env"
+  | "none";
+
+export function getDatabaseUrlSource(): {
+  source: DatabaseUrlSource;
+  host: string;
+  isPrivate: boolean;
+} {
+  const url = runtimeDbUrl();
+  const host = databaseUrlHost(url);
+  const isPrivate = isPrivateRailwayUrl(url);
+
+  if (!url) {
+    return { source: "none", host: "", isPrivate: false };
+  }
+  if (urlOverride) {
+    return { source: "memory", host, isPrivate };
+  }
+  const fromVolume = readUrlFile(persistUrlPath());
+  if (fromVolume) {
+    return { source: "volume", host, isPrivate };
+  }
+  const fromTmp = readUrlFile(TMP_URL_FILE);
+  if (fromTmp) {
+    return { source: "tmp", host, isPrivate };
+  }
+  return { source: "railway-env", host, isPrivate };
+}
+
 export function runtimeEnv(name: string): string {
   const fromProcess = readProcessEnv(name);
   if (fromProcess) return fromProcess;

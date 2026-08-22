@@ -130,7 +130,20 @@ export function SettingsEditor({
     postgresError?: string | null;
     productCount?: number | null;
     databaseUrlConfigured?: boolean;
+    activeUrlSource?: string;
+    activeUrlIsPrivate?: boolean;
   } | null>(null);
+
+  function postgresHostFromInput(raw: string): string {
+    const trimmed = raw.trim();
+    if (!trimmed) return "";
+    try {
+      const u = new URL(trimmed.replace(/^postgres(ql)?:/i, "http:"));
+      return u.hostname || "";
+    } catch {
+      return "";
+    }
+  }
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "brand", label: fc.admin.settingsBrand },
@@ -178,6 +191,8 @@ export function SettingsEditor({
         postgresError: data.postgresError ?? data.storage?.postgresError ?? null,
         productCount: data.productCount ?? data.storage?.productCount ?? null,
         databaseUrlConfigured: Boolean(data.databaseUrlConfigured ?? data.savedUrlOnVolume),
+        activeUrlSource: data.activeUrlSource,
+        activeUrlIsPrivate: Boolean(data.activeUrlIsPrivate),
       });
     } catch {
       setDatabaseReady(false);
@@ -206,14 +221,16 @@ export function SettingsEditor({
       if (!res.ok) {
         const errMsg = data.error || fc.admin.postgresSaveFailed;
         setBackupMessage(errMsg);
-        setDatabaseReady(false);
-        setStorageStatus((prev) => ({
-          ...prev,
-          backend: data.storage?.backend ?? "file-fallback",
-          postgresError: errMsg,
-          activeHost: data.activeHost ?? prev?.activeHost,
-          databaseUrlConfigured: true,
-        }));
+        setDatabaseReady(Boolean(data.databaseReady));
+        setStorageStatus({
+          backend: data.backend ?? data.storage?.backend ?? "file-fallback",
+          postgresError: data.postgresError ?? errMsg,
+          activeHost: data.activeHost ?? data.storage?.postgresHost ?? "",
+          productCount: data.storage?.productCount ?? null,
+          databaseUrlConfigured: Boolean(data.databaseUrlConfigured ?? data.savedUrlOnVolume),
+          activeUrlSource: data.activeUrlSource,
+          activeUrlIsPrivate: Boolean(data.activeUrlIsPrivate),
+        });
         return;
       }
       setDatabaseReady(Boolean(data.databaseReady));
@@ -276,12 +293,34 @@ export function SettingsEditor({
     void loadStorageStatus();
   }, [tab]);
 
+  const pastedHost = postgresHostFromInput(databaseUrl);
+  const activeHost = storageStatus?.activeHost ?? "";
+  const pasteDiffersFromActive =
+    pastedHost.length > 0 && pastedHost.toLowerCase() !== activeHost.toLowerCase();
+  const pastedIsInternal = /railway\.internal/i.test(databaseUrl);
+
   const postgresBanner = (() => {
     if (storageLoading) {
       return {
         tone: "neutral" as const,
         title: fc.admin.postgresStatusChecking,
         detail: "",
+      };
+    }
+    if (pastedIsInternal) {
+      return {
+        tone: "error" as const,
+        title: fc.admin.postgresRejectInternal,
+        detail: fc.admin.postgresInvalidUrlHint,
+      };
+    }
+    if (pasteDiffersFromActive) {
+      return {
+        tone: "warn" as const,
+        title: fc.admin.postgresStatusPasteUntested,
+        detail: activeHost
+          ? `${fc.admin.postgresStatusHost}: ${activeHost}${databaseReady ? " (connected)" : ""}`
+          : fc.admin.postgresInvalidUrlHint,
       };
     }
     if (databaseReady) {
@@ -293,9 +332,19 @@ export function SettingsEditor({
           storageStatus?.productCount != null
             ? `${fc.admin.postgresStatusProducts}: ${storageStatus.productCount}`
             : "",
+          storageStatus?.activeUrlSource
+            ? `${fc.admin.postgresStatusActiveSource}: ${storageStatus.activeUrlSource}`
+            : "",
         ]
           .filter(Boolean)
           .join(" · "),
+      };
+    }
+    if (storageStatus?.activeUrlIsPrivate) {
+      return {
+        tone: "warn" as const,
+        title: fc.admin.postgresRejectInternal,
+        detail: storageStatus.postgresError || fc.admin.postgresInvalidUrlHint,
       };
     }
     if (storageStatus?.backend === "file-fallback" || storageStatus?.postgresError) {
@@ -867,7 +916,11 @@ export function SettingsEditor({
                   placeholder="postgresql://user:pass@host:port/railway"
                 />
               </label>
-              <FashionButton type="submit" variant="secondary" disabled={storageSaving || !databaseUrl.trim()}>
+              <FashionButton
+                type="submit"
+                variant="secondary"
+                disabled={storageSaving || !databaseUrl.trim() || pastedIsInternal}
+              >
                 {storageSaving ? "..." : fc.admin.postgresSave}
               </FashionButton>
               <FashionButton type="button" variant="secondary" onClick={() => void loadStorageStatus()}>
