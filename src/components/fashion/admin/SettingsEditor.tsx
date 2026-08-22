@@ -123,6 +123,14 @@ export function SettingsEditor({
   const [databaseUrl, setDatabaseUrl] = useState("");
   const [storageSaving, setStorageSaving] = useState(false);
   const [databaseReady, setDatabaseReady] = useState(false);
+  const [storageLoading, setStorageLoading] = useState(false);
+  const [storageStatus, setStorageStatus] = useState<{
+    backend?: string;
+    activeHost?: string;
+    postgresError?: string | null;
+    productCount?: number | null;
+    databaseUrlConfigured?: boolean;
+  } | null>(null);
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "brand", label: fc.admin.settingsBrand },
@@ -158,6 +166,31 @@ export function SettingsEditor({
     }
   }
 
+  async function loadStorageStatus() {
+    setStorageLoading(true);
+    try {
+      const res = await fetch("/api/fashion/admin/storage");
+      const data = await res.json();
+      setDatabaseReady(Boolean(data.databaseReady));
+      setStorageStatus({
+        backend: data.backend ?? data.storage?.backend,
+        activeHost: data.activeHost ?? data.storage?.postgresHost ?? "",
+        postgresError: data.postgresError ?? data.storage?.postgresError ?? null,
+        productCount: data.productCount ?? data.storage?.productCount ?? null,
+        databaseUrlConfigured: Boolean(data.databaseUrlConfigured ?? data.savedUrlOnVolume),
+      });
+    } catch {
+      setDatabaseReady(false);
+      setStorageStatus({
+        backend: "unknown",
+        postgresError: fc.admin.postgresSaveFailed,
+        databaseUrlConfigured: false,
+      });
+    } finally {
+      setStorageLoading(false);
+    }
+  }
+
   async function saveDatabaseStorage(e: React.FormEvent) {
     e.preventDefault();
     if (!databaseUrl.trim()) return;
@@ -171,16 +204,32 @@ export function SettingsEditor({
       });
       const data = await res.json();
       if (!res.ok) {
-        setBackupMessage(data.error || fc.admin.postgresSaveFailed);
+        const errMsg = data.error || fc.admin.postgresSaveFailed;
+        setBackupMessage(errMsg);
         setDatabaseReady(false);
+        setStorageStatus((prev) => ({
+          ...prev,
+          backend: data.storage?.backend ?? "file-fallback",
+          postgresError: errMsg,
+          activeHost: data.activeHost ?? prev?.activeHost,
+          databaseUrlConfigured: true,
+        }));
         return;
       }
       setDatabaseReady(Boolean(data.databaseReady));
+      setStorageStatus({
+        backend: data.storage?.backend ?? (data.databaseReady ? "postgres" : "file"),
+        activeHost: data.activeHost ?? "",
+        postgresError: data.error ?? null,
+        productCount: data.productCount ?? data.storage?.productCount ?? null,
+        databaseUrlConfigured: true,
+      });
       setBackupMessage(
         data.databaseReady
           ? `${fc.admin.postgresSaveSuccess} (${data.productCount ?? 0} products)`
           : data.error || fc.admin.postgresSaveFailed,
       );
+      if (data.databaseReady) setDatabaseUrl("");
     } catch {
       setBackupMessage(fc.admin.postgresSaveFailed);
     } finally {
@@ -224,11 +273,51 @@ export function SettingsEditor({
 
   useEffect(() => {
     if (tab !== "backup") return;
-    fetch("/api/fashion/admin/storage")
-      .then((r) => r.json())
-      .then((data) => setDatabaseReady(Boolean(data.databaseReady)))
-      .catch(() => setDatabaseReady(false));
+    void loadStorageStatus();
   }, [tab]);
+
+  const postgresBanner = (() => {
+    if (storageLoading) {
+      return {
+        tone: "neutral" as const,
+        title: fc.admin.postgresStatusChecking,
+        detail: "",
+      };
+    }
+    if (databaseReady) {
+      return {
+        tone: "ok" as const,
+        title: fc.admin.postgresStatusConnected,
+        detail: [
+          storageStatus?.activeHost ? `${fc.admin.postgresStatusHost}: ${storageStatus.activeHost}` : "",
+          storageStatus?.productCount != null
+            ? `${fc.admin.postgresStatusProducts}: ${storageStatus.productCount}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      };
+    }
+    if (storageStatus?.backend === "file-fallback" || storageStatus?.postgresError) {
+      return {
+        tone: "error" as const,
+        title: fc.admin.postgresStatusFailed,
+        detail: storageStatus.postgresError || fc.admin.postgresStatusFallback,
+      };
+    }
+    if (storageStatus?.databaseUrlConfigured) {
+      return {
+        tone: "error" as const,
+        title: fc.admin.postgresStatusFailed,
+        detail: storageStatus.postgresError || fc.admin.postgresInvalidUrlHint,
+      };
+    }
+    return {
+      tone: "warn" as const,
+      title: fc.admin.postgresStatusNotConfigured,
+      detail: fc.admin.postgresInvalidUrlHint,
+    };
+  })();
 
   function updatePillar(index: number, key: keyof AboutPillar, value: string, lang: "bn" | "en") {
     if (lang === "en") {
@@ -749,9 +838,25 @@ export function SettingsEditor({
           <div className="space-y-3 rounded-xl border border-[#c9a0b8]/40 bg-[#fff8fc] p-4">
             <p className="text-sm font-semibold text-[#5c3d5e]">{fc.admin.postgresTitle}</p>
             <p className="text-xs leading-relaxed text-[#8a7490]">{fc.admin.postgresBody}</p>
-            {databaseReady ? (
-              <p className="text-sm font-semibold text-[#2f6b4f]">{fc.admin.postgresReady}</p>
-            ) : null}
+
+            <div
+              className={`rounded-xl border px-4 py-3 ${
+                postgresBanner.tone === "ok"
+                  ? "border-[#2f6b4f]/30 bg-[#edf7f0] text-[#1e5631]"
+                  : postgresBanner.tone === "error"
+                    ? "border-red-300 bg-red-50 text-red-800"
+                    : postgresBanner.tone === "warn"
+                      ? "border-amber-300 bg-amber-50 text-amber-900"
+                      : "border-black/10 bg-white/80 text-[#5b4339]"
+              }`}
+              role="status"
+            >
+              <p className="text-sm font-semibold">{postgresBanner.title}</p>
+              {postgresBanner.detail ? (
+                <p className="mt-1 text-xs leading-relaxed opacity-90">{postgresBanner.detail}</p>
+              ) : null}
+            </div>
+
             <form onSubmit={saveDatabaseStorage} className="space-y-3">
               <label className="block text-sm">
                 <span className="mb-1 block font-medium text-[#3d2a24]">{fc.admin.postgresLabel}</span>
@@ -765,7 +870,19 @@ export function SettingsEditor({
               <FashionButton type="submit" variant="secondary" disabled={storageSaving || !databaseUrl.trim()}>
                 {storageSaving ? "..." : fc.admin.postgresSave}
               </FashionButton>
+              <FashionButton type="button" variant="secondary" onClick={() => void loadStorageStatus()}>
+                ↻
+              </FashionButton>
             </form>
+            {backupMessage ? (
+              <p
+                className={`text-sm font-medium ${
+                  databaseReady ? "text-[#2f6b4f]" : "text-red-700"
+                }`}
+              >
+                {backupMessage}
+              </p>
+            ) : null}
           </div>
 
           <p className="text-sm leading-relaxed text-[#5b4339]">{fc.admin.backupBody}</p>
