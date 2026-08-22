@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ProductGrid } from "@/components/fashion/ProductGrid";
 import { VisibleSelect } from "@/components/fashion/VisibleSelect";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
+import { sortProductsByDisplayPriority } from "@/lib/fashion/product-sort";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { Category, Product } from "@/lib/fashion/types";
 
@@ -11,7 +12,7 @@ type PriceSort = "default" | "price-asc" | "price-desc";
 const PAGE_SIZE = 20;
 
 function sortProducts(products: Product[], sort: PriceSort): Product[] {
-  if (sort === "default") return products;
+  if (sort === "default") return sortProductsByDisplayPriority(products);
   return [...products].sort((a, b) => {
     const diff = getEffectivePrice(a) - getEffectivePrice(b);
     return sort === "price-asc" ? diff : -diff;
@@ -154,6 +155,26 @@ export function HomeProductBrowse({
 
   return (
     <>
+      {showOffers ? (
+        <ProductSection
+          title={fc.home.offers}
+          subtitle={fc.home.offersSub}
+          products={offerProducts}
+          sort={offerSort}
+          onSortChange={setOfferSort}
+        />
+      ) : null}
+
+      {showNewProducts ? (
+        <ProductSection
+          title={fc.home.newProducts}
+          subtitle={fc.home.newProductsSub}
+          products={newProducts}
+          sort={newSort}
+          onSortChange={setNewSort}
+        />
+      ) : null}
+
       <section className="border-b border-black/5 bg-[#f3f1ef]">
         <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -222,26 +243,6 @@ export function HomeProductBrowse({
           />
         </div>
       </section>
-
-      {showNewProducts ? (
-        <ProductSection
-          title={fc.home.newProducts}
-          subtitle={fc.home.newProductsSub}
-          products={newProducts}
-          sort={newSort}
-          onSortChange={setNewSort}
-        />
-      ) : null}
-
-      {showOffers ? (
-        <ProductSection
-          title={fc.home.offers}
-          subtitle={fc.home.offersSub}
-          products={offerProducts}
-          sort={offerSort}
-          onSortChange={setOfferSort}
-        />
-      ) : null}
     </>
   );
 }

@@ -68,7 +68,7 @@ export const fashionI18n = {
     },
     search: {
       allCategories: "সব ক্যাটাগরি",
-      sortFeatured: "ফিচার্ড",
+      sortFeatured: "অফার/নিউ আগে",
       sortPriceLow: "দাম: কম থেকে বেশি",
       sortPriceHigh: "দাম: বেশি থেকে কম",
     },
@@ -245,7 +245,7 @@ export const fashionI18n = {
     },
     search: {
       allCategories: "All categories",
-      sortFeatured: "Featured",
+      sortFeatured: "Offers & new first",
       sortPriceLow: "Price: low to high",
       sortPriceHigh: "Price: high to low",
     },

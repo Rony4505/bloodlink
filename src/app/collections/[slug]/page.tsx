@@ -5,6 +5,7 @@ import { ProductGrid } from "@/components/fashion/ProductGrid";
 import { categories } from "@/lib/fashion/categories";
 import { getCategory } from "@/lib/fashion/categories-server";
 import { getProductsByCategory } from "@/lib/fashion/store";
+import { sortProductsByDisplayPriority } from "@/lib/fashion/product-sort";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function CollectionPage({ params }: Props) {
   const category = await getCategory(slug);
   if (!category) notFound();
 
-  const categoryProducts = await getProductsByCategory(slug);
+  const categoryProducts = sortProductsByDisplayPriority(await getProductsByCategory(slug));
 
   return (
     <FashionShell>
