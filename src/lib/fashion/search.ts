@@ -1,4 +1,5 @@
 import type { Product, SearchFilters } from "./types";
+import { sortProductsByDisplayPriority } from "./product-sort";
 
 export function slugify(value: string): string {
   return value
@@ -56,7 +57,7 @@ export function searchProducts(products: Product[], filters: SearchFilters): Pro
       results.sort((a, b) => b.id.localeCompare(a.id));
       break;
     default:
-      results.sort((a, b) => Number(b.featured) - Number(a.featured));
+      results = sortProductsByDisplayPriority(results);
       break;
   }
 
