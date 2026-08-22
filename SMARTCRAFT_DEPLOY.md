@@ -29,7 +29,13 @@ DATA_DIR=/app/data
 ```
 
 5. Add a **Volume** on this service → mount path `/app/data`
-6. **Settings → Networking → Custom Domain** → add:
+6. **Recommended — PostgreSQL (permanent data):**
+   - Railway → **+ Create** → **Database** → **PostgreSQL**
+   - Open Postgres service → **Variables** → copy **`DATABASE_PUBLIC_URL`** (must contain `proxy.rlwy.net`, not `railway.internal`)
+   - Either paste in Smart craft service variables as `DATABASE_PUBLIC_URL`, **or**
+   - After deploy: **Admin → Settings → Backup** → paste URL → **Connect Postgres**
+   - First connect migrates existing file data into Postgres automatically
+7. **Settings → Networking → Custom Domain** → add:
    - `smartcraftcorner.com`
    - `www.smartcraftcorner.com`
 7. In your domain DNS (Namecheap / Cloudflare / etc.) add the records Railway shows

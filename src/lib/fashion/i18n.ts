@@ -150,7 +150,15 @@ export const fashionI18n = {
       backupRestoreSuccess: "ব্যাকআপ সফলভাবে রিস্টোর হয়েছে",
       backupRestoreFailed: "ব্যাকআপ রিস্টোর করা যায়নি",
       backupRotatingHint:
-        "সার্ভার Volume-এ (/app/data/backups) প্রতিটি সেভে automatic backup রাখে — redeploy-এও ডেটা থাকবে।",
+        "সার্ভার Volume-এ (/app/data/backups) প্রতিটি save-এ automatic backup রাখে। Postgres connect করলে redeploy-এ data 100% safe।",
+      postgresTitle: "Postgres Database (recommended)",
+      postgresBody:
+        "Railway → PostgreSQL add করুন → DATABASE_PUBLIC_URL copy → এখানে paste করুন। Product, order, settings redeploy-এও থাকবে।",
+      postgresLabel: "DATABASE_PUBLIC_URL",
+      postgresSave: "Postgres Connect",
+      postgresReady: "Postgres connected — data permanent",
+      postgresSaveSuccess: "Postgres সফলভাবে connected",
+      postgresSaveFailed: "Postgres connect করা যায়নি",
       trackSearch: "ট্র্যাকিং নম্বর দিয়ে সার্চ",
       offersSearch: "নাম / কোড / অফার / অ্যাড সার্চ",
       bangla: "বাংলা",
@@ -306,7 +314,15 @@ export const fashionI18n = {
       backupRestoreSuccess: "Backup restored successfully",
       backupRestoreFailed: "Could not restore backup",
       backupRotatingHint:
-        "The server also keeps automatic copies on the Volume (/app/data/backups) on every save.",
+        "The server keeps automatic copies on the Volume (/app/data/backups) on every save. Postgres is the permanent store.",
+      postgresTitle: "Postgres Database (recommended)",
+      postgresBody:
+        "Railway → Add PostgreSQL → copy DATABASE_PUBLIC_URL → paste here so products and orders survive every redeploy.",
+      postgresLabel: "DATABASE_PUBLIC_URL",
+      postgresSave: "Connect Postgres",
+      postgresReady: "Postgres connected — data is permanent",
+      postgresSaveSuccess: "Postgres connected successfully",
+      postgresSaveFailed: "Could not connect Postgres",
       trackSearch: "Search by tracking number",
       offersSearch: "Search name / code / offer / ad",
       bangla: "Bangla",

@@ -38,11 +38,6 @@ npm run build
 test -d .next/standalone || (echo "[docker-build] missing .next/standalone" && exit 1)
 printf '%s' "$BUILD_ID" > /app/.build-id
 
-if [ "$APP_MODE" = "fashion" ]; then
-  echo "[docker-build] fashion mode — skipping Postgres bundle copy"
-  exit 0
-fi
-
 mkdir -p .next/standalone/node_modules
 for pkg in \
   pg \

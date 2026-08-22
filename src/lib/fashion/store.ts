@@ -24,6 +24,12 @@ import { computeAnalytics } from "./analytics";
 import { generateTrackingNumber } from "./tracking";
 import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
 import { fashionDataDir, fashionStorePath } from "./paths";
+import {
+  hasDatabaseUrl,
+  loadFashionStoreCountsFromPostgres,
+  loadFashionStoreFromPostgres,
+  saveFashionStoreToPostgres,
+} from "../pg-store";
 
 const defaultCoupons: Coupon[] = [
   {
@@ -139,6 +145,14 @@ async function hasAnyStoreBackup(): Promise<boolean> {
 }
 
 async function readExistingCounts(): Promise<StoreCounts | null> {
+  if (hasDatabaseUrl()) {
+    try {
+      const pgCounts = await loadFashionStoreCountsFromPostgres();
+      if (pgCounts) return pgCounts;
+    } catch {
+      /* fall through to file counts */
+    }
+  }
   if (!(await fileExists(storePath())) && !(await hasAnyStoreBackup())) return null;
   try {
     const parsed = await readStoreJson();
@@ -495,13 +509,79 @@ async function createInitialStore(): Promise<FashionStore> {
   };
 }
 
-async function ensureStore(): Promise<FashionStore> {
-  const building = isNextBuild();
-  const primary = storePath();
-
-  if (!building) {
-    await mkdir(dataDir(), { recursive: true });
+async function tryLoadParsedFromFile(): Promise<Partial<FashionStore> | null> {
+  try {
+    if (!(await fileExists(storePath())) && !(await hasAnyStoreBackup())) return null;
+    return await readStoreJson();
+  } catch {
+    return null;
   }
+}
+
+async function runStoreMaintenance(
+  store: FashionStore,
+  priorCounts: StoreCounts,
+  parsed?: Partial<FashionStore>,
+): Promise<FashionStore> {
+  const beforeHero = parsed?.settings?.heroTitle ?? store.settings.heroTitle;
+  const beforeFooter = parsed?.settings?.footerText ?? store.settings.footerText;
+  if (
+    (beforeHero && beforeHero !== store.settings.heroTitle) ||
+    (beforeFooter && beforeFooter !== store.settings.footerText)
+  ) {
+    await writeStore(store, priorCounts);
+  }
+  if (purgeExpired(store)) await writeStore(store, priorCounts);
+  if (normalizeProductSlugs(store)) await writeStore(store, priorCounts);
+  if (await syncAdminPasswordHash(store)) await writeStore(store, priorCounts);
+  return store;
+}
+
+async function ensureStoreFromPostgres(): Promise<FashionStore | null> {
+  const fromPgRaw = await loadFashionStoreFromPostgres();
+  const fromFileRaw = await tryLoadParsedFromFile();
+
+  if (fromPgRaw) {
+    const priorCounts = {
+      products: Array.isArray(fromPgRaw.products) ? fromPgRaw.products.length : 0,
+      orders: Array.isArray(fromPgRaw.orders) ? fromPgRaw.orders.length : 0,
+      customers: Array.isArray(fromPgRaw.customers) ? fromPgRaw.customers.length : 0,
+    };
+    let store = await buildStoreFromParsed(fromPgRaw, { allowSeedFallback: false });
+
+    if (fromFileRaw) {
+      const fileCounts = {
+        products: Array.isArray(fromFileRaw.products) ? fromFileRaw.products.length : 0,
+        orders: Array.isArray(fromFileRaw.orders) ? fromFileRaw.orders.length : 0,
+        customers: Array.isArray(fromFileRaw.customers) ? fromFileRaw.customers.length : 0,
+      };
+      if (
+        fileCounts.products > priorCounts.products ||
+        fileCounts.orders > priorCounts.orders ||
+        fileCounts.customers > priorCounts.customers
+      ) {
+        console.warn("[fashion-store] File has richer data than Postgres — migrating file to Postgres");
+        store = await buildStoreFromParsed(fromFileRaw, { allowSeedFallback: false });
+        await writeStore(store, priorCounts);
+        return store;
+      }
+    }
+
+    return runStoreMaintenance(store, priorCounts, fromPgRaw);
+  }
+
+  if (fromFileRaw) {
+    console.info("[fashion-store] Migrating fashion store file into Postgres");
+    const store = await buildStoreFromParsed(fromFileRaw, { allowSeedFallback: false });
+    await writeStore(store);
+    return store;
+  }
+
+  return null;
+}
+
+async function ensureStoreFromFile(building: boolean): Promise<FashionStore> {
+  const primary = storePath();
 
   if (!(await fileExists(primary))) {
     if (await hasAnyStoreBackup()) {
@@ -537,8 +617,6 @@ async function ensureStore(): Promise<FashionStore> {
 
   try {
     const parsed = await readStoreJson();
-    const beforeHero = parsed.settings?.heroTitle;
-    const beforeFooter = parsed.settings?.footerText;
     const priorCounts = {
       products: Array.isArray(parsed.products) ? parsed.products.length : 0,
       orders: Array.isArray(parsed.orders) ? parsed.orders.length : 0,
@@ -546,16 +624,7 @@ async function ensureStore(): Promise<FashionStore> {
     };
     const store = await buildStoreFromParsed(parsed, { allowSeedFallback: false });
     if (building) return store;
-    if (
-      (beforeHero && beforeHero !== store.settings.heroTitle) ||
-      (beforeFooter && beforeFooter !== store.settings.footerText)
-    ) {
-      await writeStore(store, priorCounts);
-    }
-    if (purgeExpired(store)) await writeStore(store, priorCounts);
-    if (normalizeProductSlugs(store)) await writeStore(store, priorCounts);
-    if (await syncAdminPasswordHash(store)) await writeStore(store, priorCounts);
-    return store;
+    return runStoreMaintenance(store, priorCounts, parsed);
   } catch (error) {
     if (building) {
       console.warn("[fashion-store] build-time store read failed, using defaults", error);
@@ -564,6 +633,24 @@ async function ensureStore(): Promise<FashionStore> {
     console.error("[fashion-store] failed to load store — refusing to reset data", error);
     throw new Error("Store data could not be loaded. Check DATA_DIR volume mount.");
   }
+}
+
+async function ensureStore(): Promise<FashionStore> {
+  const building = isNextBuild();
+  if (!building) {
+    await mkdir(dataDir(), { recursive: true });
+  }
+
+  if (hasDatabaseUrl() && !building) {
+    try {
+      const fromPg = await ensureStoreFromPostgres();
+      if (fromPg) return fromPg;
+    } catch (err) {
+      console.error("[fashion-store] Postgres unavailable — using file storage", err);
+    }
+  }
+
+  return ensureStoreFromFile(building);
 }
 
 async function writeStore(
@@ -576,6 +663,17 @@ async function writeStore(
   const task = writeQueue.then(async () => {
     const existing = priorCounts ?? (await readExistingCounts());
     assertSafeWrite(store, existing, options);
+
+    if (hasDatabaseUrl()) {
+      try {
+        await saveFashionStoreToPostgres(store, {
+          allowShrink: options?.allowShrink,
+          seedProductCount: SEED_PRODUCT_COUNT,
+        });
+      } catch (err) {
+        console.error("[fashion-store] Postgres save failed — keeping file mirror", err);
+      }
+    }
 
     await mkdir(dataDir(), { recursive: true });
     const primary = storePath();
