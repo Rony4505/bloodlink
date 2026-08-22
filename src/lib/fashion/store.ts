@@ -469,10 +469,16 @@ export async function updateStoreSettings(partial: Partial<StoreSettings>): Prom
 
   store.settings = {
     ...next,
-    deliveryRules: partial.deliveryRules ?? current.deliveryRules,
+    deliveryRules:
+      Array.isArray(partial.deliveryRules) && partial.deliveryRules.length > 0
+        ? partial.deliveryRules
+        : current.deliveryRules,
     promoBanners:
       partial.promoBanners !== undefined ? partial.promoBanners : current.promoBanners ?? [],
-    availableSizes: partial.availableSizes ?? current.availableSizes,
+    availableSizes:
+      Array.isArray(partial.availableSizes) && partial.availableSizes.length > 0
+        ? partial.availableSizes
+        : current.availableSizes,
     aboutPillars: partial.aboutPillars ?? current.aboutPillars,
     aboutPillarsEn: partial.aboutPillarsEn ?? current.aboutPillarsEn,
     serviceHighlights: partial.serviceHighlights ?? current.serviceHighlights,
@@ -636,6 +642,11 @@ function syncProductAdvertisement(store: FashionStore, product: Product): void {
 
 export async function upsertProduct(input: ProductInput): Promise<Product> {
   const store = await ensureStore();
+  const priorCounts = {
+    products: store.products.length,
+    orders: store.orders.length,
+    customers: store.customers.length,
+  };
   const isNew = !input.id || !store.products.find((p) => p.id === input.id);
   const product = resolveProductPrice(input, store.settings);
   const index = store.products.findIndex((item) => item.id === product.id);
@@ -657,7 +668,7 @@ export async function upsertProduct(input: ProductInput): Promise<Product> {
 
   syncProductAdvertisement(store, savedProduct);
 
-  await writeStore(store);
+  await writeStore(store, priorCounts);
   return savedProduct;
 }
 

@@ -46,7 +46,9 @@ export default async function ProductPage({ params }: Props) {
           <ProductPageDetails product={product} categoryTitle={category?.titleBn} />
         </div>
 
-        <ProductReviews productId={product.id} />
+        <div id="reviews" className="mt-20">
+          <ProductReviews productId={product.id} />
+        </div>
 
         <div className="mt-20">
           <ProductGrid products={related} showRelatedTitle />
