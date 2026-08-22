@@ -1,4 +1,4 @@
-import { access, readFile, stat } from "fs/promises";
+import { access, readFile, readdir, stat } from "fs/promises";
 import { fashionDataDir, fashionStorePath, fashionUploadDir } from "./paths";
 
 async function fileExists(path: string): Promise<boolean> {
@@ -17,6 +17,8 @@ export type FashionStorageHealth = {
   storePath: string;
   storeExists: boolean;
   backupExists: boolean;
+  rotatingBackupCount: number;
+  latestRotatingBackupAt: string | null;
   uploadDir: string;
   storeModifiedAt: string | null;
   storeSizeBytes: number | null;
@@ -38,6 +40,8 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
 
   let storeExists = false;
   let backupExists = false;
+  let rotatingBackupCount = 0;
+  let latestRotatingBackupAt: string | null = null;
   let storeModifiedAt: string | null = null;
   let storeSizeBytes: number | null = null;
   let productCount: number | null = null;
@@ -49,6 +53,21 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
   storeExists = await fileExists(storePath);
   backupExists = await fileExists(backupPath);
   volumeMounted = await fileExists(volumeMarkerPath);
+
+  try {
+    const backupsDir = `${dataDir}/backups`;
+    const names = (await readdir(backupsDir))
+      .filter((name) => name.startsWith("fashion-store-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    rotatingBackupCount = names.length;
+    if (names.length > 0) {
+      const latest = await stat(`${backupsDir}/${names[0]}`);
+      latestRotatingBackupAt = latest.mtime.toISOString();
+    }
+  } catch {
+    /* no backups dir yet */
+  }
 
   if (storeExists) {
     try {
@@ -72,7 +91,7 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
   let persistentHint: string;
   if (volumeMounted) {
     persistentHint =
-      "Railway Volume marker found at /app/data — store data should survive redeploys.";
+      "Railway Volume marker found at /app/data — store data should survive redeploys. Automatic backups are kept in /app/data/backups.";
   } else if (storeExists) {
     persistentHint =
       "Store file exists but no volume marker. Add a Railway Volume mounted at /app/data, redeploy, then save once in admin to confirm persistence.";
@@ -90,6 +109,8 @@ export async function getFashionStorageHealth(): Promise<FashionStorageHealth> {
     storePath,
     storeExists,
     backupExists,
+    rotatingBackupCount,
+    latestRotatingBackupAt,
     uploadDir,
     storeModifiedAt,
     storeSizeBytes,
