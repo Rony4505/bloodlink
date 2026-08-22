@@ -445,6 +445,17 @@ async function writeStore(
       /* ignore backup errors */
     }
   }
+
+  // Marker for /api/health — survives redeploy only when Railway Volume is mounted at DATA_DIR.
+  try {
+    await writeFile(
+      `${dataDir()}/.volume-mounted`,
+      new Date().toISOString(),
+      "utf8",
+    );
+  } catch {
+    /* ignore marker errors */
+  }
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
