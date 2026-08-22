@@ -4,6 +4,7 @@ import { listProducts } from "@/lib/fashion/store";
 import { getFashionStorageHealth } from "@/lib/fashion/storage-health";
 import {
   getDatabaseUrl,
+  hasDatabaseUrl,
   postgresFashionHealth,
   resetPgPool,
 } from "@/lib/pg-store";
@@ -26,11 +27,17 @@ export async function GET() {
 
   const storage = await getFashionStorageHealth();
   const active = getDatabaseUrl();
+  const urlConfigured = hasDatabaseUrl();
   return NextResponse.json({
     storage,
     savedUrlOnVolume: hasSavedDatabaseUrl(),
+    databaseUrlConfigured: urlConfigured,
     databaseReady: storage.backend === "postgres" && storage.postgresOk === true,
-    activeHost: databaseUrlHost(active),
+    activeHost: databaseUrlHost(active) || storage.postgresHost,
+    postgresError: storage.postgresError,
+    backend: storage.backend,
+    productCount: storage.productCount,
+    orderCount: storage.orderCount,
   });
 }
 
