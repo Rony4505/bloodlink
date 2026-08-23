@@ -138,6 +138,16 @@ export const registerResendSchema = z.object({
   channel: z.enum(["email"]).default("email"),
 });
 
+export const resetPasswordSendSchema = z.object({
+  email: z.string().trim().email().max(120),
+});
+
+export const resetPasswordConfirmSchema = z.object({
+  email: z.string().trim().email().max(120),
+  code: z.string().trim().min(4).max(10),
+  newPassword: z.string().min(8).max(72),
+});
+
 export const successStorySubmitSchema = z.object({
   name: z.string().trim().min(2).max(80),
   quote: z.string().trim().min(20).max(800),
