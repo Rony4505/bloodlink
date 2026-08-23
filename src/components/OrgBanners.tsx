@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { DEFAULT_BANNER_SLIDE_INTERVAL_SEC } from "@/lib/site-cms";
 import type { BannerPage, BannerPlacement, OrgBanner } from "@/lib/types";
 
 type Props = {
@@ -10,9 +11,12 @@ type Props = {
   placement?: BannerPlacement;
 };
 
-const INTERVAL_MS = 3000;
+type BannerPayload = {
+  banners: OrgBanner[];
+  slideIntervalSec: number;
+};
 
-const bannerCache = new Map<string, Promise<OrgBanner[]>>();
+const bannerCache = new Map<string, Promise<BannerPayload>>();
 
 function cacheKey(page: BannerPage, placement?: BannerPlacement) {
   return `${page}:${placement || "any"}`;
@@ -21,7 +25,7 @@ function cacheKey(page: BannerPage, placement?: BannerPlacement) {
 function loadBanners(
   page: BannerPage,
   placement?: BannerPlacement,
-): Promise<OrgBanner[]> {
+): Promise<BannerPayload> {
   const key = cacheKey(page, placement);
   const cached = bannerCache.get(key);
   if (cached) return cached;
@@ -29,28 +33,40 @@ function loadBanners(
   if (placement) params.set("placement", placement);
   const promise = fetch(`/api/banners?${params}`)
     .then((r) => r.json())
-    .then((data) =>
-      ((data.banners || []) as OrgBanner[]).filter((b) => b.enabled),
-    )
-    .catch(() => [] as OrgBanner[]);
+    .then((data) => ({
+      banners: ((data.banners || []) as OrgBanner[]).filter((b) => b.enabled),
+      slideIntervalSec:
+        typeof data.slideIntervalSec === "number" && data.slideIntervalSec > 0
+          ? data.slideIntervalSec
+          : DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
+    }))
+    .catch(() => ({
+      banners: [] as OrgBanner[],
+      slideIntervalSec: DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
+    }));
   bannerCache.set(key, promise);
   return promise;
 }
 
 /**
  * Full-bleed wide advertisement carousel (820×150).
- * Scrolls smoothly every 3s, ping-pong left↔right when multiple ads exist.
+ * Auto-scroll interval is configurable in Admin → Advertisement.
  */
 export function OrgBanners({ page, placement }: Props) {
   const { t } = useLocale();
   const [banners, setBanners] = useState<OrgBanner[]>([]);
+  const [slideIntervalSec, setSlideIntervalSec] = useState(
+    DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
+  );
   const [index, setIndex] = useState(0);
   const directionRef = useRef<1 | -1>(1);
 
   useEffect(() => {
     let alive = true;
-    void loadBanners(page, placement).then((list) => {
-      if (alive) setBanners(list);
+    void loadBanners(page, placement).then((payload) => {
+      if (!alive) return;
+      setBanners(payload.banners);
+      setSlideIntervalSec(payload.slideIntervalSec);
     });
     return () => {
       alive = false;
@@ -64,6 +80,7 @@ export function OrgBanners({ page, placement }: Props) {
 
   useEffect(() => {
     if (banners.length <= 1) return;
+    const intervalMs = Math.max(1000, slideIntervalSec * 1000);
     const id = window.setInterval(() => {
       setIndex((current) => {
         const dir = directionRef.current;
@@ -78,9 +95,9 @@ export function OrgBanners({ page, placement }: Props) {
         }
         return next;
       });
-    }, INTERVAL_MS);
+    }, intervalMs);
     return () => window.clearInterval(id);
-  }, [banners.length]);
+  }, [banners.length, slideIntervalSec]);
 
   if (!banners.length) return null;
 

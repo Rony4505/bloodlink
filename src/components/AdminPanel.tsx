@@ -11,6 +11,8 @@ import {
   AD_BANNER_ASPECT,
   AD_BANNER_HEIGHT,
   AD_BANNER_WIDTH,
+  BANNER_SLIDE_INTERVAL_OPTIONS,
+  DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
   defaultSiteAppearance,
 } from "@/lib/site-cms";
 import type {
@@ -122,6 +124,10 @@ export function AdminPanel() {
     futureServices: { enabled: false, notes: "" },
   });
   const [banners, setBanners] = useState<OrgBanner[]>([]);
+  const [bannerSlideIntervalSec, setBannerSlideIntervalSec] = useState(
+    DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
+  );
+  const [bannerIntervalSaving, setBannerIntervalSaving] = useState(false);
   const [bannerDraft, setBannerDraft] = useState({
     title: "",
     imageUrl: "",
@@ -235,6 +241,11 @@ export function AdminPanel() {
       });
     }
     setBanners(Array.isArray(data.banners) ? data.banners : []);
+    setBannerSlideIntervalSec(
+      typeof data.bannerSlideIntervalSec === "number"
+        ? data.bannerSlideIntervalSec
+        : DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
+    );
     if (data.siteAppearance) {
       setSiteAppearance({
         ...defaultSiteAppearance(),
@@ -242,6 +253,29 @@ export function AdminPanel() {
       });
     }
     await loadPendingStories();
+  }
+
+  async function saveBannerSlideInterval(sec: number) {
+    setBannerIntervalSaving(true);
+    setSettingsMsg("");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "banner-slide-interval", bannerSlideIntervalSec: sec }),
+      });
+      if (!res.ok) {
+        setSettingsMsg(t.errorGeneric);
+        return;
+      }
+      const data = await res.json();
+      setBannerSlideIntervalSec(data.bannerSlideIntervalSec ?? sec);
+      flashSaved(t.saved);
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setBannerIntervalSaving(false);
+    }
   }
 
   async function saveBanners(next: OrgBanner[]) {
@@ -1405,6 +1439,28 @@ export function AdminPanel() {
             <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {t.orgBannersHint}
             </p>
+            <label className="block max-w-xs text-sm">
+              <span className="mb-1 block font-medium">{t.orgBannerSlideInterval}</span>
+              <select
+                className="field"
+                value={bannerSlideIntervalSec}
+                disabled={bannerIntervalSaving}
+                onChange={(e) => {
+                  const sec = Number(e.target.value);
+                  setBannerSlideIntervalSec(sec);
+                  void saveBannerSlideInterval(sec);
+                }}
+              >
+                {BANNER_SLIDE_INTERVAL_OPTIONS.map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec} {t.orgBannerSlideIntervalUnit}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                {t.orgBannerSlideIntervalHint}
+              </span>
+            </label>
             <div
               className="rounded-xl border border-[color-mix(in_oklab,var(--accent)_35%,white)] bg-[color-mix(in_oklab,var(--accent)_8%,white)] p-4 text-sm"
               role="note"
