@@ -75,6 +75,16 @@ export const AD_BANNER_WIDTH = 820;
 export const AD_BANNER_HEIGHT = 150;
 export const AD_BANNER_ASPECT = `${AD_BANNER_WIDTH}/${AD_BANNER_HEIGHT}` as const;
 
+export const BANNER_SLIDE_INTERVAL_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 15] as const;
+export const DEFAULT_BANNER_SLIDE_INTERVAL_SEC = 3;
+
+export function normalizeBannerSlideIntervalSec(raw: unknown): number {
+  const n = Math.round(Number(raw));
+  return (BANNER_SLIDE_INTERVAL_OPTIONS as readonly number[]).includes(n)
+    ? n
+    : DEFAULT_BANNER_SLIDE_INTERVAL_SEC;
+}
+
 export const BANNER_SIZE_CLASS: Record<BannerSize, string> = {
   sm: "h-12 max-w-[160px]",
   md: "h-16 max-w-[220px]",

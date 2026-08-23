@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth";
 import { getAdminSettings, updateAdminSettings } from "@/lib/db";
 import { normalizePhone } from "@/lib/privacy";
-import { normalizeBanner, normalizeSiteAppearance } from "@/lib/site-cms";
+import { normalizeBanner, normalizeBannerSlideIntervalSec, normalizeSiteAppearance } from "@/lib/site-cms";
 import {
   adminCredentialsSchema,
   adminVerifyCodeSchema,
@@ -37,6 +37,7 @@ export async function GET() {
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
     banners: admin.banners || [],
+    bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
     siteAppearance: normalizeSiteAppearance(admin.siteAppearance),
   });
 }
@@ -163,8 +164,27 @@ export async function PATCH(request: Request) {
       )
       .filter(Boolean) as OrgBanner[];
     const limited = cleaned.slice(0, 20);
-    await updateAdminSettings({ banners: limited });
-    return NextResponse.json({ ok: true, banners: limited });
+    const patch: { banners: OrgBanner[]; bannerSlideIntervalSec?: number } = {
+      banners: limited,
+    };
+    if (body.bannerSlideIntervalSec !== undefined) {
+      patch.bannerSlideIntervalSec = normalizeBannerSlideIntervalSec(
+        body.bannerSlideIntervalSec,
+      );
+    }
+    await updateAdminSettings(patch);
+    const admin = await getAdminSettings();
+    return NextResponse.json({
+      ok: true,
+      banners: limited,
+      bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
+    });
+  }
+
+  if (action === "banner-slide-interval") {
+    const sec = normalizeBannerSlideIntervalSec(body.bannerSlideIntervalSec);
+    await updateAdminSettings({ bannerSlideIntervalSec: sec });
+    return NextResponse.json({ ok: true, bannerSlideIntervalSec: sec });
   }
 
   if (action === "site-appearance") {

@@ -436,7 +436,10 @@ export const dictionaries = {
     printPdf: "Print / PDF",
     orgBanners: "Advertisement",
     orgBannersHint:
-      "Add advertisements. They always appear below the hero and above the footer, and auto-scroll every 3 seconds.",
+      "Add advertisements. They always appear below the hero and above the footer. Choose how often banners auto-scroll below.",
+    orgBannerSlideInterval: "Banner slide interval",
+    orgBannerSlideIntervalUnit: "sec",
+    orgBannerSlideIntervalHint: "How long each banner stays visible before sliding to the next.",
     orgBannerSizeTitle: "Recommended banner image size",
     orgBannerSizeDimensions: "820 × 150 pixels",
     orgBannerSizeRatio: "Aspect ratio 5.47:1 (wide banner)",
@@ -937,7 +940,10 @@ export const dictionaries = {
     printPdf: "প্রিন্ট / PDF",
     orgBanners: "Advertisement",
     orgBannersHint:
-      "বিজ্ঞাপন যোগ করুন। সবসময় হিরোর নিচে ও ফুটারের উপরে দেখাবে, এবং প্রতি ৩ সেকেন্ডে স্ক্রল করবে।",
+      "বিজ্ঞাপন যোগ করুন। সবসময় হিরোর নিচে ও ফুটারের উপরে দেখাবে। নিচে থেকে slide interval বেছে নিন।",
+    orgBannerSlideInterval: "ব্যানার slide interval",
+    orgBannerSlideIntervalUnit: "সেকেন্ড",
+    orgBannerSlideIntervalHint: "পরের ব্যানারে যাওয়ার আগে কত সেকেন্ড থাকবে।",
     orgBannerSizeTitle: "ব্যানার ইমেজের সুপারিশকৃত সাইজ",
     orgBannerSizeDimensions: "৮২০ × ১৫০ পিক্সেল",
     orgBannerSizeRatio: "আকৃতি ৫.৪৭:১ (চওড়া ব্যানার)",

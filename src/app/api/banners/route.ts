@@ -4,6 +4,7 @@ import {
   BANNER_PAGES,
   BANNER_PLACEMENTS,
   bannerMatches,
+  normalizeBannerSlideIntervalSec,
 } from "@/lib/site-cms";
 import type { BannerPage, BannerPlacement } from "@/lib/types";
 
@@ -32,5 +33,8 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json({ banners });
+  return NextResponse.json({
+    banners,
+    slideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
+  });
 }

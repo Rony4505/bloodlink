@@ -245,6 +245,8 @@ export type AdminSettings = {
   privacyEn: string;
   platformOptions: PlatformOptions;
   banners: OrgBanner[];
+  /** Seconds between auto-slides on public advertisement banners (default 3). */
+  bannerSlideIntervalSec: number;
   siteAppearance: SiteAppearance;
 };
 

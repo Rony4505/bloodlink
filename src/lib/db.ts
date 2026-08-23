@@ -33,7 +33,9 @@ import {
 } from "./runtime-env";
 import {
   defaultSiteAppearance,
+  DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
   normalizeBanner,
+  normalizeBannerSlideIntervalSec,
   normalizeSiteAppearance,
 } from "./site-cms";
 import type {
@@ -177,6 +179,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     privacyEn: DEFAULT_PRIVACY_EN,
     platformOptions: defaultPlatformOptions(),
     banners: [],
+    bannerSlideIntervalSec: DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
     siteAppearance: defaultSiteAppearance(),
   };
 }
@@ -340,6 +343,9 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
         platformOptions: normalizePlatformOptions(parsed.admin.platformOptions),
         banners: normalizeBanners(parsed.admin.banners),
+        bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(
+          parsed.admin.bannerSlideIntervalSec,
+        ),
         siteAppearance: normalizeSiteAppearance(parsed.admin.siteAppearance),
       }
     : await defaultAdmin();
