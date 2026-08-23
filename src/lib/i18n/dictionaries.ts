@@ -267,6 +267,16 @@ export const dictionaries = {
     alreadyDonor: "Already registered?",
     loginTitle: "Donor login",
     loginSubtitle: "Manage your profile and donation date securely.",
+    forgotPassword: "Forgot password?",
+    forgotPasswordHint:
+      "Enter the Gmail you used when registering. We will send an OTP so you can set a new password.",
+    forgotPasswordSendOtp: "Send Gmail OTP",
+    forgotPasswordOtpLabel: "Gmail OTP",
+    forgotPasswordConfirm: "Confirm new password",
+    forgotPasswordSubmit: "Set new password & log in",
+    forgotPasswordBackToLogin: "← Back to login",
+    forgotPasswordResendHint: "← Send a new OTP",
+    forgotPasswordMismatch: "Passwords do not match",
     noAccount: "Want to help?",
     dashboardTitle: "Donor dashboard",
     dashboardSubtitle:
@@ -770,6 +780,16 @@ export const dictionaries = {
     alreadyDonor: "আগে রেজিস্টার করেছেন?",
     loginTitle: "ডোনার লগইন",
     loginSubtitle: "নিরাপদে আপনার প্রোফাইল ও রক্তদানের তারিখ পরিচালনা করুন।",
+    forgotPassword: "পাসওয়ার্ড ভুলে গেছেন?",
+    forgotPasswordHint:
+      "রেজিস্টার করার সময় যে Gmail দিয়েছিলেন সেটি দিন। OTP পাঠানো হবে — নতুন পাসওয়ার্ড সেট করতে পারবেন।",
+    forgotPasswordSendOtp: "Gmail-এ OTP পাঠান",
+    forgotPasswordOtpLabel: "Gmail OTP",
+    forgotPasswordConfirm: "নতুন পাসওয়ার্ড আবার দিন",
+    forgotPasswordSubmit: "নতুন পাসওয়ার্ড সেট করে লগইন",
+    forgotPasswordBackToLogin: "← লগইনে ফিরে যান",
+    forgotPasswordResendHint: "← আবার OTP পাঠান",
+    forgotPasswordMismatch: "পাসওয়ার্ড মিলছে না",
     noAccount: "সাহায্য করতে চান?",
     dashboardTitle: "ডোনার ড্যাশবোর্ড",
     dashboardSubtitle:
