@@ -142,9 +142,13 @@ export const resetPasswordSendSchema = z.object({
   email: z.string().trim().email().max(120),
 });
 
-export const resetPasswordConfirmSchema = z.object({
+export const resetPasswordVerifySchema = z.object({
   email: z.string().trim().email().max(120),
   code: z.string().trim().min(4).max(10),
+});
+
+export const resetPasswordConfirmSchema = z.object({
+  email: z.string().trim().email().max(120),
   newPassword: z.string().min(8).max(72),
 });
 
