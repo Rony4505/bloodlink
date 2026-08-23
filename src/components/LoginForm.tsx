@@ -6,7 +6,7 @@ import { useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
 import { useLocale } from "@/lib/i18n/locale-context";
 
-type Mode = "login" | "forgot" | "forgot-reset";
+type Mode = "login" | "forgot" | "forgot-otp" | "forgot-reset";
 
 export function LoginForm() {
   const { t } = useLocale();
@@ -67,6 +67,36 @@ export function LoginForm() {
       setNewPassword("");
       setConfirmPassword("");
       setHint(t.otpSentToEmail);
+      setMode("forgot-otp");
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyResetOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify",
+          email: resetEmail.trim().toLowerCase(),
+          code: otp,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setHint(t.forgotPasswordOtpVerified);
+      setNewPassword("");
+      setConfirmPassword("");
       setMode("forgot-reset");
     } catch {
       setError(t.errorGeneric);
@@ -90,7 +120,6 @@ export function LoginForm() {
         body: JSON.stringify({
           action: "confirm",
           email: resetEmail.trim().toLowerCase(),
-          code: otp,
           newPassword,
         }),
       });
@@ -144,9 +173,9 @@ export function LoginForm() {
     );
   }
 
-  if (mode === "forgot-reset") {
+  if (mode === "forgot-otp") {
     return (
-      <form onSubmit={confirmReset} className="space-y-3 rounded-2xl bg-white/80 p-6">
+      <form onSubmit={verifyResetOtp} className="space-y-3 rounded-2xl bg-white/80 p-6">
         {hint ? (
           <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
             {hint}
@@ -167,6 +196,31 @@ export function LoginForm() {
             autoComplete="one-time-code"
           />
         </label>
+        {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+        <button type="submit" className="btn-primary w-full" disabled={loading}>
+          {loading ? t.loading : t.forgotPasswordVerifyOtp}
+        </button>
+        <button
+          type="button"
+          className="w-full text-center text-sm font-semibold text-[var(--blood-deep)] underline"
+          onClick={() => {
+            setMode("forgot");
+            setError("");
+            setHint("");
+          }}
+        >
+          {t.forgotPasswordResendHint}
+        </button>
+      </form>
+    );
+  }
+
+  if (mode === "forgot-reset") {
+    return (
+      <form onSubmit={confirmReset} className="space-y-3 rounded-2xl bg-white/80 p-6">
+        {hint ? (
+          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">{hint}</p>
+        ) : null}
         <PasswordField
           id="reset-new-password"
           label={t.newPassword}
@@ -187,17 +241,6 @@ export function LoginForm() {
         {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
         <button type="submit" className="btn-primary w-full" disabled={loading}>
           {loading ? t.loading : t.forgotPasswordSubmit}
-        </button>
-        <button
-          type="button"
-          className="w-full text-center text-sm font-semibold text-[var(--blood-deep)] underline"
-          onClick={() => {
-            setMode("forgot");
-            setError("");
-            setHint("");
-          }}
-        >
-          {t.forgotPasswordResendHint}
         </button>
       </form>
     );
