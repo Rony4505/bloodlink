@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CountUp } from "@/components/CountUp";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 type ImpactStats = {
@@ -17,11 +18,6 @@ type Story = {
   quoteEn: string;
   quoteBn: string;
 };
-
-function formatCount(n: number): string {
-  if (n <= 0) return "0";
-  return `${n.toLocaleString()}+`;
-}
 
 const STORY_INTERVAL_MS = 4000;
 
@@ -77,11 +73,11 @@ export function HomeImpact() {
 
   const metrics = stats
     ? [
-        [formatCount(stats.livesHelped), t.impactLivesHelped],
-        [formatCount(stats.registeredUsers), t.impactRegisteredUsers],
-        [formatCount(stats.activeRequests), t.impactActiveRequests],
-        [formatCount(stats.citiesCovered), t.impactCitiesCovered],
-      ]
+        [stats.livesHelped, t.impactLivesHelped],
+        [stats.registeredUsers, t.impactRegisteredUsers],
+        [stats.activeRequests, t.impactActiveRequests],
+        [stats.citiesCovered, t.impactCitiesCovered],
+      ] as const
     : [];
 
   return (
@@ -102,7 +98,7 @@ export function HomeImpact() {
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-center sm:text-left"
               >
                 <p className="font-[family-name:var(--font-display)] text-xl font-bold tracking-tight text-[#ffb4b8] md:text-2xl">
-                  {value}
+                  <CountUp value={value} suffix={value > 0 ? "+" : ""} />
                 </p>
                 <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-white/55 md:text-xs">
                   {label}

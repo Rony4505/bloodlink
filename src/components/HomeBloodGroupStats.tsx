@@ -1,5 +1,6 @@
 "use client";
 
+import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -77,10 +78,10 @@ function BloodDropButton({
         </span>
       </span>
       <span className="text-center text-xs font-semibold leading-5 text-[var(--sage)]">
-        {availableLabel}: {available}
+        {availableLabel}: <CountUp value={available} />
       </span>
       <span className="text-center text-xs font-semibold leading-5 text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-        {unavailableLabel}: {unavailable}
+        {unavailableLabel}: <CountUp value={unavailable} />
       </span>
     </button>
   );
@@ -181,11 +182,11 @@ export function HomeDonorTotals() {
   return (
     <p className="animate-rise-delay-2 mt-5 text-sm text-white/85 md:text-base">
       <span className="font-semibold text-white">
-        {t.available}: {totals.totalAvailable}
+        {t.available}: <CountUp value={totals.totalAvailable} />
       </span>
       <span className="mx-2 text-white/40">·</span>
       <span>
-        {t.unavailable}: {totals.totalUnavailable}
+        {t.unavailable}: <CountUp value={totals.totalUnavailable} />
       </span>
     </p>
   );

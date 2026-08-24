@@ -47,6 +47,12 @@ export async function GET() {
     });
   }
 
+  mapped.sort((a, b) => {
+    const tb = Date.parse(b.createdAt || "") || 0;
+    const ta = Date.parse(a.createdAt || "") || 0;
+    return tb - ta;
+  });
+
   const contactRequests = requests.map((r) => {
     const donor = donorMap.get(r.donorId);
     return {

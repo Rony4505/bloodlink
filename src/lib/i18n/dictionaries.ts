@@ -446,6 +446,11 @@ export const dictionaries = {
     donorsNearYou: "Donors near you",
     detectingLocation: "Detecting your area…",
     printPdf: "Print / PDF",
+    donorAddedOn: "Added on",
+    printFromDate: "From date",
+    printToDate: "To date",
+    printByDate: "Print this date range",
+    noDonorsInRange: "No donors in this date range",
     orgBanners: "Advertisement",
     orgBannersHint:
       "Add advertisements. They always appear below the hero and above the footer. Choose how often banners auto-scroll below.",
@@ -962,6 +967,11 @@ export const dictionaries = {
     donorsNearYou: "আপনার কাছাকাছি ডোনার",
     detectingLocation: "আপনার এলাকা খোঁজা হচ্ছে…",
     printPdf: "প্রিন্ট / PDF",
+    donorAddedOn: "যোগ হয়েছে",
+    printFromDate: "শুরুর তারিখ",
+    printToDate: "শেষ তারিখ",
+    printByDate: "এই তারিখ অনুযায়ী প্রিন্ট",
+    noDonorsInRange: "এই তারিখে কোনো ডোনার নেই",
     orgBanners: "Advertisement",
     orgBannersHint:
       "বিজ্ঞাপন যোগ করুন। সবসময় হিরোর নিচে ও ফুটারের উপরে দেখাবে। নিচে থেকে slide interval বেছে নিন।",
