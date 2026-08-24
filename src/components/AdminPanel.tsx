@@ -39,6 +39,7 @@ type AdminDonor = {
   bloodIssue: string;
   avgRating: number | null;
   ratingCount: number;
+  createdAt?: string;
 };
 
 type ContactRequest = {
@@ -88,6 +89,8 @@ export function AdminPanel() {
     totalRequests: 0,
   });
   const [tab, setTab] = useState<"donors" | "volunteers" | "settings">("donors");
+  const [printFromDate, setPrintFromDate] = useState("");
+  const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
     null | "storage" | "backup" | "features" | "appearance" | "ads" | "privacy" | "credentials" | "verify"
   >(null);
@@ -187,9 +190,18 @@ export function AdminPanel() {
       return;
     }
     const data = await res.json();
-    setDonors(data.donors);
-    setRequests(data.contactRequests);
-    setStats(data.stats);
+    const list = Array.isArray(data.donors) ? [...data.donors] : [];
+    list.sort(
+      (a, b) =>
+        (Date.parse(b.createdAt || "") || 0) - (Date.parse(a.createdAt || "") || 0),
+    );
+    setDonors(list);
+    setRequests(data.contactRequests || []);
+    setStats({
+      totalDonors: data.stats?.totalDonors ?? list.length,
+      availableNow: data.stats?.availableNow ?? 0,
+      totalRequests: data.stats?.totalRequests ?? 0,
+    });
     setAuthed(true);
 
     const changeRes = await fetch("/api/admin/contact-changes");
@@ -399,6 +411,37 @@ export function AdminPanel() {
     }
   }
 
+  function dhakaDay(iso?: string): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+  }
+
+  function formatAddedAt(iso?: string): string {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-GB", {
+      timeZone: "Asia/Dhaka",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function donorsForPrint(): AdminDonor[] {
+    return donors.filter((d) => {
+      const day = dhakaDay(d.createdAt);
+      if (!day) return !printFromDate && !printToDate;
+      if (printFromDate && day < printFromDate) return false;
+      if (printToDate && day > printToDate) return false;
+      return true;
+    });
+  }
+
   function printDonors() {
     const escapeHtml = (value: string) =>
       value
@@ -406,7 +449,16 @@ export function AdminPanel() {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;");
-    const rows = donors
+    const list = donorsForPrint();
+    if (!list.length) {
+      window.alert(t.noDonorsInRange);
+      return;
+    }
+    const rangeLabel =
+      printFromDate || printToDate
+        ? `${printFromDate || "…"} → ${printToDate || "…"}`
+        : "all dates";
+    const rows = list
       .map(
         (d, i) =>
           `<tr>
@@ -420,6 +472,7 @@ export function AdminPanel() {
             <td>${escapeHtml(d.area)}</td>
             <td>${d.available ? "Yes" : "No"}</td>
             <td>${escapeHtml(d.lastDonationDate || "-")}</td>
+            <td>${escapeHtml(formatAddedAt(d.createdAt))}</td>
           </tr>`,
       )
       .join("");
@@ -435,11 +488,11 @@ export function AdminPanel() {
   @media print{button{display:none}}
 </style></head><body>
   <h1>BloodLink — Donor registry</h1>
-  <p>Generated ${new Date().toLocaleString()} · Total ${donors.length} · For authorized government use</p>
+  <p>Generated ${new Date().toLocaleString()} · ${list.length} donors · Added: ${rangeLabel} · Admin only</p>
   <table>
     <thead><tr>
       <th>#</th><th>Name</th><th>Blood</th><th>Gender</th><th>Phone</th>
-      <th>Email</th><th>District</th><th>Area</th><th>Available</th><th>Last donation</th>
+      <th>Email</th><th>District</th><th>Area</th><th>Available</th><th>Last donation</th><th>Added on</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>
@@ -829,12 +882,30 @@ export function AdminPanel() {
             <span>
               {t.adminRequests}: <strong>{stats.totalRequests}</strong>
             </span>
+            <label className="flex items-center gap-2 text-xs">
+              <span>{t.printFromDate}</span>
+              <input
+                type="date"
+                className="field py-1 text-sm"
+                value={printFromDate}
+                onChange={(e) => setPrintFromDate(e.target.value)}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-xs">
+              <span>{t.printToDate}</span>
+              <input
+                type="date"
+                className="field py-1 text-sm"
+                value={printToDate}
+                onChange={(e) => setPrintToDate(e.target.value)}
+              />
+            </label>
             <button
               type="button"
               className="btn-ghost ml-auto"
               onClick={printDonors}
             >
-              {t.printPdf}
+              {printFromDate || printToDate ? t.printByDate : t.printPdf}
             </button>
           </div>
 
@@ -867,6 +938,9 @@ export function AdminPanel() {
                     </p>
                     <p>
                       {t.bloodIssue}: {d.bloodIssue || t.noBloodIssue}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-[var(--blood-deep)]">
+                      {t.donorAddedOn}: {formatAddedAt(d.createdAt)}
                     </p>
                   </div>
                   <button

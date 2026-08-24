@@ -241,7 +241,5 @@ export async function toSafeDonor(donor: Donor) {
     emailVerified: Boolean(donor.emailVerified),
     phoneVerified: Boolean(donor.phoneVerified),
     verified: isDonorVerified(donor),
-    createdAt: donor.createdAt,
-    updatedAt: donor.updatedAt,
   };
 }
