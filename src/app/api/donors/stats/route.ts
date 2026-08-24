@@ -3,7 +3,7 @@ import { listDonors } from "@/lib/db";
 import { BLOOD_GROUPS } from "@/lib/districts";
 import { isDonorAvailable } from "@/lib/availability";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 15;
 
 export async function GET() {
   const donors = await listDonors();
@@ -27,10 +27,17 @@ export async function GET() {
   const totalAvailable = byGroup.reduce((sum, g) => sum + g.available, 0);
   const totalUnavailable = byGroup.reduce((sum, g) => sum + g.unavailable, 0);
 
-  return NextResponse.json({
-    totalAvailable,
-    totalUnavailable,
-    total: donors.length,
-    byGroup,
-  });
+  return NextResponse.json(
+    {
+      totalAvailable,
+      totalUnavailable,
+      total: donors.length,
+      byGroup,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=15, stale-while-revalidate=60",
+      },
+    },
+  );
 }

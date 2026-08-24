@@ -4,16 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { loadLoggedIn } from "@/lib/session-me-client";
 
 export function Header({ compact = false }: { compact?: boolean }) {
   const { t, toggleLocale } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((data) => setLoggedIn(Boolean(data.donor)))
-      .catch(() => setLoggedIn(false));
+    void loadLoggedIn().then(setLoggedIn);
   }, []);
 
   async function logout() {
