@@ -113,6 +113,23 @@ const ROTATING_BACKUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let writeQueue: Promise<void> = Promise.resolve();
 let loggedStoragePath = false;
 let lastRotatingBackupAt = 0;
+let memoryDb: DatabaseShape | null = null;
+let memoryDbAt = 0;
+let loadingDb: Promise<DatabaseShape> | null = null;
+/** Keep DB in RAM so homepage APIs do not hit Postgres on every request. */
+const MEMORY_TTL_MS = 20_000;
+
+function rememberDb(db: DatabaseShape): DatabaseShape {
+  memoryDb = db;
+  memoryDbAt = Date.now();
+  return db;
+}
+
+export function clearDbMemoryCache(): void {
+  memoryDb = null;
+  memoryDbAt = 0;
+  loadingDb = null;
+}
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -394,7 +411,7 @@ async function hydrateParsed(
   return { db: shapeFromParsed(raw, admin), needsMigrate };
 }
 
-async function ensureDb(): Promise<DatabaseShape> {
+async function loadDbFromStores(): Promise<DatabaseShape> {
   if (!loggedStoragePath) {
     loggedStoragePath = true;
     console.info(
@@ -497,6 +514,19 @@ async function ensureDb(): Promise<DatabaseShape> {
   return empty;
 }
 
+async function ensureDb(): Promise<DatabaseShape> {
+  if (memoryDb && Date.now() - memoryDbAt < MEMORY_TTL_MS) {
+    return memoryDb;
+  }
+  if (loadingDb) return loadingDb;
+  loadingDb = loadDbFromStores()
+    .then((db) => rememberDb(db))
+    .finally(() => {
+      loadingDb = null;
+    });
+  return loadingDb;
+}
+
 async function pruneRotatingBackups(): Promise<void> {
   try {
     const names = (await readdir(backupsDir))
@@ -558,6 +588,7 @@ async function persist(db: DatabaseShape): Promise<void> {
       } catch {
         // ignore mirror failures
       }
+      rememberDb(db);
       return;
     } catch (err) {
       console.error(
@@ -568,6 +599,7 @@ async function persist(db: DatabaseShape): Promise<void> {
   }
 
   await persistToFile(db);
+  rememberDb(db);
 }
 
 export async function getStorageHealth() {

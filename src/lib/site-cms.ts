@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 export const DEFAULT_HERO_BACKGROUND =
-  "https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=2000&q=80";
+  "https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=1280&q=55";
 
 export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
 

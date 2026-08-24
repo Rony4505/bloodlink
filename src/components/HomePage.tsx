@@ -11,6 +11,7 @@ import { OrgBanners } from "@/components/OrgBanners";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { loadLoggedIn } from "@/lib/session-me-client";
 
 const HomeEmergencyPosts = dynamic(
   () =>
@@ -56,12 +57,9 @@ export function HomePage() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetch("/api/auth/me", { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((data) => setLoggedIn(Boolean(data.donor)))
-      .catch(() => {
-        if (!ctrl.signal.aborted) setLoggedIn(false);
-      });
+    void loadLoggedIn().then((ok) => {
+      if (!ctrl.signal.aborted) setLoggedIn(ok);
+    });
     return () => ctrl.abort();
   }, []);
 
@@ -69,12 +67,17 @@ export function HomePage() {
     <div className="flex min-h-full flex-col">
       <DailyReminder enabled={loggedIn} />
       <section className="relative min-h-[100svh] overflow-hidden text-white">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `linear-gradient(120deg, rgba(28,10,12,0.78), rgba(110,18,32,0.55)), url('${heroBackgroundUrl.replace(/'/g, "%27")}')`,
-          }}
-        />
+        <div className="absolute inset-0 bg-[#1c0a0c]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={heroBackgroundUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            fetchPriority="high"
+            decoding="async"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(28,10,12,0.78),rgba(110,18,32,0.55))]" />
+        </div>
         <div className="hero-orb pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(214,69,80,0.55),transparent_70%)] blur-2xl" />
         <div className="hero-drift pointer-events-none absolute right-0 top-40 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-2xl" />
         <Header />

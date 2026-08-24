@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { getStorageHealth, listDonors } from "@/lib/db";
+import { getStorageHealth, listDonors, clearDbMemoryCache } from "@/lib/db";
 import {
   getDatabaseUrl,
   postgresHealth,
@@ -70,6 +70,7 @@ export async function POST(request: Request) {
     }
 
     await resetPgPool();
+    clearDbMemoryCache();
 
     const health = await postgresHealth();
     if (!health.ok) {

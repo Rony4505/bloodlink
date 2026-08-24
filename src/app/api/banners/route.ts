@@ -8,7 +8,7 @@ import {
 } from "@/lib/site-cms";
 import type { BannerPage, BannerPlacement } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 20;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,8 +33,15 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json({
-    banners,
-    slideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
-  });
+  return NextResponse.json(
+    {
+      banners,
+      slideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60",
+      },
+    },
+  );
 }
