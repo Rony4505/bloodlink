@@ -14,7 +14,6 @@ type VolunteerDonor = {
   area: string;
   gender: string;
   donationCount: number;
-  createdAt: string;
 };
 
 export function VolunteerDonorPanel() {

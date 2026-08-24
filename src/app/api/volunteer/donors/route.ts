@@ -51,7 +51,6 @@ export async function GET() {
       area: d.area,
       gender: d.gender,
       donationCount: d.donationCount,
-      createdAt: d.createdAt,
     })),
   });
 }
@@ -118,7 +117,6 @@ export async function POST(request: Request) {
         area: donor.area,
         gender: donor.gender,
         donationCount: donor.donationCount,
-        createdAt: donor.createdAt,
       },
     });
   } catch {
@@ -179,7 +177,6 @@ export async function PATCH(request: Request) {
             area: updated.area,
             gender: updated.gender,
             donationCount: updated.donationCount,
-            createdAt: updated.createdAt,
           }
         : null,
     });

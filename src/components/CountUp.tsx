@@ -9,6 +9,7 @@ type Props = {
 };
 
 export function CountUp({ value, className, suffix = "" }: Props) {
+  const target = Math.max(0, Math.floor(value) || 0);
   const [shown, setShown] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const frameRef = useRef<number>(0);
@@ -16,8 +17,18 @@ export function CountUp({ value, className, suffix = "" }: Props) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const target = Math.max(0, Math.floor(value) || 0);
+
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduceMotion) {
+      setShown(target);
+      return;
+    }
+
     let started = false;
+    setShown(0);
 
     function animate() {
       const start = performance.now();
@@ -44,10 +55,13 @@ export function CountUp({ value, className, suffix = "" }: Props) {
       io.disconnect();
       cancelAnimationFrame(frameRef.current);
     };
-  }, [value]);
+  }, [target]);
 
   return (
-    <span ref={ref} className={className}>
+    <span
+      ref={ref}
+      className={`tabular-nums ${className ?? ""}`.trim()}
+    >
       {shown.toLocaleString()}
       {suffix}
     </span>
