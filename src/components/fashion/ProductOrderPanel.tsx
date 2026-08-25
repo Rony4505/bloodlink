@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Product, StoreSettings } from "@/lib/fashion/types";
 import { useCart } from "@/lib/fashion/cart-context";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
+import { normalizeProductColors } from "@/lib/fashion/product-colors";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
@@ -12,15 +13,26 @@ import { formatBdt } from "@/lib/fashion/format";
 function formatPhoneLink(raw?: string) {
   const digits = (raw ?? "").replace(/\D/g, "");
   if (!digits) return null;
-  const normalized = digits.startsWith("880") ? digits : `880${digits.replace(/^0/, "")}`;
-  return { tel: `tel:+${normalized}`, display: raw ?? normalized, wa: `https://wa.me/${normalized}` };
+  const normalized = digits.startsWith("880")
+    ? digits
+    : `880${digits.replace(/^0/, "")}`;
+  return {
+    tel: `tel:+${normalized}`,
+    display: raw ?? normalized,
+    wa: `https://wa.me/${normalized}`,
+  };
 }
 
 export function ProductOrderPanel({ product }: { product: Product }) {
   const router = useRouter();
   const { fc, locale } = useFashionCopy();
   const { addItem } = useCart();
+  const colors = useMemo(
+    () => normalizeProductColors(product.colors),
+    [product.colors],
+  );
   const [size, setSize] = useState(product.sizes[0] ?? "Free Size");
+  const [color, setColor] = useState(colors[0]?.name ?? "Default");
   const [quantity, setQuantity] = useState(1);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [avgRating, setAvgRating] = useState(0);
@@ -30,7 +42,14 @@ export function ProductOrderPanel({ product }: { product: Product }) {
   const price = getEffectivePrice(product);
   const inStock = product.stock > 0 && product.inStock;
   const title = locale === "bn" ? product.nameBn : product.name;
-  const productCode = product.id.replace(/\D/g, "").slice(-8) || product.id.slice(-8);
+  const productCode =
+    product.id.replace(/\D/g, "").slice(-8) || product.id.slice(-8);
+
+  useEffect(() => {
+    setSize(product.sizes[0] ?? "Free Size");
+    setColor(normalizeProductColors(product.colors)[0]?.name ?? "Default");
+    setQuantity(1);
+  }, [product.id, product.sizes, product.colors]);
 
   useEffect(() => {
     fetch("/api/fashion/settings")
@@ -46,7 +65,10 @@ export function ProductOrderPanel({ product }: { product: Product }) {
           setAvgRating(0);
           return;
         }
-        const sum = reviews.reduce((acc: number, r: { rating: number }) => acc + (r.rating || 0), 0);
+        const sum = reviews.reduce(
+          (acc: number, r: { rating: number }) => acc + (r.rating || 0),
+          0,
+        );
         setAvgRating(sum / reviews.length);
       })
       .catch(() => {
@@ -56,10 +78,16 @@ export function ProductOrderPanel({ product }: { product: Product }) {
   }, [product.id]);
 
   const phone = useMemo(
-    () => formatPhoneLink(settings?.adminPhone || settings?.contactPhone || settings?.whatsapp),
+    () =>
+      formatPhoneLink(
+        settings?.adminPhone || settings?.contactPhone || settings?.whatsapp,
+      ),
     [settings],
   );
-  const whatsapp = useMemo(() => formatPhoneLink(settings?.whatsapp), [settings]);
+  const whatsapp = useMemo(
+    () => formatPhoneLink(settings?.whatsapp),
+    [settings],
+  );
 
   const deliveryNote = useMemo(() => {
     const rules = settings?.deliveryRules?.filter((r) => r.active) ?? [];
@@ -71,9 +99,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
 
     for (const rule of areaRules) {
       const label =
-        locale === "bn" && rule.district === "Dhaka"
-          ? "ঢাকা"
-          : rule.district;
+        locale === "bn" && rule.district === "Dhaka" ? "ঢাকা" : rule.district;
       parts.push(`${label}: ${formatBdt(rule.fee)}`);
     }
 
@@ -87,7 +113,8 @@ export function ProductOrderPanel({ product }: { product: Product }) {
 
   function addToCart(redirect?: "checkout") {
     if (!inStock || quantity > product.stock) return;
-    addItem({ ...product, price }, size, product.colors[0]?.name ?? "Default", quantity);
+    if (!color) return;
+    addItem({ ...product, price }, size, color, quantity);
     if (redirect === "checkout") {
       router.push("/checkout");
       return;
@@ -96,11 +123,22 @@ export function ProductOrderPanel({ product }: { product: Product }) {
     window.setTimeout(() => setAdded(false), 1800);
   }
 
+  const selectVariantLabel =
+    locale === "bn" ? "ভ্যারিয়েন্ট সিলেক্ট করুন:" : "Select Variant:";
+  const selectColorLabel =
+    locale === "bn" ? "রং সিলেক্ট করুন:" : "Select Color:";
+  const selectSizeLabel = locale === "bn" ? "সাইজ:" : "Size:";
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-1 text-sm text-[#8a7490]">
         {Array.from({ length: 5 }).map((_, i) => (
-          <span key={i} className={i < Math.round(avgRating) ? "text-[#c9852d]" : "text-[#ddd0d8]"}>
+          <span
+            key={i}
+            className={
+              i < Math.round(avgRating) ? "text-[#c9852d]" : "text-[#ddd0d8]"
+            }
+          >
             ★
           </span>
         ))}
@@ -125,7 +163,13 @@ export function ProductOrderPanel({ product }: { product: Product }) {
             : fc.actions.outOfStock}
         </p>
 
-        <p className="mt-4 text-sm font-bold text-[#5c3d5e]">Select Variant:</p>
+        <p className="mt-4 text-sm font-bold text-[#5c3d5e]">
+          {selectVariantLabel}
+        </p>
+
+        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
+          {selectSizeLabel}
+        </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {product.sizes.map((option) => (
             <button
@@ -142,11 +186,38 @@ export function ProductOrderPanel({ product }: { product: Product }) {
             </button>
           ))}
         </div>
+
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
+          {selectColorLabel}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {colors.map((option) => (
+            <button
+              key={option.name}
+              type="button"
+              onClick={() => setColor(option.name)}
+              className={`inline-flex min-w-11 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition ${
+                color === option.name
+                  ? "border-[#5c3d5e] bg-white text-[#5c3d5e] shadow-sm"
+                  : "border-[#e8d4e8]/70 bg-white/70 text-[#8a7490]"
+              }`}
+            >
+              <span
+                className="h-4 w-4 rounded-full border border-black/15 shadow-inner"
+                style={{ backgroundColor: option.hex }}
+                aria-hidden
+              />
+              {option.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <p className="text-sm">
         <span className="font-bold text-[#4a3348]">Brand :</span>{" "}
-        <span className="text-[#5c3d5e]">{settings?.brandName ?? copy.brand}</span>
+        <span className="text-[#5c3d5e]">
+          {settings?.brandName ?? copy.brand}
+        </span>
       </p>
 
       <div>
@@ -158,7 +229,9 @@ export function ProductOrderPanel({ product }: { product: Product }) {
           >
             −
           </button>
-          <span className="min-w-10 text-center text-sm font-bold">{quantity}</span>
+          <span className="min-w-10 text-center text-sm font-bold">
+            {quantity}
+          </span>
           <button
             type="button"
             className="px-4 py-2 text-lg"
@@ -173,7 +246,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          disabled={!inStock}
+          disabled={!inStock || !color}
           onClick={() => addToCart()}
           className="rounded-xl bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] px-4 py-3 text-sm font-bold text-white shadow-md disabled:opacity-50"
         >
@@ -181,7 +254,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
         </button>
         <button
           type="button"
-          disabled={!inStock}
+          disabled={!inStock || !color}
           onClick={() => addToCart("checkout")}
           className="rounded-xl bg-[#2b1d19] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
         >
@@ -210,7 +283,9 @@ export function ProductOrderPanel({ product }: { product: Product }) {
       ) : null}
 
       <div className="flex gap-3 rounded-xl border border-[#e8d4e8]/50 bg-[#faf0f5] px-4 py-3 text-sm leading-relaxed text-[#5c4860]">
-        <span aria-hidden className="text-lg">📦</span>
+        <span aria-hidden className="text-lg">
+          📦
+        </span>
         <p>{deliveryNote}</p>
       </div>
     </div>

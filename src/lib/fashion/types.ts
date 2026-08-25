@@ -133,6 +133,8 @@ export type StoreSettings = {
   metaDescriptionEn?: string;
   promoBanners?: PromoBanner[];
   availableSizes?: string[];
+  /** Preset color swatches admins can assign to products. */
+  availableColors?: ProductColor[];
   websiteChatEnabled?: boolean;
   /** Top buyer (VIP) — min lifetime spend (BDT) to unlock discount */
   vipMinSpend?: number;

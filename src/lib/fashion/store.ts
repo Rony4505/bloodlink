@@ -26,6 +26,10 @@ import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
 import { repairStoreProductImages } from "./product-image-fixes";
 import { fashionDataDir, fashionStorePath } from "./paths";
 import {
+  DEFAULT_AVAILABLE_COLORS,
+  normalizeProductColors,
+} from "./product-colors";
+import {
   hasDatabaseUrl,
   loadFashionStoreCountsFromPostgres,
   loadFashionStoreFromPostgres,
@@ -307,6 +311,10 @@ function migrateSettings(parsed?: Partial<StoreSettings>): StoreSettings {
       : defaultSettings.deliveryRules,
     promoBanners: parsed?.promoBanners ?? defaultSettings.promoBanners ?? [],
     availableSizes: parsed?.availableSizes ?? defaultSettings.availableSizes,
+    availableColors:
+      Array.isArray(parsed?.availableColors) && parsed.availableColors.length > 0
+        ? parsed.availableColors
+        : defaultSettings.availableColors ?? DEFAULT_AVAILABLE_COLORS,
     aboutPillars: parsed?.aboutPillars ?? defaultSettings.aboutPillars,
     aboutPillarsEn: parsed?.aboutPillarsEn ?? defaultSettings.aboutPillarsEn,
     serviceHighlights: parsed?.serviceHighlights ?? defaultSettings.serviceHighlights,
@@ -404,8 +412,8 @@ function migrateProduct(product: Partial<Product>, settings: StoreSettings): Pro
     description: product.description!,
     descriptionBn: product.descriptionBn!,
     fabric: product.fabric!,
-    sizes: product.sizes ?? ["S", "M", "L"],
-    colors: product.colors ?? [{ name: "Default", hex: "#f8efe9" }],
+    sizes: product.sizes?.length ? product.sizes : ["S", "M", "L"],
+    colors: normalizeProductColors(product.colors),
     tone: product.tone ?? "bg-[#f8efe9]",
     imageUrl: product.imageUrl!,
     imageUrls: product.imageUrls?.length
@@ -829,6 +837,10 @@ export async function updateStoreSettings(partial: Partial<StoreSettings>): Prom
       Array.isArray(partial.availableSizes) && partial.availableSizes.length > 0
         ? partial.availableSizes
         : current.availableSizes,
+    availableColors:
+      Array.isArray(partial.availableColors) && partial.availableColors.length > 0
+        ? partial.availableColors
+        : current.availableColors ?? DEFAULT_AVAILABLE_COLORS,
     aboutPillars: partial.aboutPillars ?? current.aboutPillars,
     aboutPillarsEn: partial.aboutPillarsEn ?? current.aboutPillarsEn,
     serviceHighlights: partial.serviceHighlights ?? current.serviceHighlights,
@@ -938,8 +950,8 @@ function resolveProductPrice(input: ProductInput, settings: StoreSettings): Prod
     description: input.description,
     descriptionBn: input.descriptionBn,
     fabric: input.fabric,
-    sizes: input.sizes,
-    colors: input.colors,
+    sizes: input.sizes?.length ? input.sizes : ["Free Size"],
+    colors: normalizeProductColors(input.colors),
     tone: input.tone,
     imageUrl: input.imageUrl,
     imageUrls: input.imageUrls?.length

@@ -4,14 +4,16 @@ import { useState } from "react";
 import type { Product } from "@/lib/fashion/types";
 import { useCart } from "@/lib/fashion/cart-context";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
+import { normalizeProductColors } from "@/lib/fashion/product-colors";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { FashionButton } from "./FashionButton";
 
 export function AddToCartPanel({ product }: { product: Product }) {
   const { fc } = useFashionCopy();
   const { addItem } = useCart();
+  const colors = normalizeProductColors(product.colors);
   const [size, setSize] = useState(product.sizes[0] ?? "Free Size");
-  const [color, setColor] = useState(product.colors[0]?.name ?? "Default");
+  const [color, setColor] = useState(colors[0]?.name ?? "Default");
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const maxQty = product.stock;
@@ -19,7 +21,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
   const price = getEffectivePrice(product);
 
   function handleAdd() {
-    if (!inStock || quantity > maxQty) return;
+    if (!inStock || quantity > maxQty || !color) return;
     addItem({ ...product, price }, size, color, quantity);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
@@ -34,7 +36,9 @@ export function AddToCartPanel({ product }: { product: Product }) {
       ) : null}
 
       <div>
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">{fc.actions.size}</p>
+        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">
+          {fc.actions.size}
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {product.sizes.map((option) => (
             <button
@@ -54,9 +58,11 @@ export function AddToCartPanel({ product }: { product: Product }) {
       </div>
 
       <div className="mt-6">
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">{fc.actions.color}</p>
+        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">
+          {fc.actions.color}
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {product.colors.map((option) => (
+          {colors.map((option) => (
             <button
               key={option.name}
               type="button"
@@ -102,7 +108,10 @@ export function AddToCartPanel({ product }: { product: Product }) {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <FashionButton onClick={handleAdd} disabled={!inStock || quantity > maxQty}>
+        <FashionButton
+          onClick={handleAdd}
+          disabled={!inStock || quantity > maxQty || !color}
+        >
           {added ? fc.actions.addedToCart : fc.actions.addToCart}
         </FashionButton>
         <FashionButton href="/cart" variant="secondary">
