@@ -1,7 +1,5 @@
 import type { Product } from "./types";
-
-const img = (id: string) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
+import { fashionStockImage } from "./product-image-fixes";
 
 const createdAt = "2026-01-01T00:00:00.000Z";
 
@@ -36,7 +34,7 @@ const rawProducts = [
       { name: "Soft Gold", hex: "#e8c9a8" },
     ],
     tone: "bg-[#f8efe9]",
-    imageUrl: img("photo-1595777457582-31a4f8e1a5c5"),
+    imageUrl: fashionStockImage("photo-1515372039744-b8f02a3ae446"),
     featured: true,
     inStock: true,
   },
@@ -59,7 +57,7 @@ const rawProducts = [
       { name: "Warm Taupe", hex: "#c9a995" },
     ],
     tone: "bg-[#f5ece6]",
-    imageUrl: img("photo-1485968579580-b6d5abeba69e"),
+    imageUrl: fashionStockImage("photo-1434389677669-e08b4cac3105"),
     featured: true,
     inStock: true,
   },
@@ -79,7 +77,7 @@ const rawProducts = [
     sizes: ["Free Size"],
     colors: [{ name: "Rose Gold", hex: "#e8b8a0" }],
     tone: "bg-[#f2e3dc]",
-    imageUrl: img("photo-1610032344697-1c227c0d9d88"),
+    imageUrl: fashionStockImage("photo-1566174053879-31528523f8ae"),
     featured: true,
     inStock: true,
   },
@@ -102,7 +100,7 @@ const rawProducts = [
       { name: "Clay", hex: "#d4b5a5" },
     ],
     tone: "bg-[#efe7e1]",
-    imageUrl: img("photo-1496747613176-916222140a94"),
+    imageUrl: fashionStockImage("photo-1490481651871-ab68de25d43d"),
     featured: true,
     inStock: true,
   },
@@ -125,7 +123,7 @@ const rawProducts = [
       { name: "Blush Rose", hex: "#e8cfc2" },
     ],
     tone: "bg-[#f5e8dc]",
-    imageUrl: img("photo-1581044777556-408782e03625"),
+    imageUrl: fashionStockImage("photo-1515372039744-b8f02a3ae446"),
     featured: true,
     inStock: true,
   },
@@ -148,7 +146,7 @@ const rawProducts = [
       { name: "Champagne", hex: "#ead9c8" },
     ],
     tone: "bg-[#f6ece6]",
-    imageUrl: img("photo-1566174053879-31528523f8ae"),
+    imageUrl: fashionStockImage("photo-1566174053879-31528523f8ae"),
     inStock: true,
   },
   {
@@ -167,7 +165,7 @@ const rawProducts = [
     sizes: ["Free Size"],
     colors: [{ name: "Soft Gold", hex: "#e8c9a8" }],
     tone: "bg-[#f0e2d4]",
-    imageUrl: img("photo-1583391732137-1b8c2f5c9a2d"),
+    imageUrl: fashionStockImage("photo-1566174053879-31528523f8ae"),
     inStock: true,
   },
   {
@@ -188,7 +186,7 @@ const rawProducts = [
       { name: "Espresso", hex: "#6f4f43" },
     ],
     tone: "bg-[#ece4de]",
-    imageUrl: img("photo-1434389677669-e08b4cac3105"),
+    imageUrl: fashionStockImage("photo-1434389677669-e08b4cac3105"),
     inStock: true,
   },
   {
@@ -211,7 +209,7 @@ const rawProducts = [
       { name: "Mocha", hex: "#b8927f" },
     ],
     tone: "bg-[#f3e7e1]",
-    imageUrl: img("photo-1515372039744-b8f02a3ae446"),
+    imageUrl: fashionStockImage("photo-1515372039744-b8f02a3ae446"),
     inStock: true,
   },
   {
@@ -232,7 +230,7 @@ const rawProducts = [
       { name: "Sage", hex: "#c8d3c4" },
     ],
     tone: "bg-[#efe4dd]",
-    imageUrl: img("photo-1490481651871-ab68de25d43d"),
+    imageUrl: fashionStockImage("photo-1490481651871-ab68de25d43d"),
     inStock: true,
   },
   {
@@ -253,7 +251,7 @@ const rawProducts = [
       { name: "Blush", hex: "#edd5ca" },
     ],
     tone: "bg-[#faf0ea]",
-    imageUrl: img("photo-1539533018447-63fcce267608"),
+    imageUrl: fashionStockImage("photo-1434389677669-e08b4cac3105"),
     inStock: true,
   },
   {
@@ -275,7 +273,7 @@ const rawProducts = [
       { name: "Deep Rose", hex: "#c99286" },
     ],
     tone: "bg-[#efe0d8]",
-    imageUrl: img("photo-1515372039744-b8f02a3ae446"),
+    imageUrl: fashionStockImage("photo-1515372039744-b8f02a3ae446"),
     inStock: true,
   },
 ];

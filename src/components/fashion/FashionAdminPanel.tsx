@@ -15,6 +15,7 @@ import { ReportContent, type ReportType } from "@/components/fashion/admin/Repor
 import { SettingsEditor } from "@/components/fashion/admin/SettingsEditor";
 import { adminThemes, type AdminTheme } from "@/components/fashion/admin/admin-themes";
 import { copy } from "@/lib/fashion/copy";
+import { FASHION_IMAGE_UPLOAD_HINT_BN } from "@/lib/fashion/product-image-fixes";
 import { advertiseKindLabel } from "@/lib/fashion/i18n";
 import { bangladeshDistricts, BANNER_RECOMMENDED_SIZE } from "@/lib/fashion/districts";
 import { formatBdt } from "@/lib/fashion/format";
@@ -1288,6 +1289,7 @@ export function FashionAdminPanel() {
             ) : null}
             <div className="rounded-2xl border border-black/6 bg-white/80 p-4">
               <p className="text-sm font-semibold text-[#9b7766]">প্রোডাক্ট ছবি (একাধিক যোগ করুন)</p>
+              <p className="mt-1 text-xs text-[#8b6456]">{FASHION_IMAGE_UPLOAD_HINT_BN}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {(form.imageUrls?.length ? form.imageUrls : form.imageUrl ? [form.imageUrl] : []).map((url, index) => (
                   <div key={`${url}-${index}`} className="relative">

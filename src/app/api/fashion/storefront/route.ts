@@ -7,6 +7,8 @@ import {
   listPublicCoupons,
 } from "@/lib/fashion/store";
 
+const PUBLIC_CACHE = "public, s-maxage=60, stale-while-revalidate=120";
+
 export async function GET() {
   const [settings, offers, newProducts, banners, coupons] = await Promise.all([
     getStoreSettings(),
@@ -24,5 +26,8 @@ export async function GET() {
     .sort()
     .join("|");
 
-  return NextResponse.json({ settings, offers, newProducts, banners, coupons, promoFingerprint });
+  return NextResponse.json(
+    { settings, offers, newProducts, banners, coupons, promoFingerprint },
+    { headers: { "Cache-Control": PUBLIC_CACHE } },
+  );
 }

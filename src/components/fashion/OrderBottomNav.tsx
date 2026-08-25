@@ -6,10 +6,37 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/lib/fashion/cart-context";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 
+const AUTH_CACHE_KEY = "fashion_customer_logged_in";
+const AUTH_CACHE_MS = 2 * 60 * 1000;
+
 function normalizePath(pathname: string | null): string {
   if (!pathname) return "/";
   const trimmed = pathname.replace(/\/+$/, "");
   return trimmed || "/";
+}
+
+function readCachedAuth(): boolean | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(AUTH_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ok: boolean; at: number };
+    if (Date.now() - parsed.at > AUTH_CACHE_MS) return null;
+    return Boolean(parsed.ok);
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedAuth(ok: boolean) {
+  try {
+    sessionStorage.setItem(
+      AUTH_CACHE_KEY,
+      JSON.stringify({ ok, at: Date.now() }),
+    );
+  } catch {
+    /* ignore quota errors */
+  }
 }
 
 export function OrderBottomNav() {
@@ -17,17 +44,24 @@ export function OrderBottomNav() {
   const path = normalizePath(pathname);
   const { itemCount } = useCart();
   const { fc, locale } = useFashionCopy();
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(() => readCachedAuth());
 
   useEffect(() => {
     let alive = true;
+    const cached = readCachedAuth();
+    if (cached !== null) setLoggedIn(cached);
+
     fetch("/api/fashion/auth")
       .then((r) => r.json())
       .then((data) => {
-        if (alive) setLoggedIn(Boolean(data.customer));
+        if (!alive) return;
+        const ok = Boolean(data.customer);
+        writeCachedAuth(ok);
+        setLoggedIn(ok);
       })
       .catch(() => {
-        if (alive) setLoggedIn(false);
+        if (!alive) return;
+        if (cached === null) setLoggedIn(false);
       });
     return () => {
       alive = false;
@@ -53,7 +87,7 @@ export function OrderBottomNav() {
       aria-label="Mobile navigation"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-[#e8d4e8]/70 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(74,51,72,0.08)] backdrop-blur md:hidden"
     >
-      <div className="mx-auto grid max-w-lg grid-cols-4 items-end gap-1 px-2 pt-1.5">
+      <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 pt-2">
         <BottomLink
           href="/collections"
           label={categoryLabel}
@@ -61,7 +95,7 @@ export function OrderBottomNav() {
         >
           <MenuIcon />
         </BottomLink>
-        <BottomLink href="/" label={homeLabel} active={isHome} elevated>
+        <BottomLink href="/" label={homeLabel} active={isHome}>
           <HomeIcon />
         </BottomLink>
         <BottomLink
@@ -87,32 +121,26 @@ function BottomLink({
   href,
   label,
   active,
-  elevated = false,
   children,
 }: {
   href: string;
   label: string;
   active: boolean;
-  elevated?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex flex-col items-center gap-0.5 px-1 py-2 text-[10px] font-semibold transition ${
+      className={`flex flex-col items-center gap-1 px-1 py-1.5 text-[10px] font-semibold transition-colors ${
         active ? "text-[#5c3d5e]" : "text-[#8a7490]"
       }`}
     >
       <span
-        className={`flex items-center justify-center transition ${
-          elevated && active
-            ? "-mt-5 h-14 w-14 rounded-full bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-lg ring-4 ring-[#e8c4d8]/60"
-            : active
-              ? "h-10 w-10 rounded-full bg-[color-mix(in_oklab,#9d6b8a_18%,white)] text-[#5c3d5e] ring-2 ring-[#e8c4d8]/70"
-              : elevated
-                ? "h-10 w-10 rounded-full bg-[#f6eef3] text-[#8a7490]"
-                : "h-10 w-10 rounded-full text-current"
+        className={`flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 ease-out ${
+          active
+            ? "-translate-y-1 scale-110 bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-[0_8px_20px_rgba(157,107,138,0.35)] ring-2 ring-[#e8c4d8]/80"
+            : "bg-transparent text-current"
         }`}
       >
         {children}
@@ -139,7 +167,7 @@ function MenuIcon() {
 
 function HomeIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
         stroke="currentColor"
