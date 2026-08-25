@@ -42,3 +42,47 @@ Helpful links after go-live:
 
 - `https://bloodlinkbd.org/robots.txt`
 - `https://bloodlinkbd.org/sitemap.xml`
+
+
+## C) Google Search-এ logo / link icon আপডেট হচ্ছে না?
+
+**এটা স্বাভাবিক।** Google Search result-এর ছোট্ট logo (favicon) সাথে সাথে বদলায় না — সাধারণত কয়েক দিন থেকে কয়েক সপ্তাহ লাগে।
+
+### গুরুত্বপূর্ণ পার্থক্য
+
+| কোথায় | কোন ফাইল |
+| --- | --- |
+| Website header / homepage logo | Admin panel → Site appearance → Logo upload (`logoUrl`) |
+| Google Search-এর পাশের ছোট icon | `favicon.ico`, `icon-48.png`, `icon-192.png` |
+
+Admin থেকে logo বদলালে **শুধু সাইটে** দেখা যায়। Google-এর icon আলাদা — সেই static favicon ফাইলগুলো আপডেট করতে হয়।
+
+### এখনই যা করবেন
+
+1. নতুন logo যদি চান Google-এ:
+   - Square PNG বানান (কমপক্ষে **48×48**, ভালো হয় **192×192**)
+   - `public/icon-48.png`, `public/icon-192.png`, `public/apple-touch-icon.png` replace করুন
+   - চাইলে `public/favicon.ico` ও update করুন
+   - Deploy / Redeploy Railway
+2. Browser-এ খুলে check করুন:
+   - `https://bloodlinkbd.org/icon-192.png`
+   - `https://bloodlinkbd.org/favicon.ico`
+3. [Google Search Console](https://search.google.com/search-console) → **URL Inspection**
+   - `https://bloodlinkbd.org` পেস্ট করুন
+   - **Request indexing** চাপুন (homepage আবার crawl করতে বলে)
+4. অপেক্ষা করুন — Google cache refresh হতে **কয়েক দিন–কয়েক সপ্তাহ** লাগতে পারে
+5. নিজের browser cache clear করেও Google result একই থাকতে পারে; সেটা Google-এর cache
+
+### করবেন না
+
+- Favicon URL বারবার বদলাবেন না (Google unstable URL পছন্দ করে না)
+- প্রতি ঘন্টায় Request indexing spam করবেন না
+- শুধু admin logo upload করে Google icon expect করবেন না
+
+### Check list
+
+- [ ] `icon-192.png` square এবং নতুন logo দেখাচ্ছে
+- [ ] Homepage HTML-এ `<link rel="icon" ...>` আছে (view source)
+- [ ] Search Console property verified (`https://bloodlinkbd.org`)
+- [ ] Homepage-এ Request indexing করা হয়েছে
+- [ ] Redeploy এর পর live URL-এ নতুন icon খুলছে

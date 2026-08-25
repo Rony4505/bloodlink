@@ -9,7 +9,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      // Allow uploaded brand assets so Google can fetch logo/favicon candidates.
+      allow: ["/", "/api/uploads/"],
       disallow: [
         BLOODLINK_OWNER_PATH,
         "/owner-hq-7f3m",
