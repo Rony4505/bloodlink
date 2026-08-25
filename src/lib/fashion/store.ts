@@ -23,6 +23,7 @@ import type {
 import { computeAnalytics } from "./analytics";
 import { generateTrackingNumber } from "./tracking";
 import { buildProductSlug, isAsciiProductSlug } from "./product-slug";
+import { repairStoreProductImages } from "./product-image-fixes";
 import { fashionDataDir, fashionStorePath } from "./paths";
 import {
   hasDatabaseUrl,
@@ -78,6 +79,21 @@ const MAX_ROTATING_BACKUPS = 30;
 const SEED_PRODUCT_COUNT = rawSeedProducts.length;
 
 let writeQueue: Promise<void> = Promise.resolve();
+let memoryStore: FashionStore | null = null;
+let memoryStoreAt = 0;
+/** Keep catalog in RAM so product pages do not hit Postgres every request. */
+const MEMORY_TTL_MS = 20_000;
+
+function rememberStore(store: FashionStore): FashionStore {
+  memoryStore = store;
+  memoryStoreAt = Date.now();
+  return store;
+}
+
+function clearMemoryStore(): void {
+  memoryStore = null;
+  memoryStoreAt = 0;
+}
 
 type StoreCounts = { products: number; orders: number; customers: number };
 
@@ -533,6 +549,7 @@ async function runStoreMaintenance(
   }
   if (purgeExpired(store)) await writeStore(store, priorCounts);
   if (normalizeProductSlugs(store)) await writeStore(store, priorCounts);
+  if (repairStoreProductImages(store.products)) await writeStore(store, priorCounts);
   if (await syncAdminPasswordHash(store)) await writeStore(store, priorCounts);
   return store;
 }
@@ -637,6 +654,14 @@ async function ensureStoreFromFile(building: boolean): Promise<FashionStore> {
 
 async function ensureStore(): Promise<FashionStore> {
   const building = isNextBuild();
+  if (
+    !building &&
+    memoryStore &&
+    Date.now() - memoryStoreAt < MEMORY_TTL_MS
+  ) {
+    return memoryStore;
+  }
+
   if (!building) {
     await mkdir(dataDir(), { recursive: true });
   }
@@ -644,13 +669,13 @@ async function ensureStore(): Promise<FashionStore> {
   if (hasDatabaseUrl() && !building) {
     try {
       const fromPg = await ensureStoreFromPostgres();
-      if (fromPg) return fromPg;
+      if (fromPg) return rememberStore(fromPg);
     } catch (err) {
       console.error("[fashion-store] Postgres unavailable — using file storage", err);
     }
   }
 
-  return ensureStoreFromFile(building);
+  return rememberStore(await ensureStoreFromFile(building));
 }
 
 async function writeStore(
@@ -711,6 +736,7 @@ async function writeStore(
 
   writeQueue = task.catch(() => undefined);
   await task;
+  clearMemoryStore();
 }
 
 /** Full store snapshot for admin download / disaster recovery. */

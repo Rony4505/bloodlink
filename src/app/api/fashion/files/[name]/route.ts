@@ -2,6 +2,9 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { fashionUploadDir } from "@/lib/fashion/paths";
+import { loadUploadFromPostgres } from "@/lib/pg-store";
+
+export const runtime = "nodejs";
 
 const CONTENT_TYPES: Record<string, string> = {
   jpg: "image/jpeg",
@@ -32,6 +35,15 @@ export async function GET(
       },
     });
   } catch {
+    const fromPg = await loadUploadFromPostgres(safe);
+    if (fromPg) {
+      return new NextResponse(new Uint8Array(fromPg.data), {
+        headers: {
+          "Content-Type": fromPg.contentType || "image/jpeg",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 }
