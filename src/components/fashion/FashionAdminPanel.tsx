@@ -15,6 +15,10 @@ import { ReportContent, type ReportType } from "@/components/fashion/admin/Repor
 import { SettingsEditor } from "@/components/fashion/admin/SettingsEditor";
 import { adminThemes, type AdminTheme } from "@/components/fashion/admin/admin-themes";
 import { copy } from "@/lib/fashion/copy";
+import {
+  DEFAULT_AVAILABLE_COLORS,
+  normalizeProductColors,
+} from "@/lib/fashion/product-colors";
 import { FASHION_IMAGE_UPLOAD_HINT_BN } from "@/lib/fashion/product-image-fixes";
 import { advertiseKindLabel } from "@/lib/fashion/i18n";
 import { bangladeshDistricts, BANNER_RECOMMENDED_SIZE } from "@/lib/fashion/districts";
@@ -29,6 +33,7 @@ import type {
   FashionOrder,
   OrderStatus,
   Product,
+  ProductColor,
   ProductInput,
   PromoBanner,
   StoreSettings,
@@ -41,8 +46,13 @@ type OffersSubTab = "offers" | "advertisement";
 const emptyProduct: ProductInput = {
   name: "", nameBn: "", price: 0, buyPrice: 0, categorySlug: "festive",
   description: "", descriptionBn: "", fabric: "", sizes: ["S", "M", "L"],
-  colors: [{ name: "Default", hex: "#f8efe9" }], tone: "bg-[#f8efe9]",
-  imageUrl: "https://images.unsplash.com/photo-1595777457582-31a4f8e1a5c5?auto=format&fit=crop&w=900&q=80",
+  colors: [
+    { name: "Black", hex: "#1c1412" },
+    { name: "White", hex: "#f7f4f1" },
+    { name: "Red", hex: "#b4232e" },
+  ],
+  tone: "bg-[#f8efe9]",
+  imageUrl: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=900&h=1200&q=80",
   stock: 25, inStock: true, featured: false, pricingMode: "manual", advertiseActive: false,
 };
 
@@ -114,6 +124,8 @@ export function FashionAdminPanel() {
   const [districtSearch, setDistrictSearch] = useState("");
   const [newSize, setNewSize] = useState("");
   const [productNewSize, setProductNewSize] = useState("");
+  const [productNewColorName, setProductNewColorName] = useState("");
+  const [productNewColorHex, setProductNewColorHex] = useState("#9d6b8a");
   const [useNewCategory, setUseNewCategory] = useState(false);
   const [newCategoryTitleBn, setNewCategoryTitleBn] = useState("");
   const [newCategorySlug, setNewCategorySlug] = useState("");
@@ -259,6 +271,7 @@ export function FashionAdminPanel() {
     setUseNewCategory(false);
     setForm({
       ...product,
+      colors: normalizeProductColors(product.colors),
       featured: product.featured ?? false,
       advertiseActive:
         product.advertiseActive ??
@@ -275,10 +288,15 @@ export function FashionAdminPanel() {
     setUseNewCategory(false);
     setNewCategoryTitleBn("");
     setNewCategorySlug("");
+    const presetColors =
+      settings?.availableColors?.length
+        ? settings.availableColors.slice(0, 3)
+        : emptyProduct.colors;
     setForm({
       ...emptyProduct,
       categorySlug: selectedCategorySlug || categories[0]?.slug || "festive",
       sizes: settings?.availableSizes?.slice(0, 3) ?? emptyProduct.sizes,
+      colors: normalizeProductColors(presetColors),
     });
     setProductModalOpen(true);
   }
@@ -292,6 +310,27 @@ export function FashionAdminPanel() {
     }));
   }
 
+  function toggleProductColor(color: ProductColor) {
+    setForm((current) => {
+      const exists = current.colors.some(
+        (c) => c.name.toLowerCase() === color.name.toLowerCase(),
+      );
+      if (exists) {
+        const next = current.colors.filter(
+          (c) => c.name.toLowerCase() !== color.name.toLowerCase(),
+        );
+        return {
+          ...current,
+          colors: next.length ? next : normalizeProductColors([]),
+        };
+      }
+      return {
+        ...current,
+        colors: normalizeProductColors([...current.colors, color]),
+      };
+    });
+  }
+
   async function addProductSize() {
     const size = productNewSize.trim();
     if (!size || !settings) return;
@@ -303,6 +342,30 @@ export function FashionAdminPanel() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ availableSizes }),
+    });
+  }
+
+  async function addProductColor() {
+    const name = productNewColorName.trim();
+    if (!name) return;
+    const color: ProductColor = {
+      name,
+      hex: productNewColorHex.trim() || "#9d6b8a",
+    };
+    const availableColors = normalizeProductColors([
+      ...(settings?.availableColors ?? DEFAULT_AVAILABLE_COLORS),
+      color,
+    ]);
+    if (settings) setSettings({ ...settings, availableColors });
+    setForm((current) => ({
+      ...current,
+      colors: normalizeProductColors([...current.colors, color]),
+    }));
+    setProductNewColorName("");
+    await fetch("/api/fashion/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ availableColors }),
     });
   }
 
@@ -333,10 +396,20 @@ export function FashionAdminPanel() {
       setCategories(updatedCategories);
     }
 
+    if (!form.sizes.length) {
+      showSuccess("রং/সাইজ লাগবে", "কমপক্ষে একটি সাইজ সিলেক্ট করুন", "rose");
+      return;
+    }
+    const colors = normalizeProductColors(form.colors);
+    if (!colors.length) {
+      showSuccess("রং লাগবে", "কমপক্ষে একটি রং সিলেক্ট করুন", "rose");
+      return;
+    }
+
     const res = await fetch(editingId ? `/api/fashion/products/${editingId}` : "/api/fashion/products", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, categorySlug, pricingMode: "manual" }),
+      body: JSON.stringify({ ...form, colors, categorySlug, pricingMode: "manual" }),
     });
     if (!res.ok) return;
     setProductModalOpen(false);
@@ -1258,6 +1331,71 @@ export function FashionAdminPanel() {
                 <input className="field flex-1" placeholder="নতুন সাইজ যোগ (যেমন XXL)" value={productNewSize} onChange={(e) => setProductNewSize(e.target.value)} />
                 <FashionButton type="button" variant="secondary" onClick={() => void addProductSize()}>যোগ</FashionButton>
               </div>
+            </div>
+            <div className="block">
+              <span className="text-sm text-[#9b7766]">রং (কাস্টমার সিলেক্ট করবে)</span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {[
+                  ...(settings?.availableColors ?? DEFAULT_AVAILABLE_COLORS),
+                  ...form.colors,
+                ]
+                  .filter(
+                    (c, i, arr) =>
+                      arr.findIndex(
+                        (x) => x.name.toLowerCase() === c.name.toLowerCase(),
+                      ) === i,
+                  )
+                  .map((colorOption) => {
+                    const selected = form.colors.some(
+                      (c) =>
+                        c.name.toLowerCase() === colorOption.name.toLowerCase(),
+                    );
+                    return (
+                      <button
+                        key={colorOption.name}
+                        type="button"
+                        onClick={() => toggleProductColor(colorOption)}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${
+                          selected
+                            ? "bg-[#e8b896] text-[#3d2a24]"
+                            : "border border-black/10 bg-white/80 text-[#6f554a]"
+                        }`}
+                      >
+                        <span
+                          className="h-3.5 w-3.5 rounded-full border border-black/15"
+                          style={{ backgroundColor: colorOption.hex }}
+                          aria-hidden
+                        />
+                        {colorOption.name}
+                      </button>
+                    );
+                  })}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  className="field min-w-[8rem] flex-1"
+                  placeholder="নতুন রং (যেমন Olive)"
+                  value={productNewColorName}
+                  onChange={(e) => setProductNewColorName(e.target.value)}
+                />
+                <input
+                  type="color"
+                  className="h-11 w-14 cursor-pointer rounded-xl border border-black/10 bg-white p-1"
+                  value={productNewColorHex}
+                  onChange={(e) => setProductNewColorHex(e.target.value)}
+                  aria-label="Color picker"
+                />
+                <FashionButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void addProductColor()}
+                >
+                  যোগ
+                </FashionButton>
+              </div>
+              <p className="mt-2 text-xs text-[#8b6456]">
+                সিলেক্ট করা রংগুলো প্রোডাক্ট পেজে কাস্টমার দেখবে ও বেছে নিতে পারবে।
+              </p>
             </div>
             <div className="rounded-2xl border border-black/6 bg-white/80 p-4">
               <label className="flex items-center gap-2 text-sm">
