@@ -349,10 +349,21 @@ export function FashionAdminPanel() {
 
   async function confirmDeleteProduct() {
     if (!pendingDeleteProduct) return;
-    const res = await fetch(`/api/fashion/products/${pendingDeleteProduct.id}`, { method: "DELETE" });
+    const target = pendingDeleteProduct;
+    const res = await fetch(`/api/fashion/products/${target.id}`, {
+      method: "DELETE",
+    });
+    const data = await res.json().catch(() => ({}));
     setPendingDeleteProduct(null);
-    if (!res.ok) return;
-    showSuccess("মুছে ফেলা হয়েছে", `${pendingDeleteProduct.nameBn} সরানো হয়েছে`, "rose");
+    if (!res.ok) {
+      showSuccess(
+        "মুছা যায়নি",
+        data.error || `${target.nameBn} মুছে ফেলা যায়নি — আবার চেষ্টা করুন`,
+        "rose",
+      );
+      return;
+    }
+    showSuccess("মুছে ফেলা হয়েছে", `${target.nameBn} সরানো হয়েছে`, "rose");
     await load();
   }
 

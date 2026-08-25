@@ -22,9 +22,18 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const ok = await deleteProduct(id);
-  if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true });
+  try {
+    const ok = await deleteProduct(id);
+    if (!ok) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Could not delete product";
+    console.error("[fashion] delete product failed", err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function GET(_request: Request, { params }: Params) {

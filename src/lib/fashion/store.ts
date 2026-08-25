@@ -99,6 +99,8 @@ type StoreCounts = { products: number; orders: number; customers: number };
 
 type WriteStoreOptions = {
   allowShrink?: boolean;
+  /** Explicit admin delete of the last product (empty catalog is intentional). */
+  allowEmptyProducts?: boolean;
 };
 
 async function loadLatestRotatingBackup(): Promise<Partial<FashionStore> | null> {
@@ -189,7 +191,11 @@ function assertSafeWrite(
 ): void {
   if (!existing) return;
 
-  if (existing.products > 0 && store.products.length === 0) {
+  if (
+    existing.products > 0 &&
+    store.products.length === 0 &&
+    !options?.allowEmptyProducts
+  ) {
     throw new Error("[fashion-store] refused to write empty products over existing catalog");
   }
   if (existing.orders > 0 && store.orders.length === 0) {
@@ -199,7 +205,7 @@ function assertSafeWrite(
     throw new Error("[fashion-store] refused to write empty customers over existing customers");
   }
 
-  if (options?.allowShrink) return;
+  if (options?.allowShrink || options?.allowEmptyProducts) return;
 
   if (store.products.length < existing.products) {
     throw new Error(
@@ -693,10 +699,12 @@ async function writeStore(
       try {
         await saveFashionStoreToPostgres(store, {
           allowShrink: options?.allowShrink,
+          allowEmptyProducts: options?.allowEmptyProducts,
           seedProductCount: SEED_PRODUCT_COUNT,
         });
       } catch (err) {
         console.error("[fashion-store] Postgres save failed — keeping file mirror", err);
+        throw err;
       }
     }
 
@@ -1050,8 +1058,18 @@ export async function deleteProduct(id: string): Promise<boolean> {
   const next = store.products.filter((product) => product.id !== id);
   if (next.length === store.products.length) return false;
   store.products = next;
-  store.settings.promoBanners = (store.settings.promoBanners ?? []).filter((b) => b.productId !== id);
-  await writeStore(store, priorCounts, { allowShrink: true });
+  store.settings.promoBanners = (store.settings.promoBanners ?? []).filter(
+    (b) => b.productId !== id,
+  );
+  store.coupons = (store.coupons ?? []).map((coupon) => {
+    if (!coupon.productIds?.length) return coupon;
+    const productIds = coupon.productIds.filter((productId) => productId !== id);
+    return { ...coupon, productIds };
+  });
+  await writeStore(store, priorCounts, {
+    allowShrink: true,
+    allowEmptyProducts: true,
+  });
   return true;
 }
 

@@ -129,7 +129,11 @@ export async function loadFashionStoreCountsFromPostgres(): Promise<{
 
 export async function saveFashionStoreToPostgres(
   store: FashionStore,
-  options: { allowShrink?: boolean; seedProductCount?: number } = {},
+  options: {
+    allowShrink?: boolean;
+    allowEmptyProducts?: boolean;
+    seedProductCount?: number;
+  } = {},
 ): Promise<void> {
   await ensureFashionTable();
   const existing = await loadFashionStoreCountsFromPostgres();
@@ -137,7 +141,11 @@ export async function saveFashionStoreToPostgres(
   const seedCount = options.seedProductCount ?? 0;
 
   if (existing) {
-    if (existing.products > 0 && next.products === 0) {
+    if (
+      existing.products > 0 &&
+      next.products === 0 &&
+      !options.allowEmptyProducts
+    ) {
       throw new Error(
         `[fashion-store] Refusing to overwrite Postgres products (${existing.products}) with empty data`,
       );
