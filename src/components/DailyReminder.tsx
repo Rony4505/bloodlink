@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 function bdParts(date = new Date()) {
@@ -23,15 +23,30 @@ function bdParts(date = new Date()) {
 
 export function DailyReminder({ enabled }: { enabled: boolean }) {
   const { t } = useLocale();
+  const [hourBd, setHourBd] = useState(10);
+  const [reminderEnabled, setReminderEnabled] = useState(true);
 
   useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled) return;
+    fetch("/api/notifications")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const daily = data?.prefs?.dailyDonationReminder;
+        if (!daily) return;
+        setReminderEnabled(Boolean(daily.enabled));
+        if (typeof daily.hourBd === "number") setHourBd(daily.hourBd);
+      })
+      .catch(() => undefined);
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || !reminderEnabled || typeof window === "undefined") return;
 
     async function tick() {
       const { key, hour, minute } = bdParts();
-      if (hour !== 10 || minute > 5) return;
+      if (hour !== hourBd || minute > 8) return;
 
-      const storageKey = `bloodlink_daily_${key}`;
+      const storageKey = `bloodlink_daily_${key}_${hourBd}`;
       if (localStorage.getItem(storageKey)) return;
 
       await fetch("/api/notifications").catch(() => undefined);
@@ -53,7 +68,7 @@ export function DailyReminder({ enabled }: { enabled: boolean }) {
     void tick();
     const id = window.setInterval(() => void tick(), 60_000);
     return () => window.clearInterval(id);
-  }, [enabled, t.dailyReminderBody, t.dailyReminderTitle]);
+  }, [enabled, hourBd, reminderEnabled, t.dailyReminderBody, t.dailyReminderTitle]);
 
   return null;
 }

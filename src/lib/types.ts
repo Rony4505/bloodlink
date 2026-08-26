@@ -190,6 +190,29 @@ export type PlatformOptions = {
   futureServices: PlatformFeatureOption;
 };
 
+/** Per-channel admin controls for BloodLink in-app notifications. */
+export type NotificationChannelConfig = {
+  enabled: boolean;
+  /** Special channels (e.g. blood request) stay forced on. */
+  locked: boolean;
+  /** How often periodic notifications may fire (1 = every day). */
+  intervalDays: number;
+  /** Hour of day in Asia/Dhaka (0–23) when periodic reminders may start. */
+  hourBd: number;
+  notes: string;
+};
+
+export type NotificationSettings = {
+  /** Always-on: every account holder when someone posts a blood need. */
+  bloodRequestBroadcast: NotificationChannelConfig;
+  /** Morning reminder to update last donation date. */
+  dailyDonationReminder: NotificationChannelConfig;
+  /** Contact change approve/decline notices. */
+  contactChangeAlerts: NotificationChannelConfig;
+  /** Admin one-shot announcements to all accounts. */
+  systemAnnouncements: NotificationChannelConfig;
+};
+
 export type BannerSize = "sm" | "md" | "lg" | "leaderboard" | "square";
 
 export type BannerPage =
@@ -244,6 +267,7 @@ export type AdminSettings = {
   privacyBn: string;
   privacyEn: string;
   platformOptions: PlatformOptions;
+  notificationSettings: NotificationSettings;
   banners: OrgBanner[];
   /** Seconds between auto-slides on public advertisement banners (default 3). */
   bannerSlideIntervalSec: number;

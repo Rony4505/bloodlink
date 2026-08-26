@@ -52,6 +52,8 @@ export const BLOODLINK_PATH_PREFIXES = [
   "/api/donors",
   "/api/auth",
   "/api/admin",
+  "/api/notifications",
+  "/api/cron",
   "/api/requests",
   "/api/health",
   "/api/uploads",
