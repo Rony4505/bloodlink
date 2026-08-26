@@ -12,7 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const paths =
     mode === "fashion"
       ? ["", "/collections", "/about", "/contact", "/store-admin", "/track", "/cart"]
-      : ["", "/find", "/ambulance", "/register", "/login", "/requests", "/about", "/warnings", "/privacy"];
+      : ["", "/find", "/ambulance", "/register", "/login", "/requests", "/about", "/warnings", "/privacy", "/promo"];
 
   return paths.map((path) => ({
     url: `${site}${path}`,
