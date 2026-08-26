@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
-import { PushEnableBanner } from "@/components/PushEnableBanner";
+import { NotificationsPushAskModal } from "@/components/NotificationsPushAskModal";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { localizeNotification } from "@/lib/notification-text";
 
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
 
   return (
     <PageShell title={t.notifications}>
-      <PushEnableBanner enabled />
+      <NotificationsPushAskModal />
       <div className="overflow-hidden rounded-[1.75rem] border border-[color-mix(in_oklab,var(--blood)_18%,transparent)] bg-[linear-gradient(165deg,#fff8f4_0%,#ffffff_42%,#f7f1ea_100%)] shadow-[0_18px_50px_-28px_rgba(90,20,30,0.45)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-[color-mix(in_oklab,var(--blood)_8%,white)] px-5 py-4">
           <div>

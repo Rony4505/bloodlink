@@ -266,6 +266,12 @@ export const dictionaries = {
       "Your donor profile is ready. Review your details below, then open your dashboard.",
     registerSuccessSummary: "Your donor profile",
     registerSuccessCta: "Go to my dashboard",
+    registerPushTitle: "Allow notifications?",
+    registerPushBody:
+      "Get alerts for blood needs and reminders even when BloodLink is closed (internet on).",
+    registerPushAllow: "Allow notifications",
+    registerPushSkip: "Not now",
+    registerPushOn: "Notifications enabled.",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     alreadyDonor: "Already registered?",
@@ -570,10 +576,6 @@ export const dictionaries = {
     notifGoldBlessing: "Monthly gold-donor blessing",
     notifGoldBlessingHint:
       "Once each BD month, send a warm crimson blessing to the current top Gold/Platinum donor.",
-    pushEnableTitle: "Turn on phone alerts",
-    pushEnableBody:
-      "Even when BloodLink is closed, you’ll get a notification when internet is on — so you know to open the site.",
-    pushEnableButton: "Enable alerts",
     pushDenied: "Notifications are blocked in browser settings.",
     adminPublishedStories: "Published success stories",
     adminPublishedStoriesHint:
@@ -850,6 +852,12 @@ export const dictionaries = {
       "আপনার ডোনার প্রোফাইল তৈরি হয়েছে। নিচে বিবরণ দেখে ড্যাশবোর্ডে যান।",
     registerSuccessSummary: "আপনার ডোনার প্রোফাইল",
     registerSuccessCta: "ড্যাশবোর্ডে যান",
+    registerPushTitle: "নোটিফিকেশন অনুমতি দেবেন?",
+    registerPushBody:
+      "BloodLink বন্ধ থাকলেও ইন্টারনেট চালু থাকলে রক্তের প্রয়োজন ও রিমাইন্ডারের অ্যালার্ট পাবেন।",
+    registerPushAllow: "নোটিফিকেশন অনুমতি দিন",
+    registerPushSkip: "এখন না",
+    registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     alreadyDonor: "আগে রেজিস্টার করেছেন?",
@@ -1155,10 +1163,6 @@ export const dictionaries = {
     notifGoldBlessing: "মাসিক গোল্ড ডোনার শুভেচ্ছা",
     notifGoldBlessingHint:
       "প্রতি BD মাসে বর্তমান টপ গোল্ড/প্লাটিনাম ডোনারকে আবেগঘন রক্তিম শুভেচ্ছা পাঠাবে।",
-    pushEnableTitle: "ফোন অ্যালার্ট চালু করুন",
-    pushEnableBody:
-      "BloodLink বন্ধ থাকলেও ইন্টারনেট চালু থাকলে নোটিফিকেশন পাবেন — যাতে বুঝতে পারেন ওয়েবসাইটে ঢুকতে হবে।",
-    pushEnableButton: "অ্যালার্ট চালু করুন",
     pushDenied: "ব্রাউজার সেটিংসে নোটিফিকেশন ব্লক করা আছে।",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
     adminPublishedStoriesHint:
