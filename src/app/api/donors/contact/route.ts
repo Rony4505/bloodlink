@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { isDonorAvailable } from "@/lib/availability";
-import { hashIp } from "@/lib/auth";
+import { getCurrentDonor, hashIp } from "@/lib/auth";
 import {
   countRecentContactRequests,
   createContactRequest,
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || "unknown";
     const ipHash = hashIp(ip);
+    const viewer = await getCurrentDonor();
 
     const recent = await countRecentContactRequests(ipHash, 60 * 60 * 1000);
     if (recent >= 8) {
@@ -45,24 +46,33 @@ export async function POST(request: Request) {
       );
     }
 
-    await createContactRequest({
-      donorId: donor.id,
-      seekerName: parsed.data.seekerName,
-      seekerPhone: normalizePhone(parsed.data.seekerPhone),
-      hospital: parsed.data.hospital,
-      ipHash,
-    });
-
-    const audit = createHash("sha256")
+    const auditCode = createHash("sha256")
       .update(`${donor.id}:${parsed.data.seekerPhone}:${Date.now()}`)
       .digest("hex")
       .slice(0, 10);
+
+    await createContactRequest({
+      kind: "donor_phone",
+      donorId: donor.id,
+      postId: null,
+      seekerName: parsed.data.seekerName,
+      seekerPhone: normalizePhone(parsed.data.seekerPhone),
+      hospital: parsed.data.hospital,
+      seekerUserId: viewer?.id || null,
+      auditCode,
+      targetName: donor.name,
+      targetPhone: donor.phone,
+      targetBloodGroup: donor.bloodGroup,
+      targetDistrict: donor.district,
+      targetArea: donor.area,
+      ipHash,
+    });
 
     return NextResponse.json({
       ok: true,
       phone: donor.phone,
       donorName: donor.name,
-      audit,
+      audit: auditCode,
     });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });

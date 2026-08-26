@@ -54,19 +54,29 @@ export async function GET() {
   });
 
   const contactRequests = requests.map((r) => {
-    const donor = donorMap.get(r.donorId);
+    const donor = r.donorId ? donorMap.get(r.donorId) : null;
+    const seekerAccount = r.seekerUserId
+      ? donorMap.get(r.seekerUserId)
+      : null;
     return {
       id: r.id,
+      kind: r.kind || "donor_phone",
       seekerName: r.seekerName,
       seekerPhone: r.seekerPhone,
       hospital: r.hospital,
       createdAt: r.createdAt,
+      auditCode: r.auditCode || "",
+      seekerUserId: r.seekerUserId,
+      seekerAccountName: seekerAccount?.name || null,
+      seekerAccountEmail: seekerAccount?.email || null,
       donorId: r.donorId,
-      donorName: donor?.name || "Unknown donor",
-      donorPhone: donor?.phone || "—",
-      donorBloodGroup: donor?.bloodGroup || "—",
-      donorDistrict: donor?.district || "—",
-      donorArea: donor?.area || "—",
+      postId: r.postId,
+      donorName: r.targetName || donor?.name || "Unknown",
+      donorPhone: r.targetPhone || donor?.phone || "—",
+      donorBloodGroup: r.targetBloodGroup || donor?.bloodGroup || "—",
+      donorDistrict: r.targetDistrict || donor?.district || "—",
+      donorArea: r.targetArea || donor?.area || "—",
+      donorEmail: donor?.email || "—",
     };
   });
 

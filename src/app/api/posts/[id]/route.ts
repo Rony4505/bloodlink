@@ -1,12 +1,17 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { isDonorAvailable } from "@/lib/availability";
-import { getCurrentDonor } from "@/lib/auth";
-import { findPostById } from "@/lib/db";
+import { getCurrentDonor, hashIp } from "@/lib/auth";
+import {
+  createContactRequest,
+  findPostById,
+  hasRecentPostContactLog,
+} from "@/lib/db";
 import { maskPhone } from "@/lib/privacy";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
   try {
     const { id } = await params;
     const post = await findPostById(id);
@@ -20,6 +25,34 @@ export async function GET(_request: Request, { params }: Params) {
       isDonorAvailable(donor!.gender, donor!.lastDonationDate) &&
       donor!.bloodGroup === post.bloodGroup &&
       !donor!.bloodIssue;
+
+    if (canContact && donor) {
+      const already = await hasRecentPostContactLog(post.id, donor.id);
+      if (!already) {
+        const forwarded = request.headers.get("x-forwarded-for");
+        const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+        const auditCode = createHash("sha256")
+          .update(`post:${post.id}:${donor.id}:${Date.now()}`)
+          .digest("hex")
+          .slice(0, 10);
+        await createContactRequest({
+          kind: "post_phone",
+          donorId: donor.id,
+          postId: post.id,
+          seekerName: donor.name,
+          seekerPhone: donor.phone,
+          hospital: post.hospital,
+          seekerUserId: donor.id,
+          auditCode,
+          targetName: post.posterName,
+          targetPhone: post.posterPhone,
+          targetBloodGroup: post.bloodGroup,
+          targetDistrict: post.district,
+          targetArea: post.area,
+          ipHash: hashIp(ip),
+        });
+      }
+    }
 
     return NextResponse.json({
       post: {
