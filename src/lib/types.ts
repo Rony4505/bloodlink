@@ -174,7 +174,8 @@ export type AppNotification = {
     | "blood_request"
     | "daily_update"
     | "system"
-    | "contact_change";
+    | "contact_change"
+    | "gold_blessing";
   href: string;
   postId?: string | null;
   read: boolean;
@@ -226,6 +227,17 @@ export type NotificationSettings = {
   contactChangeAlerts: NotificationChannelConfig;
   /** Admin one-shot announcements to all accounts. */
   systemAnnouncements: NotificationChannelConfig;
+  /** Monthly emotional blessing for the current Gold/Platinum top donor. */
+  monthlyGoldBlessing: NotificationChannelConfig;
+};
+
+export type PushSubscriptionRecord = {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: string;
 };
 
 export type BannerSize = "sm" | "md" | "lg" | "leaderboard" | "square";
@@ -287,6 +299,9 @@ export type AdminSettings = {
   /** Seconds between auto-slides on public advertisement banners (default 3). */
   bannerSlideIntervalSec: number;
   siteAppearance: SiteAppearance;
+  /** Web Push VAPID key pair (generated once and persisted). */
+  vapidPublicKey: string;
+  vapidPrivateKey: string;
 };
 
 export type DatabaseShape = {
@@ -296,6 +311,7 @@ export type DatabaseShape = {
   ratings: Rating[];
   posts: BloodPost[];
   notifications: AppNotification[];
+  pushSubscriptions: PushSubscriptionRecord[];
   pendingRegistrations: PendingRegistration[];
   pendingSuccessStories: PendingSuccessStory[];
   volunteers: Volunteer[];

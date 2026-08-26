@@ -207,6 +207,7 @@ export const notificationSettingsSchema = z.object({
   dailyDonationReminder: notificationChannelSchema,
   contactChangeAlerts: notificationChannelSchema,
   systemAnnouncements: notificationChannelSchema,
+  monthlyGoldBlessing: notificationChannelSchema,
 });
 
 export const notificationBroadcastSchema = z.object({

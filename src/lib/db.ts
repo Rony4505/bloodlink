@@ -18,6 +18,7 @@ import {
   bloodRequestTexts,
   contactChangeResultTexts,
   dailyReminderTexts,
+  goldBlessingTexts,
   withBilingual,
 } from "./notification-text";
 import {
@@ -58,6 +59,7 @@ import type {
   PendingSuccessStory,
   PlatformOptions,
   PostUrgency,
+  PushSubscriptionRecord,
   Rating,
   VerifyChannel,
   Volunteer,
@@ -206,6 +208,8 @@ async function defaultAdmin(): Promise<AdminSettings> {
     banners: [],
     bannerSlideIntervalSec: DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
     siteAppearance: defaultSiteAppearance(),
+    vapidPublicKey: "",
+    vapidPrivateKey: "",
   };
 }
 
@@ -362,6 +366,9 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
       normalizePost(p as Partial<BloodPost> & { id: string }),
     ),
     notifications: parsed.notifications ?? [],
+    pushSubscriptions: Array.isArray(parsed.pushSubscriptions)
+      ? parsed.pushSubscriptions
+      : [],
     pendingRegistrations: (parsed.pendingRegistrations ?? [])
       .map((p) => normalizePendingRegistration(p))
       .filter(Boolean) as PendingRegistration[],
@@ -406,6 +413,8 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
           parsed.admin.bannerSlideIntervalSec,
         ),
         siteAppearance: normalizeSiteAppearance(parsed.admin.siteAppearance),
+        vapidPublicKey: String(parsed.admin.vapidPublicKey || ""),
+        vapidPrivateKey: String(parsed.admin.vapidPrivateKey || ""),
       }
     : await defaultAdmin();
   return { admin, needsMigrate };
@@ -438,6 +447,7 @@ async function createEmptyDb(): Promise<DatabaseShape> {
     ratings: [],
     posts: [],
     notifications: [],
+    pushSubscriptions: [],
     pendingRegistrations: [],
     pendingSuccessStories: [],
     volunteers: [],
@@ -911,6 +921,18 @@ export async function rejectPendingSuccessStory(id: string): Promise<boolean> {
   });
 }
 
+export async function deletePublishedSuccessStory(id: string): Promise<boolean> {
+  return withWrite(async (db) => {
+    const appearance = normalizeSiteAppearance(db.admin.siteAppearance);
+    const before = appearance.successStories.length;
+    appearance.successStories = appearance.successStories.filter((s) => s.id !== id);
+    if (appearance.successStories.length === before) return false;
+    db.admin = { ...db.admin, siteAppearance: appearance };
+    await persist(db);
+    return true;
+  });
+}
+
 export async function getSiteImpactStats() {
   const db = await ensureDb();
   const posts = await listPosts();
@@ -1223,19 +1245,20 @@ export async function findPostById(id: string): Promise<BloodPost | null> {
 export async function createPost(
   input: Omit<BloodPost, "id" | "createdAt">,
 ): Promise<BloodPost> {
-  return withWrite(async (db) => {
+  const { post, notifyUserIds, pushTitle, pushBody } = await withWrite(async (db) => {
     purgeExpiredPostsInDb(db);
-    const post = normalizePost({
+    const next = normalizePost({
       ...input,
       id: randomUUID(),
       createdAt: new Date().toISOString(),
     });
-    db.posts.push(post);
+    db.posts.push(next);
 
-    const texts = withBilingual(bloodRequestTexts(post));
+    const texts = withBilingual(bloodRequestTexts(next));
     const notifySettings = normalizeNotificationSettings(
       db.admin.notificationSettings,
     );
+    const notifyUserIds: string[] = [];
     if (notifySettings.bloodRequestBroadcast.enabled) {
       const createdAt = new Date().toISOString();
       for (const donor of db.donors) {
@@ -1244,17 +1267,38 @@ export async function createPost(
           userId: donor.id,
           ...texts,
           type: "blood_request",
-          href: `/requests/${post.id}`,
-          postId: post.id,
+          href: `/requests/${next.id}`,
+          postId: next.id,
           read: false,
           createdAt,
         });
+        notifyUserIds.push(donor.id);
       }
     }
 
     await persist(db);
-    return post;
+    return {
+      post: next,
+      notifyUserIds,
+      pushTitle: texts.titleBn || texts.title,
+      pushBody: texts.bodyBn || texts.body,
+    };
   });
+
+  if (notifyUserIds.length) {
+    void import("./web-push-send")
+      .then((m) =>
+        m.sendWebPushToUsers(notifyUserIds, {
+          title: pushTitle,
+          body: pushBody,
+          url: `/requests/${post.id}`,
+          tag: `blood-${post.id}`,
+        }),
+      )
+      .catch(() => undefined);
+  }
+
+  return post;
 }
 
 export async function listNotifications(
@@ -1299,14 +1343,17 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 export async function createDailyRemindersIfNeeded(
   todayKey = bangladeshDateKey(),
 ): Promise<number> {
-  return withWrite(async (db) => {
+  const { created, userIds, texts } = await withWrite(async (db) => {
     const settings = normalizeNotificationSettings(db.admin.notificationSettings)
       .dailyDonationReminder;
-    if (!settings.enabled) return 0;
-    if (bangladeshHour() < settings.hourBd) return 0;
+    if (!settings.enabled) return { created: 0, userIds: [] as string[], texts: null };
+    if (bangladeshHour() < settings.hourBd) {
+      return { created: 0, userIds: [] as string[], texts: null };
+    }
 
     const intervalDays = Math.max(1, settings.intervalDays);
     let created = 0;
+    const userIds: string[] = [];
     const texts = withBilingual(dailyReminderTexts());
     const createdAt = new Date().toISOString();
 
@@ -1333,10 +1380,174 @@ export async function createDailyRemindersIfNeeded(
         read: false,
         createdAt,
       });
+      userIds.push(donor.id);
       created += 1;
     }
     if (created) await persist(db);
-    return created;
+    return { created, userIds, texts };
+  });
+
+  if (created && texts) {
+    void import("./web-push-send")
+      .then((m) =>
+        m.sendWebPushToUsers(userIds, {
+          title: texts.titleBn || texts.title,
+          body: texts.bodyBn || texts.body,
+          url: "/dashboard",
+          tag: `daily-${todayKey}`,
+        }),
+      )
+      .catch(() => undefined);
+  }
+
+  return created;
+}
+
+/** Once per BD calendar month: bless the top Gold/Platinum donor. */
+export async function createMonthlyGoldBlessingIfNeeded(
+  monthKey = bangladeshDateKey().slice(0, 7),
+): Promise<{ created: boolean; donorId: string | null }> {
+  const result = await withWrite(async (db) => {
+    const settings = normalizeNotificationSettings(db.admin.notificationSettings)
+      .monthlyGoldBlessing;
+    if (!settings.enabled) return { created: false, donorId: null as string | null, texts: null };
+    if (bangladeshHour() < settings.hourBd) {
+      return { created: false, donorId: null as string | null, texts: null };
+    }
+
+    const already = db.notifications.some(
+      (n) =>
+        n.type === "gold_blessing" &&
+        bangladeshDateKey(new Date(n.createdAt)).startsWith(monthKey),
+    );
+    if (already) return { created: false, donorId: null as string | null, texts: null };
+
+    const ranked = [...db.donors]
+      .map((d) => normalizeDonor(d))
+      .filter((d) => (d.donationCount || 0) >= 10)
+      .sort((a, b) => {
+        const diff = (b.donationCount || 0) - (a.donationCount || 0);
+        if (diff !== 0) return diff;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
+    const top = ranked[0];
+    if (!top) return { created: false, donorId: null as string | null, texts: null };
+
+    const texts = withBilingual(
+      goldBlessingTexts(top.name, top.donationCount || 0),
+    );
+    db.notifications.push({
+      id: randomUUID(),
+      userId: top.id,
+      ...texts,
+      type: "gold_blessing",
+      href: "/dashboard",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    await persist(db);
+    return { created: true, donorId: top.id, texts };
+  });
+
+  if (result.created && result.donorId && result.texts) {
+    void import("./web-push-send")
+      .then((m) =>
+        m.sendWebPushToUsers([result.donorId!], {
+          title: result.texts!.titleBn || result.texts!.title,
+          body: result.texts!.bodyBn || result.texts!.body,
+          url: "/notifications",
+          tag: `gold-${monthKey}`,
+        }),
+      )
+      .catch(() => undefined);
+  }
+
+  return { created: result.created, donorId: result.donorId };
+}
+
+export async function ensureVapidKeys(): Promise<{
+  publicKey: string;
+  privateKey: string;
+}> {
+  const admin = await getAdminSettings();
+  if (admin.vapidPublicKey && admin.vapidPrivateKey) {
+    return { publicKey: admin.vapidPublicKey, privateKey: admin.vapidPrivateKey };
+  }
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    const publicKey = process.env.VAPID_PUBLIC_KEY.trim();
+    const privateKey = process.env.VAPID_PRIVATE_KEY.trim();
+    await updateAdminSettings({ vapidPublicKey: publicKey, vapidPrivateKey: privateKey });
+    return { publicKey, privateKey };
+  }
+
+  const webpush = await import("web-push");
+  const generated = webpush.generateVAPIDKeys();
+  await updateAdminSettings({
+    vapidPublicKey: generated.publicKey,
+    vapidPrivateKey: generated.privateKey,
+  });
+  return generated;
+}
+
+export async function listPushSubscriptions(
+  userIds?: string[],
+): Promise<PushSubscriptionRecord[]> {
+  const db = await ensureDb();
+  const list = db.pushSubscriptions || [];
+  if (!userIds?.length) return [...list];
+  const set = new Set(userIds);
+  return list.filter((s) => set.has(s.userId));
+}
+
+export async function upsertPushSubscription(input: {
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}): Promise<PushSubscriptionRecord> {
+  return withWrite(async (db) => {
+    if (!db.pushSubscriptions) db.pushSubscriptions = [];
+    const existing = db.pushSubscriptions.findIndex(
+      (s) => s.endpoint === input.endpoint,
+    );
+    const record: PushSubscriptionRecord = {
+      id: existing >= 0 ? db.pushSubscriptions[existing].id : randomUUID(),
+      userId: input.userId,
+      endpoint: input.endpoint,
+      p256dh: input.p256dh,
+      auth: input.auth,
+      createdAt: new Date().toISOString(),
+    };
+    if (existing >= 0) db.pushSubscriptions[existing] = record;
+    else db.pushSubscriptions.push(record);
+    await persist(db);
+    return record;
+  });
+}
+
+export async function removePushSubscriptionByEndpoint(
+  endpoint: string,
+): Promise<void> {
+  return withWrite(async (db) => {
+    db.pushSubscriptions = (db.pushSubscriptions || []).filter(
+      (s) => s.endpoint !== endpoint,
+    );
+    await persist(db);
+  });
+}
+
+export async function removePushSubscriptionForUser(
+  userId: string,
+  endpoint?: string,
+): Promise<void> {
+  return withWrite(async (db) => {
+    db.pushSubscriptions = (db.pushSubscriptions || []).filter((s) => {
+      if (s.userId !== userId) return true;
+      if (endpoint) return s.endpoint !== endpoint;
+      return false;
+    });
+    await persist(db);
   });
 }
 
@@ -1347,9 +1558,11 @@ export async function broadcastSystemAnnouncement(input: {
   bodyBn: string;
   href?: string;
 }): Promise<number> {
-  return withWrite(async (db) => {
+  const { created, userIds, texts, href } = await withWrite(async (db) => {
     const settings = normalizeNotificationSettings(db.admin.notificationSettings);
-    if (!settings.systemAnnouncements.enabled) return 0;
+    if (!settings.systemAnnouncements.enabled) {
+      return { created: 0, userIds: [] as string[], texts: null, href: "/notifications" };
+    }
 
     const texts = withBilingual({
       titleEn: input.titleEn,
@@ -1359,6 +1572,7 @@ export async function broadcastSystemAnnouncement(input: {
     });
     const href = input.href?.trim() || "/notifications";
     const createdAt = new Date().toISOString();
+    const userIds: string[] = [];
     let created = 0;
     for (const donor of db.donors) {
       db.notifications.push({
@@ -1370,11 +1584,27 @@ export async function broadcastSystemAnnouncement(input: {
         read: false,
         createdAt,
       });
+      userIds.push(donor.id);
       created += 1;
     }
     if (created) await persist(db);
-    return created;
+    return { created, userIds, texts, href };
   });
+
+  if (created && texts) {
+    void import("./web-push-send")
+      .then((m) =>
+        m.sendWebPushToUsers(userIds, {
+          title: texts.titleBn || texts.title,
+          body: texts.bodyBn || texts.body,
+          url: href,
+          tag: `sys-${Date.now()}`,
+        }),
+      )
+      .catch(() => undefined);
+  }
+
+  return created;
 }
 
 export async function listContactChangeRequests(): Promise<ContactChangeRequest[]> {

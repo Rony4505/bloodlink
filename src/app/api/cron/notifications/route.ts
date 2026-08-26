@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { createDailyRemindersIfNeeded } from "@/lib/db";
+import {
+  createDailyRemindersIfNeeded,
+  createMonthlyGoldBlessingIfNeeded,
+} from "@/lib/db";
 import { bangladeshDateKey } from "@/lib/notification-settings";
 
 /**
  * External scheduler (Railway cron / curl) can hit this after the configured
- * BD hour to ensure daily donation reminders are created even if no user
- * opens the app. Protect with CRON_SECRET when set.
+ * BD hour. Protect with CRON_SECRET when set.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -18,11 +20,14 @@ export async function GET(request: Request) {
     }
   }
 
-  const created = await createDailyRemindersIfNeeded(bangladeshDateKey());
+  const dateKey = bangladeshDateKey();
+  const created = await createDailyRemindersIfNeeded(dateKey);
+  const gold = await createMonthlyGoldBlessingIfNeeded(dateKey.slice(0, 7));
   return NextResponse.json({
     ok: true,
-    dateKey: bangladeshDateKey(),
+    dateKey,
     created,
+    goldBlessing: gold,
   });
 }
 

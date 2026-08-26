@@ -31,6 +31,14 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
     hourBd: 10,
     notes: "Allow admin to send one-shot announcements to all account holders.",
   },
+  monthlyGoldBlessing: {
+    enabled: true,
+    locked: false,
+    intervalDays: 30,
+    hourBd: 10,
+    notes:
+      "Once each BD month, send a warm BloodLink blessing to the current Gold/Platinum top donor.",
+  },
 };
 
 function clampInt(value: unknown, min: number, max: number, fallback: number) {
@@ -58,6 +66,7 @@ export function defaultNotificationSettings(): NotificationSettings {
     dailyDonationReminder: { ...DEFAULT_NOTIFICATION_SETTINGS.dailyDonationReminder },
     contactChangeAlerts: { ...DEFAULT_NOTIFICATION_SETTINGS.contactChangeAlerts },
     systemAnnouncements: { ...DEFAULT_NOTIFICATION_SETTINGS.systemAnnouncements },
+    monthlyGoldBlessing: { ...DEFAULT_NOTIFICATION_SETTINGS.monthlyGoldBlessing },
   };
 }
 
@@ -81,6 +90,10 @@ export function normalizeNotificationSettings(
     systemAnnouncements: normalizeChannel(
       raw?.systemAnnouncements,
       base.systemAnnouncements,
+    ),
+    monthlyGoldBlessing: normalizeChannel(
+      raw?.monthlyGoldBlessing,
+      base.monthlyGoldBlessing,
     ),
   };
 }

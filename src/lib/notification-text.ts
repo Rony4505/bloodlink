@@ -10,6 +10,15 @@ export function bloodRequestTexts(post: BloodPost) {
   };
 }
 
+export function goldBlessingTexts(name: string, donationCount: number) {
+  return {
+    titleEn: "A crimson blessing from BloodLink",
+    titleBn: "BloodLink-এর রক্তিম শুভেচ্ছা",
+    bodyEn: `Dear ${name}, this month you stand as our Gold donor — ${donationCount} lives touched through your courage. Every drop you gave carried hope into a family's darkest hour. BloodLink bows to your humanity. Keep shining; Bangladesh needs hearts like yours.`,
+    bodyBn: `প্রিয় ${name}, এই মাসে আপনি আমাদের গোল্ড ডোনার — আপনার সাহসে স্পর্শ পেয়েছে ${donationCount}টি জীবন। আপনার দেওয়া প্রতিটি বিন্দু কোনো পরিবারের অন্ধকারে আলো এনেছে। BloodLink নত হয় আপনার মানবতার কাছে। জ্বলে উঠুন; বাংলাদেশের দরকার আপনার মতো হৃদয়।`,
+  };
+}
+
 export function dailyReminderTexts() {
   return {
     titleEn: "Update your donation status",

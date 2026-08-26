@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentDonor } from "@/lib/auth";
 import {
   createDailyRemindersIfNeeded,
+  createMonthlyGoldBlessingIfNeeded,
   getAdminSettings,
   listNotifications,
   markAllNotificationsRead,
@@ -24,9 +25,13 @@ export async function GET() {
     admin.notificationSettings,
   );
   const daily = notificationSettings.dailyDonationReminder;
+  const gold = notificationSettings.monthlyGoldBlessing;
 
   if (daily.enabled && bangladeshHour() >= daily.hourBd) {
     await createDailyRemindersIfNeeded(bangladeshDateKey());
+  }
+  if (gold.enabled && bangladeshHour() >= gold.hourBd) {
+    await createMonthlyGoldBlessingIfNeeded(bangladeshDateKey().slice(0, 7));
   }
 
   const notifications = await listNotifications(donor.id);
@@ -41,6 +46,10 @@ export async function GET() {
       },
       bloodRequestBroadcast: {
         enabled: notificationSettings.bloodRequestBroadcast.enabled,
+      },
+      monthlyGoldBlessing: {
+        enabled: gold.enabled,
+        hourBd: gold.hourBd,
       },
     },
   });
