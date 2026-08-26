@@ -304,6 +304,34 @@ function normalizeVolunteerActivity(
   };
 }
 
+function normalizeContactRequest(
+  raw: Partial<ContactRequest> | null | undefined,
+): ContactRequest | null {
+  if (!raw?.id || !raw.seekerName || !raw.seekerPhone) return null;
+  const kind =
+    raw.kind === "post_phone"
+      ? "post_phone"
+      : "donor_phone";
+  return {
+    id: String(raw.id),
+    kind,
+    donorId: raw.donorId ? String(raw.donorId) : null,
+    postId: raw.postId ? String(raw.postId) : null,
+    seekerName: String(raw.seekerName).trim(),
+    seekerPhone: String(raw.seekerPhone).trim(),
+    hospital: String(raw.hospital || "").trim(),
+    seekerUserId: raw.seekerUserId ? String(raw.seekerUserId) : null,
+    auditCode: String(raw.auditCode || "").trim().slice(0, 16),
+    targetName: String(raw.targetName || "").trim(),
+    targetPhone: String(raw.targetPhone || "").trim(),
+    targetBloodGroup: String(raw.targetBloodGroup || "").trim(),
+    targetDistrict: String(raw.targetDistrict || "").trim(),
+    targetArea: String(raw.targetArea || "").trim(),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    ipHash: String(raw.ipHash || ""),
+  };
+}
+
 export function toPublicVolunteer(v: Volunteer) {
   return {
     id: v.id,
@@ -324,7 +352,9 @@ export function toPublicVolunteer(v: Volunteer) {
 function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): DatabaseShape {
   return {
     donors: (parsed.donors ?? []).map((d) => normalizeDonor(d)),
-    contactRequests: parsed.contactRequests ?? [],
+    contactRequests: (parsed.contactRequests ?? [])
+      .map((r) => normalizeContactRequest(r))
+      .filter(Boolean) as ContactRequest[],
     contactChangeRequests: parsed.contactChangeRequests ?? [],
     ratings: parsed.ratings ?? [],
     posts: (parsed.posts ?? []).map((p) =>
@@ -702,9 +732,13 @@ export async function listDonors(): Promise<Donor[]> {
 
 export async function listContactRequests(): Promise<ContactRequest[]> {
   const db = await ensureDb();
-  return [...db.contactRequests].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  return (db.contactRequests || [])
+    .map((r) => normalizeContactRequest(r))
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        new Date(b!.createdAt).getTime() - new Date(a!.createdAt).getTime(),
+    ) as ContactRequest[];
 }
 
 export async function findDonorByEmail(email: string): Promise<Donor | null> {
@@ -1034,15 +1068,33 @@ export async function createContactRequest(
   input: Omit<ContactRequest, "id" | "createdAt">,
 ): Promise<ContactRequest> {
   return withWrite(async (db) => {
-    const request: ContactRequest = {
+    const request = normalizeContactRequest({
       ...input,
       id: randomUUID(),
       createdAt: new Date().toISOString(),
-    };
+    });
+    if (!request) throw new Error("INVALID_CONTACT_REQUEST");
     db.contactRequests.push(request);
     await persist(db);
     return request;
   });
+}
+
+/** Avoid duplicate post-phone reveal logs for the same viewer+post within a day. */
+export async function hasRecentPostContactLog(
+  postId: string,
+  seekerUserId: string,
+  withinMs = 24 * 60 * 60 * 1000,
+): Promise<boolean> {
+  const db = await ensureDb();
+  const cutoff = Date.now() - withinMs;
+  return (db.contactRequests || []).some(
+    (r) =>
+      r.kind === "post_phone" &&
+      r.postId === postId &&
+      r.seekerUserId === seekerUserId &&
+      new Date(r.createdAt).getTime() >= cutoff,
+  );
 }
 
 export async function countRecentContactRequests(

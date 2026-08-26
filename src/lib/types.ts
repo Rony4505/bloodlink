@@ -70,10 +70,23 @@ export type PendingSuccessStory = {
 
 export type ContactRequest = {
   id: string;
-  donorId: string;
+  /** donor_phone = seeker revealed a donor number; post_phone = donor unlocked a blood-need poster number */
+  kind: "donor_phone" | "post_phone";
+  donorId: string | null;
+  postId: string | null;
   seekerName: string;
   seekerPhone: string;
   hospital: string;
+  /** Logged-in account id when the seeker/viewer had a session. */
+  seekerUserId: string | null;
+  /** Short code for investigation / support follow-up. */
+  auditCode: string;
+  /** Snapshot of the person whose number was revealed. */
+  targetName: string;
+  targetPhone: string;
+  targetBloodGroup: string;
+  targetDistrict: string;
+  targetArea: string;
   createdAt: string;
   ipHash: string;
 };

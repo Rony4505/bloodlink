@@ -46,16 +46,23 @@ type AdminDonor = {
 
 type ContactRequest = {
   id: string;
+  kind?: "donor_phone" | "post_phone" | string;
   seekerName: string;
   seekerPhone: string;
   hospital: string;
   createdAt: string;
-  donorId: string;
+  auditCode?: string;
+  seekerUserId?: string | null;
+  seekerAccountName?: string | null;
+  seekerAccountEmail?: string | null;
+  donorId: string | null;
+  postId?: string | null;
   donorName: string;
   donorPhone: string;
   donorBloodGroup: string;
   donorDistrict: string;
   donorArea: string;
+  donorEmail?: string;
 };
 
 type AdminBloodPost = {
@@ -109,9 +116,9 @@ export function AdminPanel() {
     totalRequests: 0,
     totalPosts: 0,
   });
-  const [tab, setTab] = useState<"donors" | "posts" | "volunteers" | "settings">(
-    "donors",
-  );
+  const [tab, setTab] = useState<
+    "donors" | "posts" | "contacts" | "volunteers" | "settings"
+  >("donors");
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
@@ -1005,6 +1012,13 @@ export function AdminPanel() {
           </button>
           <button
             type="button"
+            className={tab === "contacts" ? "btn-primary" : "btn-ghost"}
+            onClick={() => setTab("contacts")}
+          >
+            {t.adminContactLog}
+          </button>
+          <button
+            type="button"
             className={tab === "volunteers" ? "btn-primary" : "btn-ghost"}
             onClick={() => setTab("volunteers")}
           >
@@ -1024,6 +1038,81 @@ export function AdminPanel() {
       </div>
 
       {tab === "volunteers" ? <AdminVolunteersPanel /> : null}
+
+      {tab === "contacts" ? (
+        <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white/90 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] bg-[linear-gradient(160deg,#fff8f4,#ffffff)] px-5 py-4">
+            <div>
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
+                {t.adminContactLog}
+              </h2>
+              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+                {t.adminContactLogHint}
+              </p>
+            </div>
+            <span className="rounded-full bg-[color-mix(in_oklab,var(--blood)_12%,white)] px-3 py-1 text-xs font-bold text-[var(--blood-deep)]">
+              {t.adminRequests}: {stats.totalRequests}
+            </span>
+          </div>
+
+          {!requests.length ? (
+            <p className="px-5 py-8 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+              {t.noContactLogs}
+            </p>
+          ) : (
+            <ul className="divide-y divide-[var(--line)]">
+              {requests.map((r) => {
+                const isPost = r.kind === "post_phone";
+                return (
+                  <li key={r.id} className="px-5 py-4 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          isPost
+                            ? "bg-[color-mix(in_oklab,var(--sage)_16%,white)] text-[var(--sage)]"
+                            : "bg-[var(--blood)] text-white"
+                        }`}
+                      >
+                        {isPost ? t.contactKindPost : t.contactKindDonor}
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--blood-deep)]">
+                        {t.postedAt}: {formatAddedAt(r.createdAt)}
+                      </span>
+                      {r.auditCode ? (
+                        <span className="rounded-md bg-[color-mix(in_oklab,var(--ink)_8%,white)] px-2 py-0.5 font-mono text-[10px]">
+                          {t.auditCode}: {r.auditCode}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-2 font-semibold text-[var(--ink)]">
+                      {t.seekerContacted}: {r.seekerName} · {r.seekerPhone}
+                    </p>
+                    {r.seekerAccountName || r.seekerAccountEmail ? (
+                      <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                        {t.seekerAccount}: {r.seekerAccountName || "—"}
+                        {r.seekerAccountEmail ? ` · ${r.seekerAccountEmail}` : ""}
+                      </p>
+                    ) : null}
+                    <p className="mt-2">
+                      {t.contactedDonor}: {r.donorName} · {r.donorBloodGroup} ·{" "}
+                      {r.donorPhone}
+                      {r.donorEmail && r.donorEmail !== "—"
+                        ? ` · ${r.donorEmail}`
+                        : ""}
+                    </p>
+                    <p className="mt-1">
+                      {r.donorArea}, {r.donorDistrict}
+                      {r.hospital ? ` · ${t.hospital}: ${r.hospital}` : ""}
+                      {r.postId ? ` · post ${r.postId.slice(0, 8)}…` : ""}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       {tab === "posts" ? (
         <section className="overflow-hidden rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-white/90 shadow-sm">
@@ -1241,28 +1330,23 @@ export function AdminPanel() {
           </section>
 
           <section className="rounded-2xl bg-white/80 p-5">
-            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-              {t.adminRequests}
-            </h2>
-            <ul className="mt-4 space-y-3">
-              {requests.map((r) => (
-                <li key={r.id} className="border-b border-[var(--line)] pb-3 text-sm">
-                  <p className="font-semibold">
-                    {t.seekerContacted}: {r.seekerName} · {r.seekerPhone}
-                  </p>
-                  <p className="mt-1">
-                    {t.contactedDonor}: {r.donorName} · {r.donorBloodGroup} ·{" "}
-                    {r.donorPhone}
-                  </p>
-                  <p className="mt-1">
-                    {r.donorArea}, {r.donorDistrict} · {r.hospital}
-                  </p>
-                  <p className="mt-1 text-xs opacity-70">
-                    {new Date(r.createdAt).toLocaleString()}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+                  {t.adminContactLog}
+                </h2>
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                  {t.adminContactLogHint}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setTab("contacts")}
+              >
+                {t.adminContactLog} ({stats.totalRequests})
+              </button>
+            </div>
           </section>
         </>
       ) : null}
