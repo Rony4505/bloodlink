@@ -24,13 +24,13 @@ type Note = {
 
 function typeLabel(type: string, locale: "en" | "bn") {
   if (locale === "bn") {
-    if (type === "blood_request") return "রক্তের প্রয়োজন";
+    if (type === "blood_request") return "জরুরি · রক্তের প্রয়োজন";
     if (type === "daily_update") return "দৈনিক রিমাইন্ডার";
     if (type === "contact_change") return "যোগাযোগ আপডেট";
     if (type === "system") return "সিস্টেম";
     return "নোটিফিকেশন";
   }
-  if (type === "blood_request") return "Blood need";
+  if (type === "blood_request") return "Emergency · Blood need";
   if (type === "daily_update") return "Daily reminder";
   if (type === "contact_change") return "Contact update";
   if (type === "system") return "System";
@@ -137,36 +137,70 @@ export default function NotificationsPage() {
             <ul className="space-y-3">
               {items.map((n) => {
                 const text = localizeNotification(n, locale);
+                const isBlood = n.type === "blood_request";
                 return (
                   <li key={n.id}>
                     <button
                       type="button"
                       onClick={() => openNote(n)}
                       className={`group w-full rounded-2xl border px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
-                        n.read
-                          ? "border-black/5 bg-white/75"
-                          : "border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-[color-mix(in_oklab,var(--blood)_7%,white)] shadow-sm"
+                        isBlood
+                          ? n.read
+                            ? "border-[color-mix(in_oklab,var(--blood)_28%,transparent)] bg-[linear-gradient(160deg,#fff1f0_0%,#ffe8e6_55%,#fff8f6_100%)]"
+                            : "border-[var(--blood)] bg-[linear-gradient(160deg,#ffe3df_0%,#ffd2cc_45%,#fff0ee_100%)] shadow-[0_10px_28px_-16px_rgba(140,20,30,0.55)] ring-1 ring-[color-mix(in_oklab,var(--blood)_35%,transparent)]"
+                          : n.read
+                            ? "border-black/5 bg-white/75"
+                            : "border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-[color-mix(in_oklab,var(--blood)_7%,white)] shadow-sm"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--sage)_16%,white)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--sage)]">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                              isBlood
+                                ? "bg-[var(--blood)] text-white"
+                                : "bg-[color-mix(in_oklab,var(--sage)_16%,white)] text-[var(--sage)]"
+                            }`}
+                          >
+                            {isBlood ? (
+                              <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                            ) : null}
                             {typeLabel(n.type, locale)}
                           </span>
-                          <p className="mt-2 font-semibold text-[var(--ink)]">{text.title}</p>
-                          <p className="mt-1 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+                          <p
+                            className={`mt-2 font-semibold ${
+                              isBlood ? "text-[var(--blood-deep)]" : "text-[var(--ink)]"
+                            }`}
+                          >
+                            {text.title}
+                          </p>
+                          <p
+                            className={`mt-1 text-sm leading-relaxed ${
+                              isBlood
+                                ? "text-[color-mix(in_oklab,var(--blood-deep)_78%,black)]"
+                                : "text-[color-mix(in_oklab,var(--ink)_72%,white)]"
+                            }`}
+                          >
                             {text.body}
                           </p>
                         </div>
                         {!n.read ? (
-                          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--blood)]" />
+                          <span
+                            className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                              isBlood ? "bg-[var(--blood)] ring-2 ring-[color-mix(in_oklab,var(--blood)_30%,white)]" : "bg-[var(--blood)]"
+                            }`}
+                          />
                         ) : null}
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span className="font-semibold text-[var(--blood-deep)] group-hover:underline">
-                          {n.type === "blood_request" ? t.viewDetails : t.openSettings}
+                        <span
+                          className={`font-semibold group-hover:underline ${
+                            isBlood ? "text-[var(--blood)]" : "text-[var(--blood-deep)]"
+                          }`}
+                        >
+                          {isBlood ? t.viewDetails : t.openSettings}
                         </span>
-                        <span className="opacity-65">
+                        <span className={isBlood ? "font-medium text-[var(--blood-deep)]/70" : "opacity-65"}>
                           {new Date(n.createdAt).toLocaleString(
                             locale === "bn" ? "bn-BD" : "en-BD",
                           )}

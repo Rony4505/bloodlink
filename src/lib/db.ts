@@ -1208,10 +1208,15 @@ export async function listNotifications(
   const db = await ensureDb();
   return db.notifications
     .filter((n) => n.userId === userId)
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+    .sort((a, b) => {
+      // Blood-need posts first so the newest emergency is always at the top.
+      const aBlood = a.type === "blood_request" ? 0 : 1;
+      const bBlood = b.type === "blood_request" ? 0 : 1;
+      if (aBlood !== bBlood) return aBlood - bBlood;
+      return (
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
 }
 
 export async function markNotificationRead(
