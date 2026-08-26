@@ -86,7 +86,7 @@ let writeQueue: Promise<void> = Promise.resolve();
 let memoryStore: FashionStore | null = null;
 let memoryStoreAt = 0;
 /** Keep catalog in RAM so product pages do not hit Postgres every request. */
-const MEMORY_TTL_MS = 20_000;
+const MEMORY_TTL_MS = 45_000;
 
 function rememberStore(store: FashionStore): FashionStore {
   memoryStore = store;

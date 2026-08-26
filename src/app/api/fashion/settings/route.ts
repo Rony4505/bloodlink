@@ -4,7 +4,14 @@ import { getStoreSettings, updateStoreSettings } from "@/lib/fashion/store";
 
 export async function GET() {
   const settings = await getStoreSettings();
-  return NextResponse.json({ settings });
+  return NextResponse.json(
+    { settings },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    },
+  );
 }
 
 export async function PUT(request: Request) {

@@ -27,6 +27,11 @@ const SiteAppearanceContext = createContext<SiteAppearanceContextValue | null>(
   null,
 );
 
+const isFashionClient =
+  (process.env.NEXT_PUBLIC_APP_MODE || "").toLowerCase() === "fashion" ||
+  (process.env.NEXT_PUBLIC_APP_MODE || "").toLowerCase() === "smartcraft" ||
+  (process.env.NEXT_PUBLIC_APP_MODE || "").toLowerCase() === "smart-craft-corner";
+
 export function SiteAppearanceProvider({
   children,
 }: {
@@ -38,6 +43,7 @@ export function SiteAppearanceProvider({
   );
 
   function reload() {
+    if (isFashionClient) return;
     fetch("/api/site-content")
       .then((r) => r.json())
       .then((data) => {
@@ -54,17 +60,29 @@ export function SiteAppearanceProvider({
     const bn = locale === "bn";
     return {
       appearance,
-      brand: appearance.brand || t.brand,
-      tagline: (bn ? appearance.taglineBn : appearance.taglineEn) || t.tagline,
-      heroSupport:
-        (bn ? appearance.heroSupportBn : appearance.heroSupportEn) ||
-        t.heroSupport,
-      aboutTitle:
-        (bn ? appearance.aboutTitleBn : appearance.aboutTitleEn) || t.aboutTitle,
-      aboutBody:
-        (bn ? appearance.aboutBodyBn : appearance.aboutBodyEn) || t.aboutBody,
-      logoUrl: appearance.logoUrl || "/bloodlink-logo.png",
-      heroBackgroundUrl: appearance.heroBackgroundUrl,
+      brand: isFashionClient
+        ? "Smart craft corner"
+        : appearance.brand || t.brand,
+      tagline: isFashionClient
+        ? bn
+          ? "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন"
+          : "Luxury fashion for Bangladeshi women"
+        : (bn ? appearance.taglineBn : appearance.taglineEn) || t.tagline,
+      heroSupport: isFashionClient
+        ? ""
+        : (bn ? appearance.heroSupportBn : appearance.heroSupportEn) ||
+          t.heroSupport,
+      aboutTitle: isFashionClient
+        ? ""
+        : (bn ? appearance.aboutTitleBn : appearance.aboutTitleEn) ||
+          t.aboutTitle,
+      aboutBody: isFashionClient
+        ? ""
+        : (bn ? appearance.aboutBodyBn : appearance.aboutBodyEn) || t.aboutBody,
+      logoUrl: isFashionClient
+        ? "/icon"
+        : appearance.logoUrl || "/bloodlink-logo.png",
+      heroBackgroundUrl: isFashionClient ? "" : appearance.heroBackgroundUrl,
       reload,
     };
   }, [appearance, locale, t]);

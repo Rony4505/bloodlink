@@ -18,7 +18,7 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_24px_80px_rgba(48,27,20,0.06)] transition hover:-translate-y-1">
-      <Link href={`/products/${product.slug}`} className="block">
+      <Link href={`/products/${product.slug}`} prefetch className="block">
         <div className={`relative overflow-hidden ${product.tone}`}>
           <ProductCardGallery product={product} alt={title} className="h-40 rounded-none sm:h-56 md:h-72" />
           {(product.offerActive ? product.offerLabel : product.label) ? (
