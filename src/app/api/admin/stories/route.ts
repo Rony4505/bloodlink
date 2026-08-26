@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   approvePendingSuccessStory,
+  deletePublishedSuccessStory,
   listPendingSuccessStories,
   rejectPendingSuccessStory,
 } from "@/lib/db";
@@ -39,6 +40,14 @@ export async function POST(request: Request) {
 
     if (action === "reject") {
       const removed = await rejectPendingSuccessStory(id);
+      if (!removed) {
+        return NextResponse.json({ error: "Story not found" }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "delete-published") {
+      const removed = await deletePublishedSuccessStory(id);
       if (!removed) {
         return NextResponse.json({ error: "Story not found" }, { status: 404 });
       }

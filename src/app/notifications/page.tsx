@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
+import { PushEnableBanner } from "@/components/PushEnableBanner";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { localizeNotification } from "@/lib/notification-text";
 
@@ -26,12 +27,14 @@ function typeLabel(type: string, locale: "en" | "bn") {
   if (locale === "bn") {
     if (type === "blood_request") return "জরুরি · রক্তের প্রয়োজন";
     if (type === "daily_update") return "দৈনিক রিমাইন্ডার";
+    if (type === "gold_blessing") return "রক্তিম শুভেচ্ছা";
     if (type === "contact_change") return "যোগাযোগ আপডেট";
     if (type === "system") return "সিস্টেম";
     return "নোটিফিকেশন";
   }
   if (type === "blood_request") return "Emergency · Blood need";
   if (type === "daily_update") return "Daily reminder";
+  if (type === "gold_blessing") return "Crimson blessing";
   if (type === "contact_change") return "Contact update";
   if (type === "system") return "System";
   return "Notification";
@@ -96,6 +99,7 @@ export default function NotificationsPage() {
 
   return (
     <PageShell title={t.notifications}>
+      <PushEnableBanner enabled />
       <div className="overflow-hidden rounded-[1.75rem] border border-[color-mix(in_oklab,var(--blood)_18%,transparent)] bg-[linear-gradient(165deg,#fff8f4_0%,#ffffff_42%,#f7f1ea_100%)] shadow-[0_18px_50px_-28px_rgba(90,20,30,0.45)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-[color-mix(in_oklab,var(--blood)_8%,white)] px-5 py-4">
           <div>
@@ -138,13 +142,16 @@ export default function NotificationsPage() {
               {items.map((n) => {
                 const text = localizeNotification(n, locale);
                 const isBlood = n.type === "blood_request";
+                const isGold = n.type === "gold_blessing";
                 return (
                   <li key={n.id}>
                     <button
                       type="button"
                       onClick={() => openNote(n)}
                       className={`group w-full rounded-2xl border px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
-                        isBlood
+                        isGold
+                          ? "border-[#f5c518]/70 bg-[linear-gradient(160deg,#fff8e6,#fffdf7)] shadow-sm"
+                          : isBlood
                           ? n.read
                             ? "border-[color-mix(in_oklab,var(--blood)_28%,transparent)] bg-[linear-gradient(160deg,#fff1f0_0%,#ffe8e6_55%,#fff8f6_100%)]"
                             : "border-[var(--blood)] bg-[linear-gradient(160deg,#ffe3df_0%,#ffd2cc_45%,#fff0ee_100%)] shadow-[0_10px_28px_-16px_rgba(140,20,30,0.55)] ring-1 ring-[color-mix(in_oklab,var(--blood)_35%,transparent)]"

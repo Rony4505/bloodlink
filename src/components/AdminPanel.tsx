@@ -226,6 +226,23 @@ export function AdminPanel() {
     }
   }
 
+  async function deletePublishedStory(id: string) {
+    if (!window.confirm(t.adminDeleteStoryConfirm)) return;
+    const res = await fetch("/api/admin/stories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action: "delete-published" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || t.errorGeneric);
+      return;
+    }
+    await loadSettings();
+    await reloadAppearance();
+    flashSaved();
+  }
+
   async function loadData() {
     const res = await fetch("/api/admin/donors");
     if (!res.ok) {
@@ -323,6 +340,10 @@ export function AdminPanel() {
         systemAnnouncements: {
           ...defaultNotificationSettings().systemAnnouncements,
           ...data.notificationSettings.systemAnnouncements,
+        },
+        monthlyGoldBlessing: {
+          ...defaultNotificationSettings().monthlyGoldBlessing,
+          ...data.notificationSettings.monthlyGoldBlessing,
         },
       });
     }
@@ -1579,6 +1600,12 @@ export function AdminPanel() {
                       t.notifSystemHint,
                       false,
                     ],
+                    [
+                      "monthlyGoldBlessing",
+                      t.notifGoldBlessing,
+                      t.notifGoldBlessingHint,
+                      false,
+                    ],
                   ] as const
                 ).map(([key, title, hint, alwaysOn]) => {
                   const channel = notificationSettings[key];
@@ -2082,6 +2109,51 @@ export function AdminPanel() {
                           {t.adminRejectStory}
                         </button>
                       </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-8 space-y-3 border-t border-[var(--line)] pt-6">
+              <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
+                {t.adminPublishedStories}
+              </h3>
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                {t.adminPublishedStoriesHint}
+              </p>
+              {(siteAppearance.successStories || []).length === 0 ? (
+                <p className="text-sm opacity-70">{t.adminNoPublishedStories}</p>
+              ) : (
+                <ul className="space-y-3">
+                  {(siteAppearance.successStories || []).map((s) => (
+                    <li
+                      key={s.id}
+                      className="rounded-xl border border-[var(--line)] bg-white/80 p-3 text-sm"
+                    >
+                      <p className="font-semibold">
+                        {s.name}
+                        {s.handle ? (
+                          <span className="ml-2 font-normal opacity-70">
+                            {s.handle}
+                          </span>
+                        ) : null}
+                        {!s.enabled ? (
+                          <span className="ml-2 text-xs text-[var(--blood)]">
+                            ({t.disabled})
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-2 leading-relaxed">
+                        {s.quoteBn || s.quoteEn}
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-3 rounded-full border border-[var(--blood)] px-3 py-1.5 text-xs font-semibold text-[var(--blood)]"
+                        onClick={() => void deletePublishedStory(s.id)}
+                      >
+                        {t.adminDeleteStory}
+                      </button>
                     </li>
                   ))}
                 </ul>
