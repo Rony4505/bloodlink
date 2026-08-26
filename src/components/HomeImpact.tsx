@@ -30,18 +30,32 @@ export function HomeImpact() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetch("/api/impact", { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((data) => {
+
+    async function load() {
+      try {
+        const res = await fetch("/api/impact", {
+          signal: ctrl.signal,
+          cache: "no-store",
+        });
+        const data = await res.json();
         setStats(data.stats || null);
         setStories(data.stories || []);
-      })
-      .catch(() => {
+      } catch {
         if (ctrl.signal.aborted) return;
         setStats(null);
         setStories([]);
-      });
-    return () => ctrl.abort();
+      }
+    }
+
+    void load();
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 15_000);
+
+    return () => {
+      ctrl.abort();
+      window.clearInterval(pollId);
+    };
   }, []);
 
   useEffect(() => {

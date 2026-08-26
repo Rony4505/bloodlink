@@ -3,7 +3,7 @@ import { listDonors } from "@/lib/db";
 import { BLOOD_GROUPS } from "@/lib/districts";
 import { isDonorAvailable } from "@/lib/availability";
 
-export const revalidate = 15;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const donors = await listDonors();
@@ -36,7 +36,7 @@ export async function GET() {
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=15, stale-while-revalidate=60",
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
       },
     },
   );
