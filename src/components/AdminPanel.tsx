@@ -63,6 +63,7 @@ type ContactRequest = {
   donorDistrict: string;
   donorArea: string;
   donorEmail?: string;
+  contextNote?: string;
 };
 
 type AdminBloodPost = {
@@ -1064,12 +1065,19 @@ export function AdminPanel() {
               {requests.map((r) => {
                 const isPost = r.kind === "post_phone";
                 return (
-                  <li key={r.id} className="px-5 py-4 text-sm">
+                  <li
+                    key={r.id}
+                    className={`px-5 py-4 text-sm ${
+                      isPost
+                        ? "bg-[color-mix(in_oklab,var(--sage)_5%,white)]"
+                        : ""
+                    }`}
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                           isPost
-                            ? "bg-[color-mix(in_oklab,var(--sage)_16%,white)] text-[var(--sage)]"
+                            ? "bg-[var(--sage)] text-white"
                             : "bg-[var(--blood)] text-white"
                         }`}
                       >
@@ -1085,27 +1093,66 @@ export function AdminPanel() {
                       ) : null}
                     </div>
 
-                    <p className="mt-2 font-semibold text-[var(--ink)]">
-                      {t.seekerContacted}: {r.seekerName} · {r.seekerPhone}
-                    </p>
-                    {r.seekerAccountName || r.seekerAccountEmail ? (
-                      <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-                        {t.seekerAccount}: {r.seekerAccountName || "—"}
-                        {r.seekerAccountEmail ? ` · ${r.seekerAccountEmail}` : ""}
-                      </p>
-                    ) : null}
-                    <p className="mt-2">
-                      {t.contactedDonor}: {r.donorName} · {r.donorBloodGroup} ·{" "}
-                      {r.donorPhone}
-                      {r.donorEmail && r.donorEmail !== "—"
-                        ? ` · ${r.donorEmail}`
-                        : ""}
-                    </p>
-                    <p className="mt-1">
-                      {r.donorArea}, {r.donorDistrict}
-                      {r.hospital ? ` · ${t.hospital}: ${r.hospital}` : ""}
-                      {r.postId ? ` · post ${r.postId.slice(0, 8)}…` : ""}
-                    </p>
+                    {isPost ? (
+                      <>
+                        <p className="mt-2 font-semibold text-[var(--ink)]">
+                          {t.postContactUser}: {r.seekerName} · {r.seekerPhone}
+                        </p>
+                        {r.seekerAccountEmail ? (
+                          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                            {t.seekerAccount}: {r.seekerAccountEmail}
+                          </p>
+                        ) : null}
+                        <p className="mt-2">
+                          {t.postContactPoster}: {r.donorName} · {r.donorPhone} ·{" "}
+                          {r.donorBloodGroup}
+                        </p>
+                        <p className="mt-1">
+                          {r.donorArea}, {r.donorDistrict}
+                          {r.hospital ? ` · ${t.hospital}: ${r.hospital}` : ""}
+                        </p>
+                        {r.contextNote ? (
+                          <p className="mt-1 text-xs font-medium text-[var(--sage)]">
+                            {r.contextNote}
+                          </p>
+                        ) : null}
+                        {r.postId ? (
+                          <a
+                            href={`/requests/${r.postId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex text-xs font-semibold text-[var(--blood-deep)] underline"
+                          >
+                            {t.viewDetails}
+                          </a>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-2 font-semibold text-[var(--ink)]">
+                          {t.seekerContacted}: {r.seekerName} · {r.seekerPhone}
+                        </p>
+                        {r.seekerAccountName || r.seekerAccountEmail ? (
+                          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                            {t.seekerAccount}: {r.seekerAccountName || "—"}
+                            {r.seekerAccountEmail
+                              ? ` · ${r.seekerAccountEmail}`
+                              : ""}
+                          </p>
+                        ) : null}
+                        <p className="mt-2">
+                          {t.contactedDonor}: {r.donorName} · {r.donorBloodGroup}{" "}
+                          · {r.donorPhone}
+                          {r.donorEmail && r.donorEmail !== "—"
+                            ? ` · ${r.donorEmail}`
+                            : ""}
+                        </p>
+                        <p className="mt-1">
+                          {r.donorArea}, {r.donorDistrict}
+                          {r.hospital ? ` · ${t.hospital}: ${r.hospital}` : ""}
+                        </p>
+                      </>
+                    )}
                   </li>
                 );
               })}
@@ -1240,10 +1287,12 @@ export function AdminPanel() {
                   className="flex flex-col gap-2 border-b border-[var(--line)] pb-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="text-sm">
-                    <p className="font-semibold">
-                      {d.name} · {d.bloodGroup} ·{" "}
-                      {d.gender === "female" ? t.female : t.male}{" "}
+                    <p className="flex flex-wrap items-center gap-2 font-semibold">
                       <DonationBadge count={d.donationCount || 0} />
+                      <span>
+                        {d.name} · {d.bloodGroup} ·{" "}
+                        {d.gender === "female" ? t.female : t.male}
+                      </span>
                     </p>
                     <p>
                       {d.phone} · {d.email}

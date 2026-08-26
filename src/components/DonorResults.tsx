@@ -59,6 +59,7 @@ export function DonorResults({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <DonationBadge count={donor.donationCount || 0} />
                   <h3 className="font-[family-name:var(--font-display)] text-xl font-bold">
                     {donor.name}
                   </h3>
@@ -68,7 +69,6 @@ export function DonorResults({
                   {donor.verified ? (
                     <VerifiedBadge label={t.verifiedBadge} />
                   ) : null}
-                  <DonationBadge count={donor.donationCount || 0} />
                   <span className="rounded-md bg-[color-mix(in_oklab,var(--ink)_8%,white)] px-2 py-0.5 text-xs font-semibold">
                     {donor.gender === "female" ? t.female : t.male}
                   </span>

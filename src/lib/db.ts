@@ -327,6 +327,7 @@ function normalizeContactRequest(
     targetBloodGroup: String(raw.targetBloodGroup || "").trim(),
     targetDistrict: String(raw.targetDistrict || "").trim(),
     targetArea: String(raw.targetArea || "").trim(),
+    contextNote: String(raw.contextNote || "").trim().slice(0, 240),
     createdAt: String(raw.createdAt || new Date().toISOString()),
     ipHash: String(raw.ipHash || ""),
   };

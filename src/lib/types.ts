@@ -87,6 +87,8 @@ export type ContactRequest = {
   targetBloodGroup: string;
   targetDistrict: string;
   targetArea: string;
+  /** Extra investigation context (e.g. blood-post patient name). */
+  contextNote: string;
   createdAt: string;
   ipHash: string;
 };

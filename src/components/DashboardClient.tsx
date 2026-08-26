@@ -200,9 +200,9 @@ export function DashboardClient() {
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[color-mix(in_oklab,var(--ink)_50%,white)]">
                 {t.dashboardTitle}
               </p>
-              <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--ink)]">
-                {donor.name}{" "}
-                <DonationBadge count={donor.donationCount || 0} />
+              <p className="mt-1 flex flex-wrap items-center gap-2 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--ink)]">
+                <DonationBadge count={donor.donationCount || 0} size="md" />
+                <span>{donor.name}</span>
               </p>
               <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                 {t.donationCountLabel}: {donor.donationCount || 0}
