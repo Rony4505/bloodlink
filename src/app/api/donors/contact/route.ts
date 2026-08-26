@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       targetBloodGroup: donor.bloodGroup,
       targetDistrict: donor.district,
       targetArea: donor.area,
+      contextNote: "",
       ipHash,
     });
 

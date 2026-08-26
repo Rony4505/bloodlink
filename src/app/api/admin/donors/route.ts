@@ -77,6 +77,7 @@ export async function GET() {
       donorDistrict: r.targetDistrict || donor?.district || "—",
       donorArea: r.targetArea || donor?.area || "—",
       donorEmail: donor?.email || "—",
+      contextNote: r.contextNote || "",
     };
   });
 

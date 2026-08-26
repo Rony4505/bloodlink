@@ -9,6 +9,8 @@ export type DonationBadgeTier =
 export type DonationBadgeInfo = {
   tier: DonationBadgeTier;
   count: number;
+  /** Visual stars on the premium medal (1–3). */
+  stars: number;
   /** i18n key suffix used with dictionaries */
   labelKey:
     | "donationBadgeFirst"
@@ -19,25 +21,40 @@ export type DonationBadgeInfo = {
     | null;
 };
 
+/** How many medal stars to show from donation count (max 3, matching badge art). */
+export function starsForDonationCount(count: number): number {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  if (n >= 5) return 3;
+  if (n >= 3) return 2;
+  if (n >= 1) return 1;
+  return 0;
+}
+
 /** Badge tiers by lifetime donation count (BloodLink / Community heroes). */
 export function getDonationBadge(count: number): DonationBadgeInfo {
   const n = Math.max(0, Math.floor(Number(count) || 0));
+  const stars = starsForDonationCount(n);
   if (n >= 25) {
-    return { tier: "legend", count: n, labelKey: "donationBadgeLegend" };
+    return { tier: "legend", count: n, stars, labelKey: "donationBadgeLegend" };
   }
   if (n >= 10) {
-    return { tier: "hero", count: n, labelKey: "donationBadgeHero" };
+    return { tier: "hero", count: n, stars, labelKey: "donationBadgeHero" };
   }
   if (n >= 5) {
-    return { tier: "lifesaver", count: n, labelKey: "donationBadgeLifesaver" };
+    return {
+      tier: "lifesaver",
+      count: n,
+      stars,
+      labelKey: "donationBadgeLifesaver",
+    };
   }
   if (n >= 3) {
-    return { tier: "helper", count: n, labelKey: "donationBadgeHelper" };
+    return { tier: "helper", count: n, stars, labelKey: "donationBadgeHelper" };
   }
   if (n >= 1) {
-    return { tier: "first", count: n, labelKey: "donationBadgeFirst" };
+    return { tier: "first", count: n, stars, labelKey: "donationBadgeFirst" };
   }
-  return { tier: "none", count: 0, labelKey: null };
+  return { tier: "none", count: 0, stars: 0, labelKey: null };
 }
 
 export function badgeToneClass(tier: DonationBadgeTier): string {

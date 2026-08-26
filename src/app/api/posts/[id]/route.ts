@@ -49,6 +49,7 @@ export async function GET(request: Request, { params }: Params) {
           targetBloodGroup: post.bloodGroup,
           targetDistrict: post.district,
           targetArea: post.area,
+          contextNote: `Patient: ${post.patientName} · Needed by: ${post.neededBy} · ${post.unitsNeeded} bag(s)`,
           ipHash: hashIp(ip),
         });
       }
