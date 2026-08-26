@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DailyReminder } from "@/components/DailyReminder";
 import { DonationBadge } from "@/components/DonationBadge";
+import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 type Donor = {
@@ -119,6 +120,7 @@ export function DashboardClient() {
       setDonationCount(Number(data.donor.donationCount) || 0);
       setBloodIssue(data.donor.bloodIssue || "");
       setMessage(t.saved);
+      invalidateDonorStats();
     } catch {
       setError(t.errorGeneric);
     } finally {

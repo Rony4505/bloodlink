@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 export type RegisteredDonorSummary = {
@@ -36,6 +38,10 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
+
+  useEffect(() => {
+    invalidateDonorStats();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">

@@ -21,6 +21,8 @@ type StatsPayload = {
   byGroup: GroupStat[];
 };
 
+const POLL_MS = 12_000;
+
 function BloodDropButton({
   label,
   available,
@@ -87,26 +89,50 @@ function BloodDropButton({
   );
 }
 
-export function HomeBloodGroupStats() {
-  const { t } = useLocale();
-  const router = useRouter();
+function useLiveDonorStats() {
   const [stats, setStats] = useState<StatsPayload | null>(null);
 
   useEffect(() => {
     let alive = true;
-    void loadDonorStats().then((data) => {
-      if (alive) {
-        setStats({
-          totalAvailable: data.totalAvailable,
-          totalUnavailable: data.totalUnavailable,
-          byGroup: data.byGroup || [],
-        });
-      }
-    });
+
+    async function refresh(force = false) {
+      const data = await loadDonorStats({ force });
+      if (!alive) return;
+      setStats({
+        totalAvailable: data.totalAvailable,
+        totalUnavailable: data.totalUnavailable,
+        byGroup: data.byGroup || [],
+      });
+    }
+
+    void refresh(true);
+
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh(true);
+    }, POLL_MS);
+
+    const onFocus = () => void refresh(true);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh(true);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       alive = false;
+      window.clearInterval(pollId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
+  return stats;
+}
+
+export function HomeBloodGroupStats() {
+  const { t } = useLocale();
+  const router = useRouter();
+  const stats = useLiveDonorStats();
 
   const groups =
     stats?.byGroup?.length
@@ -160,33 +186,16 @@ export function HomeBloodGroupStats() {
 
 export function HomeDonorTotals() {
   const { t } = useLocale();
-  const [totals, setTotals] = useState({
-    totalAvailable: 0,
-    totalUnavailable: 0,
-  });
-
-  useEffect(() => {
-    let alive = true;
-    void loadDonorStats().then((data) => {
-      if (!alive) return;
-      setTotals({
-        totalAvailable: data.totalAvailable,
-        totalUnavailable: data.totalUnavailable,
-      });
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const stats = useLiveDonorStats();
 
   return (
     <p className="animate-rise-delay-2 mt-5 text-sm text-white/85 md:text-base">
       <span className="font-semibold text-white">
-        {t.available}: <CountUp value={totals.totalAvailable} />
+        {t.available}: <CountUp value={stats?.totalAvailable ?? 0} />
       </span>
       <span className="mx-2 text-white/40">·</span>
       <span>
-        {t.unavailable}: <CountUp value={totals.totalUnavailable} />
+        {t.unavailable}: <CountUp value={stats?.totalUnavailable ?? 0} />
       </span>
     </p>
   );

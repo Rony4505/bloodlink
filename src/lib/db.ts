@@ -894,7 +894,9 @@ export async function getSiteImpactStats() {
     activeRequests: posts.length,
     citiesCovered: districts.size,
     verifiedDonors,
-    availableDonors: donors.filter((d) => d.available).length,
+    availableDonors: donors.filter((d) =>
+      isDonorAvailable(d.gender, d.lastDonationDate),
+    ).length,
   };
 }
 
