@@ -1163,10 +1163,6 @@ export const dictionaries = {
     notifGoldBlessing: "মাসিক গোল্ড ডোনার শুভেচ্ছা",
     notifGoldBlessingHint:
       "প্রতি BD মাসে বর্তমান টপ গোল্ড/প্লাটিনাম ডোনারকে আবেগঘন রক্তিম শুভেচ্ছা পাঠাবে।",
-    pushEnableTitle: "ফোন অ্যালার্ট চালু করুন",
-    pushEnableBody:
-      "BloodLink বন্ধ থাকলেও ইন্টারনেট চালু থাকলে নোটিফিকেশন পাবেন — যাতে বুঝতে পারেন ওয়েবসাইটে ঢুকতে হবে।",
-    pushEnableButton: "অ্যালার্ট চালু করুন",
     pushDenied: "ব্রাউজার সেটিংসে নোটিফিকেশন ব্লক করা আছে।",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
     adminPublishedStoriesHint:
