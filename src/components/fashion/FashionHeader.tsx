@@ -26,24 +26,40 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   const isDark = variant === "dark";
 
   useEffect(() => {
+    let alive = true;
     fetch("/api/fashion/auth")
       .then((r) => r.json())
-      .then((data) => setLoggedIn(Boolean(data.customer)))
-      .catch(() => setLoggedIn(false));
+      .then((data) => {
+        if (alive) setLoggedIn(Boolean(data.customer));
+      })
+      .catch(() => {
+        if (alive) setLoggedIn(false);
+      });
 
     fetch("/api/fashion/notifications")
       .then((r) => r.json())
       .then((data) => {
+        if (!alive) return;
         const count = (data.notifications ?? []).filter(
           (n: { readBy?: string[] }) => !n.readBy?.length,
         ).length;
         setUnread(count);
       })
-      .catch(() => setUnread(0));
+      .catch(() => {
+        if (alive) setUnread(0);
+      });
 
+    return () => {
+      alive = false;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    let alive = true;
     fetch("/api/fashion/settings")
       .then((r) => r.json())
       .then((data) => {
+        if (!alive) return;
         if (data.settings?.brandName) setBrand(data.settings.brandName);
         if (data.settings?.brandTagline) {
           const tag =
@@ -54,7 +70,10 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
         }
       })
       .catch(() => undefined);
-  }, [pathname, locale]);
+    return () => {
+      alive = false;
+    };
+  }, [locale]);
 
   useEffect(() => {
     setMyMenuOpen(false);
