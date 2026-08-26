@@ -333,6 +333,11 @@ export const dictionaries = {
     adminPassword: "Password",
     adminLogin: "Enter admin",
     adminDonors: "Registered donors",
+    adminBloodPosts: "Blood need posts",
+    adminBloodPostsHint:
+      "All active need-blood posts. Newest first. Shows when each was posted (BD time).",
+    postedAt: "Posted at",
+    totalBloodPosts: "Blood posts",
     adminRequests: "Contact requests",
     adminSettings: "Settings",
     adminPrivacy: "Edit privacy",
@@ -884,6 +889,11 @@ export const dictionaries = {
     adminPassword: "পাসওয়ার্ড",
     adminLogin: "অ্যাডমিনে প্রবেশ",
     adminDonors: "রেজিস্টার্ড ডোনার",
+    adminBloodPosts: "রক্তের প্রয়োজন পোস্ট",
+    adminBloodPostsHint:
+      "সব চালু need-blood পোস্ট। নতুন আগে। কবে পোস্ট হয়েছে (BD সময়) দেখা যাবে।",
+    postedAt: "পোস্ট হয়েছে",
+    totalBloodPosts: "ব্লাড পোস্ট",
     adminRequests: "কন্টাক্ট রিকোয়েস্ট",
     adminSettings: "সেটিংস",
     adminPrivacy: "প্রাইভেসি এডিট",
