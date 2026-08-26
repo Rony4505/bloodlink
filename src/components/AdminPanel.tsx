@@ -58,6 +58,23 @@ type ContactRequest = {
   donorArea: string;
 };
 
+type AdminBloodPost = {
+  id: string;
+  posterName: string;
+  posterPhone: string;
+  patientName: string;
+  relation: string;
+  bloodGroup: string;
+  unitsNeeded: number;
+  district: string;
+  area: string;
+  hospital: string;
+  neededBy: string;
+  message: string;
+  urgency: "critical" | "urgent" | "moderate" | string;
+  createdAt: string;
+};
+
 type ContactChangeRequest = {
   id: string;
   donorId: string;
@@ -81,6 +98,7 @@ export function AdminPanel() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [donors, setDonors] = useState<AdminDonor[]>([]);
+  const [posts, setPosts] = useState<AdminBloodPost[]>([]);
   const [requests, setRequests] = useState<ContactRequest[]>([]);
   const [changeRequests, setChangeRequests] = useState<ContactChangeRequest[]>(
     [],
@@ -89,8 +107,11 @@ export function AdminPanel() {
     totalDonors: 0,
     availableNow: 0,
     totalRequests: 0,
+    totalPosts: 0,
   });
-  const [tab, setTab] = useState<"donors" | "volunteers" | "settings">("donors");
+  const [tab, setTab] = useState<"donors" | "posts" | "volunteers" | "settings">(
+    "donors",
+  );
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
@@ -210,11 +231,18 @@ export function AdminPanel() {
         (Date.parse(b.createdAt || "") || 0) - (Date.parse(a.createdAt || "") || 0),
     );
     setDonors(list);
+    const postList = Array.isArray(data.posts) ? [...data.posts] : [];
+    postList.sort(
+      (a, b) =>
+        (Date.parse(b.createdAt || "") || 0) - (Date.parse(a.createdAt || "") || 0),
+    );
+    setPosts(postList);
     setRequests(data.contactRequests || []);
     setStats({
       totalDonors: data.stats?.totalDonors ?? list.length,
       availableNow: data.stats?.availableNow ?? 0,
       totalRequests: data.stats?.totalRequests ?? 0,
+      totalPosts: data.stats?.totalPosts ?? postList.length,
     });
     setAuthed(true);
 
@@ -447,6 +475,12 @@ export function AdminPanel() {
     } finally {
       setAppearanceUploading(null);
     }
+  }
+
+  function urgencyLabel(urgency: string) {
+    if (urgency === "critical") return t.urgencyCritical;
+    if (urgency === "urgent") return t.urgencyUrgent;
+    return t.urgencyModerate;
   }
 
   function dhakaDay(iso?: string): string {
@@ -964,6 +998,13 @@ export function AdminPanel() {
           </button>
           <button
             type="button"
+            className={tab === "posts" ? "btn-primary" : "btn-ghost"}
+            onClick={() => setTab("posts")}
+          >
+            {t.adminBloodPosts}
+          </button>
+          <button
+            type="button"
             className={tab === "volunteers" ? "btn-primary" : "btn-ghost"}
             onClick={() => setTab("volunteers")}
           >
@@ -984,6 +1025,79 @@ export function AdminPanel() {
 
       {tab === "volunteers" ? <AdminVolunteersPanel /> : null}
 
+      {tab === "posts" ? (
+        <section className="overflow-hidden rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-white/90 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] bg-[linear-gradient(160deg,#fff1f0,#fff8f6)] px-5 py-4">
+            <div>
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
+                {t.adminBloodPosts}
+              </h2>
+              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+                {t.adminBloodPostsHint}
+              </p>
+            </div>
+            <span className="rounded-full bg-[var(--blood)] px-3 py-1 text-xs font-bold text-white">
+              {t.totalBloodPosts}: {stats.totalPosts}
+            </span>
+          </div>
+
+          {!posts.length ? (
+            <p className="px-5 py-8 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+              {t.noPosts}
+            </p>
+          ) : (
+            <ul className="divide-y divide-[var(--line)]">
+              {posts.map((p) => (
+                <li
+                  key={p.id}
+                  className="px-5 py-4 transition hover:bg-[color-mix(in_oklab,var(--blood)_5%,white)]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1.5 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-[var(--blood)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          {p.bloodGroup}
+                        </span>
+                        <span className="rounded-full bg-[color-mix(in_oklab,var(--blood)_14%,white)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--blood-deep)]">
+                          {urgencyLabel(p.urgency)}
+                        </span>
+                        <span className="text-xs font-semibold text-[var(--blood-deep)]">
+                          {t.postedAt}: {formatAddedAt(p.createdAt)}
+                        </span>
+                      </div>
+                      <p className="font-semibold text-[var(--ink)]">
+                        {p.patientName} · {p.unitsNeeded}{" "}
+                        {locale === "bn" ? "ব্যাগ" : "bag(s)"} · {p.hospital}
+                      </p>
+                      <p>
+                        {p.area}, {p.district} · {t.neededBy}: {p.neededBy}
+                      </p>
+                      <p>
+                        {t.posterName}: {p.posterName} · {p.posterPhone}
+                        {p.relation ? ` · ${p.relation}` : ""}
+                      </p>
+                      {p.message ? (
+                        <p className="text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                          {p.message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <a
+                      href={`/requests/${p.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-ghost shrink-0 text-[var(--blood-deep)]"
+                    >
+                      {t.viewDetails}
+                    </a>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       {tab === "donors" ? (
         <>
           <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
@@ -992,6 +1106,9 @@ export function AdminPanel() {
             </span>
             <span>
               {t.availableNow}: <strong>{stats.availableNow}</strong>
+            </span>
+            <span>
+              {t.totalBloodPosts}: <strong>{stats.totalPosts}</strong>
             </span>
             <span>
               {t.adminRequests}: <strong>{stats.totalRequests}</strong>
@@ -1148,7 +1265,9 @@ export function AdminPanel() {
             </ul>
           </section>
         </>
-      ) : (
+      ) : null}
+
+      {tab === "settings" ? (
         <div className="space-y-6">
           <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">{t.settingsMenuHint}</p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -2179,7 +2298,7 @@ export function AdminPanel() {
             onClose={() => setSavePopup(false)}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
