@@ -2,32 +2,16 @@ import { NextResponse } from "next/server";
 import { getCurrentDonor } from "@/lib/auth";
 import {
   createDailyRemindersIfNeeded,
+  getAdminSettings,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/db";
-
-function bangladeshDateKey(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const d = parts.find((p) => p.type === "day")?.value;
-  return `${y}-${m}-${d}`;
-}
-
-function bangladeshHour(date = new Date()) {
-  const hour = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Dhaka",
-    hour: "numeric",
-    hour12: false,
-  }).format(date);
-  return Number(hour);
-}
+import {
+  bangladeshDateKey,
+  bangladeshHour,
+  normalizeNotificationSettings,
+} from "@/lib/notification-settings";
 
 export async function GET() {
   const donor = await getCurrentDonor();
@@ -35,8 +19,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Create daily 10:00 BD reminders when any logged-in user checks after 10:00
-  if (bangladeshHour() >= 10) {
+  const admin = await getAdminSettings();
+  const notificationSettings = normalizeNotificationSettings(
+    admin.notificationSettings,
+  );
+  const daily = notificationSettings.dailyDonationReminder;
+
+  if (daily.enabled && bangladeshHour() >= daily.hourBd) {
     await createDailyRemindersIfNeeded(bangladeshDateKey());
   }
 
@@ -44,6 +33,16 @@ export async function GET() {
   return NextResponse.json({
     notifications,
     unread: notifications.filter((n) => !n.read).length,
+    prefs: {
+      dailyDonationReminder: {
+        enabled: daily.enabled,
+        hourBd: daily.hourBd,
+        intervalDays: daily.intervalDays,
+      },
+      bloodRequestBroadcast: {
+        enabled: notificationSettings.bloodRequestBroadcast.enabled,
+      },
+    },
   });
 }
 

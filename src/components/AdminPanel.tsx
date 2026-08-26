@@ -19,9 +19,11 @@ import type {
   BannerPage,
   BannerPlacement,
   BannerSize,
+  NotificationSettings,
   OrgBanner,
   SiteAppearance,
 } from "@/lib/types";
+import { defaultNotificationSettings } from "@/lib/notification-settings";
 
 type AdminDonor = {
   id: string;
@@ -70,7 +72,7 @@ type ContactChangeRequest = {
 };
 
 export function AdminPanel() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { reload: reloadAppearance } = useSiteAppearance();
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
@@ -92,7 +94,7 @@ export function AdminPanel() {
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
-    null | "storage" | "backup" | "features" | "appearance" | "ads" | "privacy" | "credentials" | "verify"
+    null | "storage" | "backup" | "features" | "notifications" | "appearance" | "ads" | "privacy" | "credentials" | "verify"
   >(null);
   const [savePopup, setSavePopup] = useState(false);
 
@@ -126,6 +128,18 @@ export function AdminPanel() {
     orgAds: { enabled: false, notes: "" },
     futureServices: { enabled: false, notes: "" },
   });
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
+    () => defaultNotificationSettings(),
+  );
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [broadcastDraft, setBroadcastDraft] = useState({
+    titleEn: "",
+    titleBn: "",
+    bodyEn: "",
+    bodyBn: "",
+    href: "/dashboard",
+  });
+  const [broadcastSending, setBroadcastSending] = useState(false);
   const [banners, setBanners] = useState<OrgBanner[]>([]);
   const [bannerSlideIntervalSec, setBannerSlideIntervalSec] = useState(
     DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
@@ -249,6 +263,30 @@ export function AdminPanel() {
         futureServices: {
           enabled: Boolean(data.platformOptions.futureServices?.enabled),
           notes: data.platformOptions.futureServices?.notes || "",
+        },
+      });
+    }
+    if (data.notificationSettings) {
+      setNotificationSettings({
+        ...defaultNotificationSettings(),
+        ...data.notificationSettings,
+        bloodRequestBroadcast: {
+          ...defaultNotificationSettings().bloodRequestBroadcast,
+          ...data.notificationSettings.bloodRequestBroadcast,
+          locked: true,
+          enabled: true,
+        },
+        dailyDonationReminder: {
+          ...defaultNotificationSettings().dailyDonationReminder,
+          ...data.notificationSettings.dailyDonationReminder,
+        },
+        contactChangeAlerts: {
+          ...defaultNotificationSettings().contactChangeAlerts,
+          ...data.notificationSettings.contactChangeAlerts,
+        },
+        systemAnnouncements: {
+          ...defaultNotificationSettings().systemAnnouncements,
+          ...data.notificationSettings.systemAnnouncements,
         },
       });
     }
@@ -519,6 +557,82 @@ export function AdminPanel() {
       }),
     });
     if (res.ok) flashSaved(t.saved); else setSettingsMsg(t.errorGeneric);
+  }
+
+  async function saveNotificationSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setNotifSaving(true);
+    setSettingsMsg("");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "notifications",
+          notificationSettings: {
+            ...notificationSettings,
+            bloodRequestBroadcast: {
+              ...notificationSettings.bloodRequestBroadcast,
+              enabled: true,
+              locked: true,
+            },
+          },
+        }),
+      });
+      if (!res.ok) {
+        setSettingsMsg(t.errorGeneric);
+        return;
+      }
+      const data = await res.json();
+      if (data.notificationSettings) {
+        setNotificationSettings({
+          ...defaultNotificationSettings(),
+          ...data.notificationSettings,
+        });
+      }
+      flashSaved(t.saved);
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setNotifSaving(false);
+    }
+  }
+
+  async function sendBroadcast(e: React.FormEvent) {
+    e.preventDefault();
+    setBroadcastSending(true);
+    setSettingsMsg("");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "notification-broadcast",
+          ...broadcastDraft,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSettingsMsg(data.error || t.errorGeneric);
+        return;
+      }
+      setBroadcastDraft({
+        titleEn: "",
+        titleBn: "",
+        bodyEn: "",
+        bodyBn: "",
+        href: "/dashboard",
+      });
+      flashSaved(
+        locale === "bn"
+          ? `${data.sent || 0} জন অ্যাকাউন্টধারীকে পাঠানো হয়েছে`
+          : `Sent to ${data.sent || 0} account holders`,
+      );
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setBroadcastSending(false);
+    }
   }
 
   async function loadStorage() {
@@ -1041,6 +1155,7 @@ export function AdminPanel() {
             {([
               ["storage", t.storageSetup],
               ["backup", t.backupTitle],
+              ["notifications", t.notificationSettings],
               ["features", t.futureFeatures],
               ["appearance", t.siteAppearance],
               ["ads", t.orgBanners],
@@ -1167,6 +1282,231 @@ export function AdminPanel() {
           </div>
 
           
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "notifications"}
+            title={t.notificationSettings}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-5">
+              <div>
+                <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
+                  {t.notificationSettings}
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                  {t.notificationSettingsBody}
+                </p>
+              </div>
+
+              <form onSubmit={saveNotificationSettings} className="space-y-4">
+                {(
+                  [
+                    [
+                      "bloodRequestBroadcast",
+                      t.notifBloodRequest,
+                      t.notifBloodRequestHint,
+                      true,
+                    ],
+                    [
+                      "dailyDonationReminder",
+                      t.notifDailyReminder,
+                      t.notifDailyReminderHint,
+                      false,
+                    ],
+                    [
+                      "contactChangeAlerts",
+                      t.notifContactChange,
+                      t.notifContactChangeHint,
+                      false,
+                    ],
+                    [
+                      "systemAnnouncements",
+                      t.notifSystem,
+                      t.notifSystemHint,
+                      false,
+                    ],
+                  ] as const
+                ).map(([key, title, hint, alwaysOn]) => {
+                  const channel = notificationSettings[key];
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-2xl border border-[var(--line)] bg-[linear-gradient(160deg,#fffdfb,#f8f1ea)] p-4 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-[var(--ink)]">{title}</p>
+                            {alwaysOn ? (
+                              <span className="rounded-full bg-[color-mix(in_oklab,var(--blood)_14%,white)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--blood-deep)]">
+                                {t.notifAlwaysOn}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+                            {hint}
+                          </p>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm font-semibold">
+                          <input
+                            type="checkbox"
+                            checked={alwaysOn ? true : channel.enabled}
+                            disabled={alwaysOn}
+                            onChange={(e) =>
+                              setNotificationSettings((prev) => ({
+                                ...prev,
+                                [key]: { ...prev[key], enabled: e.target.checked },
+                              }))
+                            }
+                          />
+                          {alwaysOn || channel.enabled ? t.enabled : t.disabled}
+                        </label>
+                      </div>
+
+                      {!alwaysOn ? (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <label className="block text-sm">
+                            <span className="mb-1 block font-medium">{t.notifIntervalDays}</span>
+                            <input
+                              className="field"
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={channel.intervalDays}
+                              onChange={(e) =>
+                                setNotificationSettings((prev) => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...prev[key],
+                                    intervalDays: Math.max(
+                                      1,
+                                      Math.min(30, Number(e.target.value) || 1),
+                                    ),
+                                  },
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="block text-sm">
+                            <span className="mb-1 block font-medium">{t.notifHourBd}</span>
+                            <input
+                              className="field"
+                              type="number"
+                              min={0}
+                              max={23}
+                              value={channel.hourBd}
+                              onChange={(e) =>
+                                setNotificationSettings((prev) => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...prev[key],
+                                    hourBd: Math.max(
+                                      0,
+                                      Math.min(23, Number(e.target.value) || 0),
+                                    ),
+                                  },
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs font-medium text-[var(--sage)]">
+                          {t.notifBloodLockedNote}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood-deep)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-55"
+                  disabled={notifSaving}
+                >
+                  {notifSaving ? t.loading : t.saveNotificationSettings}
+                </button>
+              </form>
+
+              <div className="border-t border-[var(--line)] pt-4">
+                <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
+                  {t.notifBroadcastTitle}
+                </h3>
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                  {t.notifBroadcastBody}
+                </p>
+                <form onSubmit={sendBroadcast} className="mt-3 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm">
+                      <span className="mb-1 block font-medium">{t.notifTitleEn}</span>
+                      <input
+                        className="field"
+                        value={broadcastDraft.titleEn}
+                        onChange={(e) =>
+                          setBroadcastDraft((p) => ({ ...p, titleEn: e.target.value }))
+                        }
+                        required
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="mb-1 block font-medium">{t.notifTitleBn}</span>
+                      <input
+                        className="field"
+                        value={broadcastDraft.titleBn}
+                        onChange={(e) =>
+                          setBroadcastDraft((p) => ({ ...p, titleBn: e.target.value }))
+                        }
+                        required
+                      />
+                    </label>
+                  </div>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">{t.notifBodyEn}</span>
+                    <textarea
+                      className="field min-h-20"
+                      value={broadcastDraft.bodyEn}
+                      onChange={(e) =>
+                        setBroadcastDraft((p) => ({ ...p, bodyEn: e.target.value }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">{t.notifBodyBn}</span>
+                    <textarea
+                      className="field min-h-20"
+                      value={broadcastDraft.bodyBn}
+                      onChange={(e) =>
+                        setBroadcastDraft((p) => ({ ...p, bodyBn: e.target.value }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">{t.notifHref}</span>
+                    <input
+                      className="field"
+                      value={broadcastDraft.href}
+                      onChange={(e) =>
+                        setBroadcastDraft((p) => ({ ...p, href: e.target.value }))
+                      }
+                      placeholder="/dashboard"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-full border border-[var(--blood-deep)] px-5 py-3 font-semibold text-[var(--blood-deep)] transition hover:bg-[color-mix(in_oklab,var(--blood)_8%,white)] disabled:opacity-55"
+                    disabled={
+                      broadcastSending || !notificationSettings.systemAnnouncements.enabled
+                    }
+                  >
+                    {broadcastSending ? t.loading : t.notifSendBroadcast}
+                  </button>
+                </form>
+              </div>
+            </div>
           </AdminSettingsPanel>
 
           <AdminSettingsPanel

@@ -519,6 +519,37 @@ export const dictionaries = {
     savedPopupTitle: "Saved",
     savedPopupBody: "Your changes were saved successfully.",
     openSettings: "Open",
+    notificationSettings: "Notifications",
+    notificationSettingsBody:
+      "Choose which alerts go to registered account holders, and how often recurring reminders fire (Bangladesh time).",
+    notifBloodRequest: "Blood need posts (special)",
+    notifBloodRequestHint:
+      "Whenever someone posts a blood need, every registered user gets a notification. This special channel stays on.",
+    notifDailyReminder: "Daily donation-date reminder",
+    notifDailyReminderHint:
+      "Reminds account holders to update last donation date after giving blood.",
+    notifContactChange: "Contact change results",
+    notifContactChangeHint:
+      "Notify a donor when admin approves or declines an email/phone change.",
+    notifSystem: "Admin announcements",
+    notifSystemHint: "Allow sending one-shot messages to all account holders.",
+    notifAlwaysOn: "Always on",
+    notifBloodLockedNote:
+      "Special channel — runs for every new blood need post to all accounts.",
+    notifIntervalDays: "Repeat every (days)",
+    notifHourBd: "Send after hour (BD time, 0–23)",
+    saveNotificationSettings: "Save notification settings",
+    notifBroadcastTitle: "Send announcement to all accounts",
+    notifBroadcastBody:
+      "Writes an in-app notification for every registered donor right away.",
+    notifTitleEn: "Title (English)",
+    notifTitleBn: "Title (Bangla)",
+    notifBodyEn: "Message (English)",
+    notifBodyBn: "Message (Bangla)",
+    notifHref: "Open link (optional)",
+    notifSendBroadcast: "Send to all accounts",
+    enabled: "On",
+    disabled: "Off",
   },
   bn: {
     brand: "BloodLink",
@@ -1040,6 +1071,37 @@ export const dictionaries = {
     savedPopupTitle: "সেভ হয়েছে",
     savedPopupBody: "আপনার পরিবর্তন সফলভাবে সেভ হয়েছে।",
     openSettings: "খুলুন",
+    notificationSettings: "নোটিফিকেশন",
+    notificationSettingsBody:
+      "অ্যাকাউন্টধারীদের কোন অ্যালার্ট যাবে, আর পুনরাবৃত্তি রিমাইন্ডার কত দিন পর পর যাবে — সেটা এখানে সেট করুন (বাংলাদেশ সময়)।",
+    notifBloodRequest: "রক্তের প্রয়োজন পোস্ট (বিশেষ)",
+    notifBloodRequestHint:
+      "কেউ রক্তের প্রয়োজন পোস্ট করলে সব রেজিস্টার্ড ইউজারের কাছে নোটিফিকেশন যায়। এই বিশেষ চ্যানেল সবসময় চালু থাকে।",
+    notifDailyReminder: "দৈনিক রক্তদান তারিখ রিমাইন্ডার",
+    notifDailyReminderHint:
+      "অ্যাকাউন্টধারীদের মনে করিয়ে দেয় রক্ত দিলে শেষ রক্তদানের তারিখ আপডেট করতে।",
+    notifContactChange: "যোগাযোগ পরিবর্তনের ফল",
+    notifContactChangeHint:
+      "অ্যাডমিন ইমেইল/ফোন পরিবর্তন অনুমোদন বা প্রত্যাখ্যান করলে ডোনারকে জানায়।",
+    notifSystem: "অ্যাডমিন ঘোষণা",
+    notifSystemHint: "সব অ্যাকাউন্টধারীকে একবারে বার্তা পাঠানোর অনুমতি।",
+    notifAlwaysOn: "সবসময় চালু",
+    notifBloodLockedNote:
+      "বিশেষ চ্যানেল — নতুন রক্তের প্রয়োজন পোস্ট হলে সব অ্যাকাউন্টে যায়।",
+    notifIntervalDays: "কত দিন পর পর (দিন)",
+    notifHourBd: "কোন ঘণ্টায় পাঠাবে (BD সময়, ০–২৩)",
+    saveNotificationSettings: "নোটিফিকেশন সেটিংস সেভ",
+    notifBroadcastTitle: "সব অ্যাকাউন্টে ঘোষণা পাঠান",
+    notifBroadcastBody:
+      "প্রতিটি রেজিস্টার্ড ডোনারের ইন-অ্যাপ নোটিফিকেশন তালিকায় এখনই যোগ হবে।",
+    notifTitleEn: "শিরোনাম (ইংরেজি)",
+    notifTitleBn: "শিরোনাম (বাংলা)",
+    notifBodyEn: "বার্তা (ইংরেজি)",
+    notifBodyBn: "বার্তা (বাংলা)",
+    notifHref: "লিংক (ঐচ্ছিক)",
+    notifSendBroadcast: "সব অ্যাকাউন্টে পাঠান",
+    enabled: "চালু",
+    disabled: "বন্ধ",
   },
 } as const;
 

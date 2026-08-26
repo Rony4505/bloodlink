@@ -194,6 +194,34 @@ export const platformOptionsSchema = z.object({
   futureServices: platformFeatureSchema,
 });
 
+const notificationChannelSchema = z.object({
+  enabled: z.boolean(),
+  locked: z.boolean().optional().default(false),
+  intervalDays: z.number().int().min(1).max(30),
+  hourBd: z.number().int().min(0).max(23),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
+export const notificationSettingsSchema = z.object({
+  bloodRequestBroadcast: notificationChannelSchema,
+  dailyDonationReminder: notificationChannelSchema,
+  contactChangeAlerts: notificationChannelSchema,
+  systemAnnouncements: notificationChannelSchema,
+});
+
+export const notificationBroadcastSchema = z.object({
+  titleEn: z.string().trim().min(2).max(120),
+  titleBn: z.string().trim().min(2).max(120),
+  bodyEn: z.string().trim().min(2).max(500),
+  bodyBn: z.string().trim().min(2).max(500),
+  href: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .default("/notifications"),
+});
+
 export function normalizeRegisterInput(data: z.infer<typeof registerSchema>) {
   const phone = normalizePhone(data.phone);
   return {

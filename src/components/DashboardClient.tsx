@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DailyReminder } from "@/components/DailyReminder";
@@ -214,8 +215,16 @@ export function DashboardClient() {
                 {donor.available ? t.available : t.unavailable}
               </p>
             </div>
-            <div className="flex h-16 min-w-16 items-center justify-center rounded-2xl bg-[var(--blood)] px-3 font-[family-name:var(--font-display)] text-2xl font-bold text-white shadow-sm">
-              {donor.bloodGroup}
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex h-16 min-w-16 items-center justify-center rounded-2xl bg-[var(--blood)] px-3 font-[family-name:var(--font-display)] text-2xl font-bold text-white shadow-sm">
+                {donor.bloodGroup}
+              </div>
+              <Link
+                href="/notifications"
+                className="rounded-full border border-[var(--line)] bg-white/90 px-3 py-1.5 text-xs font-semibold text-[var(--blood-deep)] transition hover:bg-white"
+              >
+                {t.notifications}
+              </Link>
             </div>
           </div>
 

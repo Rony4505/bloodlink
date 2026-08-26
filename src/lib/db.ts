@@ -21,6 +21,13 @@ import {
   withBilingual,
 } from "./notification-text";
 import {
+  bangladeshDateKey,
+  bangladeshHour,
+  daysBetweenDateKeys,
+  defaultNotificationSettings,
+  normalizeNotificationSettings,
+} from "./notification-settings";
+import {
   hasDatabaseUrl,
   listDbEnvKeys,
   loadDbFromPostgres,
@@ -195,6 +202,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     privacyBn: DEFAULT_PRIVACY_BN,
     privacyEn: DEFAULT_PRIVACY_EN,
     platformOptions: defaultPlatformOptions(),
+    notificationSettings: defaultNotificationSettings(),
     banners: [],
     bannerSlideIntervalSec: DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
     siteAppearance: defaultSiteAppearance(),
@@ -359,6 +367,9 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         privacyBn: parsed.admin.privacyBn || DEFAULT_PRIVACY_BN,
         privacyEn: parsed.admin.privacyEn || DEFAULT_PRIVACY_EN,
         platformOptions: normalizePlatformOptions(parsed.admin.platformOptions),
+        notificationSettings: normalizeNotificationSettings(
+          parsed.admin.notificationSettings,
+        ),
         banners: normalizeBanners(parsed.admin.banners),
         bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(
           parsed.admin.bannerSlideIntervalSec,
@@ -1167,17 +1178,23 @@ export async function createPost(
     db.posts.push(post);
 
     const texts = withBilingual(bloodRequestTexts(post));
-    for (const donor of db.donors) {
-      db.notifications.push({
-        id: randomUUID(),
-        userId: donor.id,
-        ...texts,
-        type: "blood_request",
-        href: `/requests/${post.id}`,
-        postId: post.id,
-        read: false,
-        createdAt: new Date().toISOString(),
-      });
+    const notifySettings = normalizeNotificationSettings(
+      db.admin.notificationSettings,
+    );
+    if (notifySettings.bloodRequestBroadcast.enabled) {
+      const createdAt = new Date().toISOString();
+      for (const donor of db.donors) {
+        db.notifications.push({
+          id: randomUUID(),
+          userId: donor.id,
+          ...texts,
+          type: "blood_request",
+          href: `/requests/${post.id}`,
+          postId: post.id,
+          read: false,
+          createdAt,
+        });
+      }
     }
 
     await persist(db);
@@ -1220,19 +1237,33 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 }
 
 export async function createDailyRemindersIfNeeded(
-  todayKey: string,
+  todayKey = bangladeshDateKey(),
 ): Promise<number> {
   return withWrite(async (db) => {
+    const settings = normalizeNotificationSettings(db.admin.notificationSettings)
+      .dailyDonationReminder;
+    if (!settings.enabled) return 0;
+    if (bangladeshHour() < settings.hourBd) return 0;
+
+    const intervalDays = Math.max(1, settings.intervalDays);
     let created = 0;
+    const texts = withBilingual(dailyReminderTexts());
+    const createdAt = new Date().toISOString();
+
     for (const donor of db.donors) {
-      const already = db.notifications.some(
-        (n) =>
-          n.userId === donor.id &&
-          n.type === "daily_update" &&
-          n.createdAt.startsWith(todayKey),
-      );
-      if (already) continue;
-      const texts = withBilingual(dailyReminderTexts());
+      const previous = db.notifications
+        .filter((n) => n.userId === donor.id && n.type === "daily_update")
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
+
+      if (previous) {
+        const previousKey = bangladeshDateKey(new Date(previous.createdAt));
+        if (previousKey === todayKey) continue;
+        if (daysBetweenDateKeys(previousKey, todayKey) < intervalDays) continue;
+      }
+
       db.notifications.push({
         id: randomUUID(),
         userId: donor.id,
@@ -1240,7 +1271,44 @@ export async function createDailyRemindersIfNeeded(
         type: "daily_update",
         href: "/dashboard",
         read: false,
-        createdAt: new Date().toISOString(),
+        createdAt,
+      });
+      created += 1;
+    }
+    if (created) await persist(db);
+    return created;
+  });
+}
+
+export async function broadcastSystemAnnouncement(input: {
+  titleEn: string;
+  titleBn: string;
+  bodyEn: string;
+  bodyBn: string;
+  href?: string;
+}): Promise<number> {
+  return withWrite(async (db) => {
+    const settings = normalizeNotificationSettings(db.admin.notificationSettings);
+    if (!settings.systemAnnouncements.enabled) return 0;
+
+    const texts = withBilingual({
+      titleEn: input.titleEn,
+      titleBn: input.titleBn,
+      bodyEn: input.bodyEn,
+      bodyBn: input.bodyBn,
+    });
+    const href = input.href?.trim() || "/notifications";
+    const createdAt = new Date().toISOString();
+    let created = 0;
+    for (const donor of db.donors) {
+      db.notifications.push({
+        id: randomUUID(),
+        userId: donor.id,
+        ...texts,
+        type: "system",
+        href,
+        read: false,
+        createdAt,
       });
       created += 1;
     }
@@ -1339,15 +1407,20 @@ export async function resolveContactChangeRequest(
     }
 
     const texts = withBilingual(contactChangeResultTexts(decision === "approved"));
-    db.notifications.push({
-      id: randomUUID(),
-      userId: request.donorId,
-      ...texts,
-      type: "contact_change",
-      href: "/dashboard",
-      read: false,
-      createdAt: new Date().toISOString(),
-    });
+    const notifySettings = normalizeNotificationSettings(
+      db.admin.notificationSettings,
+    );
+    if (notifySettings.contactChangeAlerts.enabled) {
+      db.notifications.push({
+        id: randomUUID(),
+        userId: request.donorId,
+        ...texts,
+        type: "contact_change",
+        href: "/dashboard",
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     await persist(db);
     return request;
@@ -1363,7 +1436,16 @@ export async function updateAdminSettings(
   patch: Partial<AdminSettings>,
 ): Promise<AdminSettings> {
   return withWrite(async (db) => {
-    db.admin = { ...db.admin, ...patch };
+    const next = { ...db.admin, ...patch };
+    if (patch.notificationSettings) {
+      next.notificationSettings = normalizeNotificationSettings(
+        patch.notificationSettings,
+      );
+    }
+    if (patch.platformOptions) {
+      next.platformOptions = normalizePlatformOptions(patch.platformOptions);
+    }
+    db.admin = next;
     await persist(db);
     return db.admin;
   });

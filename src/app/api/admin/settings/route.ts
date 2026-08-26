@@ -6,13 +6,16 @@ import {
   isAdminAuthenticated,
   verifyPassword,
 } from "@/lib/auth";
-import { getAdminSettings, updateAdminSettings } from "@/lib/db";
+import { getAdminSettings, updateAdminSettings, broadcastSystemAnnouncement } from "@/lib/db";
 import { normalizePhone } from "@/lib/privacy";
+import { normalizeNotificationSettings } from "@/lib/notification-settings";
 import { normalizeBanner, normalizeBannerSlideIntervalSec, normalizeSiteAppearance } from "@/lib/site-cms";
 import {
   adminCredentialsSchema,
   adminVerifyCodeSchema,
   adminVerifySetupSchema,
+  notificationBroadcastSchema,
+  notificationSettingsSchema,
   platformOptionsSchema,
 } from "@/lib/validations";
 import type { OrgBanner } from "@/lib/types";
@@ -36,6 +39,7 @@ export async function GET() {
     privacyBn: admin.privacyBn,
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
+    notificationSettings: normalizeNotificationSettings(admin.notificationSettings),
     banners: admin.banners || [],
     bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
     siteAppearance: normalizeSiteAppearance(admin.siteAppearance),
@@ -147,6 +151,33 @@ export async function PATCH(request: Request) {
     }
     await updateAdminSettings({ platformOptions: parsed.data });
     return NextResponse.json({ ok: true, platformOptions: parsed.data });
+  }
+
+  if (action === "notifications") {
+    const parsed = notificationSettingsSchema.safeParse(body.notificationSettings);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid notification settings" }, { status: 400 });
+    }
+    const notificationSettings = normalizeNotificationSettings(parsed.data);
+    await updateAdminSettings({ notificationSettings });
+    return NextResponse.json({ ok: true, notificationSettings });
+  }
+
+  if (action === "notification-broadcast") {
+    const parsed = notificationBroadcastSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid announcement" }, { status: 400 });
+    }
+    const admin = await getAdminSettings();
+    const settings = normalizeNotificationSettings(admin.notificationSettings);
+    if (!settings.systemAnnouncements.enabled) {
+      return NextResponse.json(
+        { error: "System announcements are disabled" },
+        { status: 400 },
+      );
+    }
+    const sent = await broadcastSystemAnnouncement(parsed.data);
+    return NextResponse.json({ ok: true, sent });
   }
 
   if (action === "banners") {

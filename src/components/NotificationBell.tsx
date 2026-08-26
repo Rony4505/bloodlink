@@ -18,22 +18,36 @@ export function NotificationBell() {
         .catch(() => undefined);
     };
     load();
-    const id = window.setInterval(load, 60_000);
+    const id = window.setInterval(load, 45_000);
     return () => window.clearInterval(id);
   }, []);
 
   return (
     <Link
       href="/notifications"
-      className="relative rounded-full px-3 py-2 transition hover:bg-white/10"
+      className="relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-2 transition hover:bg-white/10 sm:px-3"
       title={t.notifications}
+      aria-label={t.notifications}
     >
-      {t.notifications}
-      {unread > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#c9852d] px-1 text-[10px] font-bold text-[#1c1412]">
-          {unread}
-        </span>
-      ) : null}
+      <span className="relative inline-flex h-5 w-5 items-center justify-center">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5 fill-none stroke-current stroke-[1.8]"
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 1 1-6 0m6 0H9"
+          />
+        </svg>
+        {unread > 0 ? (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c9852d] px-1 text-[9px] font-bold leading-none text-[#1c1412]">
+            {unread > 99 ? "99+" : unread}
+          </span>
+        ) : null}
+      </span>
+      <span className="hidden sm:inline">{t.notifications}</span>
     </Link>
   );
 }
