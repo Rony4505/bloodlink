@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { enableWebPush, isWebPushSupported } from "@/lib/web-push-client";
 
 export type RegisteredDonorSummary = {
   name: string;
@@ -38,10 +39,26 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushDone, setPushDone] = useState<"idle" | "on" | "skipped" | "denied">(
+    "idle",
+  );
+  const showPushPrompt = pushSupported && pushDone === "idle";
 
   useEffect(() => {
     invalidateDonorStats();
+    setPushSupported(isWebPushSupported());
   }, []);
+
+  async function onAllowPush() {
+    setPushBusy(true);
+    const result = await enableWebPush();
+    setPushBusy(false);
+    if (result === "granted") setPushDone("on");
+    else if (result === "denied") setPushDone("denied");
+    else setPushDone("skipped");
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
@@ -125,6 +142,46 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
             </div>
           </div>
         </div>
+
+        {showPushPrompt ? (
+          <div className="mt-5 rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 text-left">
+            <p className="text-sm font-semibold text-[var(--blood-deep)]">
+              {t.registerPushTitle}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+              {t.registerPushBody}
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                disabled={pushBusy}
+                onClick={() => void onAllowPush()}
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
+              >
+                {pushBusy ? t.loading : t.registerPushAllow}
+              </button>
+              <button
+                type="button"
+                disabled={pushBusy}
+                onClick={() => setPushDone("skipped")}
+                className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
+              >
+                {t.registerPushSkip}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {pushDone === "on" ? (
+          <p className="mt-4 text-center text-sm font-medium text-[var(--sage)]">
+            {t.registerPushOn}
+          </p>
+        ) : null}
+        {pushDone === "denied" ? (
+          <p className="mt-4 text-center text-sm font-medium text-[var(--blood)]">
+            {t.pushDenied}
+          </p>
+        ) : null}
 
         <button
           type="button"
