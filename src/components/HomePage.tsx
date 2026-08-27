@@ -12,7 +12,7 @@ import { OrgBanners } from "@/components/OrgBanners";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { loadLoggedIn } from "@/lib/session-me-client";
+import { loadLoggedIn, subscribeSessionMe } from "@/lib/session-me-client";
 
 const HomeEmergencyPosts = dynamic(
   () =>
@@ -58,10 +58,16 @@ export function HomePage() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    void loadLoggedIn().then((ok) => {
+    void loadLoggedIn({ force: true }).then((ok) => {
       if (!ctrl.signal.aborted) setLoggedIn(ok);
     });
-    return () => ctrl.abort();
+    const unsub = subscribeSessionMe((ok) => {
+      if (!ctrl.signal.aborted) setLoggedIn(ok);
+    });
+    return () => {
+      ctrl.abort();
+      unsub();
+    };
   }, []);
 
   return (

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
 import { areasForDistrict } from "@/lib/district-areas";
@@ -11,12 +10,12 @@ import {
   RegisterSuccessModal,
   type RegisteredDonorSummary,
 } from "@/components/RegisterSuccessModal";
+import { markDonorSessionActive } from "@/lib/session-me-client";
 
 type Step = "form" | "otp";
 
 export function RegisterForm() {
   const { t } = useLocale();
-  const router = useRouter();
   const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -189,7 +188,10 @@ export function RegisterForm() {
         {successDonor ? (
           <RegisterSuccessModal
             donor={successDonor}
-            onContinue={() => router.push("/dashboard")}
+            onContinue={() => {
+              markDonorSessionActive();
+              window.location.assign("/dashboard");
+            }}
           />
         ) : null}
       </>

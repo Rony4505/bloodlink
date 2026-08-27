@@ -14,8 +14,8 @@ type Props = {
 
 /**
  * Existing logged-in donors without a saved push subscription get a prompt
- * (or silent re-subscribe if the browser already granted permission).
- * New registrants are prompted from RegisterSuccessModal instead.
+ * right after login (home/dashboard/any PageShell page).
+ * New registrants are also prompted from RegisterSuccessModal.
  */
 export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const { t } = useLocale();
@@ -29,25 +29,30 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     async function boot() {
       if (!isWebPushSupported()) return;
       if (requireLogin) {
-        const ok = await loadLoggedIn();
+        const ok = await loadLoggedIn({ force: true });
         if (!ok || cancelled) return;
       }
 
       if (Notification.permission === "denied") return;
 
+      let subscribed = false;
       try {
-        const res = await fetch("/api/push/subscribe");
+        const res = await fetch("/api/push/subscribe", { cache: "no-store" });
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { subscribed?: boolean };
-        if (data.subscribed) {
-          localStorage.setItem("bloodlink_push_on", "1");
-          return;
-        }
+        subscribed = Boolean(data.subscribed);
       } catch {
-        /* fall through to local checks */
+        return;
       }
 
-      if (localStorage.getItem("bloodlink_push_on") === "1") return;
+      if (subscribed) {
+        localStorage.setItem("bloodlink_push_on", "1");
+        return;
+      }
+
+      // Server has no subscription — clear stale local flag so we still prompt.
+      localStorage.removeItem("bloodlink_push_on");
+
       if (sessionStorage.getItem(SKIP_KEY) === "1") return;
 
       if (Notification.permission === "granted") {
@@ -94,7 +99,7 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
       <div
         role="dialog"
         aria-modal="true"

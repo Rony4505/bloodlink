@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { markDonorSessionActive } from "@/lib/session-me-client";
 
 type Mode = "login" | "forgot" | "forgot-otp" | "forgot-reset";
 
 export function LoginForm() {
   const { t } = useLocale();
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +21,12 @@ export function LoginForm() {
   const [error, setError] = useState("");
   const [hint, setHint] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function goDashboardFresh() {
+    markDonorSessionActive();
+    // Full navigation so Header + push prompt remount with a fresh session.
+    window.location.assign("/dashboard");
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +43,8 @@ export function LoginForm() {
         setError(data.error || t.errorGeneric);
         return;
       }
-      router.push("/dashboard");
+      goDashboardFresh();
+      return;
     } catch {
       setError(t.errorGeneric);
     } finally {
@@ -128,7 +134,8 @@ export function LoginForm() {
         setError(data.error || t.errorGeneric);
         return;
       }
-      router.push("/dashboard");
+      goDashboardFresh();
+      return;
     } catch {
       setError(t.errorGeneric);
     } finally {

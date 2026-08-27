@@ -1,23 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { loadLoggedIn } from "@/lib/session-me-client";
+import {
+  invalidateSessionMe,
+  loadLoggedIn,
+  markDonorSessionInactive,
+  subscribeSessionMe,
+} from "@/lib/session-me-client";
 
 export function Header({ compact = false }: { compact?: boolean }) {
   const { t, toggleLocale } = useLocale();
+  const pathname = usePathname();
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    void loadLoggedIn().then(setLoggedIn);
-  }, []);
+    let cancelled = false;
+    void loadLoggedIn({ force: true }).then((ok) => {
+      if (!cancelled) setLoggedIn(ok);
+    });
+    const unsub = subscribeSessionMe((ok) => {
+      if (!cancelled) setLoggedIn(ok);
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [pathname]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    setLoggedIn(false);
+    markDonorSessionInactive();
+    invalidateSessionMe();
     window.location.href = "/";
   }
 
