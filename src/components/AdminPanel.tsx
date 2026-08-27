@@ -160,10 +160,24 @@ export function AdminPanel() {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     () => defaultNotificationSettings(),
   );
-  const [pushAllow, setPushAllow] = useState({
+  const [pushAllow, setPushAllow] = useState<{
+    donorCount: number;
+    allowedUsers: number;
+    subscriptions: number;
+    donors: Array<{
+      id: string;
+      name: string;
+      email: string;
+      phone: string;
+      bloodGroup: string;
+      allowed: boolean;
+      subscriptionCount: number;
+    }>;
+  }>({
     donorCount: 0,
     allowedUsers: 0,
     subscriptions: 0,
+    donors: [],
   });
   const [notifSaving, setNotifSaving] = useState(false);
   const [broadcastDraft, setBroadcastDraft] = useState({
@@ -357,6 +371,27 @@ export function AdminPanel() {
         donorCount: Number(data.pushAllow.donorCount) || 0,
         allowedUsers: Number(data.pushAllow.allowedUsers) || 0,
         subscriptions: Number(data.pushAllow.subscriptions) || 0,
+        donors: Array.isArray(data.pushAllow.donors)
+          ? data.pushAllow.donors.map(
+              (d: {
+                id?: string;
+                name?: string;
+                email?: string;
+                phone?: string;
+                bloodGroup?: string;
+                allowed?: boolean;
+                subscriptionCount?: number;
+              }) => ({
+                id: String(d.id || ""),
+                name: String(d.name || ""),
+                email: String(d.email || ""),
+                phone: String(d.phone || ""),
+                bloodGroup: String(d.bloodGroup || ""),
+                allowed: Boolean(d.allowed),
+                subscriptionCount: Number(d.subscriptionCount) || 0,
+              }),
+            )
+          : [],
       });
     }
     setBanners(Array.isArray(data.banners) ? data.banners : []);
@@ -1595,6 +1630,61 @@ export function AdminPanel() {
                     .replace("{donors}", String(pushAllow.donorCount))
                     .replace("{subs}", String(pushAllow.subscriptions))}
                 </p>
+                <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  {t.pushAllowListHint}
+                </p>
+                {pushAllow.donors.length ? (
+                  <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-[var(--line)] bg-white/90">
+                    <table className="w-full min-w-[28rem] text-left text-xs">
+                      <thead className="sticky top-0 bg-[color-mix(in_oklab,var(--sand)_40%,white)] text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold">{t.name}</th>
+                          <th className="px-3 py-2 font-semibold">{t.email}</th>
+                          <th className="px-3 py-2 font-semibold">{t.bloodGroup}</th>
+                          <th className="px-3 py-2 font-semibold">{t.pushAllowStatus}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pushAllow.donors.map((d) => (
+                          <tr
+                            key={d.id}
+                            className="border-t border-[var(--line)] align-top"
+                          >
+                            <td className="px-3 py-2">
+                              <p className="font-semibold text-[var(--ink)]">{d.name}</p>
+                              <p className="mt-0.5 font-mono text-[10px] text-[color-mix(in_oklab,var(--ink)_45%,white)]">
+                                {d.id.slice(0, 8)}…
+                              </p>
+                              <p className="mt-0.5 text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                                {d.phone}
+                              </p>
+                            </td>
+                            <td className="px-3 py-2 text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                              {d.email}
+                            </td>
+                            <td className="px-3 py-2 font-semibold text-[var(--blood-deep)]">
+                              {d.bloodGroup}
+                            </td>
+                            <td className="px-3 py-2">
+                              {d.allowed ? (
+                                <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--sage)_18%,white)] px-2 py-0.5 font-semibold text-[var(--sage)]">
+                                  {t.pushAllowYes}
+                                  {d.subscriptionCount > 1
+                                    ? ` · ${d.subscriptionCount}`
+                                    : ""}
+                                </span>
+                              ) : (
+                                <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--blood)_12%,white)] px-2 py-0.5 font-semibold text-[var(--blood-deep)]">
+                                  {t.pushAllowNo}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
               </div>
 
               <form onSubmit={saveNotificationSettings} className="space-y-4">

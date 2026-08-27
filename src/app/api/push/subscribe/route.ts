@@ -3,6 +3,7 @@ import { getCurrentDonor } from "@/lib/auth";
 import {
   removePushSubscriptionForUser,
   upsertPushSubscription,
+  donorHasPushSubscription,
 } from "@/lib/db";
 import { getPublicVapidKey } from "@/lib/web-push-send";
 
@@ -15,7 +16,8 @@ export async function GET() {
   }
   try {
     const publicKey = await getPublicVapidKey();
-    return NextResponse.json({ publicKey });
+    const subscribed = await donorHasPushSubscription(donor.id);
+    return NextResponse.json({ publicKey, subscribed });
   } catch {
     return NextResponse.json({ error: "Push unavailable" }, { status: 503 });
   }
