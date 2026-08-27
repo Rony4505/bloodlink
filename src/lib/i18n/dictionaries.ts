@@ -577,6 +577,9 @@ export const dictionaries = {
     notifGoldBlessingHint:
       "Once each BD month, send a warm crimson blessing to the current top Gold/Platinum donor.",
     pushDenied: "Notifications are blocked in browser settings.",
+    pushUnsupported:
+      "This browser cannot show phone alerts. Open BloodLink in Chrome (Android) or add the site to your Home Screen on iPhone, then allow notifications.",
+    pushEnableError: "Could not enable alerts. Tap Allow again, or try Chrome.",
     pushAllowStats: "Phone alerts allowed",
     pushAllowStatsBody:
       "{allowed} of {donors} accounts enabled browser/phone notifications ({subs} device subscriptions).",
@@ -1172,6 +1175,9 @@ export const dictionaries = {
     notifGoldBlessingHint:
       "প্রতি BD মাসে বর্তমান টপ গোল্ড/প্লাটিনাম ডোনারকে আবেগঘন রক্তিম শুভেচ্ছা পাঠাবে।",
     pushDenied: "ব্রাউজার সেটিংসে নোটিফিকেশন ব্লক করা আছে।",
+    pushUnsupported:
+      "এই ব্রাউজারে ফোন অ্যালার্ট চালু হয় না। Android-এ Chrome দিয়ে BloodLink খুলুন, অথবা iPhone-এ Home Screen-এ অ্যাড করে Allow দিন।",
+    pushEnableError: "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome ব্যবহার করুন।",
     pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
     pushAllowStatsBody:
       "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন ব্রাউজার/ফোন নোটিফিকেশন চালু করেছে ({subs}টি ডিভাইস সাবস্ক্রিপশন)।",

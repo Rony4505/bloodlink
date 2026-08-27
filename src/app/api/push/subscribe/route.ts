@@ -14,13 +14,16 @@ export async function GET() {
   if (!donor) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // Always return subscription status even if VAPID key generation fails,
+  // so the client can still show the allow prompt.
+  const subscribed = await donorHasPushSubscription(donor.id);
+  let publicKey: string | null = null;
   try {
-    const publicKey = await getPublicVapidKey();
-    const subscribed = await donorHasPushSubscription(donor.id);
-    return NextResponse.json({ publicKey, subscribed });
+    publicKey = await getPublicVapidKey();
   } catch {
-    return NextResponse.json({ error: "Push unavailable" }, { status: 503 });
+    /* optional for status check */
   }
+  return NextResponse.json({ publicKey, subscribed });
 }
 
 export async function POST(request: Request) {
