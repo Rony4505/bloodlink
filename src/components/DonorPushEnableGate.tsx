@@ -5,73 +5,115 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { enableWebPush, isWebPushSupported } from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
 
-const SKIP_KEY = "bloodlink_push_ask_skip";
+type GateStatus = "ask" | "on" | "denied" | "unsupported" | "error";
 
 type Props = {
   /** When true, only runs if the visitor is a logged-in donor. */
   requireLogin?: boolean;
+  /** Show the full-screen allow dialog (default true). */
+  modal?: boolean;
+  /** When true, render a persistent card as well / instead. */
+  showCard?: boolean;
 };
+
+async function fetchPushStatus(): Promise<{
+  ok: boolean;
+  subscribed: boolean;
+}> {
+  try {
+    const res = await fetch("/api/push/subscribe", { cache: "no-store" });
+    if (res.status === 401) return { ok: false, subscribed: false };
+    if (!res.ok) return { ok: true, subscribed: false };
+    const data = (await res.json()) as { subscribed?: boolean };
+    return { ok: true, subscribed: Boolean(data.subscribed) };
+  } catch {
+    return { ok: true, subscribed: false };
+  }
+}
 
 /**
  * Existing logged-in donors without a saved push subscription get a prompt
- * right after login (home/dashboard/any PageShell page).
- * New registrants are also prompted from RegisterSuccessModal.
+ * right after login. Never fails silently — unsupported/denied still show UI.
  */
-export function DonorPushEnableGate({ requireLogin = true }: Props) {
+export function DonorPushEnableGate({
+  requireLogin = true,
+  modal = true,
+  showCard = false,
+}: Props) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
+  const [card, setCard] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<"ask" | "on" | "denied">("ask");
+  const [status, setStatus] = useState<GateStatus>("ask");
 
   useEffect(() => {
     let cancelled = false;
 
     async function boot() {
-      if (!isWebPushSupported()) return;
+      // Brief delay so session cookie is readable after hard login redirect.
+      await new Promise((r) => setTimeout(r, 120));
+      if (cancelled) return;
+
       if (requireLogin) {
-        const ok = await loadLoggedIn({ force: true });
+        let ok = await loadLoggedIn({ force: true });
+        if (!ok) {
+          await new Promise((r) => setTimeout(r, 350));
+          ok = await loadLoggedIn({ force: true });
+        }
         if (!ok || cancelled) return;
       }
 
-      if (Notification.permission === "denied") return;
-
-      let subscribed = false;
-      try {
-        const res = await fetch("/api/push/subscribe", { cache: "no-store" });
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as { subscribed?: boolean };
-        subscribed = Boolean(data.subscribed);
-      } catch {
-        return;
+      let statusRes = await fetchPushStatus();
+      if (!statusRes.ok) {
+        await new Promise((r) => setTimeout(r, 400));
+        statusRes = await fetchPushStatus();
       }
+      if (cancelled) return;
 
-      if (subscribed) {
+      if (statusRes.subscribed) {
         localStorage.setItem("bloodlink_push_on", "1");
+        setOpen(false);
+        setCard(false);
         return;
       }
 
-      // Server has no subscription — clear stale local flag so we still prompt.
       localStorage.removeItem("bloodlink_push_on");
 
-      if (sessionStorage.getItem(SKIP_KEY) === "1") return;
+      if (!isWebPushSupported()) {
+        setStatus("unsupported");
+        if (modal) setOpen(true);
+        if (showCard) setCard(true);
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        setStatus("denied");
+        if (modal) setOpen(true);
+        if (showCard) setCard(true);
+        return;
+      }
 
       if (Notification.permission === "granted") {
         const result = await enableWebPush();
         if (cancelled) return;
         if (result === "granted") {
           localStorage.setItem("bloodlink_push_on", "1");
+          setOpen(false);
+          setCard(false);
           return;
         }
       }
 
-      if (!cancelled) setOpen(true);
+      setStatus("ask");
+      if (modal) setOpen(true);
+      if (showCard) setCard(true);
     }
 
     void boot();
     return () => {
       cancelled = true;
     };
-  }, [requireLogin]);
+  }, [requireLogin, showCard, modal]);
 
   async function onAllow() {
     setBusy(true);
@@ -80,79 +122,115 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     if (result === "granted") {
       setStatus("on");
       localStorage.setItem("bloodlink_push_on", "1");
-      sessionStorage.removeItem(SKIP_KEY);
-      window.setTimeout(() => setOpen(false), 900);
+      window.setTimeout(() => {
+        setOpen(false);
+        setCard(false);
+      }, 900);
       return;
     }
     if (result === "denied") {
       setStatus("denied");
       return;
     }
-    setOpen(false);
+    if (result === "unsupported") {
+      setStatus("unsupported");
+      return;
+    }
+    setStatus("error");
   }
 
-  function onSkip() {
-    sessionStorage.setItem(SKIP_KEY, "1");
-    setOpen(false);
-  }
+  const bodyText =
+    status === "unsupported"
+      ? t.pushUnsupported
+      : status === "denied"
+        ? t.pushDenied
+        : status === "error"
+          ? t.pushEnableError
+          : t.registerPushBody;
 
-  if (!open) return null;
+  const panel = (
+    <>
+      <h2
+        id="push-ask-title"
+        className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[var(--blood-deep)]"
+      >
+        {t.registerPushTitle}
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+        {bodyText}
+      </p>
+
+      {status === "on" ? (
+        <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
+      ) : null}
+
+      {status === "ask" || status === "error" ? (
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void onAllow()}
+            className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
+          >
+            {busy ? t.loading : t.registerPushAllow}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setOpen(false)}
+            className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
+          >
+            {t.registerPushSkip}
+          </button>
+        </div>
+      ) : status === "denied" || status === "unsupported" ? (
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)]"
+        >
+          {t.close}
+        </button>
+      ) : null}
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="push-ask-title"
-        className="animate-[rise_0.35s_ease-out] w-full max-w-md rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] p-6 shadow-2xl sm:p-7"
-      >
-        <h2
-          id="push-ask-title"
-          className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[var(--blood-deep)]"
-        >
-          {t.registerPushTitle}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
-          {t.registerPushBody}
-        </p>
+    <>
+      {open ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="push-ask-title"
+            className="animate-[rise_0.35s_ease-out] w-full max-w-md rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] p-6 shadow-2xl sm:p-7"
+          >
+            {panel}
+          </div>
+        </div>
+      ) : null}
 
-        {status === "on" ? (
-          <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
-        ) : null}
-        {status === "denied" ? (
-          <p className="mt-4 text-sm font-medium text-[var(--blood)]">{t.pushDenied}</p>
-        ) : null}
-
-        {status === "ask" ? (
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+      {showCard && card && status !== "on" ? (
+        <div className="mb-4 rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 shadow-sm">
+          <p className="text-sm font-semibold text-[var(--blood-deep)]">
+            {t.registerPushTitle}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+            {bodyText}
+          </p>
+          {status === "ask" || status === "error" ? (
             <button
               type="button"
               disabled={busy}
               onClick={() => void onAllow()}
-              className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
+              className="btn-primary mt-3"
             >
               {busy ? t.loading : t.registerPushAllow}
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onSkip}
-              className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
-            >
-              {t.registerPushSkip}
-            </button>
-          </div>
-        ) : status === "denied" ? (
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)]"
-          >
-            {t.close}
-          </button>
-        ) : null}
-      </div>
-    </div>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }
 

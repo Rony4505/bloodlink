@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DailyReminder } from "@/components/DailyReminder";
 import { DonationBadge } from "@/components/DonationBadge";
+import { DonorPushEnableGate } from "@/components/DonorPushEnableGate";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -193,6 +194,7 @@ export function DashboardClient() {
   return (
     <>
       <DailyReminder enabled />
+      <DonorPushEnableGate modal={false} showCard />
       <div className="space-y-5">
         <div className="overflow-hidden rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-5">
