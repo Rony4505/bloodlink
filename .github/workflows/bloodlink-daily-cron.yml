@@ -1,0 +1,25 @@
+# Daily BloodLink notification cron (backup to in-app Railway scheduler).
+# 04:05 UTC ≈ 10:05 AM Bangladesh time.
+name: BloodLink daily notifications
+
+on:
+  schedule:
+    - cron: "5 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/cron/notifications
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="https://bloodlinkbd.org/api/cron/notifications"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" "$URL"
+          else
+            curl -fsS "$URL"
+          fi
+          echo
