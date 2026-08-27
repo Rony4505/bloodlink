@@ -54,11 +54,16 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
 
   async function onAllowPush() {
     setPushBusy(true);
-    const result = await enableWebPush();
-    setPushBusy(false);
-    if (result === "granted") setPushDone("on");
-    else if (result === "denied") setPushDone("denied");
-    else setPushDone("skipped");
+    try {
+      const result = await enableWebPush({ recordIntent: true });
+      if (result === "granted") setPushDone("on");
+      else if (result === "denied") setPushDone("denied");
+      else setPushDone("skipped");
+    } catch {
+      setPushDone("skipped");
+    } finally {
+      setPushBusy(false);
+    }
   }
 
   return (

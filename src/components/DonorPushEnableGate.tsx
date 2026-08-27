@@ -121,28 +121,34 @@ export function DonorPushEnableGate({
   async function onAllow() {
     setBusy(true);
     setHint("");
-    const result = await enableWebPush();
-    setBusy(false);
-    if (result === "granted") {
-      setStatus("on");
-      localStorage.setItem("bloodlink_push_on", "1");
-      window.setTimeout(() => {
-        setOpen(false);
-        setCard(false);
-      }, 900);
-      return;
-    }
-    if (result === "denied") {
-      setStatus("denied");
-      return;
-    }
-    if (result === "unsupported") {
+    try {
+      const result = await enableWebPush({ recordIntent: true });
+      if (result === "granted") {
+        setStatus("on");
+        localStorage.setItem("bloodlink_push_on", "1");
+        window.setTimeout(() => {
+          setOpen(false);
+          setCard(false);
+        }, 900);
+        return;
+      }
+      if (result === "denied") {
+        setStatus("denied");
+        return;
+      }
+      if (result === "unsupported") {
+        setStatus("error");
+        setHint(t.pushUnsupported);
+        return;
+      }
       setStatus("error");
-      setHint(t.pushUnsupported);
-      return;
+      setHint(t.pushEnableError);
+    } catch {
+      setStatus("error");
+      setHint(t.pushEnableError);
+    } finally {
+      setBusy(false);
     }
-    setStatus("error");
-    setHint(t.pushEnableError);
   }
 
   const bodyText =
