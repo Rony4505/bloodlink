@@ -1505,15 +1505,51 @@ export async function countPushAllowStats(): Promise<{
   donorCount: number;
   allowedUsers: number;
   subscriptions: number;
+  donors: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    bloodGroup: string;
+    allowed: boolean;
+    subscriptionCount: number;
+  }>;
 }> {
   const db = await ensureDb();
   const list = db.pushSubscriptions || [];
-  const allowed = new Set(list.map((s) => s.userId).filter(Boolean));
+  const countByUser = new Map<string, number>();
+  for (const s of list) {
+    if (!s.userId) continue;
+    countByUser.set(s.userId, (countByUser.get(s.userId) || 0) + 1);
+  }
+  const donors = [...db.donors]
+    .map((d) => {
+      const subscriptionCount = countByUser.get(d.id) || 0;
+      return {
+        id: d.id,
+        name: d.name,
+        email: d.email,
+        phone: d.phone,
+        bloodGroup: d.bloodGroup,
+        allowed: subscriptionCount > 0,
+        subscriptionCount,
+      };
+    })
+    .sort((a, b) => {
+      if (a.allowed !== b.allowed) return a.allowed ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
   return {
     donorCount: db.donors.length,
-    allowedUsers: allowed.size,
+    allowedUsers: donors.filter((d) => d.allowed).length,
     subscriptions: list.length,
+    donors,
   };
+}
+
+export async function donorHasPushSubscription(userId: string): Promise<boolean> {
+  const db = await ensureDb();
+  return (db.pushSubscriptions || []).some((s) => s.userId === userId);
 }
 
 export async function upsertPushSubscription(input: {

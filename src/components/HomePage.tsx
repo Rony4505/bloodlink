@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DailyReminder } from "@/components/DailyReminder";
+import { DonorPushEnableGate } from "@/components/DonorPushEnableGate";
 import { Header } from "@/components/Header";
 import { HomeDonorTotals } from "@/components/HomeBloodGroupStats";
 import { OrgBanners } from "@/components/OrgBanners";
@@ -66,6 +67,7 @@ export function HomePage() {
   return (
     <div className="flex min-h-full flex-col">
       <DailyReminder enabled={loggedIn} />
+      {loggedIn ? <DonorPushEnableGate /> : null}
       <section className="relative min-h-[100svh] overflow-hidden text-white">
         <div className="absolute inset-0 bg-[#1c0a0c]">
           {/* eslint-disable-next-line @next/next/no-img-element */}

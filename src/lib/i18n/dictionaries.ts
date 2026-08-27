@@ -580,6 +580,11 @@ export const dictionaries = {
     pushAllowStats: "Phone alerts allowed",
     pushAllowStatsBody:
       "{allowed} of {donors} accounts enabled browser/phone notifications ({subs} device subscriptions).",
+    pushAllowListHint:
+      "Browsers must approve once — we cannot force-enable on phones. Existing donors are asked on home/dashboard until they allow.",
+    pushAllowStatus: "Push",
+    pushAllowYes: "Allowed",
+    pushAllowNo: "Not yet",
     adminPublishedStories: "Published success stories",
     adminPublishedStoriesHint:
       "Stories already on the homepage. Delete removes them from public view.",
@@ -1170,6 +1175,11 @@ export const dictionaries = {
     pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
     pushAllowStatsBody:
       "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন ব্রাউজার/ফোন নোটিফিকেশন চালু করেছে ({subs}টি ডিভাইস সাবস্ক্রিপশন)।",
+    pushAllowListHint:
+      "ব্রাউজার একবার অনুমতি দিতে হয় — ফোনে জোর করে চালু করা যায় না। পুরনো ডোনার হোম/ড্যাশবোর্ডে Allow না করা পর্যন্ত প্রম্পট পাবে।",
+    pushAllowStatus: "পুশ",
+    pushAllowYes: "Allow করা",
+    pushAllowNo: "এখনো না",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
     adminPublishedStoriesHint:
       "হোমপেজে থাকা গল্প। ডিলিট করলে পাবলিক থেকে সরে যাবে।",
