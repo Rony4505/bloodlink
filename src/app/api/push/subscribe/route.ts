@@ -34,6 +34,19 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+
+    // iPhone Safari/Chrome (and other partial browsers): user allowed notifications
+    // in the browser prompt, but PushManager/subscription may be unavailable.
+    if (body.permissionOnly === true) {
+      await upsertPushSubscription({
+        userId: donor.id,
+        endpoint: `local-permission://${donor.id}`,
+        p256dh: "permission",
+        auth: "permission",
+      });
+      return NextResponse.json({ ok: true, permissionOnly: true });
+    }
+
     const endpoint = String(body.endpoint || "").trim();
     const p256dh = String(body.keys?.p256dh || body.p256dh || "").trim();
     const auth = String(body.keys?.auth || body.auth || "").trim();

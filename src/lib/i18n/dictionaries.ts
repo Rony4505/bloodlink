@@ -577,8 +577,12 @@ export const dictionaries = {
     notifGoldBlessingHint:
       "Once each BD month, send a warm crimson blessing to the current top Gold/Platinum donor.",
     pushDenied: "Notifications are blocked in browser settings.",
+    pushDeniedHint:
+      "Open browser site settings → Notifications → Allow for bloodlinkbd.org, then tap Allow again.",
     pushUnsupported:
-      "This browser cannot show phone alerts. Open BloodLink in Chrome (Android) or add the site to your Home Screen on iPhone, then allow notifications.",
+      "Could not enable alerts in this browser. Tap Allow again, or try Chrome.",
+    pushIosHint:
+      "On iPhone, if the system prompt appears tap Allow. For background alerts, also add BloodLink to your Home Screen.",
     pushEnableError: "Could not enable alerts. Tap Allow again, or try Chrome.",
     pushAllowStats: "Phone alerts allowed",
     pushAllowStatsBody:
@@ -1175,8 +1179,12 @@ export const dictionaries = {
     notifGoldBlessingHint:
       "প্রতি BD মাসে বর্তমান টপ গোল্ড/প্লাটিনাম ডোনারকে আবেগঘন রক্তিম শুভেচ্ছা পাঠাবে।",
     pushDenied: "ব্রাউজার সেটিংসে নোটিফিকেশন ব্লক করা আছে।",
+    pushDeniedHint:
+      "ব্রাউজার সাইট সেটিংস → Notifications → bloodlinkbd.org Allow করুন, তারপর আবার Allow চাপুন।",
     pushUnsupported:
-      "এই ব্রাউজারে ফোন অ্যালার্ট চালু হয় না। Android-এ Chrome দিয়ে BloodLink খুলুন, অথবা iPhone-এ Home Screen-এ অ্যাড করে Allow দিন।",
+      "এই ব্রাউজারে অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome চেষ্টা করুন।",
+    pushIosHint:
+      "iPhone-এ সিস্টেম পারমিশন এলে Allow দিন। ব্যাকগ্রাউন্ড অ্যালার্টের জন্য Home Screen-এ BloodLink অ্যাড করা ভালো।",
     pushEnableError: "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome ব্যবহার করুন।",
     pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
     pushAllowStatsBody:

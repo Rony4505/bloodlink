@@ -33,7 +33,9 @@ export async function sendWebPushToUsers(
       keys.privateKey,
     );
 
-    const subs = await listPushSubscriptions(unique);
+    const subs = (await listPushSubscriptions(unique)).filter(
+      (s) => s.endpoint && !s.endpoint.startsWith("local-permission://"),
+    );
     let sent = 0;
     let failed = 0;
     const body = JSON.stringify({
