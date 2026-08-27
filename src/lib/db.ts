@@ -1500,6 +1500,22 @@ export async function listPushSubscriptions(
   return list.filter((s) => set.has(s.userId));
 }
 
+/** Unique donors with at least one saved web-push subscription (notification allow). */
+export async function countPushAllowStats(): Promise<{
+  donorCount: number;
+  allowedUsers: number;
+  subscriptions: number;
+}> {
+  const db = await ensureDb();
+  const list = db.pushSubscriptions || [];
+  const allowed = new Set(list.map((s) => s.userId).filter(Boolean));
+  return {
+    donorCount: db.donors.length,
+    allowedUsers: allowed.size,
+    subscriptions: list.length,
+  };
+}
+
 export async function upsertPushSubscription(input: {
   userId: string;
   endpoint: string;

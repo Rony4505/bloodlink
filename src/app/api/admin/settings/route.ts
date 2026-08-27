@@ -6,7 +6,7 @@ import {
   isAdminAuthenticated,
   verifyPassword,
 } from "@/lib/auth";
-import { getAdminSettings, updateAdminSettings, broadcastSystemAnnouncement } from "@/lib/db";
+import { getAdminSettings, updateAdminSettings, broadcastSystemAnnouncement, countPushAllowStats } from "@/lib/db";
 import { normalizePhone } from "@/lib/privacy";
 import { normalizeNotificationSettings } from "@/lib/notification-settings";
 import { normalizeBanner, normalizeBannerSlideIntervalSec, normalizeSiteAppearance } from "@/lib/site-cms";
@@ -30,6 +30,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const admin = await getAdminSettings();
+  const pushAllow = await countPushAllowStats();
   return NextResponse.json({
     username: admin.username,
     verifyEmail: admin.verifyEmail,
@@ -40,6 +41,7 @@ export async function GET() {
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
     notificationSettings: normalizeNotificationSettings(admin.notificationSettings),
+    pushAllow,
     banners: admin.banners || [],
     bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
     siteAppearance: normalizeSiteAppearance(admin.siteAppearance),

@@ -577,6 +577,9 @@ export const dictionaries = {
     notifGoldBlessingHint:
       "Once each BD month, send a warm crimson blessing to the current top Gold/Platinum donor.",
     pushDenied: "Notifications are blocked in browser settings.",
+    pushAllowStats: "Phone alerts allowed",
+    pushAllowStatsBody:
+      "{allowed} of {donors} accounts enabled browser/phone notifications ({subs} device subscriptions).",
     adminPublishedStories: "Published success stories",
     adminPublishedStoriesHint:
       "Stories already on the homepage. Delete removes them from public view.",
@@ -1164,6 +1167,9 @@ export const dictionaries = {
     notifGoldBlessingHint:
       "প্রতি BD মাসে বর্তমান টপ গোল্ড/প্লাটিনাম ডোনারকে আবেগঘন রক্তিম শুভেচ্ছা পাঠাবে।",
     pushDenied: "ব্রাউজার সেটিংসে নোটিফিকেশন ব্লক করা আছে।",
+    pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
+    pushAllowStatsBody:
+      "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন ব্রাউজার/ফোন নোটিফিকেশন চালু করেছে ({subs}টি ডিভাইস সাবস্ক্রিপশন)।",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
     adminPublishedStoriesHint:
       "হোমপেজে থাকা গল্প। ডিলিট করলে পাবলিক থেকে সরে যাবে।",
