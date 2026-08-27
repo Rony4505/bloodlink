@@ -23,6 +23,18 @@ Fashion store data lives on the **Smart craft** service Volume at `/app/data`.
 4. Volume mount path: `/app/data`
 5. Redeploy and check `https://bloodlinkbd.org/api/health`
 
+### Daily 10:00 AM (BD) notifications
+
+BloodLink’s Railway **web service** runs an in-app scheduler (every 5 minutes) that
+creates the daily donation reminder after the hour set in Admin → Notifications
+(default **10:00 BD**). No separate Railway Cron Job is required.
+
+Backup: GitHub Action `.github/workflows/bloodlink-daily-cron.yml` pings
+`/api/cron/notifications` at **04:05 UTC** (~10:05 AM BD).
+
+Optional: set `CRON_SECRET` on Railway + as a GitHub Actions secret, then the
+cron URL requires `Authorization: Bearer …`.
+
 ### Other env vars (BloodLink)
 
 - `AUTH_SECRET` = long random string (32+ chars)
