@@ -160,6 +160,11 @@ export function AdminPanel() {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     () => defaultNotificationSettings(),
   );
+  const [pushAllow, setPushAllow] = useState({
+    donorCount: 0,
+    allowedUsers: 0,
+    subscriptions: 0,
+  });
   const [notifSaving, setNotifSaving] = useState(false);
   const [broadcastDraft, setBroadcastDraft] = useState({
     titleEn: "",
@@ -345,6 +350,13 @@ export function AdminPanel() {
           ...defaultNotificationSettings().monthlyGoldBlessing,
           ...data.notificationSettings.monthlyGoldBlessing,
         },
+      });
+    }
+    if (data.pushAllow) {
+      setPushAllow({
+        donorCount: Number(data.pushAllow.donorCount) || 0,
+        allowedUsers: Number(data.pushAllow.allowedUsers) || 0,
+        subscriptions: Number(data.pushAllow.subscriptions) || 0,
       });
     }
     setBanners(Array.isArray(data.banners) ? data.banners : []);
@@ -1570,6 +1582,18 @@ export function AdminPanel() {
                 </h2>
                 <p className="mt-1 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_70%,white)]">
                   {t.notificationSettingsBody}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[color-mix(in_oklab,var(--blood)_20%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--blood-deep)]">
+                  {t.pushAllowStats}
+                </p>
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+                  {t.pushAllowStatsBody
+                    .replace("{allowed}", String(pushAllow.allowedUsers))
+                    .replace("{donors}", String(pushAllow.donorCount))
+                    .replace("{subs}", String(pushAllow.subscriptions))}
                 </p>
               </div>
 
