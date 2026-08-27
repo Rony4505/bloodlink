@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { enableWebPush, isWebPushSupported } from "@/lib/web-push-client";
+import { enableWebPush } from "@/lib/web-push-client";
 
 export type RegisteredDonorSummary = {
   name: string;
@@ -48,7 +48,8 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
 
   useEffect(() => {
     invalidateDonorStats();
-    setPushSupported(isWebPushSupported());
+    // Show Allow on every browser (iPhone Safari/Chrome included).
+    setPushSupported(true);
   }, []);
 
   async function onAllowPush() {

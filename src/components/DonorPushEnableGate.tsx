@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { enableWebPush, isWebPushSupported } from "@/lib/web-push-client";
+import {
+  canAskNotificationPermission,
+  enableWebPush,
+  isWebPushSupported,
+} from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
 
-type GateStatus = "ask" | "on" | "denied" | "unsupported" | "error";
+type GateStatus = "ask" | "on" | "denied" | "error";
 
 type Props = {
   /** When true, only runs if the visitor is a logged-in donor. */
@@ -32,8 +36,8 @@ async function fetchPushStatus(): Promise<{
 }
 
 /**
- * Existing logged-in donors without a saved push subscription get a prompt
- * right after login. Never fails silently — unsupported/denied still show UI.
+ * Existing logged-in donors without a saved push subscription get an Allow
+ * prompt on every browser — including iPhone Safari/Chrome.
  */
 export function DonorPushEnableGate({
   requireLogin = true,
@@ -45,12 +49,12 @@ export function DonorPushEnableGate({
   const [card, setCard] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<GateStatus>("ask");
+  const [hint, setHint] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function boot() {
-      // Brief delay so session cookie is readable after hard login redirect.
       await new Promise((r) => setTimeout(r, 120));
       if (cancelled) return;
 
@@ -79,21 +83,21 @@ export function DonorPushEnableGate({
 
       localStorage.removeItem("bloodlink_push_on");
 
-      if (!isWebPushSupported()) {
-        setStatus("unsupported");
-        if (modal) setOpen(true);
-        if (showCard) setCard(true);
-        return;
-      }
-
-      if (Notification.permission === "denied") {
+      // Always offer Allow — never block iPhone/other browsers behind Close-only UI.
+      if (canAskNotificationPermission() && Notification.permission === "denied") {
         setStatus("denied");
-        if (modal) setOpen(true);
-        if (showCard) setCard(true);
-        return;
+      } else {
+        setStatus("ask");
+        if (!isWebPushSupported()) {
+          setHint(t.pushIosHint);
+        }
       }
 
-      if (Notification.permission === "granted") {
+      if (
+        canAskNotificationPermission() &&
+        Notification.permission === "granted" &&
+        isWebPushSupported()
+      ) {
         const result = await enableWebPush();
         if (cancelled) return;
         if (result === "granted") {
@@ -104,7 +108,6 @@ export function DonorPushEnableGate({
         }
       }
 
-      setStatus("ask");
       if (modal) setOpen(true);
       if (showCard) setCard(true);
     }
@@ -113,10 +116,11 @@ export function DonorPushEnableGate({
     return () => {
       cancelled = true;
     };
-  }, [requireLogin, showCard, modal]);
+  }, [requireLogin, showCard, modal, t.pushIosHint]);
 
   async function onAllow() {
     setBusy(true);
+    setHint("");
     const result = await enableWebPush();
     setBusy(false);
     if (result === "granted") {
@@ -133,20 +137,22 @@ export function DonorPushEnableGate({
       return;
     }
     if (result === "unsupported") {
-      setStatus("unsupported");
+      setStatus("error");
+      setHint(t.pushUnsupported);
       return;
     }
     setStatus("error");
+    setHint(t.pushEnableError);
   }
 
   const bodyText =
-    status === "unsupported"
-      ? t.pushUnsupported
-      : status === "denied"
-        ? t.pushDenied
-        : status === "error"
-          ? t.pushEnableError
-          : t.registerPushBody;
+    status === "denied"
+      ? t.pushDenied
+      : status === "error"
+        ? hint || t.pushEnableError
+        : t.registerPushBody;
+
+  const showAllowActions = status === "ask" || status === "error";
 
   const panel = (
     <>
@@ -159,12 +165,17 @@ export function DonorPushEnableGate({
       <p className="mt-2 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
         {bodyText}
       </p>
+      {status === "ask" && hint ? (
+        <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+          {hint}
+        </p>
+      ) : null}
 
       {status === "on" ? (
         <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
       ) : null}
 
-      {status === "ask" || status === "error" ? (
+      {showAllowActions ? (
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
@@ -183,14 +194,19 @@ export function DonorPushEnableGate({
             {t.registerPushSkip}
           </button>
         </div>
-      ) : status === "denied" || status === "unsupported" ? (
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)]"
-        >
-          {t.close}
-        </button>
+      ) : status === "denied" ? (
+        <div className="mt-5 flex flex-col gap-2">
+          <p className="text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            {t.pushDeniedHint}
+          </p>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)]"
+          >
+            {t.close}
+          </button>
+        </div>
       ) : null}
     </>
   );
@@ -218,7 +234,7 @@ export function DonorPushEnableGate({
           <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
             {bodyText}
           </p>
-          {status === "ask" || status === "error" ? (
+          {showAllowActions ? (
             <button
               type="button"
               disabled={busy}

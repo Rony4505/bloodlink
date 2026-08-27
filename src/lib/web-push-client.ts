@@ -7,6 +7,7 @@ function urlBase64ToUint8Array(base64String: string) {
   return output;
 }
 
+/** Full Web Push (service worker + PushManager) — missing on many iPhone browser tabs. */
 export function isWebPushSupported() {
   return (
     typeof window !== "undefined" &&
@@ -16,38 +17,68 @@ export function isWebPushSupported() {
   );
 }
 
-/** Request permission, register SW, and save push subscription for the logged-in donor. */
-export async function enableWebPush(): Promise<"granted" | "denied" | "unsupported" | "error"> {
-  if (!isWebPushSupported()) return "unsupported";
+/** Any browser that can at least show a permission prompt. */
+export function canAskNotificationPermission() {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+export const LOCAL_PUSH_PERMISSION_PREFIX = "local-permission://";
+
+/**
+ * Request notification permission on every browser (including iPhone Safari/Chrome).
+ * When PushManager is available, also save a real web-push subscription.
+ * When only permission is available (common on iOS tabs), save a permission marker.
+ */
+export async function enableWebPush(): Promise<
+  "granted" | "denied" | "unsupported" | "error"
+> {
+  if (typeof window === "undefined") return "unsupported";
+  if (!("Notification" in window)) return "unsupported";
   if (Notification.permission === "denied") return "denied";
 
   try {
     const perm = await Notification.requestPermission();
     if (perm !== "granted") return "denied";
 
-    const reg =
-      (await navigator.serviceWorker.getRegistration("/sw.js")) ||
-      (await navigator.serviceWorker.register("/sw.js"));
-    await navigator.serviceWorker.ready;
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      try {
+        const reg =
+          (await navigator.serviceWorker.getRegistration("/sw.js")) ||
+          (await navigator.serviceWorker.register("/sw.js"));
+        await navigator.serviceWorker.ready;
 
-    const keyRes = await fetch("/api/push/subscribe");
-    if (!keyRes.ok) return "error";
-    const { publicKey } = (await keyRes.json()) as { publicKey: string };
+        const keyRes = await fetch("/api/push/subscribe", { cache: "no-store" });
+        if (!keyRes.ok) return "error";
+        const { publicKey } = (await keyRes.json()) as { publicKey?: string | null };
+        if (!publicKey) return "error";
 
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
-    const json = sub.toJSON();
-    const save = await fetch("/api/push/subscribe", {
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+        const json = sub.toJSON();
+        const save = await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpoint: json.endpoint,
+            keys: json.keys,
+          }),
+        });
+        if (!save.ok) return "error";
+        localStorage.setItem("bloodlink_push_on", "1");
+        return "granted";
+      } catch {
+        // Fall through to permission-only save (iOS / partial support).
+      }
+    }
+
+    const savePerm = await fetch("/api/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        endpoint: json.endpoint,
-        keys: json.keys,
-      }),
+      body: JSON.stringify({ permissionOnly: true }),
     });
-    if (!save.ok) return "error";
+    if (!savePerm.ok) return "error";
     localStorage.setItem("bloodlink_push_on", "1");
     return "granted";
   } catch {
