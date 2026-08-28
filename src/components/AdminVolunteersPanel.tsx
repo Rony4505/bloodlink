@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AdminVolunteerDetailPanel } from "@/components/AdminVolunteerDetailPanel";
+import { VolunteerVerbalUrlCard } from "@/components/VolunteerVerbalUrlCard";
 import { DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
@@ -8,7 +10,6 @@ import {
   getVolunteerTaskType,
   type VolunteerTaskCategory,
 } from "@/lib/volunteer-tasks";
-import { volunteerJoinUrl, volunteerWorkUrl } from "@/lib/volunteer-urls";
 
 type Activity = {
   id: string;
@@ -96,7 +97,6 @@ export function AdminVolunteersPanel() {
   const [portalUrl, setPortalUrl] = useState(
     "https://bloodlinkbd.org/volunteer/login",
   );
-  const [copied, setCopied] = useState(false);
   const [donorStats, setDonorStats] = useState<
     Record<
       string,
@@ -119,6 +119,13 @@ export function AdminVolunteersPanel() {
       volunteerName: string;
     }[]
   >([]);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [notifyTarget, setNotifyTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [notifyTitle, setNotifyTitle] = useState("BloodLink BD");
+  const [notifyBody, setNotifyBody] = useState("");
 
   const taskGroups = useMemo(() => {
     const groups: Record<VolunteerTaskCategory, typeof VOLUNTEER_TASK_TYPES> = {
@@ -161,38 +168,47 @@ export function AdminVolunteersPanel() {
     setMessage(approved ? t.volunteerDonorApproved : t.volunteerDonorRejected);
   }
 
-  async function notifyVolunteer(v: VolunteerRow) {
-    const title = window.prompt(t.volunteerNotifyTitlePrompt, "BloodLink BD");
-    if (!title) return;
-    const body = window.prompt(t.volunteerNotifyBodyPrompt, "");
-    if (!body) return;
-    const res = await fetch("/api/admin/volunteers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "notify",
-        volunteerId: v.id,
-        title,
-        body,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || t.errorGeneric);
-      return;
+  async function submitNotify() {
+    if (!notifyTarget || !notifyTitle.trim() || !notifyBody.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/volunteers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "notify",
+          volunteerId: notifyTarget.id,
+          title: notifyTitle.trim(),
+          body: notifyBody.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      const sent = data.push?.sent ?? 0;
+      const total = data.targetCount ?? 1;
+      setMessage(
+        notifyTarget.id === "all"
+          ? t.volunteerNotifyBroadcastOk.replace("{sent}", String(sent)).replace("{total}", String(total))
+          : t.volunteerNotifySent,
+      );
+      setNotifyTarget(null);
+      setNotifyBody("");
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
     }
-    setMessage(t.volunteerNotifySent);
   }
 
-  async function copyText(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      setMessage(t.volunteerUrlCopied);
-    } catch {
-      window.prompt(t.volunteerCopyUrl, text);
-    }
+  function openNotifyModal(id: string, name: string) {
+    setNotifyTarget({ id, name });
+    setNotifyTitle("BloodLink BD");
+    setNotifyBody("");
+    setMenuId(null);
   }
 
   async function load() {
@@ -424,12 +440,23 @@ export function AdminVolunteersPanel() {
     <div className="space-y-4">
       {/* Personal URL info */}
       <div className="rounded-2xl bg-[color-mix(in_oklab,#6e1220_8%,white)] px-4 py-4">
-        <p className="text-sm font-semibold text-[var(--blood-deep)]">
-          {t.volunteerPersonalUrlsTitle}
-        </p>
-        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-          {t.volunteerPersonalUrlsHint}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[var(--blood-deep)]">
+              {t.volunteerPersonalUrlsTitle}
+            </p>
+            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+              {t.volunteerPersonalUrlsHint}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-primary px-3 py-1.5 text-xs"
+            onClick={() => openNotifyModal("all", t.volunteerNotifyAllLabel)}
+          >
+            {t.volunteerNotifyAll}
+          </button>
+        </div>
       </div>
 
       {pendingDonors.length ? (
@@ -815,6 +842,21 @@ export function AdminVolunteersPanel() {
           <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
             {t.volunteerList}
           </h2>
+          <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            {t.volunteerListClickHint}
+          </p>
+
+          {detailId ? (
+            <div className="mt-4">
+              <AdminVolunteerDetailPanel
+                volunteerId={detailId}
+                portalUrl={portalUrl}
+                onClose={() => setDetailId(null)}
+                onNotify={(id, name) => openNotifyModal(id, name)}
+              />
+            </div>
+          ) : null}
+
           {!volunteers.length ? (
             <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
               {t.volunteerEmpty}
@@ -832,9 +874,16 @@ export function AdminVolunteersPanel() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-[var(--ink)]">
+                        <button
+                          type="button"
+                          className="font-semibold text-[var(--ink)] underline-offset-2 hover:text-[var(--blood-deep)] hover:underline"
+                          onClick={() => {
+                            setDetailId(v.id);
+                            setExpandedId(null);
+                          }}
+                        >
                           {v.name}
-                        </p>
+                        </button>
                         {!v.enabled ? (
                           <span className="rounded-full bg-[color-mix(in_oklab,var(--ink)_8%,white)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                             {t.volunteerInactive}
@@ -930,55 +979,27 @@ export function AdminVolunteersPanel() {
 
                   {expandedId === v.id ? (
                     <div className="mt-3 space-y-3 border-l-2 border-[color-mix(in_oklab,var(--blood)_25%,white)] pl-4">
-                      <div className="rounded-xl bg-[var(--cream)] p-3 text-xs">
-                        <p className="font-semibold text-[var(--blood-deep)]">
-                          {t.volunteerWorkUrlLabel}
-                        </p>
-                        <p className="mt-1 break-all font-mono">
-                          {volunteerWorkUrl(v.linkToken, portalUrl)}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            className="btn-ghost px-2 py-1"
-                            onClick={() =>
-                              void copyText(volunteerWorkUrl(v.linkToken, portalUrl))
-                            }
-                          >
-                            {t.volunteerCopyUrl}
-                          </button>
-                          <a
-                            className="btn-ghost px-2 py-1"
-                            href={volunteerWorkUrl(v.linkToken, portalUrl)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {t.volunteerOpenUrl}
-                          </a>
-                        </div>
-                        <p className="mt-3 font-semibold text-[var(--blood-deep)]">
-                          {t.volunteerDonorUrlLabel}
-                        </p>
-                        <p className="mt-1 break-all font-mono">
-                          {volunteerJoinUrl(v.linkToken, portalUrl)}
-                        </p>
-                        <button
-                          type="button"
-                          className="btn-ghost mt-2 px-2 py-1"
-                          onClick={() =>
-                            void copyText(volunteerJoinUrl(v.linkToken, portalUrl))
-                          }
-                        >
-                          {t.volunteerCopyUrl}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-primary mt-3 px-3 py-1"
-                          onClick={() => void notifyVolunteer(v)}
-                        >
-                          {t.volunteerSendNotify}
-                        </button>
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <VolunteerVerbalUrlCard
+                          kind="work"
+                          token={v.linkToken}
+                          origin={portalUrl}
+                          compact
+                        />
+                        <VolunteerVerbalUrlCard
+                          kind="join"
+                          token={v.linkToken}
+                          origin={portalUrl}
+                          compact
+                        />
                       </div>
+                      <button
+                        type="button"
+                        className="btn-primary px-3 py-1 text-xs"
+                        onClick={() => openNotifyModal(v.id, v.name)}
+                      >
+                        {t.volunteerSendNotify}
+                      </button>
                       <ul className="space-y-2">
                       {!v.activities.length ? (
                         <li className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
@@ -1047,6 +1068,51 @@ export function AdminVolunteersPanel() {
             </ul>
           )}
         </section>
+      ) : null}
+
+      {notifyTarget ? (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
+              {notifyTarget.id === "all"
+                ? t.volunteerNotifyAll
+                : t.volunteerNotifyOne.replace("{name}", notifyTarget.name)}
+            </h3>
+            <label className="mt-4 block text-sm">
+              <span className="mb-1 block font-medium">{t.volunteerNotifyTitlePrompt}</span>
+              <input
+                className="field"
+                value={notifyTitle}
+                onChange={(e) => setNotifyTitle(e.target.value)}
+              />
+            </label>
+            <label className="mt-3 block text-sm">
+              <span className="mb-1 block font-medium">{t.volunteerNotifyBodyPrompt}</span>
+              <textarea
+                className="field min-h-24"
+                value={notifyBody}
+                onChange={(e) => setNotifyBody(e.target.value)}
+              />
+            </label>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="btn-primary flex-1"
+                disabled={loading || !notifyBody.trim()}
+                onClick={() => void submitNotify()}
+              >
+                {loading ? t.loading : t.volunteerSendNotify}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost flex-1"
+                onClick={() => setNotifyTarget(null)}
+              >
+                {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

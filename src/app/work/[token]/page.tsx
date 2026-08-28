@@ -19,6 +19,7 @@ export default function VolunteerWorkPage({
       subtitle={t.volunteerWorkPageHint}
       showAds={false}
       showStoryForm={false}
+      skipDonorPushGate
     >
       <VolunteerWorkDashboard token={token} />
     </PageShell>

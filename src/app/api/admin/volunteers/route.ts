@@ -4,6 +4,7 @@ import { hashPassword, isAdminAuthenticated } from "@/lib/auth";
 import {
   createVolunteer,
   createVolunteerActivity,
+  createVolunteerNotification,
   deleteVolunteer,
   deleteVolunteerActivity,
   findVolunteerById,
@@ -90,23 +91,48 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const volunteer = await findVolunteerById(volunteerId);
-      if (!volunteer || !volunteer.enabled) {
-        return NextResponse.json({ error: "Volunteer not found" }, { status: 404 });
-      }
-      if (!volunteer.notificationsEnabled) {
+
+      const broadcast = volunteerId === "all";
+      const targets = broadcast
+        ? (await listVolunteers()).filter((v) => v.enabled && v.notificationsEnabled)
+        : [await findVolunteerById(volunteerId)].filter(Boolean);
+
+      if (!targets.length) {
         return NextResponse.json(
-          { error: "Volunteer notifications are off" },
-          { status: 400 },
+          { error: broadcast ? "No eligible volunteers" : "Volunteer not found" },
+          { status: broadcast ? 400 : 404 },
         );
       }
-      const push = await sendWebPushToUsers([volunteerPushUserId(volunteer.id)], {
+
+      const userIds: string[] = [];
+      let stored = 0;
+      for (const volunteer of targets) {
+        if (!volunteer) continue;
+        const workUrl = volunteerWorkUrl(volunteer.linkToken);
+        await createVolunteerNotification({
+          volunteerId: volunteer.id,
+          title,
+          body: message,
+          href: workUrl,
+        });
+        stored += 1;
+        userIds.push(volunteerPushUserId(volunteer.id));
+      }
+
+      const push = await sendWebPushToUsers(userIds, {
         title,
         body: message,
-        url: volunteerWorkUrl(volunteer.linkToken),
-        tag: `volunteer-msg-${volunteer.id}`,
+        url: targets[0] ? volunteerWorkUrl(targets[0]!.linkToken) : "/",
+        tag: broadcast ? `volunteer-broadcast-${Date.now()}` : `volunteer-msg-${volunteerId}`,
       });
-      return NextResponse.json({ ok: true, push });
+
+      return NextResponse.json({
+        ok: true,
+        push,
+        stored,
+        targetCount: targets.length,
+        broadcast,
+      });
     }
 
     if (kind === "activity") {

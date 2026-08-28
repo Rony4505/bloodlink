@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
+import { VolunteerNotificationBell } from "@/components/VolunteerNotificationBell";
+import { VolunteerPushEnableGate } from "@/components/VolunteerPushEnableGate";
+import { VolunteerVerbalUrlCard } from "@/components/VolunteerVerbalUrlCard";
 import { areasForDistrict } from "@/lib/district-areas";
 import { BLOOD_GROUPS, DISTRICTS } from "@/lib/districts";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { volunteerJoinUrl } from "@/lib/volunteer-urls";
 
 type DonorRow = {
   id: string;
@@ -38,15 +40,6 @@ type DashboardData = {
   publicKey: string | null;
 };
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = window.atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i += 1) output[i] = raw.charCodeAt(i);
-  return output;
-}
-
 export function VolunteerWorkDashboard({ token }: { token: string }) {
   const { t } = useLocale();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -55,7 +48,6 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showManual, setShowManual] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
   const [manual, setManual] = useState({
     name: "",
     phone: "",
@@ -66,10 +58,10 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
     tempPassword: "",
   });
 
-  const joinUrl = useMemo(() => {
-    if (typeof window === "undefined") return volunteerJoinUrl(token);
-    return volunteerJoinUrl(token, window.location.origin);
-  }, [token]);
+  const pageOrigin = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    return window.location.origin;
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,55 +85,6 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function copyJoinUrl() {
-    try {
-      await navigator.clipboard.writeText(joinUrl);
-      setMessage(t.volunteerUrlCopied);
-    } catch {
-      window.prompt(t.volunteerCopyUrl, joinUrl);
-    }
-  }
-
-  async function enablePush() {
-    if (!data?.publicKey) {
-      setError(t.volunteerPushUnavailable);
-      return;
-    }
-    setPushBusy(true);
-    setError("");
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
-        setError(t.volunteerPushDenied);
-        return;
-      }
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(data.publicKey),
-      });
-      const body = sub.toJSON();
-      const res = await fetch(
-        `/api/public/volunteer/${encodeURIComponent(token)}/push`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) {
-        setError(t.errorGeneric);
-        return;
-      }
-      setMessage(t.volunteerPushEnabled);
-    } catch {
-      setError(t.volunteerPushUnavailable);
-    } finally {
-      setPushBusy(false);
-    }
-  }
 
   async function submitManual(e: React.FormEvent) {
     e.preventDefault();
@@ -193,7 +136,10 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <header className="rounded-3xl bg-[linear-gradient(145deg,var(--blood-deep),#6b1424)] px-6 py-7 text-white shadow-lg">
+      <header className="relative rounded-3xl bg-[linear-gradient(145deg,var(--blood-deep),#6b1424)] px-6 py-7 text-white shadow-lg">
+        <div className="absolute right-4 top-4">
+          <VolunteerNotificationBell token={token} />
+        </div>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
           {t.volunteerWorkBoard}
         </p>
@@ -231,22 +177,16 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
       {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
       {message ? <p className="text-sm text-[var(--sage)]">{message}</p> : null}
 
-      <section className="rounded-2xl border border-[var(--line)] bg-white/90 p-5 shadow-sm">
-        <h2 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
-          {t.volunteerDonorLinkTitle}
-        </h2>
-        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_58%,white)]">
-          {t.volunteerDonorLinkHint}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <code className="block flex-1 break-all rounded-xl bg-[var(--cream)] px-3 py-2 text-xs">
-            {joinUrl}
-          </code>
-          <button type="button" className="btn-primary" onClick={() => void copyJoinUrl()}>
-            {t.volunteerCopyUrl}
-          </button>
-        </div>
+      <section className="grid gap-4 sm:grid-cols-2">
+        <VolunteerVerbalUrlCard kind="join" token={token} origin={pageOrigin} />
+        <VolunteerVerbalUrlCard kind="work" token={token} origin={pageOrigin} />
       </section>
+
+      <VolunteerPushEnableGate
+        token={token}
+        publicKey={data.publicKey}
+        notificationsEnabled={data.volunteer.notificationsEnabled}
+      />
 
       <section className="rounded-2xl border border-[var(--line)] bg-white/90 p-5 shadow-sm">
         <div className="flex flex-wrap items-end gap-3">
@@ -401,25 +341,6 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
           </ul>
         )}
       </section>
-
-      {data.volunteer.notificationsEnabled && data.publicKey ? (
-        <section className="rounded-2xl border border-[var(--line)] bg-white/90 p-5 shadow-sm">
-          <h2 className="font-[family-name:var(--font-display)] text-lg font-bold">
-            {t.volunteerNotificationsTitle}
-          </h2>
-          <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_58%,white)]">
-            {t.volunteerNotificationsHint}
-          </p>
-          <button
-            type="button"
-            className="btn-primary mt-3"
-            disabled={pushBusy}
-            onClick={() => void enablePush()}
-          >
-            {pushBusy ? t.loading : t.volunteerEnablePush}
-          </button>
-        </section>
-      ) : null}
     </div>
   );
 }

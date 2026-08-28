@@ -1,11 +1,33 @@
 import { NextResponse } from "next/server";
 import {
+  donorHasPushSubscription,
   findVolunteerByLinkToken,
+  listVolunteerNotifications,
   upsertPushSubscription,
 } from "@/lib/db";
 import { volunteerPushUserId } from "@/lib/volunteer-urls";
 
 type RouteParams = { params: Promise<{ token: string }> };
+
+export async function GET(_request: Request, { params }: RouteParams) {
+  const { token } = await params;
+  const volunteer = await findVolunteerByLinkToken(token);
+  if (!volunteer || !volunteer.enabled) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const userId = volunteerPushUserId(volunteer.id);
+  const [subscribed, notifications] = await Promise.all([
+    donorHasPushSubscription(userId),
+    listVolunteerNotifications(volunteer.id),
+  ]);
+
+  return NextResponse.json({
+    subscribed,
+    notificationsEnabled: volunteer.notificationsEnabled,
+    unread: notifications.filter((n) => !n.read).length,
+  });
+}
 
 export async function POST(request: Request, { params }: RouteParams) {
   const { token } = await params;
