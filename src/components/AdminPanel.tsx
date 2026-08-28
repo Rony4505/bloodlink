@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminPopup, AdminSettingsPanel } from "@/components/AdminPopup";
+import { AdminHealthcarePanel } from "@/components/AdminHealthcarePanel";
 import { AdminVolunteersPanel } from "@/components/AdminVolunteersPanel";
 import { DonationBadge } from "@/components/DonationBadge";
 import { PasswordField } from "@/components/PasswordField";
@@ -118,7 +119,7 @@ export function AdminPanel() {
     totalPosts: 0,
   });
   const [tab, setTab] = useState<
-    "donors" | "posts" | "contacts" | "volunteers" | "settings"
+    "donors" | "posts" | "contacts" | "volunteers" | "healthcare" | "settings"
   >("donors");
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
@@ -1095,6 +1096,13 @@ export function AdminPanel() {
           </button>
           <button
             type="button"
+            className={tab === "healthcare" ? "btn-primary" : "btn-ghost"}
+            onClick={() => setTab("healthcare")}
+          >
+            {t.adminHealthcare}
+          </button>
+          <button
+            type="button"
             className={tab === "settings" ? "btn-primary" : "btn-ghost"}
             onClick={() => setTab("settings")}
           >
@@ -1107,6 +1115,8 @@ export function AdminPanel() {
       </div>
 
       {tab === "volunteers" ? <AdminVolunteersPanel /> : null}
+
+      {tab === "healthcare" ? <AdminHealthcarePanel /> : null}
 
       {tab === "contacts" ? (
         <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white/90 shadow-sm">
