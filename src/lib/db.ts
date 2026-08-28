@@ -1424,6 +1424,52 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
   });
 }
 
+export async function createVolunteerNotification(input: {
+  volunteerId: string;
+  title: string;
+  body: string;
+  href?: string;
+}): Promise<AppNotification> {
+  return withWrite(async (db) => {
+    const { volunteerPushUserId } = await import("./volunteer-urls");
+    const notification: AppNotification = {
+      id: randomUUID(),
+      userId: volunteerPushUserId(input.volunteerId),
+      title: input.title,
+      body: input.body,
+      type: "system",
+      href: input.href || "/",
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    db.notifications.push(notification);
+    await persist(db);
+    return notification;
+  });
+}
+
+export async function markVolunteerNotificationRead(
+  volunteerId: string,
+  notificationId: string,
+): Promise<boolean> {
+  const { volunteerPushUserId } = await import("./volunteer-urls");
+  return markNotificationRead(volunteerPushUserId(volunteerId), notificationId);
+}
+
+export async function markAllVolunteerNotificationsRead(
+  volunteerId: string,
+): Promise<void> {
+  const { volunteerPushUserId } = await import("./volunteer-urls");
+  return markAllNotificationsRead(volunteerPushUserId(volunteerId));
+}
+
+export async function listVolunteerNotifications(
+  volunteerId: string,
+): Promise<AppNotification[]> {
+  const { volunteerPushUserId } = await import("./volunteer-urls");
+  return listNotifications(volunteerPushUserId(volunteerId));
+}
+
 export async function createDailyRemindersIfNeeded(
   todayKey = bangladeshDateKey(),
 ): Promise<number> {

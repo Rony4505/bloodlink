@@ -14,6 +14,7 @@ export function PageShell({
   compactHeader = false,
   showAds = true,
   showStoryForm = true,
+  skipDonorPushGate = false,
 }: {
   children: React.ReactNode;
   title: string;
@@ -24,11 +25,13 @@ export function PageShell({
   showAds?: boolean;
   /** Success-story form in footer. */
   showStoryForm?: boolean;
+  /** Volunteer/token pages should not show donor push popup. */
+  skipDonorPushGate?: boolean;
 }) {
   const ads = Boolean(showAds && bannerPage);
   return (
     <div className="flex min-h-full flex-col">
-      <DonorPushEnableGate />
+      {skipDonorPushGate ? null : <DonorPushEnableGate />}
       <div
         className={`relative overflow-hidden bg-[linear-gradient(145deg,#6e1220_0%,#9b1b2e_45%,#3d1a1f_100%)] pb-16 pt-24 text-white sm:pt-28`}
       >

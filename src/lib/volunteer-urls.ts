@@ -44,3 +44,35 @@ export function formatVolunteerDateTime(iso: string, locale = "bn-BD"): string {
     return iso;
   }
 }
+
+/** Split token into spoken chunks (e.g. ABCD · EFGH · HIJK). */
+export function verbalTokenCode(token: string): string {
+  const clean = token.replace(/[^a-zA-Z0-9]/g, "");
+  const parts: string[] = [];
+  for (let i = 0; i < clean.length; i += 4) {
+    parts.push(clean.slice(i, i + 4));
+  }
+  return parts.join(" · ");
+}
+
+export type VolunteerVerbalLink = {
+  host: string;
+  path: "join" | "work";
+  code: string;
+  url: string;
+};
+
+export function volunteerVerbalLink(
+  kind: "join" | "work",
+  token: string,
+  origin = siteOrigin(),
+): VolunteerVerbalLink {
+  const host = origin.replace(/^https?:\/\//, "");
+  const url = kind === "join" ? volunteerJoinUrl(token, origin) : volunteerWorkUrl(token, origin);
+  return {
+    host,
+    path: kind,
+    code: verbalTokenCode(token),
+    url,
+  };
+}
