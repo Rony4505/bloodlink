@@ -162,7 +162,10 @@ async function confirmRegistration(body: unknown) {
   const emailOk = hashCode(parsed.data.emailCode) === pending.emailCodeHash;
   if (!emailOk) {
     return NextResponse.json(
-      { error: "Incorrect Gmail verification code" },
+      {
+        error:
+          "Incorrect verification code. Use the 6-digit code from your latest email only (not an older message). Tap Resend if needed.",
+      },
       { status: 400 },
     );
   }

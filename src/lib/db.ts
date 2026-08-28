@@ -835,22 +835,42 @@ export async function createPendingRegistration(
 ): Promise<PendingRegistration> {
   return withWrite(async (db) => {
     purgeExpiredPending(db);
-    db.pendingRegistrations = (db.pendingRegistrations || []).filter(
-      (p) =>
-        p.email.toLowerCase() !== input.email.toLowerCase() &&
-        normalizePhone(p.phone) !== normalizePhone(input.phone),
-    );
+    const emailKey = input.email.toLowerCase();
+    const phoneKey = normalizePhone(input.phone);
     const now = Date.now();
-    const pending = normalizePendingRegistration({
-      ...input,
-      id: randomUUID(),
-      emailConfirmed: false,
-      phoneConfirmed: false,
-      createdAt: new Date(now).toISOString(),
-      expiresAt: new Date(now + PENDING_REG_TTL_MS).toISOString(),
-    });
-    if (!pending) throw new Error("Invalid pending registration");
-    db.pendingRegistrations.push(pending);
+    const existingIndex = (db.pendingRegistrations || []).findIndex(
+      (p) =>
+        p.email.toLowerCase() === emailKey ||
+        normalizePhone(p.phone) === phoneKey,
+    );
+
+    const expiresAt = new Date(now + PENDING_REG_TTL_MS).toISOString();
+    let pending: PendingRegistration | null;
+
+    if (existingIndex >= 0) {
+      pending = normalizePendingRegistration({
+        ...db.pendingRegistrations[existingIndex],
+        ...input,
+        id: db.pendingRegistrations[existingIndex].id,
+        emailConfirmed: false,
+        phoneConfirmed: false,
+        createdAt: db.pendingRegistrations[existingIndex].createdAt,
+        expiresAt,
+      });
+      if (!pending) throw new Error("Invalid pending registration");
+      db.pendingRegistrations[existingIndex] = pending;
+    } else {
+      pending = normalizePendingRegistration({
+        ...input,
+        id: randomUUID(),
+        emailConfirmed: false,
+        phoneConfirmed: false,
+        createdAt: new Date(now).toISOString(),
+        expiresAt,
+      });
+      if (!pending) throw new Error("Invalid pending registration");
+      db.pendingRegistrations.push(pending);
+    }
     await persist(db);
     return pending;
   });

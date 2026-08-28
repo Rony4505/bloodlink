@@ -141,7 +141,13 @@ async function verifyResetOtp(body: unknown) {
   }
 
   if (hashCode(parsed.data.code) !== donor.pendingResetCodeHash) {
-    return NextResponse.json({ error: "Incorrect Gmail OTP" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          "Incorrect verification code. Use the latest email OTP only, or tap Resend.",
+      },
+      { status: 400 },
+    );
   }
 
   await updateDonor(donor.id, {
