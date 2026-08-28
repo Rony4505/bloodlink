@@ -22,11 +22,7 @@ export async function GET(request: Request) {
   }
 
   const volunteer = await findVolunteerById(volunteerId);
-  if (!volunteer) {
-    return NextResponse.json({ error: "Volunteer not found" }, { status: 404 });
-  }
-
-  const all = await listVolunteerDonorSummaries(volunteer.id);
+  const all = await listVolunteerDonorSummaries(volunteerId);
   const approved = all.filter((d) => d.volunteerApproved);
   const filtered = date
     ? approved.filter((d) => d.createdAt.slice(0, 10) === date)
@@ -41,18 +37,34 @@ export async function GET(request: Request) {
     dayCounts[day] = (dayCounts[day] || 0) + 1;
   }
 
-  const activities = await listVolunteerActivities(volunteer.id);
+  const activities = await listVolunteerActivities(volunteerId);
+
+  if (!volunteer && !all.length && !activities.length) {
+    return NextResponse.json({ error: "Volunteer not found" }, { status: 404 });
+  }
 
   return NextResponse.json({
-    volunteer: {
-      id: volunteer.id,
-      name: volunteer.name,
-      role: volunteer.role,
-      district: volunteer.district,
-      linkToken: volunteer.linkToken,
-      notificationsEnabled: volunteer.notificationsEnabled,
-      enabled: volunteer.enabled,
-    },
+    volunteer: volunteer
+      ? {
+          id: volunteer.id,
+          name: volunteer.name,
+          role: volunteer.role,
+          district: volunteer.district,
+          linkToken: volunteer.linkToken,
+          notificationsEnabled: volunteer.notificationsEnabled,
+          enabled: volunteer.enabled,
+          removed: false,
+        }
+      : {
+          id: volunteerId,
+          name: "Former volunteer",
+          role: "",
+          district: "",
+          linkToken: "",
+          notificationsEnabled: false,
+          enabled: false,
+          removed: true,
+        },
     stats: {
       totalListed: all.length,
       totalApproved: approved.length,

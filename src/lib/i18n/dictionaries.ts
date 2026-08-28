@@ -156,7 +156,8 @@ export const dictionaries = {
     volunteerNoWork: "No work logged yet.",
     volunteerEnable: "Enable",
     volunteerDisable: "Disable",
-    volunteerDeleteConfirm: "Delete this volunteer and all their work logs?",
+    volunteerDeleteConfirm:
+      "Remove this volunteer only? Their added donors and work records will stay on BloodLink.",
     volunteerTotal: "Volunteers",
     volunteerActive: "Active",
     volunteerActivities: "Work logs",
@@ -837,7 +838,8 @@ export const dictionaries = {
     volunteerNoWork: "এখনো কোনো কাজ লগ হয়নি।",
     volunteerEnable: "সক্রিয়",
     volunteerDisable: "নিষ্ক্রিয়",
-    volunteerDeleteConfirm: "এই ভলান্টিয়ার ও তার সব কাজের লগ মুছবেন?",
+    volunteerDeleteConfirm:
+      "শুধু ভলান্টিয়ার মুছবেন? তার যোগ করা ডোনার ও কাজের রেকর্ড BloodLink-এ থাকবে।",
     volunteerTotal: "ভলান্টিয়ার",
     volunteerActive: "সক্রিয়",
     volunteerActivities: "কাজের লগ",
