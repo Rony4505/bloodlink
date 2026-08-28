@@ -17,7 +17,6 @@ export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }
     { href: "/warnings", label: t.warningsNav },
     { href: "/about", label: t.about },
     { href: "/privacy", label: t.privacy },
-    { href: "/volunteer/login", label: t.volunteerLogin },
   ] as const;
 
   return (

@@ -8,6 +8,7 @@ import {
   getVolunteerTaskType,
   type VolunteerTaskCategory,
 } from "@/lib/volunteer-tasks";
+import { volunteerJoinUrl, volunteerWorkUrl } from "@/lib/volunteer-urls";
 
 type Activity = {
   id: string;
@@ -31,6 +32,8 @@ type VolunteerRow = {
   username: string;
   hasLogin: boolean;
   enabled: boolean;
+  linkToken: string;
+  notificationsEnabled: boolean;
   activityCount: number;
   doneCount: number;
   inProgressCount: number;
@@ -94,6 +97,28 @@ export function AdminVolunteersPanel() {
     "https://bloodlinkbd.org/volunteer/login",
   );
   const [copied, setCopied] = useState(false);
+  const [donorStats, setDonorStats] = useState<
+    Record<
+      string,
+      {
+        totalDonors: number;
+        approvedDonors: number;
+        pendingManual: number;
+        linkDonors: number;
+      }
+    >
+  >({});
+  const [pendingDonors, setPendingDonors] = useState<
+    {
+      id: string;
+      name: string;
+      bloodGroup: string;
+      district: string;
+      area: string;
+      createdAt: string;
+      volunteerName: string;
+    }[]
+  >([]);
 
   const taskGroups = useMemo(() => {
     const groups: Record<VolunteerTaskCategory, typeof VOLUNTEER_TASK_TYPES> = {
@@ -116,19 +141,76 @@ export function AdminVolunteersPanel() {
       "",
     );
     const origin = configured || window.location.origin.replace(/\/$/, "");
-    setPortalUrl(`${origin}/volunteer/login`);
+    setPortalUrl(origin);
   }, []);
+
+  async function loadPendingDonors() {
+    const res = await fetch("/api/admin/volunteer-donors");
+    if (!res.ok) return;
+    const data = await res.json();
+    setPendingDonors(data.pending || []);
+  }
+
+  async function approveDonor(donorId: string, approved: boolean) {
+    await fetch("/api/admin/volunteer-donors", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ donorId, approved }),
+    });
+    await Promise.all([load(), loadPendingDonors()]);
+    setMessage(approved ? t.volunteerDonorApproved : t.volunteerDonorRejected);
+  }
+
+  async function notifyVolunteer(v: VolunteerRow) {
+    const title = window.prompt(t.volunteerNotifyTitlePrompt, "BloodLink BD");
+    if (!title) return;
+    const body = window.prompt(t.volunteerNotifyBodyPrompt, "");
+    if (!body) return;
+    const res = await fetch("/api/admin/volunteers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "notify",
+        volunteerId: v.id,
+        title,
+        body,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || t.errorGeneric);
+      return;
+    }
+    setMessage(t.volunteerNotifySent);
+  }
+
+  async function copyText(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      setMessage(t.volunteerUrlCopied);
+    } catch {
+      window.prompt(t.volunteerCopyUrl, text);
+    }
+  }
 
   async function load() {
     const res = await fetch("/api/admin/volunteers");
     if (!res.ok) return;
     const data = await res.json();
     setVolunteers(data.volunteers || []);
+    const map: typeof donorStats = {};
+    for (const row of data.donorStats || []) {
+      map[row.volunteerId] = row;
+    }
+    setDonorStats(map);
     setStats(data.stats || { total: 0, active: 0, activities: 0 });
   }
 
   useEffect(() => {
     void load();
+    void loadPendingDonors();
   }, []);
 
   function typeLabel(type: string) {
@@ -156,17 +238,6 @@ export function AdminVolunteersPanel() {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 16);
-  }
-
-  async function copyPortalUrl() {
-    try {
-      await navigator.clipboard.writeText(portalUrl);
-      setCopied(true);
-      setMessage(t.volunteerUrlCopied);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt(t.volunteerCopyUrl, portalUrl);
-    }
   }
 
   async function addVolunteer(e: React.FormEvent) {
@@ -351,34 +422,52 @@ export function AdminVolunteersPanel() {
 
   return (
     <div className="space-y-4">
-      {/* Slim portal bar */}
-      <div className="flex flex-col gap-2 rounded-2xl bg-[color-mix(in_oklab,#2f6b4f_10%,white)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#245a40]">
-            {t.volunteerPortalUrlTitle}
-          </p>
-          <p className="mt-0.5 truncate font-mono text-sm text-[var(--ink)]">
-            {portalUrl}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            onClick={() => void copyPortalUrl()}
-          >
-            {copied ? t.volunteerUrlCopied : t.volunteerCopyUrl}
-          </button>
-          <a
-            href={portalUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-ghost px-4 py-2 text-sm"
-          >
-            {t.volunteerOpenUrl}
-          </a>
-        </div>
+      {/* Personal URL info */}
+      <div className="rounded-2xl bg-[color-mix(in_oklab,#6e1220_8%,white)] px-4 py-4">
+        <p className="text-sm font-semibold text-[var(--blood-deep)]">
+          {t.volunteerPersonalUrlsTitle}
+        </p>
+        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+          {t.volunteerPersonalUrlsHint}
+        </p>
       </div>
+
+      {pendingDonors.length ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+          <h3 className="font-semibold text-amber-950">{t.volunteerPendingDonorsTitle}</h3>
+          <ul className="mt-3 space-y-2">
+            {pendingDonors.map((d) => (
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-sm"
+              >
+                <div>
+                  <p className="font-medium">{d.name} · {d.bloodGroup}</p>
+                  <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    {d.area}, {d.district} · {d.volunteerName}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="btn-primary px-3 py-1 text-xs"
+                    onClick={() => void approveDonor(d.id, true)}
+                  >
+                    {t.volunteerApproveDonor}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost px-3 py-1 text-xs"
+                    onClick={() => void approveDonor(d.id, false)}
+                  >
+                    {t.reject}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* Simple stats */}
       <p className="text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
@@ -465,7 +554,8 @@ export function AdminVolunteersPanel() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-medium">
-                {t.volunteerUsername}
+                {t.volunteerUsername}{" "}
+                <span className="font-normal opacity-60">({t.emailOptional})</span>
               </span>
               <input
                 className="field"
@@ -473,12 +563,14 @@ export function AdminVolunteersPanel() {
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, username: e.target.value }))
                 }
-                required
                 autoComplete="off"
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">{t.password}</span>
+              <span className="mb-1 block font-medium">
+                {t.password}{" "}
+                <span className="font-normal opacity-60">({t.emailOptional})</span>
+              </span>
               <input
                 className="field"
                 type="text"
@@ -486,7 +578,6 @@ export function AdminVolunteersPanel() {
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, password: e.target.value }))
                 }
-                required
                 minLength={6}
                 autoComplete="off"
               />
@@ -759,6 +850,12 @@ export function AdminVolunteersPanel() {
                           .replace("{total}", String(v.activityCount))
                           .replace("{done}", String(v.doneCount))
                           .replace("{progress}", String(v.inProgressCount))}
+                        {donorStats[v.id]
+                          ? ` · ${t.volunteerDonorCount.replace(
+                              "{count}",
+                              String(donorStats[v.id].approvedDonors),
+                            )}`
+                          : ""}
                       </p>
                     </div>
                     <div className="relative shrink-0">
@@ -832,7 +929,57 @@ export function AdminVolunteersPanel() {
                   </div>
 
                   {expandedId === v.id ? (
-                    <ul className="mt-3 space-y-2 border-l-2 border-[color-mix(in_oklab,var(--blood)_25%,white)] pl-4">
+                    <div className="mt-3 space-y-3 border-l-2 border-[color-mix(in_oklab,var(--blood)_25%,white)] pl-4">
+                      <div className="rounded-xl bg-[var(--cream)] p-3 text-xs">
+                        <p className="font-semibold text-[var(--blood-deep)]">
+                          {t.volunteerWorkUrlLabel}
+                        </p>
+                        <p className="mt-1 break-all font-mono">
+                          {volunteerWorkUrl(v.linkToken, portalUrl)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="btn-ghost px-2 py-1"
+                            onClick={() =>
+                              void copyText(volunteerWorkUrl(v.linkToken, portalUrl))
+                            }
+                          >
+                            {t.volunteerCopyUrl}
+                          </button>
+                          <a
+                            className="btn-ghost px-2 py-1"
+                            href={volunteerWorkUrl(v.linkToken, portalUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {t.volunteerOpenUrl}
+                          </a>
+                        </div>
+                        <p className="mt-3 font-semibold text-[var(--blood-deep)]">
+                          {t.volunteerDonorUrlLabel}
+                        </p>
+                        <p className="mt-1 break-all font-mono">
+                          {volunteerJoinUrl(v.linkToken, portalUrl)}
+                        </p>
+                        <button
+                          type="button"
+                          className="btn-ghost mt-2 px-2 py-1"
+                          onClick={() =>
+                            void copyText(volunteerJoinUrl(v.linkToken, portalUrl))
+                          }
+                        >
+                          {t.volunteerCopyUrl}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-primary mt-3 px-3 py-1"
+                          onClick={() => void notifyVolunteer(v)}
+                        >
+                          {t.volunteerSendNotify}
+                        </button>
+                      </div>
+                      <ul className="space-y-2">
                       {!v.activities.length ? (
                         <li className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                           {t.volunteerNoWork}
@@ -892,7 +1039,8 @@ export function AdminVolunteersPanel() {
                           </li>
                         ))
                       )}
-                    </ul>
+                      </ul>
+                    </div>
                   ) : null}
                 </li>
               ))}

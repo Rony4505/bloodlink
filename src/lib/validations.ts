@@ -260,8 +260,10 @@ export const volunteerSchema = z.object({
     .trim()
     .min(3)
     .max(40)
-    .regex(/^[a-zA-Z0-9._-]+$/, "Username: letters, numbers, . _ - only"),
-  password: z.string().min(6).max(72),
+    .regex(/^[a-zA-Z0-9._-]+$/, "Username: letters, numbers, . _ - only")
+    .optional()
+    .or(z.literal("")),
+  password: z.string().min(6).max(72).optional().or(z.literal("")),
   enabled: z.boolean().optional().default(true),
 });
 
