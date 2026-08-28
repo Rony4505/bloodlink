@@ -2030,7 +2030,7 @@ export async function listPendingVolunteerDonors(): Promise<
       volunteerSource: d.volunteerSource,
       volunteerApproved: d.volunteerApproved,
       volunteerId: d.createdByVolunteerId!,
-      volunteerName: volunteerMap.get(d.createdByVolunteerId!) || "—",
+      volunteerName: volunteerMap.get(d.createdByVolunteerId!) || "— (volunteer removed)",
     }));
 }
 
@@ -2149,9 +2149,7 @@ export async function deleteVolunteer(id: string): Promise<boolean> {
   return withWrite(async (db) => {
     const before = (db.volunteers || []).length;
     db.volunteers = (db.volunteers || []).filter((v) => v.id !== id);
-    db.volunteerActivities = (db.volunteerActivities || []).filter(
-      (a) => a.volunteerId !== id,
-    );
+    // Keep volunteerActivities and donor records (createdByVolunteerId) — only remove the volunteer profile and URLs.
     if ((db.volunteers || []).length === before) return false;
     await persist(db);
     return true;
