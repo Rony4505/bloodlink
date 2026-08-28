@@ -11,6 +11,7 @@ import {
   type RegisteredDonorSummary,
 } from "@/components/RegisterSuccessModal";
 import { markDonorSessionActive } from "@/lib/session-me-client";
+import { normalizeOtpCode } from "@/lib/otp-code";
 
 type Step = "form" | "otp";
 
@@ -152,9 +153,10 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
               inputMode="numeric"
               autoComplete="one-time-code"
               value={emailCode}
-              onChange={(e) => setEmailCode(e.target.value)}
+              onChange={(e) => setEmailCode(normalizeOtpCode(e.target.value))}
               required
               maxLength={10}
+              placeholder="123456"
             />
           </label>
           {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}

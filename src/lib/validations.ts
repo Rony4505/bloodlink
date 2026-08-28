@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BLOOD_GROUPS, DISTRICTS } from "./districts";
 import { isValidBdPhone, normalizePhone } from "./privacy";
+import { normalizeOtpCode } from "./otp-code";
 
 const bloodGroupSchema = z.enum(BLOOD_GROUPS);
 const districtSchema = z.enum(DISTRICTS);
@@ -130,7 +131,13 @@ export const postSchema = z.object({
 
 export const registerConfirmSchema = z.object({
   pendingId: z.string().uuid(),
-  emailCode: z.string().trim().min(4).max(10),
+  emailCode: z
+    .string()
+    .trim()
+    .min(1)
+    .max(20)
+    .transform(normalizeOtpCode)
+    .refine((v) => v.length >= 4 && v.length <= 10, "Invalid verification code"),
 });
 
 export const registerResendSchema = z.object({
@@ -144,7 +151,13 @@ export const resetPasswordSendSchema = z.object({
 
 export const resetPasswordVerifySchema = z.object({
   email: z.string().trim().email().max(120),
-  code: z.string().trim().min(4).max(10),
+  code: z
+    .string()
+    .trim()
+    .min(1)
+    .max(20)
+    .transform(normalizeOtpCode)
+    .refine((v) => v.length >= 4 && v.length <= 10, "Invalid verification code"),
 });
 
 export const resetPasswordConfirmSchema = z.object({
