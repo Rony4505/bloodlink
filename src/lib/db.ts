@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import {
   access,
   copyFile,
@@ -183,6 +183,16 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
     createdByVolunteerId: raw.createdByVolunteerId
       ? String(raw.createdByVolunteerId)
       : null,
+    volunteerSource:
+      raw.volunteerSource === "link" || raw.volunteerSource === "manual"
+        ? raw.volunteerSource
+        : null,
+    volunteerApproved:
+      raw.volunteerApproved !== undefined
+        ? Boolean(raw.volunteerApproved)
+        : raw.createdByVolunteerId
+          ? raw.volunteerSource === "link"
+          : true,
     available: isDonorAvailable(gender, lastDonationDate),
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
@@ -242,6 +252,9 @@ function normalizePendingRegistration(
     phoneCodeHash: String(raw.phoneCodeHash || ""),
     emailConfirmed: Boolean(raw.emailConfirmed),
     phoneConfirmed: Boolean(raw.phoneConfirmed),
+    createdByVolunteerId: raw.createdByVolunteerId
+      ? String(raw.createdByVolunteerId)
+      : null,
     expiresAt: String(raw.expiresAt || ""),
     createdAt: String(raw.createdAt || new Date().toISOString()),
   };
@@ -264,6 +277,10 @@ function normalizePendingSuccessStory(
   };
 }
 
+function newVolunteerLinkToken(): string {
+  return randomBytes(18).toString("base64url");
+}
+
 function normalizeVolunteer(
   raw: Partial<Volunteer> | null | undefined,
 ): Volunteer | null {
@@ -279,6 +296,8 @@ function normalizeVolunteer(
     username: String(raw.username || "").trim().toLowerCase(),
     passwordHash: String(raw.passwordHash || ""),
     enabled: raw.enabled !== false,
+    linkToken: String(raw.linkToken || "").trim() || newVolunteerLinkToken(),
+    notificationsEnabled: raw.notificationsEnabled !== false,
     createdAt: String(raw.createdAt || new Date().toISOString()),
     updatedAt: String(raw.updatedAt || raw.createdAt || new Date().toISOString()),
   };
@@ -349,6 +368,8 @@ export function toPublicVolunteer(v: Volunteer) {
     username: v.username,
     hasLogin: Boolean(v.username && v.passwordHash),
     enabled: v.enabled,
+    linkToken: v.linkToken,
+    notificationsEnabled: v.notificationsEnabled,
     createdAt: v.createdAt,
     updatedAt: v.updatedAt,
   };
@@ -456,11 +477,39 @@ async function createEmptyDb(): Promise<DatabaseShape> {
   };
 }
 
+function applySchemaMigrations(db: DatabaseShape): boolean {
+  let changed = false;
+  db.volunteers = (db.volunteers || []).map((v, i) => {
+    const normalized = normalizeVolunteer(v);
+    if (!normalized) return v;
+    const raw = db.volunteers![i];
+    if (!raw.linkToken || raw.notificationsEnabled === undefined) {
+      changed = true;
+      return normalized;
+    }
+    return v;
+  });
+  db.donors = db.donors.map((d, i) => {
+    const raw = db.donors[i];
+    if (
+      raw.volunteerSource === undefined ||
+      raw.volunteerApproved === undefined
+    ) {
+      changed = true;
+      return normalizeDonor(raw);
+    }
+    return d;
+  });
+  return changed;
+}
+
 async function hydrateParsed(
   raw: Partial<DatabaseShape>,
 ): Promise<{ db: DatabaseShape; needsMigrate: boolean }> {
   const { admin, needsMigrate } = await resolveAdmin(raw);
-  return { db: shapeFromParsed(raw, admin), needsMigrate };
+  const db = shapeFromParsed(raw, admin);
+  const schemaChanged = applySchemaMigrations(db);
+  return { db, needsMigrate: needsMigrate || schemaChanged };
 }
 
 async function loadDbFromStores(): Promise<DatabaseShape> {
@@ -971,6 +1020,13 @@ export async function createDonor(
     | "updatedAt"
     | "available"
     | "createdByVolunteerId"
+    | "pendingEmailCodeHash"
+    | "pendingPhoneCodeHash"
+    | "pendingResetCodeHash"
+    | "pendingResetChannel"
+    | "pendingResetExpiresAt"
+    | "volunteerSource"
+    | "volunteerApproved"
   > &
     Partial<
       Pick<
@@ -984,6 +1040,8 @@ export async function createDonor(
         | "pendingResetExpiresAt"
         | "donationCount"
         | "createdByVolunteerId"
+        | "volunteerSource"
+        | "volunteerApproved"
       >
     >,
 ): Promise<Donor> {
@@ -1007,6 +1065,10 @@ export async function createDonor(
       pendingResetChannel: input.pendingResetChannel ?? null,
       pendingResetExpiresAt: input.pendingResetExpiresAt ?? null,
       createdByVolunteerId: input.createdByVolunteerId ?? null,
+      volunteerSource: input.volunteerSource ?? null,
+      volunteerApproved:
+        input.volunteerApproved ??
+        (input.volunteerSource === "link" ? true : input.createdByVolunteerId ? false : true),
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
@@ -1054,6 +1116,8 @@ export async function updateDonor(
       | "pendingResetChannel"
       | "pendingResetExpiresAt"
       | "createdByVolunteerId"
+      | "volunteerSource"
+      | "volunteerApproved"
     >
   >,
 ): Promise<Donor | null> {
@@ -1815,6 +1879,102 @@ export async function findVolunteerById(id: string): Promise<Volunteer | null> {
   return found ? normalizeVolunteer(found) : null;
 }
 
+export async function findVolunteerByLinkToken(
+  token: string,
+): Promise<Volunteer | null> {
+  const db = await ensureDb();
+  const key = token.trim();
+  if (!key) return null;
+  const found = (db.volunteers || []).find(
+    (v) => String(v.linkToken || "") === key,
+  );
+  return found ? normalizeVolunteer(found) : null;
+}
+
+export type VolunteerDonorSummary = {
+  id: string;
+  name: string;
+  bloodGroup: string;
+  district: string;
+  area: string;
+  createdAt: string;
+  volunteerSource: "link" | "manual" | null;
+  volunteerApproved: boolean;
+};
+
+export async function listVolunteerDonorSummaries(
+  volunteerId: string,
+  opts?: { date?: string; approvedOnly?: boolean },
+): Promise<VolunteerDonorSummary[]> {
+  const db = await ensureDb();
+  const date = opts?.date?.slice(0, 10);
+  return db.donors
+    .map((d) => normalizeDonor(d))
+    .filter((d) => d.createdByVolunteerId === volunteerId)
+    .filter((d) => (opts?.approvedOnly ? d.volunteerApproved : true))
+    .filter((d) => {
+      if (!date) return true;
+      return d.createdAt.slice(0, 10) === date;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .map((d) => ({
+      id: d.id,
+      name: d.name,
+      bloodGroup: d.bloodGroup,
+      district: d.district,
+      area: d.area,
+      createdAt: d.createdAt,
+      volunteerSource: d.volunteerSource,
+      volunteerApproved: d.volunteerApproved,
+    }));
+}
+
+export async function listPendingVolunteerDonors(): Promise<
+  (VolunteerDonorSummary & { volunteerId: string; volunteerName: string })[]
+> {
+  const db = await ensureDb();
+  const volunteerMap = new Map(
+    (db.volunteers || []).map((v) => {
+      const n = normalizeVolunteer(v);
+      return n ? [n.id, n.name] as const : null;
+    }).filter(Boolean) as [string, string][],
+  );
+  return db.donors
+    .map((d) => normalizeDonor(d))
+    .filter(
+      (d) =>
+        d.createdByVolunteerId &&
+        d.volunteerSource === "manual" &&
+        !d.volunteerApproved,
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .map((d) => ({
+      id: d.id,
+      name: d.name,
+      bloodGroup: d.bloodGroup,
+      district: d.district,
+      area: d.area,
+      createdAt: d.createdAt,
+      volunteerSource: d.volunteerSource,
+      volunteerApproved: d.volunteerApproved,
+      volunteerId: d.createdByVolunteerId!,
+      volunteerName: volunteerMap.get(d.createdByVolunteerId!) || "—",
+    }));
+}
+
+export async function setVolunteerDonorApproval(
+  donorId: string,
+  approved: boolean,
+): Promise<Donor | null> {
+  return updateDonor(donorId, { volunteerApproved: approved });
+}
+
 export async function findVolunteerByUsername(
   username: string,
 ): Promise<Volunteer | null> {
@@ -1848,7 +2008,6 @@ export async function createVolunteer(
   return withWrite(async (db) => {
     const username = String(input.username || "").trim().toLowerCase();
     if (!username) throw new Error("Username required");
-    if (!input.passwordHash) throw new Error("Password required");
     db.volunteers = db.volunteers || [];
     if (
       db.volunteers.some(
@@ -1861,6 +2020,8 @@ export async function createVolunteer(
     const volunteer = normalizeVolunteer({
       ...input,
       username,
+      linkToken: input.linkToken || newVolunteerLinkToken(),
+      notificationsEnabled: input.notificationsEnabled !== false,
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
@@ -1886,6 +2047,7 @@ export async function updateVolunteer(
       | "enabled"
       | "username"
       | "passwordHash"
+      | "notificationsEnabled"
     >
   >,
 ): Promise<Volunteer | null> {

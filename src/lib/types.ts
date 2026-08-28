@@ -31,6 +31,10 @@ export type Donor = {
   pendingResetExpiresAt: string | null;
   /** Set when a volunteer created this donor from the portal. */
   createdByVolunteerId: string | null;
+  /** How the donor was linked to a volunteer (link = self-register URL). */
+  volunteerSource: "link" | "manual" | null;
+  /** Manual adds need admin approval before counting as volunteer work. */
+  volunteerApproved: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -54,6 +58,8 @@ export type PendingRegistration = {
   phoneCodeHash: string;
   emailConfirmed: boolean;
   phoneConfirmed: boolean;
+  /** Volunteer donor-link registration attribution. */
+  createdByVolunteerId: string | null;
   expiresAt: string;
   createdAt: string;
 };
@@ -143,6 +149,10 @@ export type Volunteer = {
   username: string;
   passwordHash: string;
   enabled: boolean;
+  /** Secret token for personal join/work URLs (no public login needed). */
+  linkToken: string;
+  /** Allow admin push notifications to this volunteer's phone. */
+  notificationsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 };

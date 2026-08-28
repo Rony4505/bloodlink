@@ -14,7 +14,7 @@ import { markDonorSessionActive } from "@/lib/session-me-client";
 
 type Step = "form" | "otp";
 
-export function RegisterForm() {
+export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
   const { t } = useLocale();
   const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState("");
@@ -55,6 +55,7 @@ export function RegisterForm() {
           action: "start",
           ...form,
           lastDonationDate: form.lastDonationDate || null,
+          ...(volunteerToken ? { volunteerToken } : {}),
         }),
       });
       const data = await res.json();

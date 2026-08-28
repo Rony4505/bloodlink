@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { hashPassword, isAdminAuthenticated } from "@/lib/auth";
 import {
@@ -5,6 +6,8 @@ import {
   createVolunteerActivity,
   deleteVolunteer,
   deleteVolunteerActivity,
+  findVolunteerById,
+  listDonorsByVolunteer,
   listVolunteerActivities,
   listVolunteers,
   toPublicVolunteer,
@@ -16,6 +19,8 @@ import {
   volunteerActivitySchema,
   volunteerSchema,
 } from "@/lib/validations";
+import { sendWebPushToUsers } from "@/lib/web-push-send";
+import { volunteerPushUserId, volunteerWorkUrl } from "@/lib/volunteer-urls";
 
 export async function GET() {
   const ok = await isAdminAuthenticated();
@@ -39,8 +44,24 @@ export async function GET() {
     };
   });
 
+  const donorStats = await Promise.all(
+    volunteers.map(async (v) => {
+      const donors = await listDonorsByVolunteer(v.id);
+      return {
+        volunteerId: v.id,
+        totalDonors: donors.length,
+        approvedDonors: donors.filter((d) => d.volunteerApproved).length,
+        pendingManual: donors.filter(
+          (d) => d.volunteerSource === "manual" && !d.volunteerApproved,
+        ).length,
+        linkDonors: donors.filter((d) => d.volunteerSource === "link").length,
+      };
+    }),
+  );
+
   return NextResponse.json({
     volunteers: withWork,
+    donorStats,
     stats: {
       total: volunteers.length,
       active: volunteers.filter((v) => v.enabled).length,
@@ -58,6 +79,35 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const kind = String(body?.kind || "volunteer");
+
+    if (kind === "notify") {
+      const volunteerId = String(body?.volunteerId || "").trim();
+      const title = String(body?.title || "").trim();
+      const message = String(body?.body || body?.message || "").trim();
+      if (!volunteerId || !title || !message) {
+        return NextResponse.json(
+          { error: "volunteerId, title, and body required" },
+          { status: 400 },
+        );
+      }
+      const volunteer = await findVolunteerById(volunteerId);
+      if (!volunteer || !volunteer.enabled) {
+        return NextResponse.json({ error: "Volunteer not found" }, { status: 404 });
+      }
+      if (!volunteer.notificationsEnabled) {
+        return NextResponse.json(
+          { error: "Volunteer notifications are off" },
+          { status: 400 },
+        );
+      }
+      const push = await sendWebPushToUsers([volunteerPushUserId(volunteer.id)], {
+        title,
+        body: message,
+        url: volunteerWorkUrl(volunteer.linkToken),
+        tag: `volunteer-msg-${volunteer.id}`,
+      });
+      return NextResponse.json({ ok: true, push });
+    }
 
     if (kind === "activity") {
       const parsed = volunteerActivitySchema.safeParse(body);
@@ -81,7 +131,12 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const passwordHash = await hashPassword(parsed.data.password);
+    const username =
+      parsed.data.username?.trim().toLowerCase() ||
+      `v-${randomUUID().slice(0, 8)}`;
+    const passwordHash = parsed.data.password
+      ? await hashPassword(parsed.data.password)
+      : "";
     const volunteer = await createVolunteer({
       name: parsed.data.name,
       phone: parsed.data.phone ? normalizePhone(parsed.data.phone) : "",
@@ -89,9 +144,11 @@ export async function POST(request: Request) {
       district: parsed.data.district || "",
       role: parsed.data.role,
       notes: parsed.data.notes || "",
-      username: parsed.data.username.trim().toLowerCase(),
+      username,
       passwordHash,
       enabled: parsed.data.enabled !== false,
+      linkToken: "",
+      notificationsEnabled: true,
     });
     return NextResponse.json({
       ok: true,
@@ -148,6 +205,9 @@ export async function PATCH(request: Request) {
     if (body.role !== undefined) patch.role = body.role;
     if (body.notes !== undefined) patch.notes = body.notes;
     if (body.enabled !== undefined) patch.enabled = Boolean(body.enabled);
+    if (body.notificationsEnabled !== undefined) {
+      patch.notificationsEnabled = Boolean(body.notificationsEnabled);
+    }
     if (body.username) patch.username = String(body.username).trim().toLowerCase();
     if (body.password && String(body.password).length >= 6) {
       patch.passwordHash = await hashPassword(String(body.password));

@@ -13,6 +13,7 @@ import {
   findDonorByEmail,
   findDonorByPhone,
   findPendingRegistration,
+  findVolunteerByLinkToken,
   updatePendingRegistration,
 } from "@/lib/db";
 import { deliverEmailOtp } from "@/lib/otp-delivery";
@@ -48,6 +49,16 @@ export async function POST(request: Request) {
   }
 }
 
+async function resolveVolunteerToken(token: unknown) {
+  const value = String(token || "").trim();
+  if (!value) return { volunteerId: null as string | null };
+  const volunteer = await findVolunteerByLinkToken(value);
+  if (!volunteer || !volunteer.enabled) {
+    return { error: "Invalid or inactive volunteer link" as const };
+  }
+  return { volunteerId: volunteer.id };
+}
+
 async function startRegistration(body: unknown) {
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
@@ -55,6 +66,13 @@ async function startRegistration(body: unknown) {
       { error: "Invalid registration data", details: parsed.error.flatten() },
       { status: 400 },
     );
+  }
+
+  const volunteerLink = await resolveVolunteerToken(
+    (body as { volunteerToken?: string })?.volunteerToken,
+  );
+  if ("error" in volunteerLink && volunteerLink.error) {
+    return NextResponse.json({ error: volunteerLink.error }, { status: 400 });
   }
 
   const data = normalizeRegisterInput(parsed.data);
@@ -93,6 +111,7 @@ async function startRegistration(body: unknown) {
     bloodIssue: data.bloodIssue,
     emailCodeHash: hashCode(emailCode),
     phoneCodeHash: "",
+    createdByVolunteerId: volunteerLink.volunteerId,
   });
 
   // Never allowInline — OTP must only go to Gmail, never in the API body.
@@ -182,6 +201,9 @@ async function confirmRegistration(body: unknown) {
     pendingResetCodeHash: null,
     pendingResetChannel: null,
     pendingResetExpiresAt: null,
+    createdByVolunteerId: pending.createdByVolunteerId,
+    volunteerSource: pending.createdByVolunteerId ? "link" : null,
+    volunteerApproved: Boolean(pending.createdByVolunteerId) || true,
   });
 
   await deletePendingRegistration(pending.id);
