@@ -2182,6 +2182,17 @@ export function AdminPanel() {
                   }))
                 }
               />
+              <input
+                className="field md:col-span-2"
+                placeholder={t.facebookUrlLabel}
+                value={siteAppearance.facebookUrl}
+                onChange={(e) =>
+                  setSiteAppearance((s) => ({
+                    ...s,
+                    facebookUrl: e.target.value,
+                  }))
+                }
+              />
               <button type="submit" className="btn-primary md:col-span-2">
                 {t.saveAppearance}
               </button>

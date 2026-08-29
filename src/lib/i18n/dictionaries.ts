@@ -409,6 +409,7 @@ export const dictionaries = {
     creatorAddressLabel: "Address",
     creatorAddress: "Feni Sadar, Feni",
     creatorEmailLabel: "Email",
+    facebookPage: "Facebook Page",
     creatorEmail: "bloodlinkbd@gmail.com",
     aboutWarningTitle: "Important warnings",
     aboutWarning1:
@@ -596,6 +597,7 @@ export const dictionaries = {
     bannerPlaceFooter: "Above footer",
     siteAppearance: "Homepage & branding",
     siteAppearanceHint: "Change logo, home background, and homepage text. Leave a field empty to keep the default language text.",
+    facebookUrlLabel: "Facebook page URL",
     logoUrl: "Logo image URL",
     logoUpload: "Upload logo",
     heroBackgroundUrl: "Homepage background image URL",
@@ -1092,6 +1094,7 @@ export const dictionaries = {
     creatorAddressLabel: "ঠিকানা",
     creatorAddress: "ফেনী সদর, ফেনী",
     creatorEmailLabel: "ইমেইল",
+    facebookPage: "Facebook পেজ",
     creatorEmail: "bloodlinkbd@gmail.com",
     aboutWarningTitle: "গুরুত্বপূর্ণ সতর্কবার্তা",
     aboutWarning1:
@@ -1280,6 +1283,7 @@ export const dictionaries = {
     bannerPlaceFooter: "ফুটারের উপরে",
     siteAppearance: "হোমপেজ ও ব্র্যান্ডিং",
     siteAppearanceHint: "লোগো, হোম ব্যাকগ্রাউন্ড ও হোমপেজের লেখা বদলান। খালি রাখলে ডিফল্ট ভাষার লেখা থাকবে।",
+    facebookUrlLabel: "Facebook পেজ URL",
     logoUrl: "লোগো ইমেজ URL",
     logoUpload: "লোগো আপলোড",
     heroBackgroundUrl: "হোমপেজ ব্যাকগ্রাউন্ড ইমেজ URL",

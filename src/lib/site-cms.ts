@@ -12,6 +12,9 @@ export const DEFAULT_HERO_BACKGROUND =
 
 export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
 
+/** Official BloodLink BD Facebook page (admin can override in site appearance). */
+export const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/bloodlinkbd.org";
+
 export function defaultSuccessStories(): SuccessStory[] {
   return [
     {
@@ -107,6 +110,7 @@ export function defaultSiteAppearance(): SiteAppearance {
     aboutBodyEn: "",
     aboutBodyBn: "",
     founderPhotoUrl: "",
+    facebookUrl: DEFAULT_FACEBOOK_URL,
     successStories: defaultSuccessStories(),
   };
 }
@@ -152,6 +156,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
     aboutBodyEn: String(raw.aboutBodyEn || "").trim(),
     aboutBodyBn: String(raw.aboutBodyBn || "").trim(),
     founderPhotoUrl: String(raw.founderPhotoUrl || "").trim(),
+    facebookUrl: String(raw.facebookUrl || base.facebookUrl).trim() || base.facebookUrl,
     successStories: normalizeSuccessStories(raw.successStories),
   };
 }

@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/BrandMark";
 import { SuccessStoryForm } from "@/components/SuccessStoryForm";
+import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { DEFAULT_FACEBOOK_URL } from "@/lib/site-cms";
 
 export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }) {
   const { t } = useLocale();
+  const { appearance } = useSiteAppearance();
+  const facebookUrl = appearance.facebookUrl?.trim() || DEFAULT_FACEBOOK_URL;
 
   const links = [
     { href: "/", label: t.bannerPageHome },
@@ -47,6 +51,17 @@ export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }
                 className="underline-offset-4 hover:underline"
               >
                 {t.creatorPhone}
+              </a>
+            </p>
+            <p className="mt-2 text-sm">
+              <a
+                href={facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-semibold text-[var(--blood-deep)] underline-offset-4 hover:underline"
+              >
+                <span aria-hidden>📘</span>
+                {t.facebookPage}
               </a>
             </p>
           </div>

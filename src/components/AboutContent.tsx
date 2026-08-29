@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { DEFAULT_FACEBOOK_URL } from "@/lib/site-cms";
 
 /** CMS about text sometimes still embeds founder lines; UI shows founder separately. */
 function missionText(body: string) {
@@ -17,6 +18,7 @@ export function AboutContent({ compact = false }: { compact?: boolean }) {
   const { aboutTitle, aboutBody, appearance } = useSiteAppearance();
   const mission = missionText(aboutBody);
   const photoUrl = appearance.founderPhotoUrl?.trim() || "";
+  const facebookUrl = appearance.facebookUrl?.trim() || DEFAULT_FACEBOOK_URL;
   const hasEmbeddedSections =
     /Our Vision|আমাদের ভিশন|Our Mission|আমাদের মিশন/i.test(mission);
 
@@ -108,6 +110,19 @@ export function AboutContent({ compact = false }: { compact?: boolean }) {
                     className="text-[var(--blood-deep)] underline-offset-4 hover:underline"
                   >
                     {t.creatorPhone}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-[var(--ink)]">{t.facebookPage}</dt>
+                <dd className="mt-0.5">
+                  <a
+                    href={facebookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--blood-deep)] underline-offset-4 hover:underline"
+                  >
+                    facebook.com/bloodlinkbd.org
                   </a>
                 </dd>
               </div>
