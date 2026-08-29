@@ -189,7 +189,7 @@ export function HomeDonorTotals() {
   const stats = useLiveDonorStats();
 
   return (
-    <p className="animate-rise-delay-2 mt-5 text-sm text-white/85 md:text-base">
+    <p className="animate-rise-delay-2 hero-glass-stats mt-5 text-sm text-white/90 md:text-base">
       <span className="font-semibold text-white">
         {t.available}: <CountUp value={stats?.totalAvailable ?? 0} />
       </span>

@@ -13,7 +13,14 @@ import {
   subscribeSessionMe,
 } from "@/lib/session-me-client";
 
-export function Header({ compact = false }: { compact?: boolean }) {
+export function Header({
+  compact = false,
+  glassNav = false,
+}: {
+  compact?: boolean;
+  /** Frosted blood-tint pills on the dark hero (homepage). */
+  glassNav?: boolean;
+}) {
   const { t, toggleLocale } = useLocale();
   const pathname = usePathname();
   const [loggedIn, setLoggedIn] = useState(false);
@@ -39,6 +46,13 @@ export function Header({ compact = false }: { compact?: boolean }) {
     window.location.href = "/";
   }
 
+  const navLinkClass = glassNav
+    ? "nav-glass-pill rounded-full px-2.5 py-2 transition sm:px-3"
+    : "rounded-full px-2.5 py-2 transition hover:bg-white/10 sm:px-3";
+  const langClass = glassNav
+    ? "nav-glass-lang rounded-full px-3 py-2 text-xs font-bold tracking-wide text-[#1c1412] shadow-sm transition sm:px-3.5"
+    : "rounded-full bg-[#c9852d] px-3 py-2 text-xs font-bold tracking-wide text-[#1c1412] shadow-sm transition hover:bg-[#d4923a] sm:px-3.5";
+
   return (
     <header className="absolute inset-x-0 top-0 z-20">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-5 md:px-8">
@@ -56,32 +70,26 @@ export function Header({ compact = false }: { compact?: boolean }) {
           {loggedIn ? (
             <>
               <NotificationBell />
-              <Link
-                href="/dashboard"
-                className="rounded-full px-2.5 py-2 transition hover:bg-white/10 sm:px-3"
-              >
+              <Link href="/dashboard" className={navLinkClass}>
                 {t.dashboard}
               </Link>
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="rounded-full px-2.5 py-2 transition hover:bg-white/10 sm:px-3"
+                className={navLinkClass}
               >
                 {t.logout}
               </button>
             </>
           ) : (
-            <Link
-              href="/login"
-              className="rounded-full px-2.5 py-2 transition hover:bg-white/10 sm:px-3"
-            >
+            <Link href="/login" className={navLinkClass}>
               {t.login}
             </Link>
           )}
           <button
             type="button"
             onClick={toggleLocale}
-            className="rounded-full bg-[#c9852d] px-3 py-2 text-xs font-bold tracking-wide text-[#1c1412] shadow-sm transition hover:bg-[#d4923a] sm:px-3.5"
+            className={langClass}
             aria-label="Toggle language"
           >
             {t.language}
