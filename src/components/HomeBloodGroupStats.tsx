@@ -30,7 +30,6 @@ function BloodDropButton({
   availableLabel,
   unavailableLabel,
   onClick,
-  immersive = false,
 }: {
   label: string;
   available: number;
@@ -38,17 +37,12 @@ function BloodDropButton({
   availableLabel: string;
   unavailableLabel: string;
   onClick: () => void;
-  immersive?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={
-        immersive
-          ? "group home-glass-card flex flex-col items-center gap-2 px-2 py-4 transition hover:-translate-y-1 hover:border-[rgba(255,160,165,0.45)]"
-          : "group flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/90 px-2 py-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_oklab,var(--blood)_35%,white)] hover:shadow-md"
-      }
+      className="group flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/90 px-2 py-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_oklab,var(--blood)_35%,white)] hover:shadow-md"
     >
       <span className="relative inline-flex h-[4.75rem] w-[3.75rem] items-center justify-center">
         <svg
@@ -85,10 +79,10 @@ function BloodDropButton({
           {label}
         </span>
       </span>
-      <span className={`text-center text-xs font-semibold leading-5 ${immersive ? "text-[#8fd4a8]" : "text-[var(--sage)]"}`}>
+      <span className="text-center text-xs font-semibold leading-5 text-[var(--sage)]">
         {availableLabel}: <CountUp value={available} />
       </span>
-      <span className={`text-center text-xs font-semibold leading-5 ${immersive ? "text-[rgba(255,235,238,0.65)]" : "text-[color-mix(in_oklab,var(--ink)_55%,white)]"}`}>
+      <span className="text-center text-xs font-semibold leading-5 text-[color-mix(in_oklab,var(--ink)_55%,white)]">
         {unavailableLabel}: <CountUp value={unavailable} />
       </span>
     </button>
@@ -135,7 +129,7 @@ function useLiveDonorStats() {
   return stats;
 }
 
-export function HomeBloodGroupStats({ immersive = false }: { immersive?: boolean }) {
+export function HomeBloodGroupStats() {
   const { t } = useLocale();
   const router = useRouter();
   const stats = useLiveDonorStats();
@@ -151,30 +145,18 @@ export function HomeBloodGroupStats({ immersive = false }: { immersive?: boolean
         }));
 
   return (
-    <section
-      className={
-        immersive ? "home-glass-section px-5 py-12 md:px-8 md:py-16" : "bg-[var(--mist)] px-5 py-12 md:px-8 md:py-16"
-      }
-    >
-      <div className={immersive ? "home-glass-panel mx-auto max-w-6xl p-6 md:p-8" : "mx-auto max-w-6xl"}>
+    <section className="bg-[var(--mist)] px-5 py-12 md:px-8 md:py-16">
+      <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2
-              className={`font-[family-name:var(--font-display)] text-2xl font-bold md:text-3xl ${
-                immersive ? "home-title" : "text-[var(--blood-deep)]"
-              }`}
-            >
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)] md:text-3xl">
               {t.bloodGroupStatsTitle}
             </h2>
-            <p
-              className={`mt-2 max-w-2xl text-sm ${
-                immersive ? "home-muted" : "text-[color-mix(in_oklab,var(--ink)_70%,white)]"
-              }`}
-            >
+            <p className="mt-2 max-w-2xl text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {t.bloodGroupStatsSub}
             </p>
           </div>
-          <Link href="/find" className={immersive ? "btn-glass-primary" : "btn-primary"}>
+          <Link href="/find" className="btn-primary">
             {t.viewAll}
           </Link>
         </div>
@@ -188,7 +170,6 @@ export function HomeBloodGroupStats({ immersive = false }: { immersive?: boolean
                 unavailable={g.unavailable}
                 availableLabel={t.available}
                 unavailableLabel={t.unavailable}
-                immersive={immersive}
                 onClick={() =>
                   router.push(
                     `/find?bloodGroup=${encodeURIComponent(g.bloodGroup)}`,
@@ -208,7 +189,7 @@ export function HomeDonorTotals() {
   const stats = useLiveDonorStats();
 
   return (
-    <p className="animate-rise-delay-2 hero-glass-stats mt-5 text-sm text-white/90 md:text-base">
+    <p className="animate-rise-delay-2 mt-5 text-sm text-white/85 md:text-base">
       <span className="font-semibold text-white">
         {t.available}: <CountUp value={stats?.totalAvailable ?? 0} />
       </span>

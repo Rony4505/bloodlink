@@ -4,7 +4,6 @@ export const dictionaries = {
   en: {
     brand: "BloodLink",
     tagline: "Find blood donors near you across Bangladesh",
-    heroBloodBadge: "Bangladesh blood donation platform",
     heroSupport:
       "Connect people in need with willing donors — quickly, locally, and securely.",
     findDonors: "Find donors",
@@ -689,7 +688,6 @@ export const dictionaries = {
   bn: {
     brand: "BloodLink",
     tagline: "বাংলাদেশজুড়ে কাছাকাছি রক্তদাতা খুঁজুন",
-    heroBloodBadge: "বাংলাদেশের রক্তদান প্ল্যাটফর্ম",
     heroSupport:
       "প্রয়োজনে মানুষকে ইচ্ছুক রক্তদাতার সাথে দ্রুত, স্থানীয় ও নিরাপদভাবে যুক্ত করুন।",
     findDonors: "ডোনার খুঁজুন",

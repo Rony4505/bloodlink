@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Bengali, Plus_Jakarta_Sans } from "next/font/google";
+import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
@@ -7,10 +7,10 @@ import { isFashionMode } from "@/lib/app-mode";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
-const display = Plus_Jakarta_Sans({
+const display = Syne({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["700", "800"],
   display: "swap",
   preload: true,
 });
@@ -18,7 +18,7 @@ const display = Plus_Jakarta_Sans({
 const body = Noto_Sans_Bengali({
   variable: "--font-body",
   subsets: ["bengali", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700"],
   display: "swap",
   preload: true,
 });

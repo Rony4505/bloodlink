@@ -11,7 +11,7 @@ const LOCALE_KEY = "bloodlink_home_district";
  * Homepage CTA for finding donors — no donor cards here.
  * Donors are shown on /find after "View all" (or district-filtered link).
  */
-export function HomeDonors({ immersive = false }: { immersive?: boolean }) {
+export function HomeDonors() {
   const { t } = useLocale();
   const [district, setDistrict] = useState("");
 
@@ -31,38 +31,20 @@ export function HomeDonors({ immersive = false }: { immersive?: boolean }) {
     : "/find";
 
   return (
-    <section
-      className={
-        immersive ? "home-glass-section px-5 py-12 md:px-8 md:py-14" : "bg-[var(--mist)] px-5 py-12 md:px-8 md:py-14"
-      }
-    >
+    <section className="bg-[var(--mist)] px-5 py-12 md:px-8 md:py-14">
       <div className="mx-auto max-w-6xl">
-        <div
-          className={
-            immersive
-              ? "home-glass-panel flex flex-col gap-5 px-5 py-6 sm:flex-row sm:items-center sm:justify-between"
-              : "flex flex-col gap-5 rounded-2xl border border-[var(--line)] bg-white/80 px-5 py-6 sm:flex-row sm:items-center sm:justify-between"
-          }
-        >
+        <div className="flex flex-col gap-5 rounded-2xl border border-[var(--line)] bg-white/80 px-5 py-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2
-              className={`font-[family-name:var(--font-display)] text-2xl font-bold md:text-3xl ${
-                immersive ? "home-title" : "text-[var(--blood-deep)]"
-              }`}
-            >
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)] md:text-3xl">
               {t.nearestDonors}
             </h2>
-            <p
-              className={`mt-1.5 max-w-xl text-sm ${
-                immersive ? "home-muted" : "text-[color-mix(in_oklab,var(--ink)_70%,white)]"
-              }`}
-            >
+            <p className="mt-1.5 max-w-xl text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {t.nearestDonorsCta}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
-              className={immersive ? "home-field min-w-44 rounded-xl px-3 py-2.5" : "field min-w-44"}
+              className="field min-w-44"
               value={district}
               onChange={(e) => onDistrictChange(e.target.value)}
               aria-label={t.district}
@@ -74,7 +56,7 @@ export function HomeDonors({ immersive = false }: { immersive?: boolean }) {
                 </option>
               ))}
             </select>
-            <Link href={findHref} className={immersive ? "btn-glass-primary" : "btn-primary"}>
+            <Link href={findHref} className="btn-primary">
               {t.viewAll}
             </Link>
           </div>
