@@ -21,7 +21,7 @@ type Story = {
 
 const STORY_INTERVAL_MS = 4000;
 
-export function HomeImpact() {
+export function HomeImpact({ immersive = false }: { immersive?: boolean }) {
   const { locale, t } = useLocale();
   const [stats, setStats] = useState<ImpactStats | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
@@ -95,13 +95,19 @@ export function HomeImpact() {
     : [];
 
   return (
-    <section className="border-t border-[var(--line)] bg-[linear-gradient(165deg,#1c0a0c_0%,#3a1218_55%,#6e1220_100%)] px-5 py-10 text-white md:px-8 md:py-12">
-      <div className="mx-auto max-w-6xl">
+    <section
+      className={
+        immersive
+          ? "home-glass-section px-5 py-10 md:px-8 md:py-12"
+          : "border-t border-[var(--line)] bg-[linear-gradient(165deg,#1c0a0c_0%,#3a1218_55%,#6e1220_100%)] px-5 py-10 text-white md:px-8 md:py-12"
+      }
+    >
+      <div className={immersive ? "home-glass-panel mx-auto max-w-6xl p-6 md:p-8" : "mx-auto max-w-6xl"}>
         <div className="max-w-2xl">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold md:text-3xl">
+          <h2 className={`font-[family-name:var(--font-display)] text-2xl font-bold md:text-3xl ${immersive ? "home-title" : ""}`}>
             {t.impactTitle}
           </h2>
-          <p className="mt-1.5 text-sm text-white/70">{t.impactSubtitle}</p>
+          <p className={`mt-1.5 text-sm ${immersive ? "home-muted" : "text-white/70"}`}>{t.impactSubtitle}</p>
         </div>
 
         {metrics.length ? (
@@ -109,12 +115,16 @@ export function HomeImpact() {
             {metrics.map(([value, label]) => (
               <li
                 key={label}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-center sm:text-left"
+                className={
+                  immersive
+                    ? "home-glass-card px-3 py-2.5 text-center sm:text-left"
+                    : "rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-center sm:text-left"
+                }
               >
                 <p className="font-[family-name:var(--font-display)] text-xl font-bold tracking-tight text-[#ffb4b8] md:text-2xl">
                   <CountUp value={value} suffix={value > 0 ? "+" : ""} />
                 </p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-white/55 md:text-xs">
+                <p className={`mt-0.5 text-[10px] uppercase tracking-[0.1em] md:text-xs ${immersive ? "home-muted" : "text-white/55"}`}>
                   {label}
                 </p>
               </li>
@@ -124,10 +134,10 @@ export function HomeImpact() {
 
         {stories.length ? (
           <div className="mt-8">
-            <h3 className="font-[family-name:var(--font-display)] text-xl font-bold md:text-2xl">
+            <h3 className={`font-[family-name:var(--font-display)] text-xl font-bold md:text-2xl ${immersive ? "home-title" : ""}`}>
               {t.successStoriesTitle}
             </h3>
-            <p className="mt-1 text-sm text-white/65">{t.successStoriesSubtitle}</p>
+            <p className={`mt-1 text-sm ${immersive ? "home-muted" : "text-white/65"}`}>{t.successStoriesSubtitle}</p>
 
             <div className="relative mt-5 overflow-hidden">
               <div
@@ -144,7 +154,7 @@ export function HomeImpact() {
                       key={s.id}
                       className="w-full shrink-0 px-0.5 sm:px-1"
                     >
-                      <div className="mx-auto max-w-xl rounded-2xl border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+                      <div className={`mx-auto max-w-xl p-5 ${immersive ? "home-glass-card" : "rounded-2xl border border-white/15 bg-white/5 backdrop-blur-sm"}`}>
                         <div className="flex items-center gap-3">
                           <span
                             aria-hidden
