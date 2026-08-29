@@ -21,12 +21,13 @@ export async function GET(request: Request) {
   }
 
   const dateKey = bangladeshDateKey();
-  const created = await createDailyRemindersIfNeeded(dateKey);
+  const daily = await createDailyRemindersIfNeeded(dateKey);
   const gold = await createMonthlyGoldBlessingIfNeeded(dateKey.slice(0, 7));
   return NextResponse.json({
     ok: true,
     dateKey,
-    created,
+    created: daily.created,
+    push: daily.push,
     goldBlessing: gold,
   });
 }

@@ -29,6 +29,10 @@ import {
   normalizeNotificationSettings,
 } from "./notification-settings";
 import {
+  isPermissionOnlyEndpoint,
+  isRealPushEndpoint,
+} from "./push-subscription-utils";
+import {
   hasDatabaseUrl,
   listDbEnvKeys,
   loadDbFromPostgres,
@@ -1472,11 +1476,17 @@ export async function listVolunteerNotifications(
 
 export async function createDailyRemindersIfNeeded(
   todayKey = bangladeshDateKey(),
-): Promise<number> {
+): Promise<{
+  created: number;
+  push: { sent: number; failed: number; eligible: number; permissionOnly: number };
+}> {
+  const emptyPush = { sent: 0, failed: 0, eligible: 0, permissionOnly: 0 };
   const { created, userIds, texts } = await withWrite(async (db) => {
     const settings = normalizeNotificationSettings(db.admin.notificationSettings)
       .dailyDonationReminder;
-    if (!settings.enabled) return { created: 0, userIds: [] as string[], texts: null };
+    if (!settings.enabled) {
+      return { created: 0, userIds: [] as string[], texts: null };
+    }
     if (bangladeshHour() < settings.hourBd) {
       return { created: 0, userIds: [] as string[], texts: null };
     }
@@ -1518,19 +1528,32 @@ export async function createDailyRemindersIfNeeded(
   });
 
   if (created && texts) {
-    void import("./web-push-send")
-      .then((m) =>
-        m.sendWebPushToUsers(userIds, {
-          title: texts.titleBn || texts.title,
-          body: texts.bodyBn || texts.body,
-          url: "/dashboard",
-          tag: `daily-${todayKey}`,
-        }),
-      )
-      .catch(() => undefined);
+    const subs = await listPushSubscriptions(userIds);
+    const permissionOnly = subs.filter((s) =>
+      isPermissionOnlyEndpoint(s.endpoint),
+    ).length;
+    const eligible = subs.filter((s) => isRealPushEndpoint(s.endpoint)).length;
+    try {
+      const m = await import("./web-push-send");
+      const push = await m.sendWebPushToUsers(userIds, {
+        title: texts.titleBn || texts.title,
+        body: texts.bodyBn || texts.body,
+        url: "/dashboard",
+        tag: `daily-${todayKey}`,
+      });
+      return {
+        created,
+        push: { ...push, eligible, permissionOnly },
+      };
+    } catch {
+      return {
+        created,
+        push: { sent: 0, failed: eligible, eligible, permissionOnly },
+      };
+    }
   }
 
-  return created;
+  return { created, push: emptyPush };
 }
 
 /** Once per BD calendar month: bless the top Gold/Platinum donor. */
@@ -1634,7 +1657,10 @@ export async function listPushSubscriptions(
 export async function countPushAllowStats(): Promise<{
   donorCount: number;
   allowedUsers: number;
+  realPushUsers: number;
+  permissionOnlyUsers: number;
   subscriptions: number;
+  realSubscriptions: number;
   donors: Array<{
     id: string;
     name: string;
@@ -1642,19 +1668,29 @@ export async function countPushAllowStats(): Promise<{
     phone: string;
     bloodGroup: string;
     allowed: boolean;
+    realPush: boolean;
+    permissionOnly: boolean;
     subscriptionCount: number;
+    realSubscriptionCount: number;
   }>;
 }> {
   const db = await ensureDb();
   const list = db.pushSubscriptions || [];
   const countByUser = new Map<string, number>();
+  const realCountByUser = new Map<string, number>();
   for (const s of list) {
     if (!s.userId) continue;
     countByUser.set(s.userId, (countByUser.get(s.userId) || 0) + 1);
+    if (isRealPushEndpoint(s.endpoint)) {
+      realCountByUser.set(s.userId, (realCountByUser.get(s.userId) || 0) + 1);
+    }
   }
   const donors = [...db.donors]
     .map((d) => {
       const subscriptionCount = countByUser.get(d.id) || 0;
+      const realSubscriptionCount = realCountByUser.get(d.id) || 0;
+      const realPush = realSubscriptionCount > 0;
+      const permissionOnly = subscriptionCount > 0 && !realPush;
       return {
         id: d.id,
         name: d.name,
@@ -1662,17 +1698,24 @@ export async function countPushAllowStats(): Promise<{
         phone: d.phone,
         bloodGroup: d.bloodGroup,
         allowed: subscriptionCount > 0,
+        realPush,
+        permissionOnly,
         subscriptionCount,
+        realSubscriptionCount,
       };
     })
     .sort((a, b) => {
+      if (a.realPush !== b.realPush) return a.realPush ? -1 : 1;
       if (a.allowed !== b.allowed) return a.allowed ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
   return {
     donorCount: db.donors.length,
     allowedUsers: donors.filter((d) => d.allowed).length,
+    realPushUsers: donors.filter((d) => d.realPush).length,
+    permissionOnlyUsers: donors.filter((d) => d.permissionOnly).length,
     subscriptions: list.length,
+    realSubscriptions: list.filter((s) => isRealPushEndpoint(s.endpoint)).length,
     donors,
   };
 }
@@ -1680,6 +1723,22 @@ export async function countPushAllowStats(): Promise<{
 export async function donorHasPushSubscription(userId: string): Promise<boolean> {
   const db = await ensureDb();
   return (db.pushSubscriptions || []).some((s) => s.userId === userId);
+}
+
+export async function donorHasRealPushSubscription(userId: string): Promise<boolean> {
+  const db = await ensureDb();
+  return (db.pushSubscriptions || []).some(
+    (s) => s.userId === userId && isRealPushEndpoint(s.endpoint),
+  );
+}
+
+export async function donorPushSubscriptionKind(
+  userId: string,
+): Promise<"none" | "real" | "permission-only"> {
+  const subs = (await ensureDb()).pushSubscriptions?.filter((s) => s.userId === userId) || [];
+  if (!subs.length) return "none";
+  if (subs.some((s) => isRealPushEndpoint(s.endpoint))) return "real";
+  return "permission-only";
 }
 
 export async function upsertPushSubscription(input: {
@@ -1690,6 +1749,13 @@ export async function upsertPushSubscription(input: {
 }): Promise<PushSubscriptionRecord> {
   return withWrite(async (db) => {
     if (!db.pushSubscriptions) db.pushSubscriptions = [];
+    if (isRealPushEndpoint(input.endpoint)) {
+      db.pushSubscriptions = db.pushSubscriptions.filter(
+        (s) =>
+          s.userId !== input.userId ||
+          !isPermissionOnlyEndpoint(s.endpoint),
+      );
+    }
     const existing = db.pushSubscriptions.findIndex(
       (s) => s.endpoint === input.endpoint,
     );

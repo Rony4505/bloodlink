@@ -19,10 +19,10 @@ export function startBloodlinkNotificationScheduler() {
       import("@/lib/db").then((m) => m.createDailyRemindersIfNeeded()),
       import("@/lib/db").then((m) => m.createMonthlyGoldBlessingIfNeeded()),
     ])
-      .then(([created, gold]) => {
-        if (created > 0 || gold.created) {
+      .then(([daily, gold]) => {
+        if (daily.created > 0 || gold.created) {
           console.info(
-            `[bloodlink-cron] daily=${created} gold=${gold.created ? gold.donorId : "skip"}`,
+            `[bloodlink-cron] daily=${daily.created} push=${JSON.stringify(daily.push)} gold=${gold.created ? gold.donorId : "skip"}`,
           );
         }
       })

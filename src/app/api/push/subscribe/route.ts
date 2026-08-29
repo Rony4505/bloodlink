@@ -3,9 +3,10 @@ import { getCurrentDonor } from "@/lib/auth";
 import {
   removePushSubscriptionForUser,
   upsertPushSubscription,
-  donorHasPushSubscription,
+  donorPushSubscriptionKind,
 } from "@/lib/db";
 import { getPublicVapidKey } from "@/lib/web-push-send";
+import { LOCAL_PUSH_PERMISSION_PREFIX } from "@/lib/push-subscription-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -16,14 +17,20 @@ export async function GET() {
   }
   // Always return subscription status even if VAPID key generation fails,
   // so the client can still show the allow prompt.
-  const subscribed = await donorHasPushSubscription(donor.id);
+  const kind = await donorPushSubscriptionKind(donor.id);
   let publicKey: string | null = null;
   try {
     publicKey = await getPublicVapidKey();
   } catch {
     /* optional for status check */
   }
-  return NextResponse.json({ publicKey, subscribed });
+  return NextResponse.json({
+    publicKey,
+    subscribed: kind !== "none",
+    realPush: kind === "real",
+    permissionOnly: kind === "permission-only",
+    kind,
+  });
 }
 
 export async function POST(request: Request) {
@@ -40,7 +47,7 @@ export async function POST(request: Request) {
     if (body.permissionOnly === true) {
       await upsertPushSubscription({
         userId: donor.id,
-        endpoint: `local-permission://${donor.id}`,
+        endpoint: `${LOCAL_PUSH_PERMISSION_PREFIX}${donor.id}`,
         p256dh: "permission",
         auth: "permission",
       });

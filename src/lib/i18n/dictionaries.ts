@@ -353,7 +353,17 @@ export const dictionaries = {
       "Get alerts for blood needs and reminders even when BloodLink is closed (internet on).",
     registerPushAllow: "Allow notifications",
     registerPushSkip: "Not now",
-    registerPushOn: "Notifications enabled.",
+    registerPushOn: "Notifications enabled — alerts work even when BloodLink is closed.",
+    registerPushInAppOnly:
+      "Saved for in-app reminders only. For phone lock alerts on iPhone, open BloodLink from your Home Screen app and allow again.",
+    pushPhoneLockTitle: "Phone lock alerts need one more step",
+    pushInAppOnlyHint:
+      "We saved your preference, but this browser cannot send alerts while the phone is locked.",
+    pushIosPwaRequired:
+      "On iPhone Safari/Chrome tabs, lock-screen alerts do not work. Share → Add to Home Screen, open BloodLink from the icon, then tap Allow again.",
+    pushUpgradeHint:
+      "Your browser allowed notifications, but background phone alerts are not active yet. Tap below to finish setup.",
+    pushUpgradeAllow: "Enable phone alerts",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     alreadyDonor: "Already registered?",
@@ -668,11 +678,12 @@ export const dictionaries = {
     pushEnableError: "Could not enable alerts. Tap Allow again, or try Chrome.",
     pushAllowStats: "Phone alerts allowed",
     pushAllowStatsBody:
-      "{allowed} of {donors} accounts enabled browser/phone notifications ({subs} device subscriptions).",
+      "{real} with real phone push · {partial} in-app only · {donors} total donors ({subs} device subscriptions).",
     pushAllowListHint:
-      "Browsers must approve once — we cannot force-enable on phones. Existing donors are asked on home/dashboard until they allow.",
+      "“In-app only” means Allow was tapped on iPhone browser — lock-screen push needs Home Screen app. Real push works when the site tab is closed.",
     pushAllowStatus: "Push",
-    pushAllowYes: "Allowed",
+    pushAllowYes: "Real push",
+    pushAllowPartial: "In-app only",
     pushAllowNo: "Not yet",
     adminPublishedStories: "Published success stories",
     adminPublishedStoriesHint:
@@ -1036,7 +1047,18 @@ export const dictionaries = {
       "BloodLink বন্ধ থাকলেও ইন্টারনেট চালু থাকলে রক্তের প্রয়োজন ও রিমাইন্ডারের অ্যালার্ট পাবেন।",
     registerPushAllow: "নোটিফিকেশন অনুমতি দিন",
     registerPushSkip: "এখন না",
-    registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
+    registerPushOn:
+      "নোটিফিকেশন চালু — BloodLink বন্ধ থাকলেও ফোনে অ্যালার্ট আসবে।",
+    registerPushInAppOnly:
+      "শুধু ওয়েবসাইটের ভেতরে রিমাইন্ডার সেভ হয়েছে। iPhone-এ লক স্ক্রিনে অ্যালার্ট চাইলে Home Screen থেকে BloodLink খুলে আবার Allow দিন।",
+    pushPhoneLockTitle: "ফোন লক থাকলে অ্যালার্টের জন্য আরও এক ধাপ",
+    pushInAppOnlyHint:
+      "আপনার Allow সেভ হয়েছে, কিন্তু এই ব্রাউজার ফোন লক থাকলে পুশ পাঠাতে পারে না।",
+    pushIosPwaRequired:
+      "iPhone Safari/Chrome ট্যাবে লক স্ক্রিনে অ্যালার্ট কাজ করে না। Share → Add to Home Screen, আইকন থেকে BloodLink খুলে আবার Allow দিন।",
+    pushUpgradeHint:
+      "ব্রাউজারে Allow হয়েছে, কিন্তু ব্যাকগ্রাউন্ড ফোন অ্যালার্ট এখনো চালু হয়নি। নিচে চাপুন।",
+    pushUpgradeAllow: "ফোন অ্যালার্ট চালু করুন",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     alreadyDonor: "আগে রেজিস্টার করেছেন?",
@@ -1352,11 +1374,12 @@ export const dictionaries = {
     pushEnableError: "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome ব্যবহার করুন।",
     pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
     pushAllowStatsBody:
-      "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন ব্রাউজার/ফোন নোটিফিকেশন চালু করেছে ({subs}টি ডিভাইস সাবস্ক্রিপশন)।",
+      "আসল ফোন পুশ {real}জন · শুধু in-app {partial}জন · মোট ডোনার {donors} ({subs}টি সাবস্ক্রিপশন)।",
     pushAllowListHint:
-      "ব্রাউজার একবার অনুমতি দিতে হয় — ফোনে জোর করে চালু করা যায় না। পুরনো ডোনার হোম/ড্যাশবোর্ডে Allow না করা পর্যন্ত প্রম্পট পাবে।",
+      "“In-app only” মানে iPhone ব্রাউজারে Allow — লক স্ক্রিন পুশের জন্য Home Screen অ্যাপ লাগবে। Real push-এ সাইট বন্ধ থাকলেও অ্যালার্ট যায়।",
     pushAllowStatus: "পুশ",
-    pushAllowYes: "Allow করা",
+    pushAllowYes: "Real push",
+    pushAllowPartial: "In-app only",
     pushAllowNo: "এখনো না",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
     adminPublishedStoriesHint:
