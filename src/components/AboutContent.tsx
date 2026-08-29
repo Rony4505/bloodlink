@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { FacebookIcon } from "@/components/FacebookIcon";
 import { DEFAULT_FACEBOOK_URL } from "@/lib/site-cms";
 
 /** CMS about text sometimes still embeds founder lines; UI shows founder separately. */
@@ -114,15 +115,16 @@ export function AboutContent({ compact = false }: { compact?: boolean }) {
                 </dd>
               </div>
               <div>
-                <dt className="font-semibold text-[var(--ink)]">{t.facebookPage}</dt>
+                <dt className="font-semibold text-[var(--ink)]">{t.facebook}</dt>
                 <dd className="mt-0.5">
                   <a
                     href={facebookUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[var(--blood-deep)] underline-offset-4 hover:underline"
+                    className="inline-flex items-center gap-2 text-[#1877F2] underline-offset-4 hover:underline"
                   >
-                    facebook.com/bloodlinkbd.org
+                    <FacebookIcon className="h-4 w-4 shrink-0" title="" />
+                    {t.facebook}
                   </a>
                 </dd>
               </div>

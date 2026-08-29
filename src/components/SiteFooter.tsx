@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { SuccessStoryForm } from "@/components/SuccessStoryForm";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { FacebookIcon } from "@/components/FacebookIcon";
 import { DEFAULT_FACEBOOK_URL } from "@/lib/site-cms";
 
 export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }) {
@@ -58,10 +59,10 @@ export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }
                 href={facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-semibold text-[var(--blood-deep)] underline-offset-4 hover:underline"
+                className="inline-flex items-center gap-2 font-semibold text-[#1877F2] underline-offset-4 hover:underline"
               >
-                <span aria-hidden>📘</span>
-                {t.facebookPage}
+                <FacebookIcon className="h-4 w-4 shrink-0" title="" />
+                {t.facebook}
               </a>
             </p>
           </div>

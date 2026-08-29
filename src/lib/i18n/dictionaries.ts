@@ -409,7 +409,7 @@ export const dictionaries = {
     creatorAddressLabel: "Address",
     creatorAddress: "Feni Sadar, Feni",
     creatorEmailLabel: "Email",
-    facebookPage: "Facebook Page",
+    facebook: "Facebook",
     creatorEmail: "bloodlinkbd@gmail.com",
     aboutWarningTitle: "Important warnings",
     aboutWarning1:
@@ -1094,7 +1094,7 @@ export const dictionaries = {
     creatorAddressLabel: "ঠিকানা",
     creatorAddress: "ফেনী সদর, ফেনী",
     creatorEmailLabel: "ইমেইল",
-    facebookPage: "Facebook পেজ",
+    facebook: "Facebook",
     creatorEmail: "bloodlinkbd@gmail.com",
     aboutWarningTitle: "গুরুত্বপূর্ণ সতর্কবার্তা",
     aboutWarning1:
