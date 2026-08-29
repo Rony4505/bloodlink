@@ -75,7 +75,8 @@ export function HomePage() {
     <div className="home-immersive relative isolate min-h-full">
       <div className="pointer-events-none fixed inset-0 z-0">
         <BloodHeroBackground fixed />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,2,4,0.12),rgba(18,4,8,0.38))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgba(8,2,4,0.05),rgba(12,3,8,0.42))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,2,4,0.08)_0%,rgba(18,4,8,0.28)_55%,rgba(10,2,6,0.45)_100%)]" />
       </div>
 
       <div className="relative z-10 flex min-h-full flex-col text-white">
