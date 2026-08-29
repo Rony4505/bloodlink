@@ -9,7 +9,6 @@ type Props = {
   page: BannerPage;
   /** Where the ad strip sits — filters banners by admin placement. */
   placement?: BannerPlacement;
-  immersive?: boolean;
 };
 
 type BannerPayload = {
@@ -53,7 +52,7 @@ function loadBanners(
  * Full-bleed wide advertisement carousel (820×150).
  * Auto-scroll interval is configurable in Admin → Advertisement.
  */
-export function OrgBanners({ page, placement, immersive = false }: Props) {
+export function OrgBanners({ page, placement }: Props) {
   const { t } = useLocale();
   const [banners, setBanners] = useState<OrgBanner[]>([]);
   const [slideIntervalSec, setSlideIntervalSec] = useState(
@@ -105,20 +104,8 @@ export function OrgBanners({ page, placement, immersive = false }: Props) {
   return (
     <section
       aria-label={t.orgBannerPublicLabel}
-      className={
-        immersive
-          ? "home-glass-section relative z-0 w-full px-5 py-4 md:px-8"
-          : "relative z-0 w-full border-y border-[var(--line)] bg-[#f4ece6]"
-      }
+      className="relative z-0 w-full border-y border-[var(--line)] bg-[#f4ece6]"
     >
-      <div
-        className={
-          immersive
-            ? "home-glass-panel mx-auto max-w-6xl overflow-hidden p-0"
-            : "relative mx-auto w-full max-w-6xl overflow-hidden"
-        }
-      >
-      {!immersive ? (
       <div className="flex items-center justify-between border-b border-[color-mix(in_oklab,var(--line)_80%,var(--ink)_20%)] bg-[color-mix(in_oklab,#f4ece6_70%,white)] px-4 py-2 sm:px-6">
         <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[color-mix(in_oklab,var(--ink)_65%,white)]">
           <span
@@ -131,22 +118,8 @@ export function OrgBanners({ page, placement, immersive = false }: Props) {
           {t.orgBannerSponsored}
         </span>
       </div>
-      ) : (
-      <div className="flex items-center justify-between border-b border-[rgba(255,180,185,0.18)] bg-[rgba(12,4,8,0.35)] px-4 py-2 sm:px-6">
-        <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[rgba(255,220,225,0.75)]">
-          <span
-            aria-hidden
-            className="inline-block h-2 w-2 rounded-full bg-[#ff6b78] shadow-[0_0_8px_rgba(255,80,95,0.6)]"
-          />
-          {t.orgBannerPublicLabel}
-        </span>
-        <span className="rounded-full border border-[rgba(255,190,195,0.28)] bg-[rgba(18,4,8,0.55)] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[rgba(255,210,215,0.65)]">
-          {t.orgBannerSponsored}
-        </span>
-      </div>
-      )}
 
-      <div className="relative w-full overflow-hidden">
+      <div className="relative mx-auto w-full max-w-6xl overflow-hidden">
         <div
           className="flex transition-transform duration-700 ease-in-out will-change-transform"
           style={{ transform: `translateX(-${index * 100}%)` }}
@@ -157,7 +130,7 @@ export function OrgBanners({ page, placement, immersive = false }: Props) {
               <img
                 src={b.imageUrl}
                 alt={b.title}
-                className={`h-full w-full object-contain ${immersive ? "bg-[rgba(8,2,4,0.85)]" : "bg-white"}`}
+                className="h-full w-full object-contain bg-white"
                 loading="lazy"
                 decoding="async"
               />
@@ -206,7 +179,6 @@ export function OrgBanners({ page, placement, immersive = false }: Props) {
             ))}
           </div>
         ) : null}
-      </div>
       </div>
     </section>
   );
