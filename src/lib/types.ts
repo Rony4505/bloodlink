@@ -288,6 +288,8 @@ export type SiteAppearance = {
   aboutBodyBn: string;
   /** Optional portrait of the founder shown on About. */
   founderPhotoUrl: string;
+  /** Official Facebook page URL shown in footer and About. */
+  facebookUrl: string;
   /** Public impact / success stories shown on the homepage. */
   successStories: SuccessStory[];
 };
