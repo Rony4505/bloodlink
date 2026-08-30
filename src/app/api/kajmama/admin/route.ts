@@ -5,6 +5,7 @@ import {
 } from "@/lib/kajmama/auth";
 import { fail, newId, ok } from "@/lib/kajmama/http";
 import { applyPackage } from "@/lib/kajmama/premium";
+import { addNote, pingPush } from "@/lib/kajmama/notify";
 import { toPublicUser } from "@/lib/kajmama/public";
 import { findBooking, findUser, readKajmamaStore, setWorkerAvailability, storeCategories, updateKajmamaStore } from "@/lib/kajmama/store";
 import type { AdPlacement, Advertisement, MobileBankingType, PackagePlan } from "@/lib/kajmama/types";
@@ -220,6 +221,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "markPaid" && body.bookingId) {
+      let workerId = "";
+      let bookingId = "";
       await updateKajmamaStore((s) => {
         const b = findBooking(s, String(body.bookingId));
         if (!b) throw new Error("বুকিং নেই");
@@ -231,7 +234,27 @@ export async function POST(request: Request) {
         b.paymentRef = String(body.paymentRef || "ADMIN");
         b.updatedAt = now;
         setWorkerAvailability(s, b.workerId);
+        workerId = b.workerId;
+        bookingId = b.id;
+        addNote(s, b.workerId, {
+          kind: "paid",
+          titleBn: "অ্যাডমিন পেমেন্ট নিশ্চিত করেছেন",
+          titleEn: "Admin confirmed payment",
+          bodyBn: "ওয়েবসাইটে পেমেন্ট মার্ক হয়েছে। এখন রেটিং ও পরের কাজ খুলবে।",
+          bodyEn: "Payment is marked on the website. Rating and the next job are unlocked.",
+          href: `/kajmama/bookings/${b.id}`,
+        });
       });
+      if (workerId) {
+        await pingPush(workerId, {
+          kind: "paid",
+          titleBn: "পেমেন্ট নিশ্চিত",
+          titleEn: "Payment confirmed",
+          bodyBn: "অ্যাডমিন পেমেন্ট মার্ক করেছেন।",
+          bodyEn: "Admin marked the payment.",
+          href: `/kajmama/bookings/${bookingId}`,
+        });
+      }
       return ok({ ok: true });
     }
 

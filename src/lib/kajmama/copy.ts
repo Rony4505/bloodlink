@@ -30,6 +30,7 @@ export const COPY = {
     call: "কল করুন",
     needWorkers: "কর্মী লাগবে",
     allWorkers: "সকল কর্মী",
+    admin: "অ্যাডমিন",
   },
   en: {
     brand: "KajMama BD",
@@ -60,5 +61,6 @@ export const COPY = {
     call: "Call",
     needWorkers: "Need workers",
     allWorkers: "All workers",
+    admin: "Admin",
   },
 } as const;

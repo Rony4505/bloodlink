@@ -3,6 +3,7 @@ import { DISTRICTS } from "@/lib/kajmama/constants";
 import { fail, isValidBdPhone, newId, normalizePhone, ok } from "@/lib/kajmama/http";
 import { applyPackage } from "@/lib/kajmama/premium";
 import { toSessionUser } from "@/lib/kajmama/public";
+import { addNote, pingPush, workerWelcomeNotes } from "@/lib/kajmama/notify";
 import { findUserByPhone, readKajmamaStore, storeCategories, updateKajmamaStore } from "@/lib/kajmama/store";
 import type { MobileBankingType, User, UserRole } from "@/lib/kajmama/types";
 
@@ -123,10 +124,32 @@ export async function POST(request: Request) {
         }
         s.users.push(next);
         createdId = next.id;
+        if (role === "worker") workerWelcomeNotes(s, next.id);
+        else {
+          addNote(s, next.id, {
+            kind: "welcome",
+            titleBn: "KajMama-তে স্বাগতম",
+            titleEn: "Welcome to KajMama",
+            bodyBn: "কাজ পোস্ট করুন। পেমেন্ট শুধু ওয়েবসাইটে — সাইটের বাইরে লেনদেন করবেন না।",
+            bodyEn: "Post a job. Pay only on the website — no off-site deals.",
+            href: "/kajmama/jobs/new",
+          });
+        }
       });
       const fresh = store.users.find((u) => u.id === createdId);
       if (!fresh) return fail("অ্যাকাউন্ট তৈরি হয়নি", 500);
       await createUserSession(fresh.id);
+      const welcome = store.notifications.find((n) => n.userId === fresh.id);
+      if (welcome) {
+        await pingPush(fresh.id, {
+          kind: welcome.kind,
+          titleBn: welcome.titleBn,
+          titleEn: welcome.titleEn,
+          bodyBn: welcome.bodyBn,
+          bodyEn: welcome.bodyEn,
+          href: welcome.href,
+        });
+      }
       return ok({ user: toSessionUser(store, fresh) });
     }
 

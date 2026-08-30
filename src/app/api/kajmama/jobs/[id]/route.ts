@@ -1,6 +1,7 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
 import { fail, newId, ok } from "@/lib/kajmama/http";
 import { siteFeeOf } from "@/lib/kajmama/premium";
+import { addNote, pingPush } from "@/lib/kajmama/notify";
 import { findJob, findUser, readKajmamaStore, storeCategories, updateKajmamaStore, workerIsBusy } from "@/lib/kajmama/store";
 
 export const runtime = "nodejs";
@@ -52,8 +53,9 @@ export async function POST(request: Request, ctx: Ctx) {
         if (exists) throw new Error("ইতিমধ্যে আগ্রহ দেখিয়েছেন");
         if (workerIsBusy(s, me.id)) throw new Error("আগের কাজের পেমেন্ট না হওয়া পর্যন্ত নতুন কাজ নেওয়া যাবে না");
         const fee = siteFeeOf(job.budget, s.settings.commissionPct);
+        const bkId = newId("bk");
         s.bookings.unshift({
-          id: newId("bk"),
+          id: bkId,
           jobId: job.id,
           hirerId: job.hirerId,
           workerId: me.id,
@@ -64,6 +66,14 @@ export async function POST(request: Request, ctx: Ctx) {
           workerPayout: fee.workerPayout,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+        });
+        addNote(s, job.hirerId, {
+          kind: "apply",
+          titleBn: "একজন কর্মী আগ্রহ দেখিয়েছেন",
+          titleEn: "A worker showed interest",
+          bodyBn: `${me.name} «${job.title}» কাজে আগ্রহ দেখিয়েছেন।`,
+          bodyEn: `${me.name} showed interest in “${job.title}”.`,
+          href: `/kajmama/bookings/${bkId}`,
         });
         return;
       }
@@ -82,6 +92,16 @@ export async function POST(request: Request, ctx: Ctx) {
     });
     const job = findJob(store, id);
     const booking = store.bookings.find((b) => b.jobId === id && (b.workerId === me.id || b.hirerId === me.id));
+    if (body.action === "apply" && job) {
+      await pingPush(job.hirerId, {
+        kind: "apply",
+        titleBn: "একজন কর্মী আগ্রহ দেখিয়েছেন",
+        titleEn: "A worker showed interest",
+        bodyBn: `${me.name} আপনার কাজে আগ্রহ দেখিয়েছেন।`,
+        bodyEn: `${me.name} showed interest in your job.`,
+        href: booking ? `/kajmama/bookings/${booking.id}` : "/kajmama/dashboard",
+      });
+    }
     return ok({ job, bookingId: booking?.id });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "কাজ হয়নি");

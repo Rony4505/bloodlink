@@ -1552,4 +1552,132 @@
   .km-shell {
     background: #fff;
   }
+
+  .km-bell,
+  .km-bell-panel {
+    display: none !important;
+  }
+}
+
+.km-warn {
+  background: #fff6eb;
+  border: 1px solid #ffb04a;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  color: var(--km-ink);
+}
+
+.km-warn h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+  color: #9a4a00;
+}
+
+.km-warn ol {
+  margin: 0 0 0.7rem;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.km-bell {
+  position: relative;
+}
+
+.km-bell-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.05rem;
+  position: relative;
+}
+
+.km-bell-btn i {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--km-gold);
+  color: #fff;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  padding: 0 3px;
+}
+
+.km-bell-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(340px, calc(100vw - 1.5rem));
+  background: #fff;
+  color: var(--km-ink);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 61, 62, 0.22);
+  border: 1px solid var(--km-line);
+  z-index: 40;
+  overflow: hidden;
+}
+
+.km-bell-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  background: var(--km-teal);
+  color: #fff;
+}
+
+.km-bell-panel header button {
+  background: transparent;
+  border: 0;
+  color: var(--km-gold-2);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.km-bell-push {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--km-line);
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.km-bell-list {
+  max-height: 320px;
+  overflow: auto;
+  display: grid;
+}
+
+.km-bell-list a {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--km-line);
+  color: inherit;
+}
+
+.km-bell-list a.unread {
+  background: #fff8ef;
+}
+
+.km-bell-list a b {
+  font-size: 0.88rem;
+}
+
+.km-bell-list a span {
+  color: var(--km-muted);
+  font-size: 0.8rem;
 }

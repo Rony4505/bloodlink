@@ -2,6 +2,7 @@ import { getSessionUser } from "@/lib/kajmama/auth";
 import { DISTRICTS } from "@/lib/kajmama/constants";
 import { fail, newId, ok } from "@/lib/kajmama/http";
 import { siteFeeOf } from "@/lib/kajmama/premium";
+import { addNote, pingPush } from "@/lib/kajmama/notify";
 import { findJob, findUser, readKajmamaStore, storeCategories, updateKajmamaStore, workerIsBusy } from "@/lib/kajmama/store";
 import type { Job } from "@/lib/kajmama/types";
 
@@ -72,6 +73,8 @@ export async function POST(request: Request) {
     const whenText = (body.whenText || "").trim() || "আলোচনাসাপেক্ষ";
 
     let jobId = "";
+    let hiredWorkerId = "";
+    let bookingId = "";
     const store = await updateKajmamaStore((s) => {
       let workerId: string | undefined;
       let status: Job["status"] = "open";
@@ -101,24 +104,45 @@ export async function POST(request: Request) {
       s.jobs.unshift(job);
       if (workerId) {
         const fee = siteFeeOf(budget, s.settings.commissionPct);
-        s.bookings.unshift({
+        const bk = {
           id: newId("bk"),
           jobId: job.id,
           hirerId: me.id,
           workerId,
-          status: "pending",
+          status: "pending" as const,
           price: budget,
           commissionPct: s.settings.commissionPct,
           siteFee: fee.siteFee,
           workerPayout: fee.workerPayout,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+        };
+        s.bookings.unshift(bk);
+        bookingId = bk.id;
+        hiredWorkerId = workerId;
+        addNote(s, workerId, {
+          kind: "hire",
+          titleBn: "নতুন হায়ার রিকোয়েস্ট",
+          titleEn: "New hire request",
+          bodyBn: `${me.name} আপনাকে «${title}» কাজের জন্য চান। একসেপ্ট বা না বলুন।`,
+          bodyEn: `${me.name} wants to hire you for “${title}”. Accept or decline.`,
+          href: `/kajmama/bookings/${bk.id}`,
         });
       }
     });
 
     const job = findJob(store, jobId);
     if (!job) return fail("পোস্ট হয়নি", 500);
+    if (hiredWorkerId) {
+      await pingPush(hiredWorkerId, {
+        kind: "hire",
+        titleBn: "নতুন হায়ার রিকোয়েস্ট",
+        titleEn: "New hire request",
+        bodyBn: `${me.name} আপনাকে কাজের জন্য চান।`,
+        bodyEn: `${me.name} wants to hire you.`,
+        href: `/kajmama/bookings/${bookingId}`,
+      });
+    }
     const booking = store.bookings.find((b) => b.jobId === job.id);
     return ok({ job: serializeJob(job, store), bookingId: booking?.id });
   } catch (e) {

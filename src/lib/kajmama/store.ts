@@ -73,6 +73,8 @@ function normalizeStore(raw: Partial<KajmamaStore> | null | undefined): KajmamaS
       Array.isArray(raw?.settings?.mobiles) && raw.settings.mobiles.length
         ? raw.settings.mobiles
         : DEFAULT_ADMIN_MOBILES,
+    vapidPublicKey: raw?.settings?.vapidPublicKey || "",
+    vapidPrivateKey: raw?.settings?.vapidPrivateKey || "",
   };
   return {
     settings,
@@ -87,6 +89,8 @@ function normalizeStore(raw: Partial<KajmamaStore> | null | undefined): KajmamaS
     messages: Array.isArray(raw?.messages) ? raw.messages : [],
     reviews: Array.isArray(raw?.reviews) ? raw.reviews : [],
     support: Array.isArray(raw?.support) ? raw.support : [],
+    notifications: Array.isArray(raw?.notifications) ? raw.notifications : [],
+    pushSubs: Array.isArray(raw?.pushSubs) ? raw.pushSubs : [],
   };
 }
 
@@ -118,6 +122,7 @@ async function mergeMissingDemoData(store: KajmamaStore): Promise<KajmamaStore> 
   const needCats = store.categories.length === 0;
   const needPkgs = store.packages.length === 0;
   const missingAds = seed.ads.filter((a) => !store.ads.some((x) => x.id === a.id));
+  const missingNotes = seed.notifications.filter((n) => !store.notifications.some((x) => x.id === n.id));
   const seedPremiumIds = seed.users.filter((u) => u.role === "worker" && u.packageId !== "basic").map((u) => u.id);
   let users = missingUsers.length ? [...store.users, ...missingUsers] : store.users;
   let pkgPatched = false;
@@ -138,7 +143,8 @@ async function mergeMissingDemoData(store: KajmamaStore): Promise<KajmamaStore> 
     !needCats &&
     !needPkgs &&
     !pkgPatched &&
-    missingAds.length === 0
+    missingAds.length === 0 &&
+    missingNotes.length === 0
   ) {
     return store;
   }
@@ -149,6 +155,7 @@ async function mergeMissingDemoData(store: KajmamaStore): Promise<KajmamaStore> 
     categories: needCats ? seed.categories : store.categories,
     packages: needPkgs ? seed.packages : store.packages,
     ads: missingAds.length ? [...store.ads, ...missingAds] : store.ads,
+    notifications: missingNotes.length ? [...store.notifications, ...missingNotes] : store.notifications,
     settings: settingsNeedBrand
       ? {
           ...store.settings,

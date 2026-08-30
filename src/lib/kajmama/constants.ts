@@ -211,3 +211,34 @@ export const DEFAULT_ADS = [
     active: true,
   },
 ];
+
+export const WORKER_WARNINGS = [
+  {
+    bn: "সাইটের বাইরে টাকা লেনদেন করবেন না। ধরা পড়লে অ্যাকাউন্ট ব্লক হবে, কাজও বাতিল হতে পারে।",
+    en: "Do not take or send money off this website. Off-platform deals can get your account blocked.",
+  },
+  {
+    bn: "কাজদাতার ব্যক্তিগত বিকাশ, নগদ বা রকেটে পেমেন্ট নেবেন না — শুধু KajMama-র মাধ্যমে।",
+    en: "Never accept bKash, Nagad, or Rocket on the hirer's personal number — pay only through KajMama.",
+  },
+  {
+    bn: "কেউ জামানত, রেজিস্ট্রেশন ফি বা অ্যাডভান্স চাইলে সেটা প্রতারণা। টাকা পাঠাবেন না।",
+    en: "Anyone asking for a deposit, registration fee, or advance is a scam. Do not send money.",
+  },
+  {
+    bn: "OTP, পিন, ব্যাংক পাসওয়ার্ড বা মোবাইল ব্যাংকিং কোড কাউকে দেবেন না — অ্যাডমিনও চাইবে না।",
+    en: "Never share OTP, PIN, or banking passwords. KajMama admin will never ask for them.",
+  },
+  {
+    bn: "সাইট ফি কর্মীর থেকে কাটা হয়। কাজের টাকা আপনার দেওয়া ব্যাংক/মোবাইল অ্যাকাউন্টে যাবে।",
+    en: "The website fee is deducted from the worker. Job money is sent to the account you register.",
+  },
+  {
+    bn: "মিথ্যা স্কিল বা পরিচয় দিলে ভেরিফিকেশন বাতিল হবে।",
+    en: "Fake skills or identity will cancel verification.",
+  },
+  {
+    bn: "কাজ শেষে ওয়েবসাইটে পেমেন্ট না হওয়া পর্যন্ত পরের কাজ নিতে পারবেন না।",
+    en: "Until the job is paid on the website you cannot take the next job.",
+  },
+];

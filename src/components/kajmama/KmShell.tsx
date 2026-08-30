@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { useKm } from "./KmSession";
 import { KmAdSlot } from "./KmAds";
+import { KmBell } from "./KmBell";
 import { KmChatWidget } from "./KmChatWidget";
 import { KmLogoMark } from "./KmUi";
 import "./kajmama.css";
@@ -41,6 +42,10 @@ export function KmShell({ children }: { children: React.ReactNode }) {
             </Link>
           </nav>
           <div className="km-nav-end">
+            <Link href={`${KAJMAMA_BASE}/admin`} className={`km-ghost-link ${on(`${KAJMAMA_BASE}/admin`)}`}>
+              {t.admin}
+            </Link>
+            <KmBell />
             <button type="button" className="km-lang" onClick={() => setLang(lang === "bn" ? "en" : "bn")}>
               {lang === "bn" ? "EN" : "বাং"}
             </button>
@@ -91,6 +96,7 @@ export function KmShell({ children }: { children: React.ReactNode }) {
             <Link href={KAJMAMA_BASE}>{t.home}</Link>
             <Link href={`${KAJMAMA_BASE}/workers`}>{t.allWorkers}</Link>
             <Link href={postHref}>{t.needWorkers}</Link>
+            <Link href={`${KAJMAMA_BASE}/admin`}>{t.admin}</Link>
           </div>
           <div>
             <h4>{t.contact}</h4>

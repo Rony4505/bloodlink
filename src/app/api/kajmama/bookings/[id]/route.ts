@@ -1,6 +1,7 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
 import { fail, newId, ok } from "@/lib/kajmama/http";
 import { siteFeeOf } from "@/lib/kajmama/premium";
+import { addNote, pingPush, type NoteDraft } from "@/lib/kajmama/notify";
 import { toPublicUser } from "@/lib/kajmama/public";
 import {
   findBooking,
@@ -82,6 +83,7 @@ export async function POST(request: Request, ctx: Ctx) {
   };
 
   try {
+    const pings: { userId: string; draft: NoteDraft }[] = [];
     await updateKajmamaStore((s) => {
       const booking = findBooking(s, id);
       if (!booking || !canSee(me.id, booking.hirerId, booking.workerId)) {
@@ -104,6 +106,17 @@ export async function POST(request: Request, ctx: Ctx) {
           createdAt: now,
         });
         booking.updatedAt = now;
+        const otherId = me.id === booking.hirerId ? booking.workerId : booking.hirerId;
+        const draft: NoteDraft = {
+          kind: "chat",
+          titleBn: "নতুন মেসেজ",
+          titleEn: "New message",
+          bodyBn: text.slice(0, 80),
+          bodyEn: text.slice(0, 80),
+          href: `/kajmama/bookings/${booking.id}`,
+        };
+        addNote(s, otherId, draft);
+        pings.push({ userId: otherId, draft });
         return;
       }
 
@@ -146,6 +159,53 @@ export async function POST(request: Request, ctx: Ctx) {
           throw new Error("অবস্থা সঠিক নয়");
         }
         booking.updatedAt = now;
+        const href = `/kajmama/bookings/${booking.id}`;
+        if (next === "accepted") {
+          const draft: NoteDraft = {
+            kind: "accepted",
+            titleBn: "কর্মী কাজ গ্রহণ করেছেন",
+            titleEn: "Worker accepted",
+            bodyBn: "বুকিং একসেপ্ট হয়েছে। চ্যাট করে সময় ঠিক করুন।",
+            bodyEn: "The worker accepted. Chat to confirm timing.",
+            href,
+          };
+          addNote(s, booking.hirerId, draft);
+          pings.push({ userId: booking.hirerId, draft });
+        } else if (next === "declined") {
+          const other = me.id === booking.workerId ? booking.hirerId : booking.workerId;
+          const draft: NoteDraft = {
+            kind: "declined",
+            titleBn: "বুকিং বাতিল",
+            titleEn: "Booking cancelled",
+            bodyBn: "এই কাজ আর চলবে না।",
+            bodyEn: "This job will not continue.",
+            href,
+          };
+          addNote(s, other, draft);
+          pings.push({ userId: other, draft });
+        } else if (next === "in_progress") {
+          const draft: NoteDraft = {
+            kind: "progress",
+            titleBn: "কাজ শুরু হয়েছে",
+            titleEn: "Work started",
+            bodyBn: "কর্মী কাজ শুরু করেছেন।",
+            bodyEn: "The worker started the job.",
+            href,
+          };
+          addNote(s, booking.hirerId, draft);
+          pings.push({ userId: booking.hirerId, draft });
+        } else if (next === "completed") {
+          const draft: NoteDraft = {
+            kind: "completed",
+            titleBn: "কাজ শেষ — ওয়েবসাইটে পেমেন্ট করুন",
+            titleEn: "Job done — pay on the website",
+            bodyBn: "কাজদাতা কাজ শেষ মার্ক করেছেন। সাইটে পেমেন্ট না হলে পরের কাজ নিতে পারবেন না।",
+            bodyEn: "The hirer marked the job complete. Pay on the site or the worker stays unavailable.",
+            href,
+          };
+          addNote(s, booking.workerId, draft);
+          pings.push({ userId: booking.workerId, draft });
+        }
         return;
       }
 
@@ -161,6 +221,16 @@ export async function POST(request: Request, ctx: Ctx) {
         booking.paymentRef = ref.slice(0, 80);
         booking.updatedAt = now;
         setWorkerAvailability(s, booking.workerId);
+        const draft: NoteDraft = {
+          kind: "paid",
+          titleBn: "পেমেন্ট হয়েছে",
+          titleEn: "Payment received",
+          bodyBn: "ওয়েবসাইটে পেমেন্ট নিশ্চিত। টাকা আপনার অ্যাকাউন্টে যাবে। এখন রেটিং দিতে পারেন।",
+          bodyEn: "Website payment is confirmed. Payout goes to your account. You can rate now.",
+          href: `/kajmama/bookings/${booking.id}`,
+        };
+        addNote(s, booking.workerId, draft);
+        pings.push({ userId: booking.workerId, draft });
         return;
       }
 
@@ -180,11 +250,22 @@ export async function POST(request: Request, ctx: Ctx) {
           text: (body.text || "").trim().slice(0, 400),
           createdAt: now,
         });
+        const draft: NoteDraft = {
+          kind: "review",
+          titleBn: "নতুন রেটিং",
+          titleEn: "New rating",
+          bodyBn: `${me.name} আপনাকে ${rating}★ দিয়েছেন।`,
+          bodyEn: `${me.name} rated you ${rating}★.`,
+          href: `/kajmama/bookings/${booking.id}`,
+        };
+        addNote(s, toUserId, draft);
+        pings.push({ userId: toUserId, draft });
         return;
       }
 
       throw new Error("Unknown action");
     });
+    await Promise.all(pings.map((p) => pingPush(p.userId, p.draft)));
     return ok({ ok: true });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "আপডেট হয়নি");

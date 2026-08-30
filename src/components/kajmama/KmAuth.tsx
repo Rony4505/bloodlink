@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE, WORKER_WARNINGS } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import type { SessionUser, UserRole } from "@/lib/kajmama/types";
 import { useKm } from "./KmSession";
@@ -78,6 +78,9 @@ export function KmLogin() {
           {bn ? "অ্যাকাউন্ট নেই?" : "No account?"}{" "}
           <Link href={registerHref}>{bn ? "খুলুন" : "Sign up"}</Link>
         </p>
+        <p className="km-muted">
+          <Link href={`${KAJMAMA_BASE}/admin`}>{bn ? "সাইট অ্যাডমিন →" : "Site admin →"}</Link>
+        </p>
       </form>
     </div>
   );
@@ -106,6 +109,7 @@ export function KmRegister() {
   const [bankHolder, setBankHolder] = useState("");
   const [mobileBanking, setMobileBanking] = useState("");
   const [mobileType, setMobileType] = useState("bkash");
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -115,6 +119,10 @@ export function KmRegister() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (role === "worker" && !agreed) {
+      setError(bn ? "সতর্কবার্তা পড়ে সম্মত হতে হবে।" : "Please accept the safety warnings.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -175,6 +183,22 @@ export function KmRegister() {
             <div className="km-meta">{bn ? "প্রোফাইল খুলব" : "I will take jobs"}</div>
           </button>
         </div>
+        {role === "worker" ? (
+          <aside className="km-warn" role="alert">
+            <h3>⚠️ {bn ? "ওয়ার্কারদের জন্য সতর্কবার্তা" : "Safety warnings for workers"}</h3>
+            <ol>
+              {WORKER_WARNINGS.map((w) => (
+                <li key={w.en}>{bn ? w.bn : w.en}</li>
+              ))}
+            </ol>
+            <label className="km-checkrow">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} required />
+              {bn
+                ? "আমি সব সতর্কবার্তা পড়েছি এবং সাইটের নিয়ম মেনে কাজ করব।"
+                : "I have read these warnings and will follow KajMama rules."}
+            </label>
+          </aside>
+        ) : null}
         <label className="km-label">
           {bn ? "নাম" : "Name"}
           <input className="km-input" value={name} onChange={(e) => setName(e.target.value)} required />

@@ -161,6 +161,28 @@ export type Review = {
   createdAt: string;
 };
 
+export type AppNotification = {
+  id: string;
+  userId: string;
+  titleBn: string;
+  titleEn: string;
+  bodyBn: string;
+  bodyEn: string;
+  href: string;
+  kind: string;
+  read: boolean;
+  createdAt: string;
+};
+
+export type KajmamaPushSub = {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: string;
+};
+
 export type PlatformSettings = {
   ownerPin: string;
   siteName: string;
@@ -174,6 +196,8 @@ export type PlatformSettings = {
   commissionPct: number;
   banks: AdminBankAccount[];
   mobiles: AdminMobileAccount[];
+  vapidPublicKey: string;
+  vapidPrivateKey: string;
 };
 
 export type KajmamaStore = {
@@ -187,6 +211,8 @@ export type KajmamaStore = {
   messages: Message[];
   reviews: Review[];
   support: SupportMessage[];
+  notifications: AppNotification[];
+  pushSubs: KajmamaPushSub[];
 };
 
 export type PublicUser = {
