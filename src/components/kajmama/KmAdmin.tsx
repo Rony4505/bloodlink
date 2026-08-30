@@ -142,7 +142,18 @@ export function KmAdmin() {
 
   return (
     <div className="km-page km-wrap">
-      <h1>KajMama Admin</h1>
+      <div className="km-page-head">
+        <h1>KajMama Admin</h1>
+        <button
+          type="button"
+          className="km-btn ghost sm"
+          onClick={() => {
+            void act({ action: "logout" }).then(() => setAuthed(false));
+          }}
+        >
+          {bn ? "অ্যাডমিন লগআউট" : "Admin logout"}
+        </button>
+      </div>
       <div className="km-grid-3" style={{ margin: "1rem 0" }}>
         <div className="km-card">
           <p className="km-muted">{bn ? "কর্মী" : "Workers"}</p>

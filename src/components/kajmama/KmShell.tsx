@@ -42,7 +42,7 @@ export function KmShell({ children }: { children: React.ReactNode }) {
             </Link>
           </nav>
           <div className="km-nav-end">
-            <Link href={`${KAJMAMA_BASE}/admin`} className={`km-ghost-link ${on(`${KAJMAMA_BASE}/admin`)}`}>
+            <Link href={`${KAJMAMA_BASE}/admin`} className="km-admin-link">
               {t.admin}
             </Link>
             <KmBell />
@@ -96,7 +96,9 @@ export function KmShell({ children }: { children: React.ReactNode }) {
             <Link href={KAJMAMA_BASE}>{t.home}</Link>
             <Link href={`${KAJMAMA_BASE}/workers`}>{t.allWorkers}</Link>
             <Link href={postHref}>{t.needWorkers}</Link>
-            <Link href={`${KAJMAMA_BASE}/admin`}>{t.admin}</Link>
+            <Link href={`${KAJMAMA_BASE}/admin`} className="km-admin-link">
+              {t.admin}
+            </Link>
           </div>
           <div>
             <h4>{t.contact}</h4>
