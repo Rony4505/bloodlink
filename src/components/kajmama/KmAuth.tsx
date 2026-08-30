@@ -88,7 +88,7 @@ export function KmRegister() {
   const router = useRouter();
   const params = useSearchParams();
   const bn = lang === "bn";
-  const [role, setRole] = useState<UserRole>(params.get("role") === "worker" ? "worker" : "hirer");
+  const [role, setRole] = useState<UserRole>(params.get("role") === "hirer" ? "hirer" : "worker");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");

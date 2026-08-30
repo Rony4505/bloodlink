@@ -201,7 +201,7 @@ export function KmWorkers() {
           {slice.length > 0 ? (
             <div className="km-list">
               {slice.map((w) => (
-                <article key={w.id} className={`km-card km-worker-list ${w.verified ? "is-premium" : ""}`}>
+                <Link key={w.id} href={`${KAJMAMA_BASE}/workers/${w.id}`} className={`km-card km-worker-list ${w.verified ? "is-premium" : ""}`}>
                   <KmPremium on={w.verified} />
                   <KmAvatar name={w.name} id={w.id} size={78} />
                   <div>
@@ -219,16 +219,14 @@ export function KmWorkers() {
                       {bn ? " বছর" : " yrs"}
                     </p>
                     <p className={`km-avail ${w.available ? "on" : ""}`}>
-                      <i /> {w.available ? (bn ? "Available" : "Available") : bn ? "Busy" : "Busy"}
+                      <i /> {w.available ? "Available" : bn ? "Busy" : "Busy"}
                     </p>
                   </div>
                   <div className="km-call-col">
                     <p className="km-phone">{w.phone || w.phoneMasked}</p>
-                    <Link className="km-btn dark sm" href={`${KAJMAMA_BASE}/workers/${w.id}`}>
-                      {t.call}
-                    </Link>
+                    <span className="km-btn dark sm">{t.call}</span>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           ) : null}

@@ -334,8 +334,8 @@
   border-radius: 28px 28px 8px 8px;
   background:
     linear-gradient(180deg, transparent 55%, rgba(15, 61, 62, 0.35)),
-    url("https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=60")
-      center 20%/cover no-repeat;
+    url("https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=60")
+      center 15%/cover no-repeat;
   box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
   border: 4px solid rgba(255, 255, 255, 0.2);
 }
@@ -971,7 +971,7 @@
 
 .km-filters-inline {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
   gap: 0.5rem;
   margin: 0.9rem 0 1.1rem;
 }
