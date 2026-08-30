@@ -12,11 +12,12 @@ const kmDisplay = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "কাজমামা | Kajmama",
+    absolute: "কাজমামা | Kajmama",
     template: "%s | কাজমামা",
   },
   description:
     "কাজমামা — বাংলাদেশের কাজের মানুষ হায়ার করার প্রিমিয়াম মার্কেটপ্লেস। ইলেকট্রিশিয়ান, প্লাম্বার, ক্লিনিং, এসি, ড্রাইভার ও আরও।",
+  applicationName: "Kajmama",
   robots: { index: true, follow: true },
 };
 
