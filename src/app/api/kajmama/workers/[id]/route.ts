@@ -1,6 +1,6 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
 import { fail, ok } from "@/lib/kajmama/http";
-import { toPublicUser } from "@/lib/kajmama/public";
+import { toPublicUser, workerList } from "@/lib/kajmama/public";
 import { findUser, readKajmamaStore, reviewsFor } from "@/lib/kajmama/store";
 
 export const runtime = "nodejs";
@@ -32,9 +32,17 @@ export async function GET(_request: Request, ctx: Ctx) {
     fromName: findUser(store, r.fromUserId)?.name || "সদস্য",
   }));
 
+  const similar = workerList(store, {
+    category: user.skills[0],
+    district: user.district,
+  })
+    .filter((w) => w.id !== user.id)
+    .slice(0, 4);
+
   return ok({
     worker: toPublicUser(store, user, { revealPhone: reveal }),
     reviews,
-    canHire: !!me && me.role === "hirer" && me.id !== user.id,
+    similar,
+    canHire: !!me && me.id !== user.id,
   });
 }

@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIES, DISTRICTS, KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import type { SessionUser, UserRole } from "@/lib/kajmama/types";
 import { useKm } from "./KmSession";
 
+function nextPath(raw: string | null) {
+  if (raw && raw.startsWith(KAJMAMA_BASE)) return raw;
+  return `${KAJMAMA_BASE}/dashboard`;
+}
+
 export function KmLogin() {
   const { reload, lang } = useKm();
   const router = useRouter();
+  const params = useSearchParams();
   const bn = lang === "bn";
   const [phone, setPhone] = useState("01722222222");
   const [password, setPassword] = useState("123456");
@@ -27,13 +33,15 @@ export function KmLogin() {
         body: JSON.stringify({ action: "login", phone, password }),
       });
       await reload();
-      router.push(`${KAJMAMA_BASE}/dashboard`);
+      router.push(nextPath(params.get("next")));
     } catch (err) {
       setError(err instanceof Error ? err.message : "লগইন হয়নি");
     } finally {
       setBusy(false);
     }
   }
+
+  const registerHref = `${KAJMAMA_BASE}/register${params.get("next") ? `?next=${encodeURIComponent(params.get("next") || "")}&role=hirer` : ""}`;
 
   return (
     <div className="km-page km-wrap">
@@ -68,7 +76,7 @@ export function KmLogin() {
         </p>
         <p className="km-muted">
           {bn ? "অ্যাকাউন্ট নেই?" : "No account?"}{" "}
-          <Link href={`${KAJMAMA_BASE}/register`}>{bn ? "খুলুন" : "Sign up"}</Link>
+          <Link href={registerHref}>{bn ? "খুলুন" : "Sign up"}</Link>
         </p>
       </form>
     </div>
@@ -78,8 +86,9 @@ export function KmLogin() {
 export function KmRegister() {
   const { reload, lang } = useKm();
   const router = useRouter();
+  const params = useSearchParams();
   const bn = lang === "bn";
-  const [role, setRole] = useState<UserRole>("hirer");
+  const [role, setRole] = useState<UserRole>(params.get("role") === "worker" ? "worker" : "hirer");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -89,6 +98,8 @@ export function KmRegister() {
   const [bio, setBio] = useState("");
   const [experienceYears, setExperienceYears] = useState("1");
   const [hourlyRate, setHourlyRate] = useState("300");
+  const [plan, setPlan] = useState<"basic" | "monthly" | "yearly">("basic");
+  const [photoName, setPhotoName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -119,7 +130,7 @@ export function KmRegister() {
         }),
       });
       await reload();
-      router.push(`${KAJMAMA_BASE}/dashboard`);
+      router.push(nextPath(params.get("next")));
     } catch (err) {
       setError(err instanceof Error ? err.message : "রেজিস্টার হয়নি");
     } finally {
@@ -131,10 +142,13 @@ export function KmRegister() {
     <div className="km-page km-wrap">
       <div className="km-page-head">
         <div>
-          <h1>{bn ? "অ্যাকাউন্ট খুলুন" : "Create account"}</h1>
-          <p className="km-muted">{bn ? "কাজদাতা বা কাজের মানুষ — বেছে নিন।" : "Hire help, or offer your skill."}</p>
+          <h1>{bn ? "ওয়ার্কার রেজিস্ট্রেশন" : "Create account"}</h1>
+          <p className="km-muted">
+            {bn ? "নিবন্ধন করুন, কাজের সুযোগ পান। কাজদাতা বা কাজের মানুষ — বেছে নিন।" : "Register and get work — or hire help."}
+          </p>
         </div>
       </div>
+      <div className="km-reg-grid">
       <form className="km-form wide km-card" onSubmit={onSubmit}>
         <div className="km-role">
           <button type="button" className={role === "hirer" ? "on" : ""} onClick={() => setRole("hirer")}>
@@ -190,7 +204,6 @@ export function KmRegister() {
                   key={c.id}
                   className={`km-chip ${skills.includes(c.id) ? "on" : ""}`}
                   onClick={() => toggleSkill(c.id)}
-                  style={skills.includes(c.id) ? { borderColor: "#c6a35a", background: "#fbf6ea" } : undefined}
                 >
                   {c.icon} {bn ? c.nameBn : c.nameEn}
                 </button>
@@ -214,17 +227,71 @@ export function KmRegister() {
                 <input className="km-input" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
               </label>
             </div>
+            <label className="km-upload">
+              <input
+                type="file"
+                accept="image/jpeg,image/png"
+                hidden
+                onChange={(e) => setPhotoName(e.target.files?.[0]?.name || "")}
+              />
+              <b>{bn ? "ছবি আপলোড" : "Upload photo"}</b>
+              <span>{photoName || (bn ? "JPG/PNG, সর্বোচ্চ ২MB" : "JPG/PNG, max 2MB")}</span>
+            </label>
           </>
         ) : null}
         {error ? <p className="km-error">{error}</p> : null}
-        <button className="km-btn gold" disabled={busy} type="submit">
-          {busy ? "..." : bn ? "অ্যাকাউন্ট তৈরি" : "Create account"}
+        <button className="km-btn dark" disabled={busy} type="submit">
+          {busy ? "..." : bn ? "আবেদন করুন →" : "Apply →"}
         </button>
+        <p className="km-hint">🔒 {bn ? "আপনার তথ্য নিরাপদ ও গোপন থাকবে।" : "Your information stays private."}</p>
         <p className="km-muted">
           {bn ? "আগে থেকে আছেন?" : "Already here?"}{" "}
-          <Link href={`${KAJMAMA_BASE}/login`}>{bn ? "লগইন" : "Log in"}</Link>
+          <Link href={`${KAJMAMA_BASE}/login${params.get("next") ? `?next=${encodeURIComponent(params.get("next") || "")}` : ""}`}>
+            {bn ? "লগইন" : "Log in"}
+          </Link>
         </p>
       </form>
+      <aside className="km-plans">
+        <h2>👑 {bn ? "প্রিমিয়াম প্ল্যানে আরও সুযোগ" : "Get more with premium"}</h2>
+        <p className="km-muted">
+          {bn
+            ? "প্রিমিয়াম ব্যাজ, সার্চে উপরে, হোমপেজে ফিচার — bKash দিয়ে পেমেন্ট।"
+            : "Premium badge, top of search, homepage feature — pay with bKash."}
+        </p>
+        <button type="button" className={`km-plan ${plan === "basic" ? "on" : ""}`} onClick={() => setPlan("basic")}>
+          <em>{bn ? "ফ্রি" : "Free"}</em>
+          <h3>{bn ? "বেসিক" : "Basic"}</h3>
+          <ul>
+            <li>{bn ? "বেসিক লিস্টিং" : "Basic listing"}</li>
+            <li className="off">{bn ? "টপ সার্চ নয়" : "No top search"}</li>
+            <li className="off">{bn ? "প্রিমিয়াম ব্যাজ নয়" : "No premium badge"}</li>
+          </ul>
+          <span className="km-btn ghost sm">{bn ? "বেসিক দিয়ে চলুন" : "Continue as basic"}</span>
+        </button>
+        <button type="button" className={`km-plan popular ${plan === "monthly" ? "on" : ""}`} onClick={() => setPlan("monthly")}>
+          <span className="km-ribbon-tag">{bn ? "সবচেয়ে জনপ্রিয়" : "Most popular"}</span>
+          <em>৳ ২৯৯ / {bn ? "মাস" : "mo"}</em>
+          <h3>{bn ? "প্রিমিয়াম মাসিক" : "Premium monthly"}</h3>
+          <ul>
+            <li>{bn ? "টপ সার্চ প্রাধান্য" : "Top search"}</li>
+            <li>{bn ? "প্রিমিয়াম ব্যাজ" : "Premium badge"}</li>
+            <li>{bn ? "৩টি ছবি" : "Up to 3 photos"}</li>
+          </ul>
+          <span className="km-btn gold sm">{bn ? "এই প্ল্যান নিন" : "Select this plan"}</span>
+        </button>
+        <button type="button" className={`km-plan ${plan === "yearly" ? "on" : ""}`} onClick={() => setPlan("yearly")}>
+          <span className="km-ribbon-tag teal">{bn ? "বেস্ট ভ্যালু" : "Best value"}</span>
+          <em>৳ ২,৪৯৯ / {bn ? "বছর" : "yr"}</em>
+          <h3>{bn ? "প্রিমিয়াম বাৎসরিক" : "Premium yearly"}</h3>
+          <ul>
+            <li>{bn ? "মাসিকের সব সুবিধা" : "Everything in monthly"}</li>
+            <li>{bn ? "হোমপেজে ফিচার" : "Homepage feature"}</li>
+          </ul>
+          <span className="km-btn dark sm">{bn ? "এই প্ল্যান নিন" : "Select this plan"}</span>
+        </button>
+        <p className="km-hint">bKash · {bn ? "পেমেন্ট নিরাপদ — ডেমোতে চার্জ হয় না।" : "Secure payment — no charge in demo."}</p>
+      </aside>
+      </div>
     </div>
   );
 }

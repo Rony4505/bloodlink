@@ -41,7 +41,6 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const me = await getSessionUser();
   if (!me) return fail("লগইন করুন", 401);
-  if (me.role !== "hirer") return fail("কাজ পোস্ট করতে কাজদাতা অ্যাকাউন্ট লাগবে");
 
   try {
     const body = (await request.json()) as {

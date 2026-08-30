@@ -24,6 +24,7 @@ export function toPublicUser(
     createdAt: user.createdAt,
     rating,
     reviewCount,
+    phoneMasked: maskPhone(user.phone),
     phone: opts?.revealPhone ? user.phone : undefined,
   };
 }

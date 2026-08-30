@@ -1,6 +1,6 @@
 import { fail, ok } from "@/lib/kajmama/http";
 import { workerList } from "@/lib/kajmama/public";
-import { publicCategories, readKajmamaStore } from "@/lib/kajmama/store";
+import { categoriesWithCounts, readKajmamaStore } from "@/lib/kajmama/store";
 import { DISTRICTS } from "@/lib/kajmama/constants";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export async function GET() {
         taglineBn: store.settings.taglineBn,
         taglineEn: store.settings.taglineEn,
       },
-      categories: publicCategories(),
+      categories: categoriesWithCounts(store),
       districts: DISTRICTS,
       featuredWorkers: workers.filter((w) => w.verified).slice(0, 6),
       stats: {

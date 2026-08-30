@@ -1,11 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { avatarTone, initials, taka, takaEn } from "@/lib/kajmama/format";
+import { avatarTone, initials, photoUrlFor, taka, takaEn } from "@/lib/kajmama/format";
 import { categoryById } from "@/lib/kajmama/constants";
 import { useKm } from "./KmSession";
 
-export function KmAvatar({ name, size = 44 }: { name: string; size?: number }) {
+export function KmLogoMark({ size = 42 }: { size?: number }) {
+  return (
+    <span className="km-logo-mark" style={{ width: size, height: size }} aria-hidden>
+      <svg viewBox="0 0 48 48" width={size * 0.72} height={size * 0.72}>
+        <circle cx="24" cy="24" r="22" fill="#0f3d3e" />
+        <path d="M14 20h20l-2-6H16z" fill="#ff8a00" />
+        <rect x="21" y="14" width="6" height="4" rx="1" fill="#ffb04a" />
+        <circle cx="24" cy="28" r="7" fill="#fff" />
+        <path d="M16 42c1.5-7 5.5-10 8-10s6.5 3 8 10" fill="#fff" />
+      </svg>
+    </span>
+  );
+}
+
+export function KmAvatar({ name, size = 44, id }: { name: string; size?: number; id?: string }) {
+  const src = id ? photoUrlFor(id) : undefined;
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- remote portraits; no next/image remotePatterns for KajMama
+      <img
+        className="km-avatar"
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        style={{ width: size, height: size, objectFit: "cover" }}
+      />
+    );
+  }
   return (
     <span
       className="km-avatar"
@@ -36,20 +64,24 @@ export function KmMoney({ amount }: { amount: number }) {
 }
 
 export function KmVerified({ on }: { on: boolean }) {
-  const { lang } = useKm();
   if (!on) return null;
-  return <span className="km-badge gold">{lang === "bn" ? "ভেরিফায়েড" : "Verified"}</span>;
+  return (
+    <span className="km-check" title="Verified" aria-label="Verified">
+      ✓
+    </span>
+  );
+}
+
+export function KmPremium({ on }: { on: boolean }) {
+  if (!on) return null;
+  return <span className="km-premium">PREMIUM</span>;
 }
 
 export function KmSkill({ id }: { id: string }) {
   const { lang } = useKm();
   const cat = categoryById(id);
   if (!cat) return null;
-  return (
-    <span className="km-chip">
-      {cat.icon} {lang === "bn" ? cat.nameBn : cat.nameEn}
-    </span>
-  );
+  return <span className="km-chip">{lang === "bn" ? cat.nameBn : cat.nameEn}</span>;
 }
 
 export function KmEmpty({ title, hint, href, cta }: { title: string; hint: string; href?: string; cta?: string }) {

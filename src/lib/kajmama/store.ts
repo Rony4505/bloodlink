@@ -21,11 +21,11 @@ function normalizeStore(raw: Partial<KajmamaStore> | null | undefined): KajmamaS
   return {
     settings: {
       ownerPin: raw?.settings?.ownerPin || DEFAULT_OWNER_PIN,
-      siteName: raw?.settings?.siteName || "Kajmama",
-      siteNameBn: raw?.settings?.siteNameBn || "কাজমামা",
-      taglineBn: raw?.settings?.taglineBn || "কাজ লাগলে মামা আছে।",
-      taglineEn: raw?.settings?.taglineEn || "Work needed? Mama is here.",
-      contactPhone: raw?.settings?.contactPhone || "01700000000",
+      siteName: raw?.settings?.siteName || "KajMama BD",
+      siteNameBn: raw?.settings?.siteNameBn || "KajMama BD",
+      taglineBn: raw?.settings?.taglineBn || "জেলা ও কাজ অনুযায়ী মিস্ত্রি খুঁজুন",
+      taglineEn: raw?.settings?.taglineEn || "Find workers by district and job type",
+      contactPhone: raw?.settings?.contactPhone || "01712-345678",
       commissionPct: raw?.settings?.commissionPct || COMMISSION_PCT,
     },
     users: Array.isArray(raw?.users) ? raw.users : [],
@@ -40,12 +40,43 @@ export async function readKajmamaStore(): Promise<KajmamaStore> {
   await ensureDir();
   try {
     const text = await readFile(STORE_PATH, "utf8");
-    return normalizeStore(JSON.parse(text) as Partial<KajmamaStore>);
+    const store = normalizeStore(JSON.parse(text) as Partial<KajmamaStore>);
+    return mergeMissingDemoData(store);
   } catch {
     const fresh = createSeedStore();
     await writeKajmamaStore(fresh);
     return fresh;
   }
+}
+
+const DEMO_EXTRA_IDS = ["u_imran", "u_jasim", "u_rakib", "u_sohel", "u_babu", "u_lina"];
+
+async function mergeMissingDemoData(store: KajmamaStore): Promise<KajmamaStore> {
+  const seed = createSeedStore();
+  const missingUsers = DEMO_EXTRA_IDS.some((id) => !store.users.some((u) => u.id === id))
+    ? seed.users.filter((u) => !store.users.some((x) => x.id === u.id || x.phone === u.phone))
+    : [];
+  const missingReviews = seed.reviews.filter((r) => !store.reviews.some((x) => x.id === r.id));
+  const settingsNeedBrand =
+    store.settings.siteName === "Kajmama" || store.settings.contactPhone === "01700000000";
+  if (missingUsers.length === 0 && missingReviews.length === 0 && !settingsNeedBrand) return store;
+  const next: KajmamaStore = {
+    ...store,
+    users: missingUsers.length ? [...store.users, ...missingUsers] : store.users,
+    reviews: missingReviews.length ? [...store.reviews, ...missingReviews] : store.reviews,
+    settings: settingsNeedBrand
+      ? {
+          ...store.settings,
+          siteName: "KajMama BD",
+          siteNameBn: "KajMama BD",
+          taglineBn: "জেলা ও কাজ অনুযায়ী মিস্ত্রি খুঁজুন",
+          taglineEn: "Find workers by district and job type",
+          contactPhone: store.settings.contactPhone === "01700000000" ? "01712-345678" : store.settings.contactPhone,
+        }
+      : store.settings,
+  };
+  await writeKajmamaStore(next);
+  return next;
 }
 
 export async function writeKajmamaStore(store: KajmamaStore): Promise<void> {
@@ -103,4 +134,13 @@ export function reviewsFor(store: KajmamaStore, userId: string): Review[] {
 
 export function publicCategories() {
   return CATEGORIES;
+}
+
+export function categoriesWithCounts(store: KajmamaStore) {
+  return CATEGORIES.map((c) => ({
+    ...c,
+    workerCount: store.users.filter(
+      (u) => u.role === "worker" && !u.blocked && u.skills.includes(c.id),
+    ).length,
+  }));
 }

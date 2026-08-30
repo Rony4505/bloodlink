@@ -15,6 +15,7 @@ export type Category = {
   blurbBn: string;
   blurbEn: string;
   icon: string;
+  workerCount?: number;
 };
 
 export type User = {
@@ -116,6 +117,7 @@ export type PublicUser = {
   createdAt: string;
   rating: number;
   reviewCount: number;
+  phoneMasked: string;
   phone?: string;
 };
 

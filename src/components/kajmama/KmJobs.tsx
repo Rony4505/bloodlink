@@ -46,11 +46,18 @@ export function KmJobs() {
           <h1>{bn ? "খোলা কাজ" : "Open jobs"}</h1>
           <p className="km-muted">{bn ? "ওয়ার্কাররা আগ্রহ দেখাতে পারেন।" : "Workers can show interest."}</p>
         </div>
-        {user?.role === "hirer" ? (
+        {user ? (
           <Link className="km-btn gold sm" href={`${KAJMAMA_BASE}/jobs/new`}>
             {bn ? "কাজ পোস্ট" : "Post a job"}
           </Link>
-        ) : null}
+        ) : (
+          <Link
+            className="km-btn gold sm"
+            href={`${KAJMAMA_BASE}/register?role=hirer&next=${encodeURIComponent(`${KAJMAMA_BASE}/jobs/new`)}`}
+          >
+            {bn ? "কাজ পোস্ট" : "Post a job"}
+          </Link>
+        )}
       </div>
       <div className="km-filters">
         <select className="km-select" style={{ maxWidth: 200 }} value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -72,7 +79,11 @@ export function KmJobs() {
         <KmEmpty
           title={bn ? "এখন খোলা কাজ নেই" : "No open jobs"}
           hint={bn ? "কাজদাতা হিসেবে পোস্ট করুন।" : "Post one as a hirer."}
-          href={user ? `${KAJMAMA_BASE}/jobs/new` : `${KAJMAMA_BASE}/register`}
+          href={
+            user
+              ? `${KAJMAMA_BASE}/jobs/new`
+              : `${KAJMAMA_BASE}/register?role=hirer&next=${encodeURIComponent(`${KAJMAMA_BASE}/jobs/new`)}`
+          }
           cta={bn ? "কাজ পোস্ট" : "Post a job"}
         />
       ) : (
@@ -145,14 +156,21 @@ export function KmJobNew() {
   }
 
   if (!user) {
+    const next = encodeURIComponent(`${KAJMAMA_BASE}/jobs/new`);
     return (
       <div className="km-page km-wrap">
-        <KmEmpty
-          title={bn ? "লগইন করুন" : "Please log in"}
-          hint={bn ? "কাজ পোস্ট করতে কাজদাতা অ্যাকাউন্ট লাগবে।" : "A hirer account is required."}
-          href={`${KAJMAMA_BASE}/login`}
-          cta={bn ? "লগইন" : "Log in"}
-        />
+        <div className="km-empty">
+          <h3>{bn ? "কাজ পোস্ট করতে অ্যাকাউন্ট খুলুন" : "Create an account to post"}</h3>
+          <p>{bn ? "কাজদাতা হিসেবে ঢুকলেই পোস্ট করতে পারবেন।" : "Sign in as someone who needs work done."}</p>
+          <div className="km-cta" style={{ justifyContent: "center" }}>
+            <Link className="km-btn gold" href={`${KAJMAMA_BASE}/register?role=hirer&next=${next}`}>
+              {bn ? "অ্যাকাউন্ট খুলুন" : "Sign up"}
+            </Link>
+            <Link className="km-btn ghost" href={`${KAJMAMA_BASE}/login?next=${next}`}>
+              {bn ? "লগইন" : "Log in"}
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

@@ -138,6 +138,29 @@ export function KmDashboard() {
         </div>
       </div>
 
+      {user.role === "worker" ? (
+        <section style={{ marginBottom: "1.6rem" }}>
+          <h2>👑 {bn ? "প্রিমিয়াম মেম্বারশিপ" : "Premium membership"}</h2>
+          <div className="km-grid-3">
+            <div className="km-plan">
+              <em>{bn ? "ফ্রি" : "Free"}</em>
+              <h3>{bn ? "বেসিক" : "Basic"}</h3>
+              <p className="km-muted">{bn ? "বেসিক লিস্টিং" : "Basic listing"}</p>
+            </div>
+            <div className="km-plan popular on">
+              <em>৳ ২৯৯</em>
+              <h3>{bn ? "মাসিক" : "Monthly"}</h3>
+              <p className="km-muted">{bn ? "টপ সার্চ + ব্যাজ" : "Top search + badge"}</p>
+            </div>
+            <div className="km-plan">
+              <em>৳ ২,৪৯৯</em>
+              <h3>{bn ? "বাৎসরিক" : "Yearly"}</h3>
+              <p className="km-muted">{bn ? "হোমপেজ ফিচার" : "Homepage feature"}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <h2>{bn ? "আমার বুকিং" : "My bookings"}</h2>
       {bookings.length === 0 ? (
         <p className="km-muted">{bn ? "এখনো বুকিং নেই।" : "No bookings yet."}</p>
