@@ -28,6 +28,8 @@ export const COPY = {
     applyFilter: "ফিল্টার প্রয়োগ করুন",
     resetFilter: "ফিল্টার রিসেট করুন",
     call: "কল করুন",
+    needWorkers: "কর্মী লাগবে",
+    allWorkers: "সকল কর্মী",
   },
   en: {
     brand: "KajMama BD",
@@ -56,5 +58,7 @@ export const COPY = {
     applyFilter: "Apply filters",
     resetFilter: "Reset filters",
     call: "Call",
+    needWorkers: "Need workers",
+    allWorkers: "All workers",
   },
 } as const;

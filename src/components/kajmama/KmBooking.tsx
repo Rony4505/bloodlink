@@ -11,13 +11,27 @@ import { KmAvatar, KmMoney, KmStatus } from "./KmUi";
 type Msg = { id: string; fromUserId: string; text: string; createdAt: string; mine: boolean };
 
 type Payload = {
-  booking: { id: string; status: BookingStatus; price: number; hirerId: string; workerId: string };
+  booking: {
+    id: string;
+    status: BookingStatus;
+    price: number;
+    hirerId: string;
+    workerId: string;
+    siteFee?: number;
+    workerPayout?: number;
+    commissionPct?: number;
+  };
   job: { title: string; description: string; whenText: string } | null;
   hirer: PublicUser | null;
   worker: PublicUser | null;
   messages: Msg[];
   myReview?: { rating: number; text: string };
   meId: string;
+  payments?: {
+    banks: { bankName: string; accountName: string; accountNumber: string; branch: string }[];
+    mobiles: { type: string; number: string; name: string }[];
+    commissionPct: number;
+  };
 };
 
 export function KmBooking() {
@@ -28,6 +42,8 @@ export function KmBooking() {
   const [text, setText] = useState("");
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
+  const [payMethod, setPayMethod] = useState("bkash");
+  const [payRef, setPayRef] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -192,7 +208,62 @@ export function KmBooking() {
           ) : null}
         </div>
 
-        {st === "completed" && !data.myReview ? (
+        {st === "completed" && isHirer ? (
+          <form
+            className="km-form"
+            style={{ marginTop: "1rem" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!id) return;
+              void kmApi(`/api/kajmama/bookings/${id}`, {
+                method: "POST",
+                body: JSON.stringify({ action: "pay", paymentMethod: payMethod, paymentRef: payRef || "DEMO" }),
+              })
+                .then(() => load())
+                .catch((err) => setError(err instanceof Error ? err.message : "পেমেন্ট হয়নি"));
+            }}
+          >
+            <h3>{bn ? "ওয়েবসাইটে পেমেন্ট করুন" : "Pay on the website"}</h3>
+            <p className="km-hint">
+              {bn
+                ? `সাইট ফি কর্মী থেকে কাটা: ৳${data.booking.siteFee || 0} · কর্মী পাবেন ৳${data.booking.workerPayout || 0}`
+                : `Fee from worker: ৳${data.booking.siteFee || 0} · worker gets ৳${data.booking.workerPayout || 0}`}
+            </p>
+            {(data.payments?.mobiles || []).map((m) => (
+              <p key={m.number} className="km-meta">
+                {m.type}: {m.number} ({m.name})
+              </p>
+            ))}
+            {(data.payments?.banks || []).map((b) => (
+              <p key={b.accountNumber} className="km-meta">
+                {b.bankName}: {b.accountNumber}
+              </p>
+            ))}
+            <select className="km-select" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+              <option value="bkash">bKash</option>
+              <option value="nagad">Nagad</option>
+              <option value="bank">Bank</option>
+            </select>
+            <input
+              className="km-input"
+              placeholder={bn ? "ট্রান্সঅ্যাকশন আইডি" : "Transaction ID"}
+              value={payRef}
+              onChange={(e) => setPayRef(e.target.value)}
+            />
+            <button className="km-btn gold" type="submit">
+              {bn ? "পেমেন্ট নিশ্চিত" : "Confirm payment"}
+            </button>
+          </form>
+        ) : null}
+        {st === "completed" && isWorker ? (
+          <p className="km-hint">
+            {bn
+              ? "ওয়েবসাইটে পেমেন্ট না হওয়া পর্যন্ত নতুন কাজ নিতে পারবেন না, রেটিংও খুলবে না।"
+              : "Until website payment is done you cannot take a new job, and ratings stay locked."}
+          </p>
+        ) : null}
+
+        {st === "paid" && !data.myReview ? (
           <form onSubmit={review} className="km-form" style={{ marginTop: "1rem" }}>
             <h3>{bn ? "রিভিউ দিন" : "Leave a review"}</h3>
             <select className="km-select" value={rating} onChange={(e) => setRating(Number(e.target.value))}>

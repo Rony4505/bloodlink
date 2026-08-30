@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { CATEGORIES, DISTRICTS, KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import type { SessionUser, UserRole } from "@/lib/kajmama/types";
 import { useKm } from "./KmSession";
@@ -84,7 +84,7 @@ export function KmLogin() {
 }
 
 export function KmRegister() {
-  const { reload, lang } = useKm();
+  const { reload, lang, meta } = useKm();
   const router = useRouter();
   const params = useSearchParams();
   const bn = lang === "bn";
@@ -92,14 +92,20 @@ export function KmRegister() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [district, setDistrict] = useState(DISTRICTS[0]);
+  const [district, setDistrict] = useState("ঢাকা");
+  const [upazila, setUpazila] = useState("");
   const [area, setArea] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [bio, setBio] = useState("");
   const [experienceYears, setExperienceYears] = useState("1");
   const [hourlyRate, setHourlyRate] = useState("300");
-  const [plan, setPlan] = useState<"basic" | "monthly" | "yearly">("basic");
+  const [plan, setPlan] = useState("basic");
   const [photoName, setPhotoName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bankHolder, setBankHolder] = useState("");
+  const [mobileBanking, setMobileBanking] = useState("");
+  const [mobileType, setMobileType] = useState("bkash");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -121,12 +127,21 @@ export function KmRegister() {
           phone,
           password,
           district,
+          upazila,
           area,
           skills,
           bio,
           experienceYears: Number(experienceYears),
           hourlyRate: Number(hourlyRate),
           jobRate: Number(hourlyRate) * 2,
+          packageId: plan,
+          payout: {
+            bankName,
+            bankAccount,
+            bankHolder: bankHolder || name,
+            mobileBanking,
+            mobileBankingType: mobileType,
+          },
         }),
       });
       await reload();
@@ -183,9 +198,25 @@ export function KmRegister() {
         <div className="km-row">
           <label className="km-label">
             {bn ? "জেলা" : "District"}
-            <select className="km-select" value={district} onChange={(e) => setDistrict(e.target.value)}>
-              {DISTRICTS.map((d) => (
+            <select
+              className="km-select"
+              value={district}
+              onChange={(e) => {
+                setDistrict(e.target.value);
+                setUpazila("");
+              }}
+            >
+              {meta.districts.map((d) => (
                 <option key={d}>{d}</option>
+              ))}
+            </select>
+          </label>
+          <label className="km-label">
+            {bn ? "উপজেলা" : "Upazila"}
+            <select className="km-select" value={upazila} onChange={(e) => setUpazila(e.target.value)}>
+              <option value="">{bn ? "উপজেলা" : "Upazila"}</option>
+              {(meta.upazilas[district] || []).map((u) => (
+                <option key={u}>{u}</option>
               ))}
             </select>
           </label>
@@ -198,7 +229,7 @@ export function KmRegister() {
           <>
             <div className="km-label">{bn ? "স্কিল (সর্বোচ্চ ৪টা)" : "Skills (max 4)"}</div>
             <div className="km-chips">
-              {CATEGORIES.map((c) => (
+              {meta.categories.map((c) => (
                 <button
                   type="button"
                   key={c.id}
@@ -237,6 +268,23 @@ export function KmRegister() {
               <b>{bn ? "ছবি আপলোড" : "Upload photo"}</b>
               <span>{photoName || (bn ? "JPG/PNG, সর্বোচ্চ ২MB" : "JPG/PNG, max 2MB")}</span>
             </label>
+            <h3>{bn ? "পেআউট অ্যাকাউন্ট (আবশ্যক)" : "Payout account (required)"}</h3>
+            <p className="km-hint">
+              {bn
+                ? "সাইট ফি কর্মীর থেকে কাটা হয়। কাজের টাকা এই অ্যাকাউন্টে যাবে।"
+                : "Website fee is deducted from the worker. Job money is sent here."}
+            </p>
+            <input className="km-input" placeholder={bn ? "ব্যাংকের নাম" : "Bank name"} value={bankName} onChange={(e) => setBankName(e.target.value)} required={role === "worker"} />
+            <input className="km-input" placeholder={bn ? "অ্যাকাউন্ট নম্বর" : "Account number"} value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} required={role === "worker"} />
+            <input className="km-input" placeholder={bn ? "অ্যাকাউন্ট হোল্ডার" : "Account holder"} value={bankHolder} onChange={(e) => setBankHolder(e.target.value)} />
+            <div className="km-row">
+              <select className="km-select" value={mobileType} onChange={(e) => setMobileType(e.target.value)}>
+                <option value="bkash">bKash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+              </select>
+              <input className="km-input" placeholder="01XXXXXXXXX" value={mobileBanking} onChange={(e) => setMobileBanking(e.target.value)} required={role === "worker"} />
+            </div>
           </>
         ) : null}
         {error ? <p className="km-error">{error}</p> : null}
@@ -255,40 +303,29 @@ export function KmRegister() {
         <h2>👑 {bn ? "প্রিমিয়াম প্ল্যানে আরও সুযোগ" : "Get more with premium"}</h2>
         <p className="km-muted">
           {bn
-            ? "প্রিমিয়াম ব্যাজ, সার্চে উপরে, হোমপেজে ফিচার — bKash দিয়ে পেমেন্ট।"
-            : "Premium badge, top of search, homepage feature — pay with bKash."}
+            ? "প্যাকেজ নিলে অটো প্রিমিয়াম। সময় শেষে প্রিমিয়াম অটো শেষ।"
+            : "A paid package turns premium on automatically, then expires on its own."}
         </p>
-        <button type="button" className={`km-plan ${plan === "basic" ? "on" : ""}`} onClick={() => setPlan("basic")}>
-          <em>{bn ? "ফ্রি" : "Free"}</em>
-          <h3>{bn ? "বেসিক" : "Basic"}</h3>
-          <ul>
-            <li>{bn ? "বেসিক লিস্টিং" : "Basic listing"}</li>
-            <li className="off">{bn ? "টপ সার্চ নয়" : "No top search"}</li>
-            <li className="off">{bn ? "প্রিমিয়াম ব্যাজ নয়" : "No premium badge"}</li>
-          </ul>
-          <span className="km-btn ghost sm">{bn ? "বেসিক দিয়ে চলুন" : "Continue as basic"}</span>
-        </button>
-        <button type="button" className={`km-plan popular ${plan === "monthly" ? "on" : ""}`} onClick={() => setPlan("monthly")}>
-          <span className="km-ribbon-tag">{bn ? "সবচেয়ে জনপ্রিয়" : "Most popular"}</span>
-          <em>৳ ২৯৯ / {bn ? "মাস" : "mo"}</em>
-          <h3>{bn ? "প্রিমিয়াম মাসিক" : "Premium monthly"}</h3>
-          <ul>
-            <li>{bn ? "টপ সার্চ প্রাধান্য" : "Top search"}</li>
-            <li>{bn ? "প্রিমিয়াম ব্যাজ" : "Premium badge"}</li>
-            <li>{bn ? "৩টি ছবি" : "Up to 3 photos"}</li>
-          </ul>
-          <span className="km-btn gold sm">{bn ? "এই প্ল্যান নিন" : "Select this plan"}</span>
-        </button>
-        <button type="button" className={`km-plan ${plan === "yearly" ? "on" : ""}`} onClick={() => setPlan("yearly")}>
-          <span className="km-ribbon-tag teal">{bn ? "বেস্ট ভ্যালু" : "Best value"}</span>
-          <em>৳ ২,৪৯৯ / {bn ? "বছর" : "yr"}</em>
-          <h3>{bn ? "প্রিমিয়াম বাৎসরিক" : "Premium yearly"}</h3>
-          <ul>
-            <li>{bn ? "মাসিকের সব সুবিধা" : "Everything in monthly"}</li>
-            <li>{bn ? "হোমপেজে ফিচার" : "Homepage feature"}</li>
-          </ul>
-          <span className="km-btn dark sm">{bn ? "এই প্ল্যান নিন" : "Select this plan"}</span>
-        </button>
+        {(meta.packages.length ? meta.packages : []).map((p) => (
+          <button
+            type="button"
+            key={p.id}
+            className={`km-plan ${p.premium ? "popular" : ""} ${plan === p.id ? "on" : ""}`}
+            onClick={() => setPlan(p.id)}
+          >
+            {p.premium ? <span className="km-ribbon-tag">{bn ? "প্রিমিয়াম" : "Premium"}</span> : null}
+            <em>{p.price ? `৳ ${p.price}` : bn ? "ফ্রি" : "Free"}</em>
+            <h3>{bn ? p.nameBn : p.nameEn}</h3>
+            <ul>
+              {(bn ? p.featuresBn : p.featuresEn).map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+            <span className={`km-btn ${p.premium ? "gold" : "ghost"} sm`}>
+              {plan === p.id ? (bn ? "নির্বাচিত" : "Selected") : bn ? "এই প্ল্যান নিন" : "Select this plan"}
+            </span>
+          </button>
+        ))}
         <p className="km-hint">bKash · {bn ? "পেমেন্ট নিরাপদ — ডেমোতে চার্জ হয় না।" : "Secure payment — no charge in demo."}</p>
       </aside>
       </div>

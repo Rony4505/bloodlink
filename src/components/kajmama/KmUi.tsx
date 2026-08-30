@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { avatarTone, initials, photoUrlFor, taka, takaEn } from "@/lib/kajmama/format";
-import { categoryById } from "@/lib/kajmama/constants";
 import { useKm } from "./KmSession";
 
 export function KmLogoMark({ size = 42 }: { size?: number }) {
@@ -78,8 +77,8 @@ export function KmPremium({ on }: { on: boolean }) {
 }
 
 export function KmSkill({ id }: { id: string }) {
-  const { lang } = useKm();
-  const cat = categoryById(id);
+  const { lang, meta } = useKm();
+  const cat = meta.categories.find((c) => c.id === id);
   if (!cat) return null;
   return <span className="km-chip">{lang === "bn" ? cat.nameBn : cat.nameEn}</span>;
 }
@@ -107,7 +106,8 @@ export function KmStatus({ status }: { status: string }) {
     accepted: { bn: "গ্রহণ", en: "Accepted" },
     declined: { bn: "না", en: "Declined" },
     in_progress: { bn: "চলছে", en: "In progress" },
-    completed: { bn: "শেষ", en: "Done" },
+    completed: { bn: "পেমেন্ট বাকি", en: "Awaiting payment" },
+    paid: { bn: "পেইড", en: "Paid" },
     cancelled: { bn: "বাতিল", en: "Cancelled" },
   };
   const label = map[status] || { bn: status, en: status };

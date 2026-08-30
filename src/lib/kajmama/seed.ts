@@ -1,14 +1,34 @@
 import bcrypt from "bcryptjs";
-import { COMMISSION_PCT, DEFAULT_OWNER_PIN, DEMO_PASSWORD } from "./constants";
+import {
+  CATEGORIES,
+  COMMISSION_PCT,
+  DEFAULT_ADMIN_BANKS,
+  DEFAULT_ADMIN_MOBILES,
+  DEFAULT_ADS,
+  DEFAULT_OWNER_PIN,
+  DEFAULT_PACKAGES,
+  DEMO_PASSWORD,
+} from "./constants";
 import { newId } from "./http";
+import { siteFeeOf } from "./premium";
 import type { Booking, Job, KajmamaStore, Message, Review, User } from "./types";
 
-function user(partial: Omit<User, "passwordHash" | "createdAt" | "blocked"> & { createdAt?: string }): User {
+function user(partial: Omit<User, "passwordHash" | "blocked" | "upazila" | "packageId" | "packageExpiresAt" | "payout"> & Partial<Pick<User, "upazila" | "packageId" | "packageExpiresAt" | "payout">>): User {
   return {
-    blocked: false,
-    createdAt: partial.createdAt || new Date().toISOString(),
     passwordHash: "",
+    blocked: false,
     ...partial,
+    createdAt: partial.createdAt || new Date().toISOString(),
+    upazila: partial.upazila || partial.area,
+    packageId: partial.packageId || "basic",
+    packageExpiresAt: partial.packageExpiresAt ?? null,
+    payout: partial.payout || {
+      bankName: "Dutch-Bangla Bank",
+      bankAccount: `101${partial.phone.slice(-6)}`,
+      bankHolder: partial.name,
+      mobileBanking: partial.phone,
+      mobileBankingType: "bkash",
+    },
   };
 }
 
@@ -242,7 +262,15 @@ export function createSeedStore(): KajmamaStore {
       available: true,
       createdAt: new Date(now - 3 * day).toISOString(),
     }),
-  ].map((u) => ({ ...u, passwordHash: hash }));
+  ].map((u) => {
+    const premium = u.verified;
+    return {
+      ...u,
+      passwordHash: hash,
+      packageId: premium ? "yearly" : "basic",
+      packageExpiresAt: premium ? new Date(now + 200 * day).toISOString() : null,
+    };
+  });
 
   const hirers: User[] = [
     user({
@@ -287,6 +315,7 @@ export function createSeedStore(): KajmamaStore {
       title: "রুম ফ্যান ও দুইটা লাইট ঠিক",
       description: "মাস্টার বেডরুমের ফ্যান কাঁপে, বারান্দার দুইটা লাইট জ্বলে না। আজ সন্ধ্যার মধ্যে হলে ভালো।",
       district: "ঢাকা",
+      upazila: "গুলশান",
       area: "গুলশান",
       budget: 1200,
       whenText: "আজ সন্ধ্যা",
@@ -300,6 +329,7 @@ export function createSeedStore(): KajmamaStore {
       title: "কিচেনের সিঙ্ক লিক",
       description: "সিঙ্কের নিচে পানি পড়ছে। জরুরি।",
       district: "ঢাকা",
+      upazila: "মিরপুর",
       area: "মিরপুর",
       budget: 800,
       whenText: "আজকের মধ্যে",
@@ -314,6 +344,7 @@ export function createSeedStore(): KajmamaStore {
       title: "ফ্ল্যাট ডীপ ক্লিন",
       description: "৩ বেডের ফ্ল্যাট, কিচেন ও বাথরুমসহ।",
       district: "ঢাকা",
+      upazila: "গুলশান",
       area: "গুলশান",
       budget: 3500,
       whenText: "গত শুক্রবার",
@@ -322,15 +353,21 @@ export function createSeedStore(): KajmamaStore {
     },
   ];
 
+  const fee = siteFeeOf(3500, COMMISSION_PCT);
   const bookings: Booking[] = [
     {
       id: "bk_done_1",
       jobId: "job_done_1",
       hirerId: "u_hirer_demo",
       workerId: "u_salma",
-      status: "completed",
+      status: "paid",
       price: 3500,
       commissionPct: COMMISSION_PCT,
+      siteFee: fee.siteFee,
+      workerPayout: fee.workerPayout,
+      paidAt: new Date(now - 5 * day).toISOString(),
+      paymentMethod: "bkash",
+      paymentRef: "DEMO-BKASH-3500",
       createdAt: new Date(now - 6 * day).toISOString(),
       updatedAt: new Date(now - 5 * day).toISOString(),
     },
@@ -405,12 +442,21 @@ export function createSeedStore(): KajmamaStore {
       taglineBn: "জেলা ও কাজ অনুযায়ী মিস্ত্রি খুঁজুন",
       taglineEn: "Find workers by district and job type",
       contactPhone: "01712-345678",
+      contactEmail: "support@kajmamabd.com",
+      contactWhatsapp: "01712345678",
+      contactFacebook: "https://facebook.com/kajmamabd",
       commissionPct: COMMISSION_PCT,
+      banks: DEFAULT_ADMIN_BANKS,
+      mobiles: DEFAULT_ADMIN_MOBILES,
     },
+    categories: CATEGORIES.map((c) => ({ ...c })),
+    packages: DEFAULT_PACKAGES.map((p) => ({ ...p })),
+    ads: DEFAULT_ADS.map((a) => ({ ...a })),
     users: [...workers, ...hirers],
     jobs,
     bookings,
     messages,
     reviews,
+    support: [],
   };
 }

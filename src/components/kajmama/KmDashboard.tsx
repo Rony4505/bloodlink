@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CATEGORIES, DISTRICTS, KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import type { SessionUser } from "@/lib/kajmama/types";
 import { useKm } from "./KmSession";
@@ -19,7 +19,7 @@ type BookingRow = {
 };
 
 export function KmDashboard() {
-  const { lang, user, loading, reload } = useKm();
+  const { lang, user, loading, reload, meta } = useKm();
   const bn = lang === "bn";
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [jobs, setJobs] = useState<{ id: string; title: string; status: string; budget: number }[]>([]);
@@ -28,14 +28,17 @@ export function KmDashboard() {
     hourlyRate: string;
     available: boolean;
     district: string;
+    upazila: string;
     area: string;
   } | null>(null);
   const [saved, setSaved] = useState("");
+  const [pkgBusy, setPkgBusy] = useState("");
 
   const bio = draft?.bio ?? user?.bio ?? "";
   const hourlyRate = draft?.hourlyRate ?? String(user?.hourlyRate || 0);
   const available = draft?.available ?? user?.available ?? true;
-  const district = draft?.district ?? user?.district ?? DISTRICTS[0];
+  const district = draft?.district ?? user?.district ?? "ঢাকা";
+  const upazila = draft?.upazila ?? user?.upazila ?? "";
   const area = draft?.area ?? user?.area ?? "";
 
   function patchDraft(patch: Partial<NonNullable<typeof draft>>) {
@@ -44,6 +47,7 @@ export function KmDashboard() {
       hourlyRate,
       available,
       district,
+      upazila,
       area,
       ...patch,
     });
@@ -71,6 +75,7 @@ export function KmDashboard() {
           jobRate: Number(hourlyRate) * 2,
           available,
           district,
+          upazila,
           area,
         }),
       });
@@ -141,22 +146,36 @@ export function KmDashboard() {
       {user.role === "worker" ? (
         <section style={{ marginBottom: "1.6rem" }}>
           <h2>👑 {bn ? "প্রিমিয়াম মেম্বারশিপ" : "Premium membership"}</h2>
+          <p className="km-muted">
+            {bn
+              ? `এখন: ${user.packageName || user.packageId}${user.packageExpiresAt ? ` · শেষ ${user.packageExpiresAt.slice(0, 10)}` : ""}`
+              : `Now: ${user.packageName || user.packageId}${user.packageExpiresAt ? ` · ends ${user.packageExpiresAt.slice(0, 10)}` : ""}`}
+          </p>
           <div className="km-grid-3">
-            <div className="km-plan">
-              <em>{bn ? "ফ্রি" : "Free"}</em>
-              <h3>{bn ? "বেসিক" : "Basic"}</h3>
-              <p className="km-muted">{bn ? "বেসিক লিস্টিং" : "Basic listing"}</p>
-            </div>
-            <div className="km-plan popular on">
-              <em>৳ ২৯৯</em>
-              <h3>{bn ? "মাসিক" : "Monthly"}</h3>
-              <p className="km-muted">{bn ? "টপ সার্চ + ব্যাজ" : "Top search + badge"}</p>
-            </div>
-            <div className="km-plan">
-              <em>৳ ২,৪৯৯</em>
-              <h3>{bn ? "বাৎসরিক" : "Yearly"}</h3>
-              <p className="km-muted">{bn ? "হোমপেজ ফিচার" : "Homepage feature"}</p>
-            </div>
+            {meta.packages.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                className={`km-plan ${user.packageId === p.id ? "on" : ""} ${p.premium ? "popular" : ""}`}
+                disabled={!!pkgBusy}
+                onClick={() => {
+                  setPkgBusy(p.id);
+                  void kmApi<{ user: SessionUser }>("/api/kajmama/workers", {
+                    method: "PATCH",
+                    body: JSON.stringify({ packageId: p.id, paymentRef: "DEMO" }),
+                  })
+                    .then(() => reload())
+                    .catch((err) => setSaved(err instanceof Error ? err.message : "প্যাকেজ হয়নি"))
+                    .finally(() => setPkgBusy(""));
+                }}
+              >
+                <em>{p.price ? `৳ ${p.price}` : bn ? "ফ্রি" : "Free"}</em>
+                <h3>{bn ? p.nameBn : p.nameEn}</h3>
+                <p className="km-muted">
+                  {p.durationDays ? `${p.durationDays} ${bn ? "দিন প্রিমিয়াম" : "days premium"}` : bn ? "বেসিক লিস্টিং" : "Basic listing"}
+                </p>
+              </button>
+            ))}
           </div>
         </section>
       ) : null}
@@ -188,9 +207,22 @@ export function KmDashboard() {
         <div className="km-row">
           <label className="km-label">
             {bn ? "জেলা" : "District"}
-            <select className="km-select" value={district} onChange={(e) => patchDraft({ district: e.target.value })}>
-              {DISTRICTS.map((d) => (
+            <select
+              className="km-select"
+              value={district}
+              onChange={(e) => patchDraft({ district: e.target.value, upazila: "" })}
+            >
+              {meta.districts.map((d) => (
                 <option key={d}>{d}</option>
+              ))}
+            </select>
+          </label>
+          <label className="km-label">
+            {bn ? "উপজেলা" : "Upazila"}
+            <select className="km-select" value={upazila} onChange={(e) => patchDraft({ upazila: e.target.value })}>
+              <option value="">{bn ? "উপজেলা" : "Upazila"}</option>
+              {(meta.upazilas[district] || []).map((u) => (
+                <option key={u}>{u}</option>
               ))}
             </select>
           </label>
@@ -217,7 +249,7 @@ export function KmDashboard() {
         ) : null}
         <p className="km-muted">
           {bn ? "স্কিল" : "Skills"}:{" "}
-          {user.skills.map((s) => CATEGORIES.find((c) => c.id === s)?.nameBn).filter(Boolean).join(", ") || "—"}
+          {user.skills.map((s) => meta.categories.find((c) => c.id === s)?.nameBn).filter(Boolean).join(", ") || "—"}
         </p>
         {saved ? <p className="km-hint">{saved}</p> : null}
         <button className="km-btn dark" type="submit">

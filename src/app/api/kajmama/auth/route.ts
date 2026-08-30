@@ -1,9 +1,10 @@
 import { createUserSession, clearUserSession, getSessionUser, hashPassword, verifyPassword } from "@/lib/kajmama/auth";
 import { DISTRICTS } from "@/lib/kajmama/constants";
 import { fail, isValidBdPhone, newId, normalizePhone, ok } from "@/lib/kajmama/http";
+import { applyPackage } from "@/lib/kajmama/premium";
 import { toSessionUser } from "@/lib/kajmama/public";
-import { findUserByPhone, readKajmamaStore, updateKajmamaStore } from "@/lib/kajmama/store";
-import type { User, UserRole } from "@/lib/kajmama/types";
+import { findUserByPhone, readKajmamaStore, storeCategories, updateKajmamaStore } from "@/lib/kajmama/store";
+import type { MobileBankingType, User, UserRole } from "@/lib/kajmama/types";
 
 export const runtime = "nodejs";
 
@@ -23,12 +24,21 @@ export async function POST(request: Request) {
       password?: string;
       role?: UserRole;
       district?: string;
+      upazila?: string;
       area?: string;
       skills?: string[];
       bio?: string;
       experienceYears?: number;
       hourlyRate?: number;
       jobRate?: number;
+      packageId?: string;
+      payout?: {
+        bankName?: string;
+        bankAccount?: string;
+        bankHolder?: string;
+        mobileBanking?: string;
+        mobileBankingType?: MobileBankingType | "";
+      };
     };
 
     if (body.action === "logout") {
@@ -56,10 +66,18 @@ export async function POST(request: Request) {
       const role: UserRole = body.role === "worker" ? "worker" : "hirer";
       const district = DISTRICTS.includes(body.district || "") ? body.district! : DISTRICTS[0];
       const area = (body.area || "").trim();
+      const upazila = (body.upazila || "").trim() || area;
       if (!name) return fail("নাম লিখুন");
       if (!isValidBdPhone(phone)) return fail("সঠিক বাংলাদেশি মোবাইল দিন (01XXXXXXXXX)");
       if (password.length < 6) return fail("পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");
       if (!area) return fail("এলাকা লিখুন");
+      if (role === "worker") {
+        const bankName = (body.payout?.bankName || "").trim();
+        const bankAccount = (body.payout?.bankAccount || "").trim();
+        const mobileBanking = (body.payout?.mobileBanking || "").trim();
+        if (!bankName || !bankAccount) return fail("ওয়ার্কারকে ব্যাংক নাম ও অ্যাকাউন্ট দিতে হবে");
+        if (!mobileBanking) return fail("মোবাইল ব্যাংকিং নম্বর দিতে হবে");
+      }
 
       const hashed = await hashPassword(password);
       let createdId = "";
@@ -67,7 +85,10 @@ export async function POST(request: Request) {
         if (findUserByPhone(s, phone)) {
           throw new Error("এই নম্বরে ইতিমধ্যে অ্যাকাউন্ট আছে");
         }
-        const skills = role === "worker" ? (body.skills || []).filter(Boolean).slice(0, 4) : [];
+        const skills =
+          role === "worker"
+            ? (body.skills || []).filter((id) => storeCategories(s).some((c) => c.id === id)).slice(0, 4)
+            : [];
         const next: User = {
           id: newId("u"),
           name,
@@ -75,6 +96,7 @@ export async function POST(request: Request) {
           passwordHash: hashed,
           role,
           district,
+          upazila,
           area,
           createdAt: new Date().toISOString(),
           bio: (body.bio || "").trim(),
@@ -85,7 +107,20 @@ export async function POST(request: Request) {
           verified: false,
           available: true,
           blocked: false,
+          packageId: "basic",
+          packageExpiresAt: null,
+          payout: {
+            bankName: (body.payout?.bankName || "").trim(),
+            bankAccount: (body.payout?.bankAccount || "").trim(),
+            bankHolder: (body.payout?.bankHolder || name).trim(),
+            mobileBanking: (body.payout?.mobileBanking || "").trim(),
+            mobileBankingType: (body.payout?.mobileBankingType || (role === "worker" ? "bkash" : "")) as MobileBankingType | "",
+          },
         };
+        if (role === "worker" && body.packageId && body.packageId !== "basic") {
+          const plan = s.packages.find((p) => p.id === body.packageId && p.active);
+          if (plan) applyPackage(next, plan);
+        }
         s.users.push(next);
         createdId = next.id;
       });

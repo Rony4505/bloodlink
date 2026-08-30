@@ -1,13 +1,16 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
-import { CATEGORIES } from "@/lib/kajmama/constants";
 import { fail, newId, ok } from "@/lib/kajmama/http";
+import { siteFeeOf } from "@/lib/kajmama/premium";
 import { toPublicUser } from "@/lib/kajmama/public";
 import {
   findBooking,
   findJob,
   findUser,
   readKajmamaStore,
+  setWorkerAvailability,
+  storeCategories,
   updateKajmamaStore,
+  workerIsBusy,
 } from "@/lib/kajmama/store";
 import type { BookingStatus } from "@/lib/kajmama/types";
 
@@ -31,18 +34,21 @@ export async function GET(_request: Request, ctx: Ctx) {
   const job = findJob(store, booking.jobId);
   const hirer = findUser(store, booking.hirerId);
   const worker = findUser(store, booking.workerId);
-  const reveal = ["accepted", "in_progress", "completed"].includes(booking.status);
+  const reveal = ["accepted", "in_progress", "completed", "paid"].includes(booking.status);
   const messages = store.messages
     .filter((m) => m.bookingId === booking.id)
     .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
   const myReview = store.reviews.find((r) => r.bookingId === booking.id && r.fromUserId === me.id);
-  const category = job ? CATEGORIES.find((c) => c.id === job.categoryId) : undefined;
+  const category = job ? storeCategories(store).find((c) => c.id === job.categoryId) : undefined;
+  const fee = siteFeeOf(booking.price, booking.commissionPct);
 
   return ok({
-    booking,
-    job: job
-      ? { ...job, category }
-      : null,
+    booking: {
+      ...booking,
+      siteFee: booking.siteFee ?? fee.siteFee,
+      workerPayout: booking.workerPayout ?? fee.workerPayout,
+    },
+    job: job ? { ...job, category } : null,
     hirer: hirer ? toPublicUser(store, hirer, { revealPhone: reveal }) : null,
     worker: worker ? toPublicUser(store, worker, { revealPhone: reveal }) : null,
     messages: messages.map((m) => ({
@@ -54,6 +60,11 @@ export async function GET(_request: Request, ctx: Ctx) {
     })),
     myReview,
     meId: me.id,
+    payments: {
+      banks: store.settings.banks,
+      mobiles: store.settings.mobiles,
+      commissionPct: booking.commissionPct,
+    },
   });
 }
 
@@ -66,6 +77,8 @@ export async function POST(request: Request, ctx: Ctx) {
     text?: string;
     rating?: number;
     status?: BookingStatus;
+    paymentMethod?: string;
+    paymentRef?: string;
   };
 
   try {
@@ -99,6 +112,9 @@ export async function POST(request: Request, ctx: Ctx) {
         if (next === "accepted") {
           if (me.id !== booking.workerId) throw new Error("ওয়ার্কার একসেপ্ট করবেন");
           if (booking.status !== "pending") throw new Error("এখন একসেপ্ট করা যায় না");
+          if (workerIsBusy(s, booking.workerId)) {
+            throw new Error("আগের কাজের পেমেন্ট না হওয়া পর্যন্ত নতুন কাজ নেওয়া যাবে না");
+          }
           booking.status = "accepted";
           if (job) {
             job.status = "assigned";
@@ -110,10 +126,12 @@ export async function POST(request: Request, ctx: Ctx) {
               b.updatedAt = now;
             }
           });
+          setWorkerAvailability(s, booking.workerId);
         } else if (next === "declined") {
           if (me.id !== booking.workerId && me.id !== booking.hirerId) throw new Error("অনুমতি নেই");
           if (!["pending", "accepted"].includes(booking.status)) throw new Error("বাতিল করা যায় না");
           booking.status = me.id === booking.workerId && booking.status === "pending" ? "declined" : "cancelled";
+          setWorkerAvailability(s, booking.workerId);
         } else if (next === "in_progress") {
           if (me.id !== booking.workerId) throw new Error("ওয়ার্কার কাজ শুরু করবেন");
           if (booking.status !== "accepted") throw new Error("আগে একসেপ্ট করুন");
@@ -131,8 +149,23 @@ export async function POST(request: Request, ctx: Ctx) {
         return;
       }
 
+      if (body.action === "pay") {
+        if (me.id !== booking.hirerId) throw new Error("কাজদাতা পেমেন্ট করবেন");
+        if (booking.status !== "completed") throw new Error("কাজ শেষ হলে ওয়েবসাইটে পেমেন্ট করুন");
+        const method = (body.paymentMethod || "").trim();
+        const ref = (body.paymentRef || "").trim();
+        if (!method || !ref) throw new Error("পেমেন্ট মাধ্যম ও ট্রান্সঅ্যাকশন আইডি দিন");
+        booking.status = "paid";
+        booking.paidAt = now;
+        booking.paymentMethod = method.slice(0, 80);
+        booking.paymentRef = ref.slice(0, 80);
+        booking.updatedAt = now;
+        setWorkerAvailability(s, booking.workerId);
+        return;
+      }
+
       if (body.action === "review") {
-        if (booking.status !== "completed") throw new Error("কাজ শেষ হলে রিভিউ দিন");
+        if (booking.status !== "paid") throw new Error("ওয়েবসাইটে পেমেন্ট হলে তবেই রেটিং দেওয়া যাবে");
         const exists = s.reviews.find((r) => r.bookingId === booking.id && r.fromUserId === me.id);
         if (exists) throw new Error("রিভিউ ইতিমধ্যে দেওয়া আছে");
         const rating = Math.min(5, Math.max(1, Math.round(Number(body.rating) || 0)));

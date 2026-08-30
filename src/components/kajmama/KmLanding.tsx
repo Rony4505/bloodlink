@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { categoryById, DISTRICTS, KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import type { Category, PublicUser } from "@/lib/kajmama/types";
 import { kmApi } from "@/lib/kajmama/client";
 import { peopleCount } from "@/lib/kajmama/format";
 import { useKm } from "./KmSession";
+import { KmAdSlot } from "./KmAds";
 import { KmAvatar, KmPremium, KmStars } from "./KmUi";
 
 type HomeData = {
@@ -23,12 +24,13 @@ function matchCategory(c: Category, q: string) {
 }
 
 export function KmLanding() {
-  const { t, lang, user } = useKm();
+  const { t, lang, user, meta } = useKm();
   const router = useRouter();
   const [data, setData] = useState<HomeData | null>(null);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [district, setDistrict] = useState("");
+  const [upazila, setUpazila] = useState("");
 
   useEffect(() => {
     kmApi<HomeData>("/api/kajmama")
@@ -51,6 +53,7 @@ export function KmLanding() {
     const sp = new URLSearchParams();
     if (category) sp.set("category", category);
     if (district) sp.set("district", district);
+    if (upazila) sp.set("upazila", upazila);
     router.push(`${KAJMAMA_BASE}/workers?${sp.toString()}`);
   }
 
@@ -75,10 +78,26 @@ export function KmLanding() {
               </label>
               <label className="km-search-field">
                 <span>📍 {bn ? "জেলা" : "District"}</span>
-                <select value={district} onChange={(e) => setDistrict(e.target.value)} aria-label={bn ? "জেলা" : "District"}>
+                <select
+                  value={district}
+                  onChange={(e) => {
+                    setDistrict(e.target.value);
+                    setUpazila("");
+                  }}
+                  aria-label={bn ? "জেলা" : "District"}
+                >
                   <option value="">{bn ? "জেলা নির্বাচন করুন" : "Select district"}</option>
-                  {DISTRICTS.map((d) => (
+                  {(meta.districts.length ? meta.districts : ["ঢাকা"]).map((d) => (
                     <option key={d}>{d}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="km-search-field">
+                <span>🏘️ {bn ? "উপজেলা" : "Upazila"}</span>
+                <select value={upazila} onChange={(e) => setUpazila(e.target.value)}>
+                  <option value="">{bn ? "উপজেলা" : "Upazila"}</option>
+                  {(meta.upazilas[district] || []).map((u) => (
+                    <option key={u}>{u}</option>
                   ))}
                 </select>
               </label>
@@ -104,6 +123,10 @@ export function KmLanding() {
           <div className="km-hero-man" role="img" aria-label={bn ? "বিশ্বস্ত মিস্ত্রি" : "Trusted worker"} />
         </div>
       </section>
+
+      <div className="km-wrap">
+        <KmAdSlot placement="home_hero" />
+      </div>
 
       <div className="km-wrap">
         <div className="km-stats-bar">
@@ -166,6 +189,10 @@ export function KmLanding() {
         )}
       </section>
 
+      <div className="km-wrap">
+        <KmAdSlot placement="home_categories" />
+      </div>
+
       <section className="km-post-band">
         <div className="km-wrap km-post-inner">
           <div>
@@ -190,10 +217,10 @@ export function KmLanding() {
         </div>
         <div className="km-grid-3">
           {(data?.featuredWorkers || []).slice(0, 3).map((w) => {
-            const skill = categoryById(w.skills[0] || "");
+            const skill = meta.categories.find((c) => c.id === w.skills[0]);
             return (
               <Link key={w.id} href={`${KAJMAMA_BASE}/workers/${w.id}`} className="km-card km-worker-h">
-                <KmPremium on={w.verified} />
+                <KmPremium on={w.premium} />
                 <KmAvatar name={w.name} id={w.id} size={92} />
                 <div>
                   <h3>{w.name}</h3>
@@ -212,6 +239,10 @@ export function KmLanding() {
         </div>
       </section>
 
+      <div className="km-wrap">
+        <KmAdSlot placement="home_premium" />
+      </div>
+
       <section className="km-section km-wrap" id="how">
         <h2>{t.how}</h2>
         <p className="km-muted">{t.trust}</p>
@@ -228,8 +259,8 @@ export function KmLanding() {
           </article>
           <article className="km-step">
             <i>৩</i>
-            <h3>{bn ? "কাজ শেষ, রিভিউ" : "Finish and review"}</h3>
-            <p className="km-muted">{bn ? "চ্যাট করে কাজ শেষ করুন। দুই পক্ষই রেটিং দেবে।" : "Chat, complete, and both sides review."}</p>
+            <h3>{bn ? "কাজ শেষ, ওয়েবসাইটে পেমেন্ট, তারপর রিভিউ" : "Finish, pay on the site, then review"}</h3>
+            <p className="km-muted">{bn ? "সাইটের বাইরে লেনদেন নয়। পেমেন্ট হলে তবেই রেটিং ও পরের কাজ।" : "No off-site deals. Payment unlocks ratings and the next job."}</p>
           </article>
         </div>
       </section>

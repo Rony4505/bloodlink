@@ -1,7 +1,8 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
-import { CATEGORIES, DISTRICTS } from "@/lib/kajmama/constants";
+import { DISTRICTS } from "@/lib/kajmama/constants";
 import { fail, newId, ok } from "@/lib/kajmama/http";
-import { findJob, findUser, readKajmamaStore, updateKajmamaStore } from "@/lib/kajmama/store";
+import { siteFeeOf } from "@/lib/kajmama/premium";
+import { findJob, findUser, readKajmamaStore, storeCategories, updateKajmamaStore, workerIsBusy } from "@/lib/kajmama/store";
 import type { Job } from "@/lib/kajmama/types";
 
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 function serializeJob(job: Job, store: Awaited<ReturnType<typeof readKajmamaStore>>) {
   const hirer = findUser(store, job.hirerId);
   const worker = job.workerId ? findUser(store, job.workerId) : undefined;
-  const category = CATEGORIES.find((c) => c.id === job.categoryId);
+  const category = storeCategories(store).find((c) => c.id === job.categoryId);
   return {
     ...job,
     category,
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
   const store = await readKajmamaStore();
   const category = searchParams.get("category") || "";
   const district = searchParams.get("district") || "";
+  const upazila = searchParams.get("upazila") || "";
   const mine = searchParams.get("mine") === "1";
   const me = mine ? await getSessionUser() : null;
 
@@ -34,6 +36,7 @@ export async function GET(request: Request) {
   }
   if (category) jobs = jobs.filter((j) => j.categoryId === category);
   if (district) jobs = jobs.filter((j) => j.district === district);
+  if (upazila) jobs = jobs.filter((j) => j.upazila === upazila);
   jobs.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   return ok({ jobs: jobs.map((j) => serializeJob(j, store)) });
 }
@@ -48,19 +51,22 @@ export async function POST(request: Request) {
       title?: string;
       description?: string;
       district?: string;
+      upazila?: string;
       area?: string;
       budget?: number;
       whenText?: string;
       workerId?: string;
     };
     const categoryId = body.categoryId || "";
-    if (!CATEGORIES.some((c) => c.id === categoryId)) return fail("ক্যাটাগরি বেছে নিন");
+    const cats = storeCategories(await readKajmamaStore());
+    if (!cats.some((c) => c.id === categoryId)) return fail("ক্যাটাগরি বেছে নিন");
     const title = (body.title || "").trim();
     const description = (body.description || "").trim();
     if (title.length < 4) return fail("কাজের শিরোনাম লিখুন");
     if (description.length < 8) return fail("কাজটা একটু বিস্তারিত লিখুন");
     const district = DISTRICTS.includes(body.district || "") ? body.district! : me.district;
     const area = (body.area || me.area).trim();
+    const upazila = (body.upazila || "").trim() || area;
     const budget = Math.max(0, Number(body.budget) || 0);
     if (!budget) return fail("বাজেট লিখুন");
     const whenText = (body.whenText || "").trim() || "আলোচনাসাপেক্ষ";
@@ -72,6 +78,7 @@ export async function POST(request: Request) {
       if (body.workerId) {
         const w = findUser(s, body.workerId);
         if (!w || w.role !== "worker" || w.blocked) throw new Error("ওয়ার্কার পাওয়া যায়নি");
+        if (workerIsBusy(s, w.id)) throw new Error("এই কর্মী এখন অন্য কাজে ব্যস্ত / পেমেন্ট বাকি");
         workerId = w.id;
         status = "assigned";
       }
@@ -83,6 +90,7 @@ export async function POST(request: Request) {
         title,
         description,
         district,
+        upazila,
         area,
         budget,
         whenText,
@@ -92,6 +100,7 @@ export async function POST(request: Request) {
       jobId = job.id;
       s.jobs.unshift(job);
       if (workerId) {
+        const fee = siteFeeOf(budget, s.settings.commissionPct);
         s.bookings.unshift({
           id: newId("bk"),
           jobId: job.id,
@@ -100,6 +109,8 @@ export async function POST(request: Request) {
           status: "pending",
           price: budget,
           commissionPct: s.settings.commissionPct,
+          siteFee: fee.siteFee,
+          workerPayout: fee.workerPayout,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });

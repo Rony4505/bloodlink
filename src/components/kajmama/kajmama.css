@@ -295,7 +295,7 @@
 
 .km-hero-search {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr auto;
   gap: 0.55rem;
   background: #fff;
   color: var(--km-ink);
@@ -754,8 +754,13 @@
 }
 
 .km-status.s-completed {
-  background: #e7eef8;
-  color: #243a5c;
+  background: #fff6eb;
+  color: #b45309;
+}
+
+.km-status.s-paid {
+  background: #e8f6ee;
+  color: #0f7a4a;
 }
 
 .km-status.s-cancelled,
@@ -1226,16 +1231,16 @@
 }
 
 .km-plan {
+  position: relative;
   display: block;
   width: 100%;
   text-align: left;
+  cursor: pointer;
   background: #fff;
   border: 1px solid var(--km-line);
   border-radius: 16px;
-  padding: 1rem;
+  padding: 1.1rem 1rem 1.2rem;
   margin: 0.6rem 0;
-  cursor: pointer;
-  position: relative;
   font: inherit;
   color: inherit;
 }
@@ -1340,5 +1345,211 @@
   }
   .km-call-col {
     text-align: left;
+  }
+
+  .km-foot-simple {
+    grid-template-columns: 1fr;
+  }
+}
+
+.km-foot-simple {
+  grid-template-columns: 1.6fr 1fr 1fr;
+}
+
+.km-ad-banner {
+  background: linear-gradient(90deg, #0f3d3e, #165557);
+  padding: 0.55rem 0;
+}
+
+.km-ad-stack {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+
+.km-ad-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.km-ad-premium {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1rem;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0f3d3e 0%, #1a5c5e 55%, #ff8a00 140%);
+  color: #fff;
+  min-height: 110px;
+  box-shadow: 0 14px 40px rgba(15, 61, 62, 0.22);
+  border: 1px solid rgba(255, 176, 74, 0.35);
+}
+
+.km-ad-premium img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+
+.km-ad-premium > div {
+  padding: 0.85rem 1rem 0.85rem 0;
+}
+
+.km-ad-kicker {
+  display: inline-block;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  color: var(--km-gold-2);
+  margin-bottom: 0.2rem;
+}
+
+.km-ad-premium h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.km-ad-premium p {
+  margin: 0.2rem 0 0.45rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.88rem;
+}
+
+.km-ad-premium em {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--km-gold);
+  font-size: 0.85rem;
+}
+
+.km-chatfab {
+  position: fixed;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+}
+
+.km-fab {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--km-gold);
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(255, 138, 0, 0.45);
+}
+
+.km-chatpanel {
+  width: min(340px, calc(100vw - 2rem));
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(15, 61, 62, 0.28);
+  border: 1px solid var(--km-line);
+}
+
+.km-chatpanel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  background: var(--km-teal);
+  color: #fff;
+}
+
+.km-chatpanel header button {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.km-chattabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.km-chattabs button {
+  border: 0;
+  background: #f3f6f6;
+  padding: 0.55rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--km-muted);
+}
+
+.km-chattabs button.on {
+  background: #fff;
+  color: var(--km-teal);
+  box-shadow: inset 0 -2px 0 var(--km-gold);
+}
+
+.km-chatlog {
+  max-height: 220px;
+  overflow: auto;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.km-chatpanel form {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.55rem 0.7rem 0.8rem;
+}
+
+.km-chat-links {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+}
+
+.km-chat-links a {
+  display: block;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  background: #f7fafa;
+  border: 1px solid var(--km-line);
+  color: var(--km-teal);
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .km-ad-premium {
+    grid-template-columns: 1fr;
+  }
+
+  .km-ad-premium img {
+    height: 140px;
+  }
+
+  .km-ad-premium > div {
+    padding: 0.85rem 1rem 1rem;
+  }
+}
+
+@media print {
+  .km-nav,
+  .km-footer,
+  .km-chatfab,
+  .km-ad-banner,
+  .km-ad-stack,
+  .km-btn {
+    display: none !important;
+  }
+
+  .km-shell {
+    background: #fff;
   }
 }

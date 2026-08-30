@@ -1,7 +1,6 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
-import { CATEGORIES } from "@/lib/kajmama/constants";
 import { fail, ok } from "@/lib/kajmama/http";
-import { findJob, findUser, readKajmamaStore } from "@/lib/kajmama/store";
+import { findJob, findUser, readKajmamaStore, storeCategories } from "@/lib/kajmama/store";
 
 export const runtime = "nodejs";
 
@@ -16,7 +15,7 @@ export async function GET() {
       const job = findJob(store, b.jobId);
       const otherId = b.hirerId === me.id ? b.workerId : b.hirerId;
       const other = findUser(store, otherId);
-      const category = job ? CATEGORIES.find((c) => c.id === job.categoryId) : undefined;
+      const category = job ? storeCategories(store).find((c) => c.id === job.categoryId) : undefined;
       return {
         ...b,
         title: job?.title || "কাজ",

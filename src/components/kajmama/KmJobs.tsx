@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CATEGORIES, DISTRICTS, KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import { timeAgo } from "@/lib/kajmama/format";
 import { useKm } from "./KmSession";
+import { KmAdSlot } from "./KmAds";
 import { KmEmpty, KmMoney, KmStatus } from "./KmUi";
 
 type JobRow = {
@@ -14,6 +15,7 @@ type JobRow = {
   title: string;
   description: string;
   district: string;
+  upazila?: string;
   area: string;
   budget: number;
   whenText: string;
@@ -24,20 +26,22 @@ type JobRow = {
 };
 
 export function KmJobs() {
-  const { lang, user } = useKm();
+  const { lang, user, meta } = useKm();
   const bn = lang === "bn";
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [category, setCategory] = useState("");
   const [district, setDistrict] = useState("");
+  const [upazila, setUpazila] = useState("");
 
   useEffect(() => {
     const sp = new URLSearchParams();
     if (category) sp.set("category", category);
     if (district) sp.set("district", district);
+    if (upazila) sp.set("upazila", upazila);
     kmApi<{ jobs: JobRow[] }>(`/api/kajmama/jobs?${sp.toString()}`)
       .then((d) => setJobs(d.jobs))
       .catch(() => setJobs([]));
-  }, [category, district]);
+  }, [category, district, upazila]);
 
   return (
     <div className="km-page km-wrap">
@@ -59,19 +63,26 @@ export function KmJobs() {
           </Link>
         )}
       </div>
+      <KmAdSlot placement="jobs_top" />
       <div className="km-filters">
         <select className="km-select" style={{ maxWidth: 200 }} value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="">{bn ? "সব ক্যাটাগরি" : "All"}</option>
-          {CATEGORIES.map((c) => (
+          {meta.categories.map((c) => (
             <option key={c.id} value={c.id}>
               {bn ? c.nameBn : c.nameEn}
             </option>
           ))}
         </select>
-        <select className="km-select" style={{ maxWidth: 180 }} value={district} onChange={(e) => setDistrict(e.target.value)}>
+        <select className="km-select" style={{ maxWidth: 180 }} value={district} onChange={(e) => { setDistrict(e.target.value); setUpazila(""); }}>
           <option value="">{bn ? "সব জেলা" : "All districts"}</option>
-          {DISTRICTS.map((d) => (
+          {meta.districts.map((d) => (
             <option key={d}>{d}</option>
+          ))}
+        </select>
+        <select className="km-select" style={{ maxWidth: 180 }} value={upazila} onChange={(e) => setUpazila(e.target.value)}>
+          <option value="">{bn ? "উপজেলা" : "Upazila"}</option>
+          {(meta.upazilas[district] || []).map((u) => (
+            <option key={u}>{u}</option>
           ))}
         </select>
       </div>
@@ -97,7 +108,7 @@ export function KmJobs() {
                 <KmStatus status={j.status} />
               </div>
               <p className="km-meta">
-                {j.area}, {j.district} · {j.whenText} · {timeAgo(j.createdAt, bn)}
+                {j.upazila || j.area}, {j.district} · {j.whenText} · {timeAgo(j.createdAt, bn)}
               </p>
               <p>{j.description}</p>
               <div className="km-worker-foot">
@@ -113,14 +124,15 @@ export function KmJobs() {
 }
 
 export function KmJobNew() {
-  const { lang, user } = useKm();
+  const { lang, user, meta } = useKm();
   const bn = lang === "bn";
   const router = useRouter();
   const params = useSearchParams();
-  const [categoryId, setCategoryId] = useState(params.get("category") || CATEGORIES[0].id);
+  const [categoryId, setCategoryId] = useState(params.get("category") || meta.categories[0]?.id || "electrician");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [district, setDistrict] = useState(user?.district || DISTRICTS[0]);
+  const [district, setDistrict] = useState(user?.district || "ঢাকা");
+  const [upazila, setUpazila] = useState(user?.upazila || "");
   const [area, setArea] = useState(user?.area || "");
   const [budget, setBudget] = useState("1000");
   const [whenText, setWhenText] = useState("");
@@ -140,6 +152,7 @@ export function KmJobNew() {
           title,
           description,
           district,
+          upazila,
           area,
           budget: Number(budget),
           whenText,
@@ -182,7 +195,7 @@ export function KmJobNew() {
         <label className="km-label">
           {bn ? "ক্যাটাগরি" : "Category"}
           <select className="km-select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-            {CATEGORIES.map((c) => (
+            {meta.categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {bn ? c.nameBn : c.nameEn}
               </option>
@@ -200,9 +213,18 @@ export function KmJobNew() {
         <div className="km-row">
           <label className="km-label">
             {bn ? "জেলা" : "District"}
-            <select className="km-select" value={district} onChange={(e) => setDistrict(e.target.value)}>
-              {DISTRICTS.map((d) => (
+            <select className="km-select" value={district} onChange={(e) => { setDistrict(e.target.value); setUpazila(""); }}>
+              {meta.districts.map((d) => (
                 <option key={d}>{d}</option>
+              ))}
+            </select>
+          </label>
+          <label className="km-label">
+            {bn ? "উপজেলা" : "Upazila"}
+            <select className="km-select" value={upazila} onChange={(e) => setUpazila(e.target.value)}>
+              <option value="">{bn ? "উপজেলা" : "Upazila"}</option>
+              {(meta.upazilas[district] || []).map((u) => (
+                <option key={u}>{u}</option>
               ))}
             </select>
           </label>

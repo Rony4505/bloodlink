@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CATEGORIES, DISTRICTS, KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import type { PublicUser } from "@/lib/kajmama/types";
 import { useKm } from "./KmSession";
+import { KmAdSlot } from "./KmAds";
 import { KmAvatar, KmEmpty, KmPremium, KmSkill, KmStars, KmVerified } from "./KmUi";
 
 const PAGE_SIZE = 6;
@@ -19,11 +20,12 @@ const EXP_RANGES = [
 ];
 
 export function KmWorkers() {
-  const { t, lang } = useKm();
+  const { t, lang, meta } = useKm();
   const bn = lang === "bn";
   const params = useSearchParams();
   const [category, setCategory] = useState(params.get("category") || "");
   const [district, setDistrict] = useState(params.get("district") || "");
+  const [upazila, setUpazila] = useState(params.get("upazila") || "");
   const [area, setArea] = useState(params.get("area") || "");
   const [q, setQ] = useState(params.get("q") || "");
   const [sort, setSort] = useState("premium");
@@ -37,6 +39,7 @@ export function KmWorkers() {
     const sp = new URLSearchParams();
     if (category) sp.set("category", category);
     if (district) sp.set("district", district);
+    if (upazila) sp.set("upazila", upazila);
     if (q) sp.set("q", q);
     let cancelled = false;
     kmApi<{ workers: PublicUser[] }>(`/api/kajmama/workers?${sp.toString()}`)
@@ -49,13 +52,13 @@ export function KmWorkers() {
     return () => {
       cancelled = true;
     };
-  }, [category, district, q]);
+  }, [category, district, upazila, q]);
 
   const filtered = useMemo(() => {
     let list = workers || [];
     const areaQ = area.trim().toLowerCase();
     if (areaQ) list = list.filter((w) => w.area.toLowerCase().includes(areaQ));
-    if (premiumOnly) list = list.filter((w) => w.verified);
+    if (premiumOnly) list = list.filter((w) => w.premium);
     if (ratings.length) {
       const min = Math.min(...ratings);
       list = list.filter((w) => (w.rating || 0) >= min);
@@ -67,7 +70,7 @@ export function KmWorkers() {
     const next = [...list];
     if (sort === "rating") next.sort((a, b) => b.rating - a.rating);
     else if (sort === "exp") next.sort((a, b) => b.experienceYears - a.experienceYears);
-    else next.sort((a, b) => Number(b.verified) - Number(a.verified) || b.rating - a.rating);
+    else next.sort((a, b) => Number(b.premium) - Number(a.premium) || b.rating - a.rating);
     return next;
   }, [workers, area, premiumOnly, ratings, exps, sort]);
 
@@ -85,6 +88,7 @@ export function KmWorkers() {
     setExps([]);
     setPremiumOnly(false);
     setArea("");
+    setUpazila("");
     setSort("premium");
     setPage(1);
   }
@@ -108,7 +112,7 @@ export function KmWorkers() {
             }}
           >
             <option value="">{bn ? "কাজের ধরন" : "Job type"}</option>
-            {CATEGORIES.map((c) => (
+            {meta.categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {bn ? c.nameBn : c.nameEn}
               </option>
@@ -119,12 +123,26 @@ export function KmWorkers() {
             value={district}
             onChange={(e) => {
               setDistrict(e.target.value);
+              setUpazila("");
               setPage(1);
             }}
           >
             <option value="">{bn ? "জেলা" : "District"}</option>
-            {DISTRICTS.map((d) => (
+            {(meta.districts.length ? meta.districts : []).map((d) => (
               <option key={d}>{d}</option>
+            ))}
+          </select>
+          <select
+            className="km-select"
+            value={upazila}
+            onChange={(e) => {
+              setUpazila(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">{bn ? "উপজেলা" : "Upazila"}</option>
+            {(meta.upazilas[district] || []).map((u) => (
+              <option key={u}>{u}</option>
             ))}
           </select>
           <input
@@ -154,6 +172,7 @@ export function KmWorkers() {
         </div>
       </div>
 
+      <KmAdSlot placement="workers_top" />
       <div className="km-results-layout">
         <aside className="km-side-filters">
           <h3>{bn ? "ফিল্টার" : "Filters"}</h3>
@@ -186,6 +205,7 @@ export function KmWorkers() {
           <button type="button" className="km-btn dark sm" onClick={reset}>
             {t.resetFilter}
           </button>
+          <KmAdSlot placement="workers_sidebar" />
         </aside>
 
         <div>
@@ -201,8 +221,8 @@ export function KmWorkers() {
           {slice.length > 0 ? (
             <div className="km-list">
               {slice.map((w) => (
-                <Link key={w.id} href={`${KAJMAMA_BASE}/workers/${w.id}`} className={`km-card km-worker-list ${w.verified ? "is-premium" : ""}`}>
-                  <KmPremium on={w.verified} />
+                <Link key={w.id} href={`${KAJMAMA_BASE}/workers/${w.id}`} className={`km-card km-worker-list ${w.premium ? "is-premium" : ""}`}>
+                  <KmPremium on={w.premium} />
                   <KmAvatar name={w.name} id={w.id} size={78} />
                   <div>
                     <h3>
@@ -214,7 +234,7 @@ export function KmWorkers() {
                       ))}
                     </div>
                     <p className="km-meta">
-                      📍 {w.area}, {w.district} · <KmStars value={w.rating || 4.5} /> {(w.rating || 4.5).toFixed(1)}{" "}
+                      📍 {w.upazila || w.area}, {w.district} · <KmStars value={w.rating || 4.5} /> {(w.rating || 4.5).toFixed(1)}{" "}
                       {w.reviewCount ? `(${w.reviewCount})` : ""} · 💼 {w.experienceYears}
                       {bn ? " বছর" : " yrs"}
                     </p>

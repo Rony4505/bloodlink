@@ -2,8 +2,37 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { COPY, type KajmamaLang } from "@/lib/kajmama/copy";
+import { CATEGORIES, DEFAULT_PACKAGES } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
-import type { SessionUser } from "@/lib/kajmama/types";
+import { UPAZILAS } from "@/lib/kajmama/geo";
+import type {
+  Advertisement,
+  Category,
+  PackagePlan,
+  SessionUser,
+  AdminBankAccount,
+  AdminMobileAccount,
+} from "@/lib/kajmama/types";
+
+export type KmMeta = {
+  categories: Category[];
+  packages: PackagePlan[];
+  districts: string[];
+  upazilas: Record<string, string[]>;
+  ads: Advertisement[];
+  contact: { phone: string; email: string; whatsapp: string; facebook: string };
+  payments: { banks: AdminBankAccount[]; mobiles: AdminMobileAccount[]; commissionPct: number };
+};
+
+const EMPTY_META: KmMeta = {
+  categories: CATEGORIES,
+  packages: DEFAULT_PACKAGES,
+  districts: [],
+  upazilas: UPAZILAS,
+  ads: [],
+  contact: { phone: "01712-345678", email: "support@kajmamabd.com", whatsapp: "01712345678", facebook: "" },
+  payments: { banks: [], mobiles: [], commissionPct: 10 },
+};
 
 type Ctx = {
   lang: KajmamaLang;
@@ -11,6 +40,7 @@ type Ctx = {
   t: (typeof COPY)[KajmamaLang];
   user: SessionUser | null;
   loading: boolean;
+  meta: KmMeta;
   reload: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -31,6 +61,7 @@ export function KmProvider({ children }: { children: React.ReactNode }) {
   });
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState<KmMeta>(EMPTY_META);
 
   const setLang = useCallback((l: KajmamaLang) => {
     setLangState(l);
@@ -74,6 +105,23 @@ export function KmProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setLoading(false);
       });
+    fetch("/api/kajmama/meta")
+      .then((r) => r.json() as Promise<KmMeta>)
+      .then((data) => {
+        if (!live) return;
+        setMeta({
+          categories: data.categories?.length ? data.categories : CATEGORIES,
+          packages: data.packages || [],
+          districts: data.districts || [],
+          upazilas: data.upazilas || UPAZILAS,
+          ads: data.ads || [],
+          contact: data.contact || EMPTY_META.contact,
+          payments: data.payments || EMPTY_META.payments,
+        });
+      })
+      .catch(() => {
+        /* keep defaults */
+      });
     return () => {
       live = false;
     };
@@ -86,10 +134,11 @@ export function KmProvider({ children }: { children: React.ReactNode }) {
       t: COPY[lang],
       user,
       loading,
+      meta,
       reload,
       logout,
     }),
-    [lang, setLang, user, loading, reload, logout],
+    [lang, setLang, user, loading, meta, reload, logout],
   );
 
   return <KmCtx.Provider value={value}>{children}</KmCtx.Provider>;

@@ -1,7 +1,7 @@
 import { getSessionUser } from "@/lib/kajmama/auth";
-import { CATEGORIES } from "@/lib/kajmama/constants";
 import { fail, newId, ok } from "@/lib/kajmama/http";
-import { findJob, findUser, readKajmamaStore, updateKajmamaStore } from "@/lib/kajmama/store";
+import { siteFeeOf } from "@/lib/kajmama/premium";
+import { findJob, findUser, readKajmamaStore, storeCategories, updateKajmamaStore, workerIsBusy } from "@/lib/kajmama/store";
 
 export const runtime = "nodejs";
 
@@ -15,7 +15,7 @@ export async function GET(_request: Request, ctx: Ctx) {
   const me = await getSessionUser();
   const hirer = findUser(store, job.hirerId);
   const worker = job.workerId ? findUser(store, job.workerId) : undefined;
-  const category = CATEGORIES.find((c) => c.id === job.categoryId);
+  const category = storeCategories(store).find((c) => c.id === job.categoryId);
   const myBooking = me
     ? store.bookings.find(
         (b) => b.jobId === job.id && (b.hirerId === me.id || b.workerId === me.id),
@@ -50,6 +50,8 @@ export async function POST(request: Request, ctx: Ctx) {
         if (job.hirerId === me.id) throw new Error("নিজের কাজে আগ্রহ দেওয়া যায় না");
         const exists = s.bookings.find((b) => b.jobId === job.id && b.workerId === me.id);
         if (exists) throw new Error("ইতিমধ্যে আগ্রহ দেখিয়েছেন");
+        if (workerIsBusy(s, me.id)) throw new Error("আগের কাজের পেমেন্ট না হওয়া পর্যন্ত নতুন কাজ নেওয়া যাবে না");
+        const fee = siteFeeOf(job.budget, s.settings.commissionPct);
         s.bookings.unshift({
           id: newId("bk"),
           jobId: job.id,
@@ -58,6 +60,8 @@ export async function POST(request: Request, ctx: Ctx) {
           status: "pending",
           price: job.budget,
           commissionPct: s.settings.commissionPct,
+          siteFee: fee.siteFee,
+          workerPayout: fee.workerPayout,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });

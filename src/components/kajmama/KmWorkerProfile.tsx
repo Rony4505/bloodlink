@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { categoryById, KAJMAMA_BASE } from "@/lib/kajmama/constants";
+import { KAJMAMA_BASE } from "@/lib/kajmama/constants";
 import { kmApi } from "@/lib/kajmama/client";
 import { timeAgo } from "@/lib/kajmama/format";
 import type { PublicUser } from "@/lib/kajmama/types";
 import { useKm } from "./KmSession";
+import { KmAdSlot } from "./KmAds";
 import { KmAvatar, KmMoney, KmSkill, KmStars, KmVerified } from "./KmUi";
 
 type Review = { id: string; rating: number; text: string; createdAt: string; fromName: string };
 
 export function KmWorkerProfile() {
   const { id } = useParams<{ id: string }>();
-  const { lang, user } = useKm();
+  const { lang, user, meta } = useKm();
   const bn = lang === "bn";
   const router = useRouter();
   const [tab, setTab] = useState<"about" | "reviews">("about");
@@ -53,7 +54,7 @@ export function KmWorkerProfile() {
     );
   }
 
-  const skill = categoryById(worker.skills[0] || "");
+  const skill = meta.categories.find((c) => c.id === (worker.skills[0] || ""));
   const phone = worker.phone || worker.phoneMasked;
   const hireHref = `${KAJMAMA_BASE}/jobs/new?worker=${worker.id}&category=${worker.skills[0] || ""}`;
 
@@ -65,7 +66,7 @@ export function KmWorkerProfile() {
       <div className="km-profile-hero">
         <div className="km-avatar-wrap">
           <KmAvatar name={worker.name} id={worker.id} size={108} />
-          {worker.verified ? <span className="km-photo-badge">PREMIUM</span> : null}
+          {worker.premium ? <span className="km-photo-badge">PREMIUM</span> : null}
         </div>
         <div className="km-profile-hero-main">
           <h1>
@@ -73,14 +74,14 @@ export function KmWorkerProfile() {
           </h1>
           <p className="km-jobpill">{skill ? (bn ? skill.nameBn : skill.nameEn) : ""}</p>
           <p className="km-meta">
-            📍 {worker.area}, {worker.district}
+            📍 {worker.upazila || worker.area}, {worker.district}
           </p>
           <p className="km-meta">
             <KmStars value={worker.rating || 4.8} /> {(worker.rating || 4.8).toFixed(1)} · {worker.reviewCount || 0}{" "}
             {bn ? "রিভিউ" : "reviews"}
           </p>
-          {worker.verified ? (
-            <span className="km-verified-box">{bn ? "VERIFIED প্রিমিয়াম সদস্য" : "VERIFIED premium member"}</span>
+          {worker.premium ? (
+            <span className="km-verified-box">{bn ? "PREMIUM সদস্য" : "PREMIUM member"}</span>
           ) : null}
         </div>
         <div className="km-profile-actions">
@@ -172,6 +173,7 @@ export function KmWorkerProfile() {
           )}
         </div>
         <aside>
+          <KmAdSlot placement="profile_sidebar" />
           <div className="km-card">
             <div className="km-page-head" style={{ marginBottom: "0.7rem" }}>
               <h3 style={{ margin: 0 }}>{bn ? "অনুরূপ কর্মী" : "Similar workers"}</h3>
@@ -194,8 +196,10 @@ export function KmWorkerProfile() {
           </div>
           <div className="km-card" style={{ marginTop: "0.8rem" }}>
             <h3>{bn ? "বিশ্বাস ও নিরাপত্তা" : "Trust & safety"}</h3>
-            <p className="km-meta">✓ {bn ? "অ্যাডমিন ভেরিফায়েড প্রোফাইল" : "Admin-verified profile"}</p>
             {worker.verified ? (
+              <p className="km-meta">✓ {bn ? "অ্যাডমিন ভেরিফায়েড প্রোফাইল" : "Admin-verified profile"}</p>
+            ) : null}
+            {worker.premium ? (
               <p className="km-meta">👑 {bn ? "প্রিমিয়াম সদস্য" : "Premium member"}</p>
             ) : null}
             <p className="km-muted" style={{ marginTop: "0.6rem" }}>

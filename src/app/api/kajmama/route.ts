@@ -18,11 +18,11 @@ export async function GET() {
       },
       categories: categoriesWithCounts(store),
       districts: DISTRICTS,
-      featuredWorkers: workers.filter((w) => w.verified).slice(0, 6),
+      featuredWorkers: workers.filter((w) => w.premium).slice(0, 6),
       stats: {
         workers: workers.length,
         jobs: store.jobs.filter((j) => j.status === "open").length,
-        completed: store.bookings.filter((b) => b.status === "completed").length,
+        completed: store.bookings.filter((b) => b.status === "paid" || b.status === "completed").length,
       },
     });
   } catch (e) {
