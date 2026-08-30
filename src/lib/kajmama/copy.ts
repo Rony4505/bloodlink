@@ -1,0 +1,38 @@
+export type KajmamaLang = "bn" | "en";
+
+export const COPY = {
+  bn: {
+    brand: "কাজমামা",
+    tagline: "কাজ লাগলে মামা আছে।",
+    heroLead: "বাংলাদেশের বিশ্বস্ত কাজের মানুষ — এক জায়গায়।",
+    findWorker: "কাজের মানুষ খুঁজুন",
+    becomeWorker: "কাজের প্রোফাইল খুলুন",
+    postJob: "কাজ পোস্ট করুন",
+    workers: "ওয়ার্কার",
+    jobs: "কাজ",
+    login: "লগইন",
+    register: "অ্যাকাউন্ট",
+    dashboard: "ড্যাশবোর্ড",
+    logout: "লগআউট",
+    how: "কীভাবে কাজ করে",
+    trust: "বিশ্বাসই আসল প্রোডাক্ট",
+    footer: "কাজমামা — বাংলাদেশের কাজের মার্কেটপ্লেস। BloodLink / অন্য কোনো অ্যাপের সাথে যুক্ত নয়।",
+  },
+  en: {
+    brand: "Kajmama",
+    tagline: "Work needed? Mama is here.",
+    heroLead: "Trusted workers across Bangladesh — in one calm place.",
+    findWorker: "Find a worker",
+    becomeWorker: "Open a worker profile",
+    postJob: "Post a job",
+    workers: "Workers",
+    jobs: "Jobs",
+    login: "Log in",
+    register: "Sign up",
+    dashboard: "Dashboard",
+    logout: "Log out",
+    how: "How it works",
+    trust: "Trust is the product",
+    footer: "Kajmama — a Bangladesh work marketplace. Not connected to BloodLink or other apps.",
+  },
+} as const;

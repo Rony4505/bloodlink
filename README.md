@@ -8,6 +8,9 @@ Free humanitarian platform to help people in Bangladesh find blood donors by blo
 > **PitchLive (Cricket):** Live cricket score + video rental at **`/cricket`**.  
 > See **[CRICKET_LIVE.md](./CRICKET_LIVE.md)**. Demo: `/cricket/t/demo` (PIN `1234`).
 
+> **Kajmama (কাজমামা):** Standalone worker marketplace at **`/kajmama`**. Isolated from BloodLink / Smart craft / POS / Cricket.  
+> See **[KAJMAMA.md](./KAJMAMA.md)**. Demo hirer `01722222222` / `123456`.
+
 ## Features
 
 - Bangla / English language toggle
