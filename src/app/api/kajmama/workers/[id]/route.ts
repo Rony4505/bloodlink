@@ -34,7 +34,6 @@ export async function GET(_request: Request, ctx: Ctx) {
 
   const similar = workerList(store, {
     category: user.skills[0],
-    district: user.district,
   })
     .filter((w) => w.id !== user.id)
     .slice(0, 4);
