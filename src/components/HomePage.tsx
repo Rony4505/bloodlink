@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { DailyReminder } from "@/components/DailyReminder";
 import { DonorPushEnableGate } from "@/components/DonorPushEnableGate";
 import { Header } from "@/components/Header";
@@ -13,6 +13,46 @@ import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { loadLoggedIn, subscribeSessionMe } from "@/lib/session-me-client";
+
+function HeroBtnIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="btn-glass-icon" aria-hidden>
+      {children}
+    </span>
+  );
+}
+
+function SearchDonorIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[2]">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path strokeLinecap="round" d="M15.5 15.5L20 20" />
+      <path strokeLinecap="round" d="M8.5 10.5h4M10.5 8.5v4" />
+    </svg>
+  );
+}
+
+function RegisterDonorIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[2]">
+      <circle cx="10" cy="8" r="3.5" />
+      <path strokeLinecap="round" d="M4 19c0-3.5 2.8-5.5 6-5.5s6 2 6 5.5" />
+      <path strokeLinecap="round" d="M18 8v6M15 11h6" />
+    </svg>
+  );
+}
+
+function BloodNeedIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[2]">
+      <path
+        strokeLinejoin="round"
+        d="M12 4c0 0-5 5.2-5 9a5 5 0 1 0 10 0c0-3.8-5-9-5-9z"
+      />
+      <path strokeLinecap="round" d="M12 11v5M9.5 13.5h5" />
+    </svg>
+  );
+}
 
 const HomeEmergencyPosts = dynamic(
   () =>
@@ -117,12 +157,21 @@ export function HomePage() {
           </h1>
           <div className="animate-rise-delay-2 mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/find" className="btn-glass-primary">
+              <HeroBtnIcon>
+                <SearchDonorIcon />
+              </HeroBtnIcon>
               {t.findDonors}
             </Link>
             <Link href="/register" className="btn-glass-secondary">
+              <HeroBtnIcon>
+                <RegisterDonorIcon />
+              </HeroBtnIcon>
               {t.becomeDonor}
             </Link>
             <Link href="/requests" className="btn-glass-secondary">
+              <HeroBtnIcon>
+                <BloodNeedIcon />
+              </HeroBtnIcon>
               {t.requestBlood}
             </Link>
           </div>
