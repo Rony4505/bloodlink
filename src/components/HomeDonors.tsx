@@ -38,9 +38,6 @@ export function HomeDonors() {
             <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)] md:text-3xl">
               {t.nearestDonors}
             </h2>
-            <p className="mt-1.5 max-w-xl text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.nearestDonorsCta}
-            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -56,7 +53,7 @@ export function HomeDonors() {
                 </option>
               ))}
             </select>
-            <Link href={findHref} className="btn-primary">
+            <Link href={findHref} className="btn-glass-primary">
               {t.viewAll}
             </Link>
           </div>

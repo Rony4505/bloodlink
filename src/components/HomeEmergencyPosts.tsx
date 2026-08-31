@@ -64,11 +64,8 @@ export function HomeEmergencyPosts() {
             <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--blood-deep)] md:text-4xl">
               {t.emergencyTitle}
             </h2>
-            <p className="mt-2 max-w-2xl text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.emergencySubtitle}
-            </p>
           </div>
-          <Link href="/requests" className="btn-ghost">
+          <Link href="/requests" className="btn-glass-ghost">
             {t.viewAllRequests}
           </Link>
         </div>
