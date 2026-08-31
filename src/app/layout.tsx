@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Bengali, Plus_Jakarta_Sans, Syne } from "next/font/google";
+import { Noto_Sans_Bengali, Outfit, Syne } from "next/font/google";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
@@ -15,10 +15,10 @@ const display = Syne({
   preload: true,
 });
 
-const brand = Plus_Jakarta_Sans({
+const brand = Outfit({
   variable: "--font-brand",
   subsets: ["latin"],
-  weight: ["700", "800"],
+  weight: ["600", "700", "800"],
   display: "swap",
   preload: true,
 });
