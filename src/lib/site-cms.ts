@@ -10,16 +10,7 @@ import type {
 export const DEFAULT_HERO_BACKGROUND =
   "https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=1280&q=55";
 
-/** Shipped heart-link blood drop brand mark (transparent PNG, cropped). */
-export const BRAND_LOGO_URL = "/brand/bloodlink-mark.png?v=3";
-
-/** @deprecated Use BRAND_LOGO_URL — kept for backwards-compatible references. */
-export const DEFAULT_LOGO_URL = BRAND_LOGO_URL;
-
-/** Always use the shipped brand mark on BloodLink BD. */
-export function resolveBrandLogoUrl(_stored?: string | null): string {
-  return BRAND_LOGO_URL;
-}
+export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
 
 /** Official BloodLink BD Facebook page (admin can override in site appearance). */
 export const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/bloodlinkbd.org";
@@ -151,7 +142,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
   const base = defaultSiteAppearance();
   if (!raw || typeof raw !== "object") return base;
   return {
-    logoUrl: resolveBrandLogoUrl(raw.logoUrl),
+    logoUrl: String(raw.logoUrl || base.logoUrl).trim() || base.logoUrl,
     heroBackgroundUrl:
       String(raw.heroBackgroundUrl || base.heroBackgroundUrl).trim() ||
       base.heroBackgroundUrl,

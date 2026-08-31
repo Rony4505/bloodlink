@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { DailyReminder } from "@/components/DailyReminder";
 import { DonorPushEnableGate } from "@/components/DonorPushEnableGate";
-import { BrandMark } from "@/components/BrandMark";
 import { Header } from "@/components/Header";
 import { HomeDonorTotals } from "@/components/HomeBloodGroupStats";
 import { OrgBanners } from "@/components/OrgBanners";
@@ -86,10 +86,14 @@ const SafetyWarnings = dynamic(
 export function HomePage() {
   const { t } = useLocale();
   const {
+    brand,
     tagline,
+    logoUrl,
     heroBackgroundUrl,
   } = useSiteAppearance();
   const [loggedIn, setLoggedIn] = useState(false);
+  const isLocalLogo =
+    logoUrl.startsWith("/") && !logoUrl.startsWith("/api/");
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -125,7 +129,29 @@ export function HomePage() {
         <div className="hero-drift pointer-events-none absolute right-0 top-40 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-2xl" />
         <Header />
         <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-16 pt-28 md:justify-center md:px-8 md:pb-24">
-          <BrandMark variant="light" size="lg" className="animate-rise" />
+          <div className="animate-rise flex items-center gap-4 md:gap-5">
+            {isLocalLogo ? (
+              <Image
+                src={logoUrl}
+                alt={brand}
+                width={88}
+                height={88}
+                priority
+                className="h-16 w-16 rounded-full bg-white/95 object-cover shadow-lg md:h-[88px] md:w-[88px]"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={brand}
+                className="h-16 w-16 rounded-full bg-white/95 object-cover shadow-lg md:h-[88px] md:w-[88px]"
+                decoding="async"
+              />
+            )}
+            <p className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight drop-shadow md:text-7xl">
+              {brand}
+            </p>
+          </div>
           <h1 className="animate-rise-delay mt-4 max-w-2xl text-2xl font-medium leading-snug md:text-3xl">
             {tagline}
           </h1>
