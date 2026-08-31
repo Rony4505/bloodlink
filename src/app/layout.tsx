@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Bengali, Outfit, Syne } from "next/font/google";
+import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
@@ -11,14 +11,6 @@ const display = Syne({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["700", "800"],
-  display: "swap",
-  preload: true,
-});
-
-const brand = Outfit({
-  variable: "--font-brand",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
   display: "swap",
   preload: true,
 });
@@ -124,7 +116,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: "Find blood donors across Bangladesh by blood group and location.",
       images: [
         {
-          url: "/brand/bloodlink-mark.png",
+          url: "/bloodlink-logo.png",
           width: 512,
           height: 512,
           alt: "BloodLink BD logo",
@@ -135,7 +127,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "BloodLink BD | Bangladesh Blood Donor Finder",
       description: "Find blood donors across Bangladesh by blood group and location.",
-      images: ["/brand/bloodlink-mark.png"],
+      images: ["/bloodlink-logo.png"],
     },
     robots: { index: true, follow: true },
   };
@@ -145,7 +137,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const fashion = isFashionMode();
 
   return (
-    <html lang="bn" className={`${display.variable} ${brand.variable} ${body.variable} h-full`}>
+    <html lang="bn" className={`${display.variable} ${body.variable} h-full`}>
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />

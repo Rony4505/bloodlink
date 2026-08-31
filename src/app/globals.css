@@ -25,7 +25,6 @@
   --color-sand: var(--sand);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
-  --font-brand: var(--font-brand);
 }
 
 * {
@@ -385,30 +384,6 @@ select {
   align-items: center;
   justify-content: center;
   opacity: 0.95;
-}
-
-/* BloodLink brand lockup */
-.brand-lockup-logo {
-  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.38));
-}
-
-.brand-wordmark {
-  font-family: var(--font-brand), var(--font-display), sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 0.92;
-}
-
-.brand-wordmark-light {
-  color: #fff;
-  text-shadow:
-    0 2px 18px rgba(0, 0, 0, 0.42),
-    0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.brand-wordmark-dark {
-  color: var(--blood-deep);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .blood-drop-card {
