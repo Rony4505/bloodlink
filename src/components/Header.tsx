@@ -98,6 +98,7 @@ export function Header({ compact = false }: { compact?: boolean }) {
         <BrandMark
           variant="light"
           size={compact ? "sm" : "md"}
+          premium
           showWordmark={!compact}
           className={
             compact

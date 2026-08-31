@@ -34,7 +34,7 @@ export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }
           }`}
         >
           <div>
-            <BrandMark variant="dark" size="sm" />
+            <BrandMark variant="dark" size="sm" premium />
             <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
               {t.createdBy}:{" "}
               <span className="font-semibold text-[var(--ink)]">{t.creatorName}</span>
