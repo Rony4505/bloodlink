@@ -125,12 +125,7 @@ export function HomePage() {
         <div className="hero-drift pointer-events-none absolute right-0 top-40 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-2xl" />
         <Header />
         <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-16 pt-28 md:justify-center md:px-8 md:pb-24">
-          <BrandMark
-            variant="light"
-            size="lg"
-            premium
-            className="animate-rise"
-          />
+          <BrandMark variant="light" size="lg" className="animate-rise" />
           <h1 className="animate-rise-delay mt-4 max-w-2xl text-2xl font-medium leading-snug md:text-3xl">
             {tagline}
           </h1>
