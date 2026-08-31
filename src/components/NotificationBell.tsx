@@ -25,7 +25,7 @@ export function NotificationBell() {
   return (
     <Link
       href="/notifications"
-      className="relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-2 transition hover:bg-white/10 sm:px-3"
+      className="relative inline-flex shrink-0 items-center rounded-full p-2 transition hover:bg-white/10 sm:gap-1.5 sm:px-3 sm:py-2"
       title={t.notifications}
       aria-label={t.notifications}
     >
