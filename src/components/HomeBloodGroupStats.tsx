@@ -152,11 +152,8 @@ export function HomeBloodGroupStats() {
             <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)] md:text-3xl">
               {t.bloodGroupStatsTitle}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.bloodGroupStatsSub}
-            </p>
           </div>
-          <Link href="/find" className="btn-primary">
+          <Link href="/find" className="btn-glass-primary">
             {t.viewAll}
           </Link>
         </div>

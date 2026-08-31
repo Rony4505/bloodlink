@@ -48,7 +48,6 @@ export function HomePage() {
   const {
     brand,
     tagline,
-    heroSupport,
     logoUrl,
     heroBackgroundUrl,
   } = useSiteAppearance();
@@ -116,17 +115,14 @@ export function HomePage() {
           <h1 className="animate-rise-delay mt-4 max-w-2xl text-2xl font-medium leading-snug md:text-3xl">
             {tagline}
           </h1>
-          <p className="animate-rise-delay-2 mt-4 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">
-            {heroSupport}
-          </p>
           <div className="animate-rise-delay-2 mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/find" className="btn-primary">
+            <Link href="/find" className="btn-glass-primary">
               {t.findDonors}
             </Link>
-            <Link href="/register" className="btn-secondary">
+            <Link href="/register" className="btn-glass-secondary">
               {t.becomeDonor}
             </Link>
-            <Link href="/requests" className="btn-secondary">
+            <Link href="/requests" className="btn-glass-secondary">
               {t.requestBlood}
             </Link>
           </div>

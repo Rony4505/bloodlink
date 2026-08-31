@@ -101,7 +101,6 @@ export function HomeImpact() {
           <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold md:text-3xl">
             {t.impactTitle}
           </h2>
-          <p className="mt-1.5 text-sm text-white/70">{t.impactSubtitle}</p>
         </div>
 
         {metrics.length ? (
@@ -127,7 +126,6 @@ export function HomeImpact() {
             <h3 className="font-[family-name:var(--font-display)] text-xl font-bold md:text-2xl">
               {t.successStoriesTitle}
             </h3>
-            <p className="mt-1 text-sm text-white/65">{t.successStoriesSubtitle}</p>
 
             <div className="relative mt-5 overflow-hidden">
               <div
