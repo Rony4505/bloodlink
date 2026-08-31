@@ -38,44 +38,59 @@ function BloodDropButton({
   unavailableLabel: string;
   onClick: () => void;
 }) {
+  const gradId = `drop-${label.replace("+", "pos").replace("-", "neg")}`;
+  const shineId = `shine-${label.replace("+", "pos").replace("-", "neg")}`;
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/90 px-2 py-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_oklab,var(--blood)_35%,white)] hover:shadow-md"
+      className="blood-drop-card group flex w-full flex-col items-center gap-2.5 px-3 py-5"
     >
-      <span className="relative inline-flex h-[4.75rem] w-[3.75rem] items-center justify-center">
+      <span className="relative inline-flex h-[5.25rem] w-[4.1rem] items-center justify-center">
+        <span
+          aria-hidden
+          className="absolute bottom-0 h-3 w-[70%] rounded-[50%] bg-[rgba(110,18,32,0.18)] blur-md transition group-hover:scale-110"
+        />
         <svg
           viewBox="0 0 64 84"
-          className="h-full w-full drop-shadow-md transition group-hover:scale-105"
+          className="relative h-full w-full drop-shadow-[0_10px_18px_rgba(110,18,32,0.35)] transition duration-300 group-hover:scale-105"
           aria-hidden
         >
           <defs>
-            <linearGradient
-              id={`drop-${label.replace("+", "pos").replace("-", "neg")}`}
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="1"
-            >
-              <stop offset="0%" stopColor="#9b1b2e" />
-              <stop offset="55%" stopColor="#6e1220" />
-              <stop offset="100%" stopColor="#3d0c14" />
+            <linearGradient id={gradId} x1="0.15" y1="0" x2="0.85" y2="1">
+              <stop offset="0%" stopColor="#ff8a96" />
+              <stop offset="28%" stopColor="#e84555" />
+              <stop offset="58%" stopColor="#b81e32" />
+              <stop offset="100%" stopColor="#4a0c16" />
             </linearGradient>
+            <radialGradient id={shineId} cx="0.35" cy="0.22" r="0.55">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.72)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            </radialGradient>
+            <filter id={`glow-${gradId}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#6e1220" floodOpacity="0.35" />
+            </filter>
           </defs>
           <path
             d="M32 4C32 4 8 34 8 52c0 13.255 10.745 24 24 24s24-10.745 24-24C56 34 32 4 32 4z"
-            fill={`url(#drop-${label.replace("+", "pos").replace("-", "neg")})`}
+            fill={`url(#${gradId})`}
+            filter={`url(#glow-${gradId})`}
+          />
+          <path
+            d="M32 4C32 4 8 34 8 52c0 13.255 10.745 24 24 24s24-10.745 24-24C56 34 32 4 32 4z"
+            fill={`url(#${shineId})`}
           />
           <path
             d="M22 28c4-8 8-14 10-18 2 4 6 10 10 18"
             fill="none"
-            stroke="rgba(255,255,255,0.22)"
-            strokeWidth="3"
+            stroke="rgba(255,255,255,0.35)"
+            strokeWidth="2.5"
             strokeLinecap="round"
           />
+          <ellipse cx="24" cy="30" rx="4" ry="6" fill="rgba(255,255,255,0.18)" />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center pt-3 font-[family-name:var(--font-display)] text-lg font-bold text-white drop-shadow">
+        <span className="absolute inset-0 flex items-center justify-center pt-3.5 font-[family-name:var(--font-display)] text-lg font-bold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]">
           {label}
         </span>
       </span>
