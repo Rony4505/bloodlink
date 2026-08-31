@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { defaultSiteAppearance } from "@/lib/site-cms";
+import { defaultSiteAppearance, resolveBrandLogoUrl } from "@/lib/site-cms";
 import type { SiteAppearance } from "@/lib/types";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -81,7 +81,7 @@ export function SiteAppearanceProvider({
         : (bn ? appearance.aboutBodyBn : appearance.aboutBodyEn) || t.aboutBody,
       logoUrl: isFashionClient
         ? "/icon"
-        : appearance.logoUrl || "/bloodlink-logo.png",
+        : resolveBrandLogoUrl(appearance.logoUrl),
       heroBackgroundUrl: isFashionClient ? "" : appearance.heroBackgroundUrl,
       reload,
     };
