@@ -10,7 +10,30 @@ import type {
 export const DEFAULT_HERO_BACKGROUND =
   "https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=1280&q=55";
 
-export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
+/** Shipped heart-link blood drop brand mark (transparent PNG). */
+export const BRAND_LOGO_URL = "/brand/bloodlink-mark.png";
+
+/** @deprecated Use BRAND_LOGO_URL — kept for backwards-compatible references. */
+export const DEFAULT_LOGO_URL = BRAND_LOGO_URL;
+
+/** Replace legacy/admin-uploaded logos with the current shipped brand mark. */
+export function resolveBrandLogoUrl(stored?: string | null): string {
+  const url = String(stored || "").trim();
+  if (!url) return BRAND_LOGO_URL;
+
+  const lower = url.toLowerCase();
+  if (
+    lower === "/bloodlink-logo.png" ||
+    lower.endsWith("bloodlink-logo.png") ||
+    lower.startsWith("/api/uploads/") ||
+    lower.startsWith("/uploads/") ||
+    lower.includes("bloodlink-logo")
+  ) {
+    return BRAND_LOGO_URL;
+  }
+
+  return url;
+}
 
 /** Official BloodLink BD Facebook page (admin can override in site appearance). */
 export const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/bloodlinkbd.org";
@@ -142,7 +165,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
   const base = defaultSiteAppearance();
   if (!raw || typeof raw !== "object") return base;
   return {
-    logoUrl: String(raw.logoUrl || base.logoUrl).trim() || base.logoUrl,
+    logoUrl: resolveBrandLogoUrl(raw.logoUrl),
     heroBackgroundUrl:
       String(raw.heroBackgroundUrl || base.heroBackgroundUrl).trim() ||
       base.heroBackgroundUrl,

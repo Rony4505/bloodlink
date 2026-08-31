@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { BRAND_LOGO_URL } from "@/lib/site-cms";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
 
 type BrandMarkProps = {
@@ -13,9 +14,13 @@ type BrandMarkProps = {
 };
 
 const sizes = {
-  sm: { height: 36, text: "text-xl", logoClass: "h-9 w-auto" },
-  md: { height: 44, text: "text-2xl", logoClass: "h-11 w-auto" },
-  lg: { height: 88, text: "text-5xl md:text-7xl", logoClass: "h-16 w-auto md:h-[5.5rem]" },
+  sm: { height: 36, text: "text-[1.35rem]", logoClass: "h-9 w-auto" },
+  md: { height: 44, text: "text-[1.65rem]", logoClass: "h-11 w-auto" },
+  lg: {
+    height: 96,
+    text: "text-[2.65rem] md:text-[4.25rem]",
+    logoClass: "h-[4.5rem] w-auto md:h-[6rem]",
+  },
 };
 
 function splitBrand(brand: string) {
@@ -37,22 +42,12 @@ function PremiumWordmark({
   const { lead, tail } = splitBrand(brand);
   const tone = variant === "light" ? "light" : "dark";
 
-  if (!tail) {
-    return (
-      <span
-        className={`brand-wordmark-premium brand-wordmark-premium-${tone} truncate font-[family-name:var(--font-display)] font-bold tracking-tight ${textClass}`}
-      >
-        {brand}
-      </span>
-    );
-  }
-
   return (
     <span
-      className={`brand-wordmark-premium truncate font-[family-name:var(--font-display)] font-bold tracking-tight ${textClass}`}
+      className={`brand-wordmark brand-wordmark-${tone} truncate font-[family-name:var(--font-brand)] font-extrabold ${textClass}`}
     >
-      <span className={`brand-wordmark-blood brand-wordmark-blood-${tone}`}>{lead}</span>
-      <span className={`brand-wordmark-link brand-wordmark-link-${tone}`}>{tail}</span>
+      <span className="brand-wordmark-main">{lead}</span>
+      {tail ? <span className="brand-wordmark-accent">{tail}</span> : null}
     </span>
   );
 }
@@ -66,24 +61,26 @@ export function BrandMark({
 }: BrandMarkProps) {
   const { brand, logoUrl } = useSiteAppearance();
   const dims = sizes[size];
+  const resolvedLogo = logoUrl || BRAND_LOGO_URL;
   const isLocalLogo =
-    logoUrl.startsWith("/") && !logoUrl.startsWith("/api/");
+    resolvedLogo.startsWith("/") && !resolvedLogo.startsWith("/api/");
 
   const logoNode = isLocalLogo ? (
     <Image
-      src={logoUrl}
+      src={resolvedLogo}
       alt={`${brand} logo`}
       width={dims.height}
-      height={dims.height}
-      className={`${dims.logoClass} object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.28)]`}
+      height={Math.round(dims.height * 1.39)}
+      className={`${dims.logoClass} object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.32)]`}
       priority={size === "lg"}
+      unoptimized
     />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={logoUrl}
+      src={resolvedLogo}
       alt={`${brand} logo`}
-      className={`${dims.logoClass} object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.28)]`}
+      className={`${dims.logoClass} object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.32)]`}
       decoding="async"
     />
   );
@@ -99,9 +96,9 @@ export function BrandMark({
           <PremiumWordmark brand={brand} variant={variant} textClass={dims.text} />
         ) : (
           <span
-            className={`truncate font-[family-name:var(--font-display)] font-bold tracking-tight ${dims.text} ${
+            className={`truncate font-[family-name:var(--font-brand)] font-extrabold tracking-[-0.04em] ${dims.text} ${
               variant === "light"
-                ? "text-white drop-shadow-sm"
+                ? "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
                 : "text-[var(--blood-deep)]"
             }`}
           >
