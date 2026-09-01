@@ -55,6 +55,7 @@ export type HealthcareSearchParams = {
   q?: string;
   district?: string;
   division?: string;
+  upazila?: string;
   category?: "all" | "hospital" | "diagnostic";
   page?: number;
   limit?: number;
@@ -72,6 +73,7 @@ export type HealthcareSearchResult = {
   >;
   districts: string[];
   divisions: string[];
+  upazilas: string[];
 };
 
 function norm(s: string) {
@@ -87,6 +89,7 @@ export async function searchHealthcareFacilities(
   const q = norm(params.q ?? "");
   const district = norm(params.district ?? "");
   const division = norm(params.division ?? "");
+  const upazila = norm(params.upazila ?? "");
   const category = params.category ?? "all";
 
   let items = dataset.facilities;
@@ -99,6 +102,9 @@ export async function searchHealthcareFacilities(
   }
   if (division) {
     items = items.filter((f) => norm(f.division) === division);
+  }
+  if (upazila) {
+    items = items.filter((f) => norm(f.upazila) === upazila);
   }
   if (q) {
     items = items.filter((f) => {
@@ -131,6 +137,13 @@ export async function searchHealthcareFacilities(
     (a, b) => a.localeCompare(b),
   );
 
+  const upazilaSource = district
+    ? dataset.facilities.filter((f) => norm(f.district) === district)
+    : dataset.facilities;
+  const upazilas = [...new Set(upazilaSource.map((f) => f.upazila).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b),
+  );
+
   return {
     items: pageItems,
     total,
@@ -147,5 +160,13 @@ export async function searchHealthcareFacilities(
     },
     districts,
     divisions,
+    upazilas,
   };
+}
+
+export async function getHealthcareFacilityById(
+  dghsId: string,
+): Promise<HealthcareFacility | null> {
+  const dataset = await loadHealthcareFacilities();
+  return dataset.facilities.find((f) => f.dghsId === dghsId) ?? null;
 }

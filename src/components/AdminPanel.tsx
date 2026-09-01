@@ -2415,6 +2415,7 @@ export function AdminPanel() {
                   <option value="requests">{t.bannerPageRequests}</option>
                   <option value="about">{t.bannerPageAbout}</option>
                   <option value="ambulance">{t.bannerPageAmbulance}</option>
+                  <option value="healthcare">{t.bannerPageHealthcare}</option>
                   <option value="all">{t.bannerPageAll}</option>
                 </select>
                 <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
