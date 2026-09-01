@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       patientPhone,
       date,
       notes: body?.notes,
-      source: "phone",
+      source: "manual",
       autoConfirm: true,
     });
 

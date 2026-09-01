@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HealthcareVerbalUrlCard } from "@/components/healthcare/HealthcareVerbalUrlCard";
+import { HealthcareAppointmentBooking } from "@/components/healthcare/HealthcareAppointmentBooking";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type {
   HealthcareAppointment,
@@ -136,14 +137,6 @@ function scheduleSummaryLabel(
   return t.healthcareScheduleSummary.replace("{count}", String(count));
 }
 
-const emptyManualAppt = {
-  doctorId: "",
-  dghsId: "",
-  patientName: "",
-  patientPhone: "",
-  date: "",
-  notes: "",
-};
 
 type Tab = "appointments" | "doctors" | "portal";
 
@@ -156,7 +149,6 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [doctorDraft, setDoctorDraft] = useState<DoctorDraft>(emptyDoctorDraft);
-  const [manualAppt, setManualAppt] = useState(emptyManualAppt);
   const [editingDoctorId, setEditingDoctorId] = useState<string | null>(null);
 
   const apiBase = `/api/public/healthcare/${encodeURIComponent(token)}`;
@@ -174,9 +166,6 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
       }
       const payload = json as DashboardData;
       setData(payload);
-      if (payload.facilities?.[0]) {
-        setManualAppt((a) => (a.dghsId ? a : { ...a, dghsId: payload.facilities[0]!.dghsId }));
-      }
     } catch {
       setError(t.errorGeneric);
       setData(null);
@@ -369,25 +358,6 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
         d.weekday === weekday ? { ...d, [field]: value } : d,
       ),
     }));
-  }
-
-  async function submitManualAppointment(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-    const res = await fetch(`${apiBase}/appointments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(manualAppt),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      setError(json.error || t.errorGeneric);
-      return;
-    }
-    setMessage(t.healthcareAppointmentCreated);
-    setManualAppt((a) => ({ ...emptyManualAppt, dghsId: a.dghsId, doctorId: a.doctorId }));
-    void load();
   }
 
   function exportCsv() {
@@ -595,59 +565,27 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
             </ul>
           )}
 
-          <form
-            className="rounded-2xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_12%,white)] p-4"
-            onSubmit={(e) => void submitManualAppointment(e)}
-          >
-            <h3 className="font-semibold text-[var(--blood-deep)]">{t.healthcareManualAppointment}</h3>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <select
-                className="field"
-                required
-                value={manualAppt.doctorId}
-                onChange={(e) => {
-                  const doctor = data.doctors.find((d) => d.id === e.target.value);
-                  setManualAppt((a) => ({
-                    ...a,
-                    doctorId: e.target.value,
-                    dghsId: doctor?.dghsId || a.dghsId,
-                  }));
-                }}
-              >
-                <option value="">{t.healthcareSelectDoctor}</option>
-                {data.doctors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {doctorName(d)}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="field"
-                required
-                placeholder={t.healthcarePatientName}
-                value={manualAppt.patientName}
-                onChange={(e) => setManualAppt((a) => ({ ...a, patientName: e.target.value }))}
-              />
-              <input
-                className="field"
-                required
-                type="tel"
-                placeholder={t.healthcarePatientPhone}
-                value={manualAppt.patientPhone}
-                onChange={(e) => setManualAppt((a) => ({ ...a, patientPhone: e.target.value }))}
-              />
-              <input
-                className="field"
-                required
-                type="date"
-                value={manualAppt.date}
-                onChange={(e) => setManualAppt((a) => ({ ...a, date: e.target.value }))}
-              />
-            </div>
-            <button type="submit" className="btn-glass-primary mt-3">
-              {t.healthcareAddPhoneAppointment}
-            </button>
-          </form>
+          {data.doctors.length > 0 ? (
+            <HealthcareAppointmentBooking
+              doctors={data.doctors.map((d) => ({
+                id: d.id,
+                name: d.name,
+                nameBn: d.nameBn,
+                specialty: d.specialty,
+                specialtyBn: d.specialtyBn,
+              }))}
+              dghsId={companyDghsId}
+              facilityName={companyName}
+              title={t.healthcareManualAppointment}
+              submitUrl={`${apiBase}/appointments`}
+              submitLabel={t.healthcareSaveManualAppointment}
+              showSlip={false}
+              onBooked={() => {
+                setMessage(t.healthcareAppointmentCreated);
+                void load();
+              }}
+            />
+          ) : null}
         </div>
       ) : null}
 

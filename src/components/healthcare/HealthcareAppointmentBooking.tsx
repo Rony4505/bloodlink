@@ -37,6 +37,11 @@ type Props = {
   dghsId?: string;
   facilityName: string;
   defaultDoctorId?: string;
+  title?: string;
+  submitUrl?: string;
+  submitLabel?: string;
+  showSlip?: boolean;
+  onBooked?: () => void;
 };
 
 const WEEKDAY_KEYS = [
@@ -54,6 +59,11 @@ export function HealthcareAppointmentBooking({
   dghsId,
   facilityName,
   defaultDoctorId,
+  title,
+  submitUrl = "/api/healthcare/appointments",
+  submitLabel,
+  showSlip = true,
+  onBooked,
 }: Props) {
   const { t, locale } = useLocale();
   const now = new Date();
@@ -62,12 +72,14 @@ export function HealthcareAppointmentBooking({
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [days, setDays] = useState<DayCapacity[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
+  const [nextSerial, setNextSerial] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [loadingDays, setLoadingDays] = useState(false);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState("");
+  const [bookSuccess, setBookSuccess] = useState("");
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
   const [bookedDoctor, setBookedDoctor] = useState<DoctorOption | null>(null);
   const [smsSent, setSmsSent] = useState<boolean | null>(null);
@@ -108,8 +120,34 @@ export function HealthcareAppointmentBooking({
 
   useEffect(() => {
     setSelectedDate("");
+    setNextSerial("");
     setBooked(null);
+    setBookSuccess("");
   }, [doctorId, year, month]);
+
+  useEffect(() => {
+    if (!selectedDate || !doctorId) {
+      setNextSerial("");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/healthcare/appointments/slots?doctorId=${encodeURIComponent(doctorId)}&date=${encodeURIComponent(selectedDate)}`,
+        );
+        const json = (await res.json()) as { booking?: { nextSerial?: string } | null };
+        if (!cancelled) {
+          setNextSerial(json.booking?.nextSerial || "");
+        }
+      } catch {
+        if (!cancelled) setNextSerial("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, doctorId]);
 
   function shiftMonth(delta: number) {
     const d = new Date(year, month - 1 + delta, 1);
@@ -140,13 +178,25 @@ export function HealthcareAppointmentBooking({
     return cells;
   }, [year, month, days]);
 
+  function resetForm() {
+    setBooked(null);
+    setBookedDoctor(null);
+    setPatientName("");
+    setPatientPhone("");
+    setNotes("");
+    setSelectedDate("");
+    setNextSerial("");
+    setBookSuccess("");
+  }
+
   async function submitBooking(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedDate || !doctorId) return;
     setBooking(true);
     setBookError("");
+    setBookSuccess("");
     try {
-      const res = await fetch("/api/healthcare/appointments", {
+      const res = await fetch(submitUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -167,10 +217,21 @@ export function HealthcareAppointmentBooking({
         setBookError(json.error || t.healthcareBookError);
         return;
       }
-      setBooked(json.appointment || null);
-      setBookedDoctor(selectedDoctor);
-      setSmsSent(json.sms?.delivered ?? null);
+      onBooked?.();
+      if (showSlip && json.appointment) {
+        setBooked(json.appointment);
+        setBookedDoctor(selectedDoctor);
+        setSmsSent(json.sms?.delivered ?? null);
+        setSelectedDate("");
+        void loadDays();
+        return;
+      }
+      setBookSuccess(t.healthcareAppointmentCreated);
+      setPatientName("");
+      setPatientPhone("");
+      setNotes("");
       setSelectedDate("");
+      setNextSerial("");
       void loadDays();
     } catch {
       setBookError(t.healthcareBookError);
@@ -185,34 +246,36 @@ export function HealthcareAppointmentBooking({
     );
   }
 
-  if (booked && bookedDoctor) {
+  if (booked && bookedDoctor && showSlip) {
     return (
       <HealthcareAppointmentSlip
         appointment={booked}
         doctor={bookedDoctor}
         facilityName={facilityName}
         smsSent={smsSent}
-        onBookAnother={() => {
-          setBooked(null);
-          setBookedDoctor(null);
-          setPatientName("");
-          setPatientPhone("");
-          setNotes("");
-        }}
+        onBookAnother={resetForm}
       />
     );
   }
 
   const selectedInfo = days.find((d) => d.date === selectedDate);
+  const heading = title || t.healthcareBookTitle;
+  const buttonLabel = submitLabel || t.healthcareBookSubmit;
 
   return (
     <section className="rounded-2xl border border-[color-mix(in_oklab,var(--blood)_20%,white)] bg-[linear-gradient(165deg,#fffdfa_0%,#ffffff_50%,#fff0ee_100%)] p-5 shadow-[0_12px_36px_rgba(110,18,32,0.08)] md:p-6">
       <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
-        {t.healthcareBookTitle}
+        {heading}
       </h3>
       <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
         {t.healthcareCalendarHint}
       </p>
+
+      {bookSuccess ? (
+        <p className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {bookSuccess}
+        </p>
+      ) : null}
 
       <label className="mt-4 block text-sm">
         <span className="mb-1 block font-medium">{t.healthcareSelectDoctor}</span>
@@ -311,7 +374,8 @@ export function HealthcareAppointmentBooking({
             {" · "}
             {selectedInfo.remaining}/{selectedInfo.maxPatients} {t.healthcareSlotsLeft}
             {" · "}
-            {t.healthcareNextSerial}: <strong>{String(selectedInfo.booked + 1).padStart(3, "0")}</strong>
+            {t.healthcareNextSerial}:{" "}
+            <strong>{nextSerial || "…"}</strong>
           </p>
           <div className="grid gap-4 md:grid-cols-2">
             <input
@@ -338,7 +402,7 @@ export function HealthcareAppointmentBooking({
           />
           {bookError ? <p className="text-sm text-[var(--blood)]">{bookError}</p> : null}
           <button type="submit" className="btn-glass-primary" disabled={booking}>
-            {booking ? t.loading : t.healthcareBookSubmit}
+            {booking ? t.loading : buttonLabel}
           </button>
         </form>
       ) : null}
