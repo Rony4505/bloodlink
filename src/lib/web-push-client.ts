@@ -177,8 +177,14 @@ export async function enableWebPush(options?: {
       }
     }
 
-    // Permission granted, or user tapped Allow on a limited browser (iOS tab, etc.)
+    // Permission granted in browser tab only — do NOT mark as fully enabled.
     if (perm === "granted" || recordIntent) {
+      if (iosBrowserTab) {
+        if (await savePermissionOnly()) {
+          return "granted";
+        }
+        return "error";
+      }
       if (await savePermissionOnly()) {
         localStorage.setItem("bloodlink_push_on", "1");
         return "granted";
@@ -188,7 +194,7 @@ export async function enableWebPush(options?: {
 
     return "denied";
   } catch {
-    if (recordIntent && (await savePermissionOnly())) {
+    if (recordIntent && !iosBrowserTab && (await savePermissionOnly())) {
       localStorage.setItem("bloodlink_push_on", "1");
       return "granted";
     }

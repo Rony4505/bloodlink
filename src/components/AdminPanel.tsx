@@ -164,20 +164,25 @@ export function AdminPanel() {
   const [pushAllow, setPushAllow] = useState<{
     donorCount: number;
     allowedUsers: number;
+    permissionOnlyUsers: number;
     subscriptions: number;
+    deliverableSubscriptions: number;
     donors: Array<{
       id: string;
       name: string;
       email: string;
       phone: string;
       bloodGroup: string;
-      allowed: boolean;
+      pushStatus: "deliverable" | "permission_only" | "none";
       subscriptionCount: number;
+      deliverableCount: number;
     }>;
   }>({
     donorCount: 0,
     allowedUsers: 0,
+    permissionOnlyUsers: 0,
     subscriptions: 0,
+    deliverableSubscriptions: 0,
     donors: [],
   });
   const [notifSaving, setNotifSaving] = useState(false);
@@ -371,7 +376,9 @@ export function AdminPanel() {
       setPushAllow({
         donorCount: Number(data.pushAllow.donorCount) || 0,
         allowedUsers: Number(data.pushAllow.allowedUsers) || 0,
+        permissionOnlyUsers: Number(data.pushAllow.permissionOnlyUsers) || 0,
         subscriptions: Number(data.pushAllow.subscriptions) || 0,
+        deliverableSubscriptions: Number(data.pushAllow.deliverableSubscriptions) || 0,
         donors: Array.isArray(data.pushAllow.donors)
           ? data.pushAllow.donors.map(
               (d: {
@@ -380,16 +387,21 @@ export function AdminPanel() {
                 email?: string;
                 phone?: string;
                 bloodGroup?: string;
+                pushStatus?: "deliverable" | "permission_only" | "none";
                 allowed?: boolean;
                 subscriptionCount?: number;
+                deliverableCount?: number;
               }) => ({
                 id: String(d.id || ""),
                 name: String(d.name || ""),
                 email: String(d.email || ""),
                 phone: String(d.phone || ""),
                 bloodGroup: String(d.bloodGroup || ""),
-                allowed: Boolean(d.allowed),
+                pushStatus:
+                  d.pushStatus ||
+                  (d.allowed ? "deliverable" : "none"),
                 subscriptionCount: Number(d.subscriptionCount) || 0,
+                deliverableCount: Number(d.deliverableCount) || 0,
               }),
             )
           : [],
@@ -1638,7 +1650,8 @@ export function AdminPanel() {
                   {t.pushAllowStatsBody
                     .replace("{allowed}", String(pushAllow.allowedUsers))
                     .replace("{donors}", String(pushAllow.donorCount))
-                    .replace("{subs}", String(pushAllow.subscriptions))}
+                    .replace("{subs}", String(pushAllow.deliverableSubscriptions))
+                    .replace("{partial}", String(pushAllow.permissionOnlyUsers))}
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                   {t.pushAllowListHint}
@@ -1676,12 +1689,16 @@ export function AdminPanel() {
                               {d.bloodGroup}
                             </td>
                             <td className="px-3 py-2">
-                              {d.allowed ? (
+                              {d.pushStatus === "deliverable" ? (
                                 <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--sage)_18%,white)] px-2 py-0.5 font-semibold text-[var(--sage)]">
                                   {t.pushAllowYes}
-                                  {d.subscriptionCount > 1
-                                    ? ` · ${d.subscriptionCount}`
+                                  {d.deliverableCount > 1
+                                    ? ` · ${d.deliverableCount}`
                                     : ""}
+                                </span>
+                              ) : d.pushStatus === "permission_only" ? (
+                                <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">
+                                  {t.pushAllowPartial}
                                 </span>
                               ) : (
                                 <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--blood)_12%,white)] px-2 py-0.5 font-semibold text-[var(--blood-deep)]">

@@ -68,6 +68,11 @@ import type {
 } from "./types";
 import { POST_URGENCIES, resolvePostUrgency } from "./post-urgency";
 import { normalizePhone } from "./privacy";
+import {
+  donorPushStatusFromSubscriptions,
+  isDeliverablePushSubscription,
+  isPermissionOnlyPushSubscription,
+} from "./push-subscription";
 
 function defaultPlatformOptions(): PlatformOptions {
   return {
@@ -1630,53 +1635,83 @@ export async function listPushSubscriptions(
   return list.filter((s) => set.has(s.userId));
 }
 
-/** Unique donors with at least one saved web-push subscription (notification allow). */
+/** Unique donors with a real deliverable Web Push subscription. */
 export async function countPushAllowStats(): Promise<{
   donorCount: number;
   allowedUsers: number;
+  permissionOnlyUsers: number;
   subscriptions: number;
+  deliverableSubscriptions: number;
   donors: Array<{
     id: string;
     name: string;
     email: string;
     phone: string;
     bloodGroup: string;
-    allowed: boolean;
+    pushStatus: "deliverable" | "permission_only" | "none";
     subscriptionCount: number;
+    deliverableCount: number;
   }>;
 }> {
   const db = await ensureDb();
   const list = db.pushSubscriptions || [];
   const countByUser = new Map<string, number>();
+  const deliverableByUser = new Map<string, number>();
   for (const s of list) {
     if (!s.userId) continue;
     countByUser.set(s.userId, (countByUser.get(s.userId) || 0) + 1);
+    if (isDeliverablePushSubscription(s)) {
+      deliverableByUser.set(s.userId, (deliverableByUser.get(s.userId) || 0) + 1);
+    }
   }
   const donors = [...db.donors]
     .map((d) => {
       const subscriptionCount = countByUser.get(d.id) || 0;
+      const deliverableCount = deliverableByUser.get(d.id) || 0;
+      const pushStatus = donorPushStatusFromSubscriptions(list, d.id);
       return {
         id: d.id,
         name: d.name,
         email: d.email,
         phone: d.phone,
         bloodGroup: d.bloodGroup,
-        allowed: subscriptionCount > 0,
+        pushStatus,
         subscriptionCount,
+        deliverableCount,
       };
     })
     .sort((a, b) => {
-      if (a.allowed !== b.allowed) return a.allowed ? -1 : 1;
+      const rank = (s: typeof a.pushStatus) =>
+        s === "deliverable" ? 0 : s === "permission_only" ? 1 : 2;
+      const diff = rank(a.pushStatus) - rank(b.pushStatus);
+      if (diff !== 0) return diff;
       return a.name.localeCompare(b.name);
     });
   return {
     donorCount: db.donors.length,
-    allowedUsers: donors.filter((d) => d.allowed).length,
+    allowedUsers: donors.filter((d) => d.pushStatus === "deliverable").length,
+    permissionOnlyUsers: donors.filter((d) => d.pushStatus === "permission_only").length,
     subscriptions: list.length,
+    deliverableSubscriptions: list.filter(isDeliverablePushSubscription).length,
     donors,
   };
 }
 
+export async function donorHasDeliverablePushSubscription(userId: string): Promise<boolean> {
+  const db = await ensureDb();
+  return (db.pushSubscriptions || []).some(
+    (s) => s.userId === userId && isDeliverablePushSubscription(s),
+  );
+}
+
+export async function donorHasPermissionOnlyPush(userId: string): Promise<boolean> {
+  const db = await ensureDb();
+  return (db.pushSubscriptions || []).some(
+    (s) => s.userId === userId && isPermissionOnlyPushSubscription(s),
+  );
+}
+
+/** @deprecated use donorHasDeliverablePushSubscription or donorHasPermissionOnlyPush */
 export async function donorHasPushSubscription(userId: string): Promise<boolean> {
   const db = await ensureDb();
   return (db.pushSubscriptions || []).some((s) => s.userId === userId);
