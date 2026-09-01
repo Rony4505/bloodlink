@@ -5,8 +5,19 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { HealthcareFacility } from "@/lib/healthcare-facilities";
 
+type CompanySummary = {
+  id: string;
+  name: string;
+  nameBn: string;
+  contactPhone: string;
+  district: string;
+  upazila: string;
+  doctorCount: number;
+};
+
 type SearchResponse = {
   items: HealthcareFacility[];
+  companies?: CompanySummary[];
   total: number;
   page: number;
   limit: number;
@@ -161,7 +172,44 @@ export function HealthcareBrowser() {
         <p className="text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">{t.loading}</p>
       ) : null}
 
-      {!loading && data && data.items.length === 0 ? (
+      {!loading && data && (data.companies?.length ?? 0) > 0 ? (
+        <div className="space-y-3">
+          <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
+            {t.healthcareRegisteredProviders}
+          </h3>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(data.companies ?? []).map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/healthcare/c/${c.id}`}
+                  className="group flex h-full flex-col rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,white)] bg-[linear-gradient(165deg,#fff5f8_0%,#ffffff_60%,#fffdfa_100%)] p-4 shadow-[0_10px_30px_rgba(110,18,32,0.06)] transition hover:-translate-y-0.5"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--blood)]">
+                    {t.healthcareRegisteredProvider}
+                  </p>
+                  <p className="mt-1 font-[family-name:var(--font-display)] text-base font-bold text-[var(--ink)] group-hover:text-[var(--blood-deep)]">
+                    {locale === "bn" && c.nameBn ? c.nameBn : c.name}
+                  </p>
+                  <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                    {[c.upazila, c.district].filter(Boolean).join(", ")}
+                  </p>
+                  <p className="mt-2 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    {c.doctorCount} {t.healthcareDoctors.toLowerCase()}
+                  </p>
+                  {c.contactPhone ? (
+                    <p className="mt-2 font-bold text-[var(--blood-deep)]">{c.contactPhone}</p>
+                  ) : null}
+                  <span className="btn-glass-primary mt-4 inline-flex w-full justify-center text-sm">
+                    {t.healthcareViewDetails}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {!loading && data && data.items.length === 0 && !(data.companies?.length ?? 0) ? (
         <p className="rounded-xl border border-[var(--line)] bg-white/80 px-4 py-8 text-center text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">
           {t.healthcareEmpty}
         </p>
