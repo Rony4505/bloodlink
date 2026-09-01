@@ -61,9 +61,12 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    const linkedDghsIds = Array.isArray(body?.linkedDghsIds)
+      ? body.linkedDghsIds.map((id: unknown) => String(id).trim()).filter(Boolean)
+      : [];
     const name = String(body?.name || "").trim();
-    if (!name) {
-      return NextResponse.json({ error: "Name required" }, { status: 400 });
+    if (!name && linkedDghsIds.length === 0) {
+      return NextResponse.json({ error: "Name or DGHS facility link required" }, { status: 400 });
     }
 
     const company = await createHealthcareCompany({

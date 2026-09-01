@@ -1,9 +1,19 @@
-import { access, mkdir, readFile, writeFile } from "fs/promises";
+import {
+  access,
+  copyFile,
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  unlink,
+  writeFile,
+} from "fs/promises";
 import {
   bookingTimesForDay,
   canBookDate,
   nextSerialNumber,
 } from "@/lib/healthcare-slots";
+import { getHealthcareFacilityById } from "@/lib/healthcare-facilities";
 import {
   hasDatabaseUrl,
   loadHealthcareFromPostgres,
@@ -90,6 +100,28 @@ function dataFilePath(): string {
   return path.join(dataDir(), "healthcare-platform.json");
 }
 
+function dataBakPath(): string {
+  return path.join(dataDir(), "healthcare-platform.bak.json");
+}
+
+function dataTmpPath(): string {
+  return path.join(dataDir(), "healthcare-platform.tmp.json");
+}
+
+function dataBackupsDir(): string {
+  return path.join(dataDir(), "healthcare-backups");
+}
+
+const MEMORY_TTL_MS = 20_000;
+const MAX_ROTATING_BACKUPS = 30;
+
+let writeQueue: Promise<void> = Promise.resolve();
+let memoryHealthcare: HealthcarePlatformData | null = null;
+let memoryHealthcareAt = 0;
+let loadingHealthcare: Promise<HealthcarePlatformData> | null = null;
+let loggedHealthcareStorage = false;
+let lastHealthcareBackupAt = 0;
+
 function emptyData(): HealthcarePlatformData {
   return { companies: [], doctors: [], appointments: [] };
 }
@@ -140,61 +172,284 @@ function hasStoredData(data: HealthcarePlatformData): boolean {
   return data.companies.length > 0 || data.doctors.length > 0 || data.appointments.length > 0;
 }
 
-async function readHealthcareFile(): Promise<HealthcarePlatformData | null> {
-  await ensureDataDir();
+function dataScore(data: HealthcarePlatformData): number {
+  return (
+    data.companies.length * 10_000 + data.doctors.length * 100 + data.appointments.length
+  );
+}
+
+function mergeHealthcareData(...sources: HealthcarePlatformData[]): HealthcarePlatformData {
+  const companies = new Map<string, HealthcareCompany>();
+  const doctors = new Map<string, HealthcareDoctor>();
+  const appointments = new Map<string, HealthcareAppointment>();
+
+  for (const src of sources) {
+    for (const row of src.companies) {
+      if (row.id) companies.set(row.id, row);
+    }
+    for (const row of src.doctors) {
+      if (row.id) doctors.set(row.id, row);
+    }
+    for (const row of src.appointments) {
+      if (row.id) appointments.set(row.id, row);
+    }
+  }
+
+  return {
+    companies: [...companies.values()],
+    doctors: [...doctors.values()],
+    appointments: [...appointments.values()],
+  };
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
   try {
-    const raw = await readFile(dataFilePath(), "utf8");
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readHealthcareJsonFile(
+  filePath: string,
+): Promise<HealthcarePlatformData | null> {
+  try {
+    const raw = await readFile(filePath, "utf8");
     return normalizeData(JSON.parse(raw) as HealthcarePlatformData);
   } catch {
     return null;
   }
 }
 
-async function writeHealthcareFile(data: HealthcarePlatformData): Promise<void> {
-  await ensureDataDir();
-  await writeFile(dataFilePath(), JSON.stringify(normalizeData(data), null, 2), "utf8");
+async function readHealthcareBackupFiles(): Promise<HealthcarePlatformData[]> {
+  const dir = dataBackupsDir();
+  try {
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith("healthcare-") && name.endsWith(".json"))
+      .sort()
+      .reverse()
+      .slice(0, 10);
+    const results: HealthcarePlatformData[] = [];
+    for (const name of names) {
+      const parsed = await readHealthcareJsonFile(path.join(dir, name));
+      if (parsed && hasStoredData(parsed)) results.push(parsed);
+    }
+    return results;
+  } catch {
+    return [];
+  }
 }
 
-export async function loadHealthcarePlatform(): Promise<HealthcarePlatformData> {
+async function loadHealthcareFromStores(): Promise<HealthcarePlatformData> {
+  if (!loggedHealthcareStorage) {
+    loggedHealthcareStorage = true;
+    console.info(
+      `[healthcare] Storage backend: ${hasDatabaseUrl() ? "postgres+file" : "file"} (${dataFilePath()})`,
+    );
+  }
+
+  await ensureDataDir();
+  const fromFile = await readHealthcareJsonFile(dataFilePath());
+  const fromBak = await readHealthcareJsonFile(dataBakPath());
+  const fromBackups = await readHealthcareBackupFiles();
+
+  let fromPg: HealthcarePlatformData | null = null;
   if (hasDatabaseUrl()) {
     try {
-      const fromPg = await loadHealthcareFromPostgres();
-      const normalizedPg = fromPg
-        ? normalizeData(fromPg as Partial<HealthcarePlatformData>)
-        : null;
-      if (normalizedPg && hasStoredData(normalizedPg)) {
-        return normalizedPg;
-      }
-      const fromFile = await readHealthcareFile();
-      if (fromFile && hasStoredData(fromFile)) {
-        await saveHealthcareToPostgres(fromFile);
-        return fromFile;
-      }
-      if (normalizedPg) return normalizedPg;
+      const raw = await loadHealthcareFromPostgres();
+      fromPg = raw ? normalizeData(raw as Partial<HealthcarePlatformData>) : null;
     } catch (err) {
-      console.error("[healthcare] Postgres load failed, falling back to file", err);
+      console.error("[healthcare] Postgres load failed:", err);
     }
   }
 
-  const fromFile = await readHealthcareFile();
-  if (fromFile) return fromFile;
+  const candidates = [fromPg, fromFile, fromBak, ...fromBackups].filter(
+    (row): row is HealthcarePlatformData => Boolean(row && hasStoredData(row)),
+  );
 
-  return emptyData();
+  if (!candidates.length) {
+    const mainExists = await fileExists(dataFilePath());
+    const bakExists = await fileExists(dataBakPath());
+    if (mainExists || bakExists) {
+      throw new Error(
+        "[healthcare] Data files exist but could not be read — refusing empty wipe",
+      );
+    }
+    return emptyData();
+  }
+
+  const merged = mergeHealthcareData(...candidates);
+  const bestSingle = candidates.reduce((best, cur) =>
+    dataScore(cur) > dataScore(best) ? cur : best,
+  );
+  const resolved = dataScore(merged) >= dataScore(bestSingle) ? merged : bestSingle;
+
+  if (fromPg && dataScore(resolved) > dataScore(fromPg)) {
+    console.warn(
+      `[healthcare] Restored richer healthcare data into Postgres (${dataScore(resolved)} > ${dataScore(fromPg)})`,
+    );
+    await persistHealthcare(resolved, { allowShrink: true });
+  } else if (!fromPg && hasDatabaseUrl() && hasStoredData(resolved)) {
+    console.info("[healthcare] Migrating healthcare file data into Postgres");
+    await persistHealthcare(resolved, { allowShrink: true });
+  }
+
+  return resolved;
 }
 
-export async function saveHealthcarePlatform(data: HealthcarePlatformData): Promise<void> {
+async function writeRotatingHealthcareBackup(data: HealthcarePlatformData): Promise<void> {
+  const now = Date.now();
+  if (now - lastHealthcareBackupAt < 6 * 60 * 60 * 1000) return;
+  lastHealthcareBackupAt = now;
+  try {
+    const dir = dataBackupsDir();
+    await mkdir(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    await writeFile(
+      path.join(dir, `healthcare-${stamp}.json`),
+      JSON.stringify(data, null, 2),
+      "utf8",
+    );
+    const names = (await readdir(dir))
+      .filter((name) => name.startsWith("healthcare-") && name.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const name of names.slice(MAX_ROTATING_BACKUPS)) {
+      await unlink(path.join(dir, name)).catch(() => undefined);
+    }
+  } catch (err) {
+    console.error("[healthcare] rotating backup failed:", err);
+  }
+}
+
+async function persistHealthcareToFile(
+  data: HealthcarePlatformData,
+  options: { allowShrink?: boolean } = {},
+): Promise<void> {
+  await ensureDataDir();
+  const normalized = normalizeData(data);
+  const existing = await readHealthcareJsonFile(dataFilePath());
+  if (existing && !options.allowShrink) {
+    if (hasStoredData(existing) && !hasStoredData(normalized)) {
+      throw new Error("[healthcare] Refusing to overwrite file data with empty store");
+    }
+    if (existing.companies.length > 0 && normalized.companies.length === 0) {
+      throw new Error("[healthcare] Refusing to wipe companies from file");
+    }
+    if (existing.doctors.length > 0 && normalized.doctors.length === 0) {
+      throw new Error("[healthcare] Refusing to wipe doctors from file");
+    }
+  }
+
+  if (await fileExists(dataFilePath())) {
+    try {
+      await copyFile(dataFilePath(), dataBakPath());
+    } catch (err) {
+      console.error("[healthcare] backup copy failed:", err);
+    }
+  }
+
+  await writeFile(dataTmpPath(), JSON.stringify(normalized, null, 2), "utf8");
+  await rename(dataTmpPath(), dataFilePath());
+  await writeRotatingHealthcareBackup(normalized);
+}
+
+async function persistHealthcare(
+  data: HealthcarePlatformData,
+  options: { allowShrink?: boolean } = {},
+): Promise<void> {
   const normalized = normalizeData(data);
 
   if (hasDatabaseUrl()) {
-    await saveHealthcareToPostgres(normalized);
+    try {
+      await saveHealthcareToPostgres(normalized, options);
+      try {
+        await persistHealthcareToFile(normalized, options);
+      } catch (err) {
+        console.error("[healthcare] file mirror failed:", err);
+      }
+      memoryHealthcare = normalized;
+      memoryHealthcareAt = Date.now();
+      return;
+    } catch (err) {
+      console.error("[healthcare] Postgres persist failed — writing file fallback:", err);
+    }
   }
 
-  try {
-    await writeHealthcareFile(normalized);
-  } catch (err) {
-    if (!hasDatabaseUrl()) throw err;
-    console.error("[healthcare] File mirror save failed", err);
+  await persistHealthcareToFile(normalized, options);
+  memoryHealthcare = normalized;
+  memoryHealthcareAt = Date.now();
+}
+
+async function withHealthcareWrite<T>(
+  fn: (data: HealthcarePlatformData) => Promise<T> | T,
+  options: { allowShrink?: boolean } = {},
+): Promise<T> {
+  const run = writeQueue.then(async () => {
+    const data = await loadHealthcareFromStores();
+    const result = await fn(data);
+    await persistHealthcare(data, options);
+    return result;
+  });
+  writeQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+export async function loadHealthcarePlatform(): Promise<HealthcarePlatformData> {
+  if (memoryHealthcare && Date.now() - memoryHealthcareAt < MEMORY_TTL_MS) {
+    return memoryHealthcare;
   }
+  if (loadingHealthcare) return loadingHealthcare;
+  loadingHealthcare = loadHealthcareFromStores()
+    .then((data) => {
+      memoryHealthcare = data;
+      memoryHealthcareAt = Date.now();
+      return data;
+    })
+    .finally(() => {
+      loadingHealthcare = null;
+    });
+  return loadingHealthcare;
+}
+
+export async function saveHealthcarePlatform(
+  data: HealthcarePlatformData,
+  options: { allowShrink?: boolean } = {},
+): Promise<void> {
+  const run = writeQueue.then(async () => {
+    await persistHealthcare(normalizeData(data), options);
+  });
+  writeQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  await run;
+}
+
+export async function companyDefaultsFromDghs(linkedDghsIds: string[]): Promise<
+  Partial<
+    Pick<
+      HealthcareCompany,
+      "name" | "nameBn" | "contactPhone" | "contactEmail" | "district" | "upazila"
+    >
+  >
+> {
+  const primaryId = linkedDghsIds.find(Boolean);
+  if (!primaryId) return {};
+  const facility = await getHealthcareFacilityById(primaryId);
+  if (!facility) return {};
+  return {
+    name: facility.name,
+    nameBn: facility.nameBn,
+    contactPhone: facility.phone,
+    contactEmail: facility.email,
+    district: facility.district,
+    upazila: facility.upazila,
+  };
 }
 
 export function newHealthcareToken(): string {
@@ -306,27 +561,29 @@ export async function createHealthcareCompany(input: {
   upazila?: string;
   linkedDghsIds?: string[];
 }): Promise<HealthcareCompany> {
-  const data = await loadHealthcarePlatform();
-  const now = new Date().toISOString();
-  const company: HealthcareCompany = {
-    id: newHealthcareId("hco"),
-    name: input.name.trim(),
-    nameBn: String(input.nameBn || "").trim(),
-    contactPhone: String(input.contactPhone || "").trim(),
-    contactEmail: String(input.contactEmail || "").trim(),
-    linkToken: newHealthcareToken(),
-    enabled: true,
-    linkedDghsIds: Array.isArray(input.linkedDghsIds)
+  return withHealthcareWrite(async (data) => {
+    const linkedDghsIds = Array.isArray(input.linkedDghsIds)
       ? [...new Set(input.linkedDghsIds.map((id) => String(id).trim()).filter(Boolean))]
-      : [],
-    district: String(input.district || "").trim(),
-    upazila: String(input.upazila || "").trim(),
-    createdAt: now,
-    updatedAt: now,
-  };
-  data.companies.push(company);
-  await saveHealthcarePlatform(data);
-  return company;
+      : [];
+    const defaults = await companyDefaultsFromDghs(linkedDghsIds);
+    const now = new Date().toISOString();
+    const company: HealthcareCompany = {
+      id: newHealthcareId("hco"),
+      name: input.name.trim() || defaults.name || "",
+      nameBn: String(input.nameBn || defaults.nameBn || "").trim(),
+      contactPhone: String(input.contactPhone || defaults.contactPhone || "").trim(),
+      contactEmail: String(input.contactEmail || defaults.contactEmail || "").trim(),
+      linkToken: newHealthcareToken(),
+      enabled: true,
+      linkedDghsIds,
+      district: String(input.district || defaults.district || "").trim(),
+      upazila: String(input.upazila || defaults.upazila || "").trim(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    data.companies.push(company);
+    return company;
+  });
 }
 
 export async function updateHealthcareCompany(
@@ -345,56 +602,76 @@ export async function updateHealthcareCompany(
     >
   >,
 ): Promise<HealthcareCompany | null> {
-  const data = await loadHealthcarePlatform();
-  const idx = data.companies.findIndex((c) => c.id === companyId);
-  if (idx === -1) return null;
-  const current = data.companies[idx]!;
-  const next: HealthcareCompany = {
-    ...current,
-    ...patch,
-    name: patch.name !== undefined ? patch.name.trim() : current.name,
-    nameBn: patch.nameBn !== undefined ? patch.nameBn.trim() : current.nameBn,
-    contactPhone:
-      patch.contactPhone !== undefined ? patch.contactPhone.trim() : current.contactPhone,
-    contactEmail:
-      patch.contactEmail !== undefined ? patch.contactEmail.trim() : current.contactEmail,
-    linkedDghsIds:
+  return withHealthcareWrite(async (data) => {
+    const idx = data.companies.findIndex((c) => c.id === companyId);
+    if (idx === -1) return null;
+    const current = data.companies[idx]!;
+    const linkedDghsIds =
       patch.linkedDghsIds !== undefined
         ? [...new Set(patch.linkedDghsIds.map((id) => String(id).trim()).filter(Boolean))]
-        : current.linkedDghsIds,
-    district: patch.district !== undefined ? patch.district.trim() : current.district,
-    upazila: patch.upazila !== undefined ? patch.upazila.trim() : current.upazila,
-    updatedAt: new Date().toISOString(),
-  };
-  data.companies[idx] = next;
-  await saveHealthcarePlatform(data);
-  return next;
+        : current.linkedDghsIds;
+    const defaults =
+      patch.linkedDghsIds !== undefined
+        ? await companyDefaultsFromDghs(linkedDghsIds)
+        : {};
+    const next: HealthcareCompany = {
+      ...current,
+      ...patch,
+      name: patch.name !== undefined ? patch.name.trim() : current.name || defaults.name || "",
+      nameBn:
+        patch.nameBn !== undefined
+          ? patch.nameBn.trim()
+          : current.nameBn || defaults.nameBn || "",
+      contactPhone:
+        patch.contactPhone !== undefined
+          ? patch.contactPhone.trim()
+          : current.contactPhone || defaults.contactPhone || "",
+      contactEmail:
+        patch.contactEmail !== undefined
+          ? patch.contactEmail.trim()
+          : current.contactEmail || defaults.contactEmail || "",
+      linkedDghsIds,
+      district:
+        patch.district !== undefined
+          ? patch.district.trim()
+          : current.district || defaults.district || "",
+      upazila:
+        patch.upazila !== undefined
+          ? patch.upazila.trim()
+          : current.upazila || defaults.upazila || "",
+      updatedAt: new Date().toISOString(),
+    };
+    data.companies[idx] = next;
+    return next;
+  });
 }
 
 export async function deleteHealthcareCompany(companyId: string): Promise<boolean> {
-  const data = await loadHealthcarePlatform();
-  const before = data.companies.length;
-  data.companies = data.companies.filter((c) => c.id !== companyId);
-  data.doctors = data.doctors.filter((d) => d.companyId !== companyId);
-  data.appointments = data.appointments.filter((a) => a.companyId !== companyId);
-  if (data.companies.length === before) return false;
-  await saveHealthcarePlatform(data);
-  return true;
+  return withHealthcareWrite(
+    (data) => {
+      const before = data.companies.length;
+      data.companies = data.companies.filter((c) => c.id !== companyId);
+      data.doctors = data.doctors.filter((d) => d.companyId !== companyId);
+      data.appointments = data.appointments.filter((a) => a.companyId !== companyId);
+      return before !== data.companies.length;
+    },
+    { allowShrink: true },
+  );
 }
 
 export async function regenerateHealthcareCompanyToken(
   companyId: string,
 ): Promise<HealthcareCompany | null> {
-  const data = await loadHealthcarePlatform();
-  const idx = data.companies.findIndex((c) => c.id === companyId);
-  if (idx === -1) return null;
-  data.companies[idx] = {
-    ...data.companies[idx]!,
-    linkToken: newHealthcareToken(),
-    updatedAt: new Date().toISOString(),
-  };
-  await saveHealthcarePlatform(data);
-  return data.companies[idx]!;
+  return withHealthcareWrite((data) => {
+    const idx = data.companies.findIndex((c) => c.id === companyId);
+    if (idx === -1) return null;
+    data.companies[idx] = {
+      ...data.companies[idx]!,
+      linkToken: newHealthcareToken(),
+      updatedAt: new Date().toISOString(),
+    };
+    return data.companies[idx]!;
+  });
 }
 
 export async function createHealthcareDoctor(input: {
@@ -408,37 +685,37 @@ export async function createHealthcareDoctor(input: {
   room?: string;
   schedules?: HealthcareDoctorSchedule[];
 }): Promise<HealthcareDoctor | null> {
-  const data = await loadHealthcarePlatform();
-  const company = findCompanyById(data, input.companyId);
-  if (!company) return null;
-  const dghsId = input.dghsId.trim() || company.linkedDghsIds[0] || "";
-  if (
-    dghsId &&
-    company.linkedDghsIds.length > 0 &&
-    !company.linkedDghsIds.includes(dghsId)
-  ) {
-    return null;
-  }
+  return withHealthcareWrite((data) => {
+    const company = findCompanyById(data, input.companyId);
+    if (!company) return null;
+    const dghsId = input.dghsId.trim() || company.linkedDghsIds[0] || "";
+    if (
+      dghsId &&
+      company.linkedDghsIds.length > 0 &&
+      !company.linkedDghsIds.includes(dghsId)
+    ) {
+      return null;
+    }
 
-  const now = new Date().toISOString();
-  const doctor: HealthcareDoctor = {
-    id: newHealthcareId("hcd"),
-    companyId: input.companyId,
-    dghsId,
-    name: input.name.trim(),
-    nameBn: String(input.nameBn || "").trim(),
-    specialty: String(input.specialty || "").trim(),
-    specialtyBn: String(input.specialtyBn || "").trim(),
-    phone: String(input.phone || "").trim(),
-    room: String(input.room || "").trim(),
-    enabled: true,
-    schedules: Array.isArray(input.schedules) ? input.schedules : [],
-    createdAt: now,
-    updatedAt: now,
-  };
-  data.doctors.push(doctor);
-  await saveHealthcarePlatform(data);
-  return doctor;
+    const now = new Date().toISOString();
+    const doctor: HealthcareDoctor = {
+      id: newHealthcareId("hcd"),
+      companyId: input.companyId,
+      dghsId,
+      name: input.name.trim(),
+      nameBn: String(input.nameBn || "").trim(),
+      specialty: String(input.specialty || "").trim(),
+      specialtyBn: String(input.specialtyBn || "").trim(),
+      phone: String(input.phone || "").trim(),
+      room: String(input.room || "").trim(),
+      enabled: true,
+      schedules: Array.isArray(input.schedules) ? input.schedules : [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    data.doctors.push(doctor);
+    return doctor;
+  });
 }
 
 export async function updateHealthcareDoctor(
@@ -459,49 +736,53 @@ export async function updateHealthcareDoctor(
     >
   >,
 ): Promise<HealthcareDoctor | null> {
-  const data = await loadHealthcarePlatform();
-  const idx = data.doctors.findIndex((d) => d.id === doctorId && d.companyId === companyId);
-  if (idx === -1) return null;
-  const current = data.doctors[idx]!;
-  if (patch.dghsId !== undefined) {
-    const company = findCompanyById(data, companyId);
-    const nextDghsId = patch.dghsId.trim() || company?.linkedDghsIds[0] || "";
-    if (
-      nextDghsId &&
-      company?.linkedDghsIds.length &&
-      !company.linkedDghsIds.includes(nextDghsId)
-    ) {
-      return null;
+  return withHealthcareWrite((data) => {
+    const idx = data.doctors.findIndex((d) => d.id === doctorId && d.companyId === companyId);
+    if (idx === -1) return null;
+    const current = data.doctors[idx]!;
+    let patchDghsId = patch.dghsId;
+    if (patchDghsId !== undefined) {
+      const company = findCompanyById(data, companyId);
+      const nextDghsId = patchDghsId.trim() || company?.linkedDghsIds[0] || "";
+      if (
+        nextDghsId &&
+        company?.linkedDghsIds.length &&
+        !company.linkedDghsIds.includes(nextDghsId)
+      ) {
+        return null;
+      }
+      patchDghsId = nextDghsId;
     }
-    patch = { ...patch, dghsId: nextDghsId };
-  }
-  const next: HealthcareDoctor = {
-    ...current,
-    ...patch,
-    name: patch.name !== undefined ? patch.name.trim() : current.name,
-    nameBn: patch.nameBn !== undefined ? patch.nameBn.trim() : current.nameBn,
-    specialty: patch.specialty !== undefined ? patch.specialty.trim() : current.specialty,
-    specialtyBn:
-      patch.specialtyBn !== undefined ? patch.specialtyBn.trim() : current.specialtyBn,
-    phone: patch.phone !== undefined ? patch.phone.trim() : current.phone,
-    room: patch.room !== undefined ? patch.room.trim() : current.room,
-    updatedAt: new Date().toISOString(),
-  };
-  data.doctors[idx] = next;
-  await saveHealthcarePlatform(data);
-  return next;
+    const next: HealthcareDoctor = {
+      ...current,
+      ...patch,
+      dghsId: patchDghsId !== undefined ? patchDghsId : current.dghsId,
+      name: patch.name !== undefined ? patch.name.trim() : current.name,
+      nameBn: patch.nameBn !== undefined ? patch.nameBn.trim() : current.nameBn,
+      specialty: patch.specialty !== undefined ? patch.specialty.trim() : current.specialty,
+      specialtyBn:
+        patch.specialtyBn !== undefined ? patch.specialtyBn.trim() : current.specialtyBn,
+      phone: patch.phone !== undefined ? patch.phone.trim() : current.phone,
+      room: patch.room !== undefined ? patch.room.trim() : current.room,
+      updatedAt: new Date().toISOString(),
+    };
+    data.doctors[idx] = next;
+    return next;
+  });
 }
 
 export async function deleteHealthcareDoctor(
   doctorId: string,
   companyId: string,
 ): Promise<boolean> {
-  const data = await loadHealthcarePlatform();
-  const before = data.doctors.length;
-  data.doctors = data.doctors.filter((d) => !(d.id === doctorId && d.companyId === companyId));
-  if (data.doctors.length === before) return false;
-  await saveHealthcarePlatform(data);
-  return true;
+  return withHealthcareWrite(
+    (data) => {
+      const before = data.doctors.length;
+      data.doctors = data.doctors.filter((d) => !(d.id === doctorId && d.companyId === companyId));
+      return before !== data.doctors.length;
+    },
+    { allowShrink: true },
+  );
 }
 
 export async function createHealthcareAppointment(input: {
@@ -517,37 +798,37 @@ export async function createHealthcareAppointment(input: {
   source?: HealthcareAppointment["source"];
   autoConfirm?: boolean;
 }): Promise<HealthcareAppointment | null> {
-  const data = await loadHealthcarePlatform();
-  const doctor = data.doctors.find((d) => d.id === input.doctorId && d.enabled);
-  if (!doctor) return null;
+  return withHealthcareWrite((data) => {
+    const doctor = data.doctors.find((d) => d.id === input.doctorId && d.enabled);
+    if (!doctor) return null;
 
-  const dateStr = (input.date || input.slotStart || input.scheduledAt || "").slice(0, 10);
-  if (!dateStr || dateStr.length < 10) return null;
+    const dateStr = (input.date || input.slotStart || input.scheduledAt || "").slice(0, 10);
+    if (!dateStr || dateStr.length < 10) return null;
 
-  if (!canBookDate(doctor, dateStr, data.appointments)) return null;
+    if (!canBookDate(doctor, dateStr, data.appointments)) return null;
 
-  const { slotStart, slotEnd } = bookingTimesForDay(doctor, dateStr);
-  const serialNumber = nextSerialNumber(input.doctorId, dateStr, data.appointments);
+    const { slotStart, slotEnd } = bookingTimesForDay(doctor, dateStr);
+    const serialNumber = nextSerialNumber(input.doctorId, dateStr, data.appointments);
 
-  const appointment: HealthcareAppointment = {
-    id: newHealthcareId("hca"),
-    companyId: input.companyId,
-    doctorId: input.doctorId,
-    dghsId: input.dghsId,
-    patientName: input.patientName.trim(),
-    patientPhone: input.patientPhone.trim(),
-    scheduledAt: slotStart,
-    slotStart,
-    slotEnd,
-    serialNumber,
-    status: input.autoConfirm !== false ? "confirmed" : "pending",
-    source: input.source ?? "online",
-    notes: String(input.notes || "").trim(),
-    createdAt: new Date().toISOString(),
-  };
-  data.appointments.push(appointment);
-  await saveHealthcarePlatform(data);
-  return appointment;
+    const appointment: HealthcareAppointment = {
+      id: newHealthcareId("hca"),
+      companyId: input.companyId,
+      doctorId: input.doctorId,
+      dghsId: input.dghsId,
+      patientName: input.patientName.trim(),
+      patientPhone: input.patientPhone.trim(),
+      scheduledAt: slotStart,
+      slotStart,
+      slotEnd,
+      serialNumber,
+      status: input.autoConfirm !== false ? "confirmed" : "pending",
+      source: input.source ?? "online",
+      notes: String(input.notes || "").trim(),
+      createdAt: new Date().toISOString(),
+    };
+    data.appointments.push(appointment);
+    return appointment;
+  });
 }
 
 export async function updateHealthcareAppointment(
@@ -557,41 +838,41 @@ export async function updateHealthcareAppointment(
     Pick<HealthcareAppointment, "status" | "scheduledAt" | "slotStart" | "slotEnd" | "notes">
   > & { date?: string },
 ): Promise<HealthcareAppointment | null> {
-  const data = await loadHealthcarePlatform();
-  const idx = data.appointments.findIndex(
-    (a) => a.id === appointmentId && a.companyId === companyId,
-  );
-  if (idx === -1) return null;
-  const current = data.appointments[idx]!;
-  const doctor = data.doctors.find((d) => d.id === current.doctorId);
-  const nextSlot = patch.slotStart ?? patch.scheduledAt;
-  const nextDate = (patch.date || nextSlot || "").slice(0, 10);
-  const currentDate = (current.slotStart || current.scheduledAt).slice(0, 10);
-  const isReschedule = Boolean(nextDate && nextDate.length === 10 && nextDate !== currentDate);
+  return withHealthcareWrite((data) => {
+    const idx = data.appointments.findIndex(
+      (a) => a.id === appointmentId && a.companyId === companyId,
+    );
+    if (idx === -1) return null;
+    const current = data.appointments[idx]!;
+    const doctor = data.doctors.find((d) => d.id === current.doctorId);
+    const nextSlot = patch.slotStart ?? patch.scheduledAt;
+    const nextDate = (patch.date || nextSlot || "").slice(0, 10);
+    const currentDate = (current.slotStart || current.scheduledAt).slice(0, 10);
+    const isReschedule = Boolean(nextDate && nextDate.length === 10 && nextDate !== currentDate);
 
-  if (isReschedule && doctor) {
-    const others = data.appointments.filter((a) => a.id !== appointmentId);
-    if (!canBookDate(doctor, nextDate, others)) return null;
-    const times = bookingTimesForDay(doctor, nextDate);
-    const serialNumber = nextSerialNumber(current.doctorId, nextDate, others);
-    data.appointments[idx] = {
-      ...current,
-      ...patch,
-      scheduledAt: times.slotStart,
-      slotStart: times.slotStart,
-      slotEnd: times.slotEnd,
-      serialNumber,
-      status: patch.status ?? current.status,
-    };
-  } else {
-    data.appointments[idx] = {
-      ...current,
-      ...patch,
-      scheduledAt: nextSlot ?? current.scheduledAt,
-      slotStart: nextSlot ?? current.slotStart,
-    };
-  }
+    if (isReschedule && doctor) {
+      const others = data.appointments.filter((a) => a.id !== appointmentId);
+      if (!canBookDate(doctor, nextDate, others)) return null;
+      const times = bookingTimesForDay(doctor, nextDate);
+      const serialNumber = nextSerialNumber(current.doctorId, nextDate, others);
+      data.appointments[idx] = {
+        ...current,
+        ...patch,
+        scheduledAt: times.slotStart,
+        slotStart: times.slotStart,
+        slotEnd: times.slotEnd,
+        serialNumber,
+        status: patch.status ?? current.status,
+      };
+    } else {
+      data.appointments[idx] = {
+        ...current,
+        ...patch,
+        scheduledAt: nextSlot ?? current.scheduledAt,
+        slotStart: nextSlot ?? current.slotStart,
+      };
+    }
 
-  await saveHealthcarePlatform(data);
-  return data.appointments[idx]!;
+    return data.appointments[idx]!;
+  });
 }

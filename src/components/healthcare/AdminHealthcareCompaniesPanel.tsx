@@ -34,6 +34,9 @@ type FacilitySearchItem = {
   name: string;
   nameBn: string;
   district: string;
+  upazila: string;
+  phone: string;
+  email: string;
 };
 
 const emptyDraft = {
@@ -168,13 +171,33 @@ export function AdminHealthcareCompaniesPanel() {
     void load();
   }
 
+  function applyFacilityDefaults(
+    draftState: typeof emptyDraft,
+    item: FacilitySearchItem,
+  ): typeof emptyDraft {
+    return {
+      ...draftState,
+      name: draftState.name || item.name,
+      nameBn: draftState.nameBn || item.nameBn,
+      contactPhone: draftState.contactPhone || item.phone,
+      contactEmail: draftState.contactEmail || item.email,
+      district: item.district || draftState.district,
+      upazila: item.upazila || draftState.upazila,
+    };
+  }
+
   function addFacility(item: FacilitySearchItem) {
     if (draft.linkedDghsIds.includes(item.dghsId)) return;
-    setDraft((d) => ({
-      ...d,
-      linkedDghsIds: [...d.linkedDghsIds, item.dghsId],
-      facilityQuery: "",
-    }));
+    setDraft((d) =>
+      applyFacilityDefaults(
+        {
+          ...d,
+          linkedDghsIds: [...d.linkedDghsIds, item.dghsId],
+          facilityQuery: "",
+        },
+        item,
+      ),
+    );
     setFacilityHits([]);
   }
 
@@ -192,7 +215,7 @@ export function AdminHealthcareCompaniesPanel() {
             className="input md:col-span-2"
             placeholder={t.healthcareCompanyName}
             value={draft.name}
-            required
+            required={draft.linkedDghsIds.length === 0}
             onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
           />
           <input
@@ -237,6 +260,9 @@ export function AdminHealthcareCompaniesPanel() {
               value={draft.facilityQuery}
               onChange={(e) => setDraft((d) => ({ ...d, facilityQuery: e.target.value }))}
             />
+            <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+              {t.healthcareLinkAutoFill}
+            </p>
             {facilityHits.length > 0 ? (
               <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-[var(--line)] bg-white shadow-lg">
                 {facilityHits.map((f) => (
@@ -248,7 +274,7 @@ export function AdminHealthcareCompaniesPanel() {
                     >
                       <span className="font-medium">{f.name}</span>
                       <span className="mt-0.5 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                        {f.district} · {f.dghsId}
+                        {[f.district, f.upazila].filter(Boolean).join(" · ")} · {f.dghsId}
                       </span>
                     </button>
                   </li>

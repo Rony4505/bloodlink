@@ -617,6 +617,8 @@ export const dictionaries = {
     healthcareCompanyPhone: "Contact phone",
     healthcareCompanyEmail: "Contact email",
     healthcareLinkFacility: "Link DGHS facility (search name)…",
+    healthcareLinkAutoFill:
+      "Link a DGHS facility to auto-fill name, phone, email, district and upazila.",
     healthcareCompanyCreate: "Create company",
     healthcareCompanyCreated: "Company created.",
     healthcareCompanyUpdated: "Company updated.",
@@ -1428,6 +1430,8 @@ export const dictionaries = {
     healthcareCompanyPhone: "যোগাযোগের ফোন",
     healthcareCompanyEmail: "ইমেইল",
     healthcareLinkFacility: "DGHS প্রতিষ্ঠান লিংক করুন (নাম খুঁজুন)…",
+    healthcareLinkAutoFill:
+      "DGHS প্রতিষ্ঠান লিংক করলে নাম, ফোন, ইমেইল, জেলা ও উপজেলা অটো পূরণ হবে।",
     healthcareCompanyCreate: "কোম্পানি তৈরি করুন",
     healthcareCompanyCreated: "কোম্পানি তৈরি হয়েছে।",
     healthcareCompanyUpdated: "আপডেট হয়েছে।",
