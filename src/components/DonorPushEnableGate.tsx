@@ -9,7 +9,7 @@ import {
 } from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
 
-type GateStatus = "ask" | "on" | "denied" | "error";
+type GateStatus = "ask" | "on" | "permission_only" | "denied" | "error";
 
 type Props = {
   /** When true, only runs if the visitor is a logged-in donor. */
@@ -23,15 +23,20 @@ type Props = {
 async function fetchPushStatus(): Promise<{
   ok: boolean;
   subscribed: boolean;
+  permissionOnly: boolean;
 }> {
   try {
     const res = await fetch("/api/push/subscribe", { cache: "no-store" });
-    if (res.status === 401) return { ok: false, subscribed: false };
-    if (!res.ok) return { ok: true, subscribed: false };
-    const data = (await res.json()) as { subscribed?: boolean };
-    return { ok: true, subscribed: Boolean(data.subscribed) };
+    if (res.status === 401) return { ok: false, subscribed: false, permissionOnly: false };
+    if (!res.ok) return { ok: true, subscribed: false, permissionOnly: false };
+    const data = (await res.json()) as { subscribed?: boolean; permissionOnly?: boolean };
+    return {
+      ok: true,
+      subscribed: Boolean(data.subscribed),
+      permissionOnly: Boolean(data.permissionOnly),
+    };
   } catch {
-    return { ok: true, subscribed: false };
+    return { ok: true, subscribed: false, permissionOnly: false };
   }
 }
 
@@ -82,6 +87,14 @@ export function DonorPushEnableGate({
       }
 
       localStorage.removeItem("bloodlink_push_on");
+
+      if (statusRes.permissionOnly) {
+        setStatus("permission_only");
+        setHint(t.pushIosPwaRequired);
+        if (modal) setOpen(true);
+        if (showCard) setCard(true);
+        return;
+      }
 
       // Always offer Allow — never block iPhone/other browsers behind Close-only UI.
       if (canAskNotificationPermission() && Notification.permission === "denied") {
@@ -154,11 +167,13 @@ export function DonorPushEnableGate({
   const bodyText =
     status === "denied"
       ? t.pushDenied
+      : status === "permission_only"
+        ? t.pushIosPwaRequired
       : status === "error"
         ? hint || t.pushEnableError
         : t.registerPushBody;
 
-  const showAllowActions = status === "ask" || status === "error";
+  const showAllowActions = status === "ask" || status === "error" || status === "permission_only";
 
   const panel = (
     <>

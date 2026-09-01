@@ -5,6 +5,7 @@ import {
   listPushSubscriptions,
   removePushSubscriptionByEndpoint,
 } from "@/lib/db";
+import { isDeliverablePushSubscription } from "@/lib/push-subscription";
 
 export type PushPayload = {
   title: string;
@@ -33,9 +34,7 @@ export async function sendWebPushToUsers(
       keys.privateKey,
     );
 
-    const subs = (await listPushSubscriptions(unique)).filter(
-      (s) => s.endpoint && !s.endpoint.startsWith("local-permission://"),
-    );
+    const subs = (await listPushSubscriptions(unique)).filter(isDeliverablePushSubscription);
     let sent = 0;
     let failed = 0;
     const body = JSON.stringify({

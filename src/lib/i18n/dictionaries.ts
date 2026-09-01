@@ -797,12 +797,15 @@ export const dictionaries = {
     pushEnableError: "Could not enable alerts. Tap Allow again, or try Chrome.",
     pushAllowStats: "Phone alerts allowed",
     pushAllowStatsBody:
-      "{allowed} of {donors} accounts enabled browser/phone notifications ({subs} device subscriptions).",
+      "{allowed} of {donors} accounts receive real phone push ({subs} devices). {partial} allowed notifications in browser only (iPhone needs Home Screen app).",
     pushAllowListHint:
-      "Browsers must approve once — we cannot force-enable on phones. Existing donors are asked on home/dashboard until they allow.",
+      "Browsers must approve once. iPhone Safari/Chrome tabs cannot receive background push — add BloodLink to Home Screen, open from there, then tap Allow again.",
     pushAllowStatus: "Push",
-    pushAllowYes: "Allowed",
+    pushAllowYes: "Delivering",
+    pushAllowPartial: "iPhone/browser only",
     pushAllowNo: "Not yet",
+    pushIosPwaRequired:
+      "You allowed notifications, but this iPhone browser cannot deliver background alerts. Add BloodLink to your Home Screen (Share → Add to Home Screen), open the app from there, then tap Allow again.",
     adminPublishedStories: "Published success stories",
     adminPublishedStoriesHint:
       "Stories already on the homepage. Delete removes them from public view.",
@@ -1610,12 +1613,15 @@ export const dictionaries = {
     pushEnableError: "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome ব্যবহার করুন।",
     pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
     pushAllowStatsBody:
-      "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন ব্রাউজার/ফোন নোটিফিকেশন চালু করেছে ({subs}টি ডিভাইস সাবস্ক্রিপশন)।",
+      "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন আসল ফোন পুশ পায় ({subs} ডিভাইস)। {partial}জন শুধু ব্রাউজারে Allow করেছে (iPhone-এ Home Screen অ্যাপ লাগবে)।",
     pushAllowListHint:
-      "ব্রাউজার একবার অনুমতি দিতে হয় — ফোনে জোর করে চালু করা যায় না। পুরনো ডোনার হোম/ড্যাশবোর্ডে Allow না করা পর্যন্ত প্রম্পট পাবে।",
+      "ব্রাউজারে একবার Allow করতে হয়। iPhone Safari/Chrome ট্যাবে ব্যাকগ্রাউন্ড পুশ আসে না — Home Screen-এ যোগ করে সেখান থেকে খুলে আবার Allow করুন।",
     pushAllowStatus: "পুশ",
-    pushAllowYes: "Allow করা",
+    pushAllowYes: "পুশ যাচ্ছে",
+    pushAllowPartial: "শুধু ব্রাউজার/iPhone",
     pushAllowNo: "এখনো না",
+    pushIosPwaRequired:
+      "আপনি Allow করেছেন, কিন্তু এই iPhone ব্রাউজার থেকে ব্যাকগ্রাউন্ড অ্যালার্ট যায় না। Home Screen-এ BloodLink যোগ করুন (Share → Add to Home Screen), সেখান থেকে খুলে আবার Allow চাপুন।",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
     adminPublishedStoriesHint:
       "হোমপেজে থাকা গল্প। ডিলিট করলে পাবলিক থেকে সরে যাবে।",
