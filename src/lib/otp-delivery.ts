@@ -179,6 +179,41 @@ export function getEmailOtpConfigStatus() {
   };
 }
 
+export async function deliverHealthcareSms(
+  to: string,
+  message: string,
+): Promise<OtpDeliveryResult> {
+  const smsBd = await sendViaSmsBd(to, message);
+  if (smsBd) return smsBd;
+
+  const webhook = process.env.SMS_WEBHOOK_URL?.trim();
+  if (webhook) {
+    try {
+      const res = await fetch(webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, message, text: message, phone: to }),
+      });
+      if (res.ok) return { delivered: true, mode: "sms" };
+    } catch {
+      // fall through
+    }
+  }
+
+  return {
+    delivered: false,
+    mode: "sms",
+    detail: "SMS provider not configured",
+  };
+}
+
+export function getSmsConfigStatus() {
+  return {
+    smsBdKeySet: Boolean(process.env.SMS_NET_BD_API_KEY?.trim()),
+    smsWebhookSet: Boolean(process.env.SMS_WEBHOOK_URL?.trim()),
+  };
+}
+
 export async function deliverSmsOtp(
   to: string,
   code: string,

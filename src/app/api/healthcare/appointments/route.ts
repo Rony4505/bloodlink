@@ -3,6 +3,8 @@ import {
   doctorVisibleAtFacility,
   loadHealthcarePlatform,
 } from "@/lib/healthcare-platform";
+import { sendAppointmentConfirmedSms } from "@/lib/healthcare-notify";
+import { getHealthcareFacilityById } from "@/lib/healthcare-facilities";
 
 export async function POST(request: Request) {
   try {
@@ -11,10 +13,11 @@ export async function POST(request: Request) {
     const dghsId = String(body.dghsId || "").trim();
     const patientName = String(body.patientName || "").trim();
     const patientPhone = String(body.patientPhone || "").trim();
-    const scheduledAt = String(body.scheduledAt || "").trim();
+    const slotStart = String(body.slotStart || body.scheduledAt || "").trim();
+    const date = String(body.date || slotStart.slice(0, 10) || "").trim();
     const notes = String(body.notes || "").trim();
 
-    if (!doctorId || !patientName || !patientPhone || !scheduledAt) {
+    if (!doctorId || !patientName || !patientPhone || !date) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -38,11 +41,28 @@ export async function POST(request: Request) {
       dghsId: effectiveDghsId,
       patientName,
       patientPhone,
-      scheduledAt,
+      date,
       notes,
+      autoConfirm: true,
     });
 
-    return Response.json({ ok: true, appointment });
+    if (!appointment) {
+      return Response.json({ error: "Date full or not available" }, { status: 409 });
+    }
+
+    let facilityName = company?.nameBn || company?.name || "BloodLink";
+    if (effectiveDghsId) {
+      const facility = await getHealthcareFacilityById(effectiveDghsId);
+      if (facility) facilityName = facility.nameBn || facility.name;
+    }
+
+    const sms = await sendAppointmentConfirmedSms({
+      appointment,
+      doctor,
+      facilityName,
+    });
+
+    return Response.json({ ok: true, appointment, sms });
   } catch {
     return Response.json({ error: "Failed to book appointment" }, { status: 500 });
   }

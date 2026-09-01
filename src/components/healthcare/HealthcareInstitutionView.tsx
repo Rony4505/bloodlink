@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HealthcareAppointmentBooking } from "@/components/healthcare/HealthcareAppointmentBooking";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { HealthcareFacility } from "@/lib/healthcare-facilities";
 import type { HealthcareDoctorSchedule } from "@/lib/healthcare-platform";
@@ -36,10 +37,14 @@ const WEEKDAY_KEYS = [
 function formatSchedule(
   schedules: HealthcareDoctorSchedule[],
   weekdayLabel: (weekday: number) => string,
+  patientsLabel: string,
 ) {
   if (!schedules.length) return "—";
   return schedules
-    .map((s) => `${weekdayLabel(s.weekday)} ${s.startTime}–${s.endTime}`)
+    .map(
+      (s) =>
+        `${weekdayLabel(s.weekday)} ${s.startTime}–${s.endTime} (${s.maxPatients || 20} ${patientsLabel})`,
+    )
     .join(" · ");
 }
 
@@ -48,14 +53,6 @@ export function HealthcareInstitutionView({ dghsId }: { dghsId: string }) {
   const [data, setData] = useState<InstitutionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [doctorId, setDoctorId] = useState("");
-  const [patientName, setPatientName] = useState("");
-  const [patientPhone, setPatientPhone] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [notes, setNotes] = useState("");
-  const [booking, setBooking] = useState(false);
-  const [booked, setBooked] = useState(false);
-  const [bookError, setBookError] = useState("");
 
   const weekdayLabel = useCallback(
     (weekday: number) => {
@@ -77,7 +74,6 @@ export function HealthcareInstitutionView({ dghsId }: { dghsId: string }) {
         return;
       }
       setData(json);
-      if (json.doctors.length === 1) setDoctorId(json.doctors[0].id);
     } catch {
       setError(t.healthcareLoadError);
       setData(null);
@@ -103,41 +99,6 @@ export function HealthcareInstitutionView({ dghsId }: { dghsId: string }) {
     const specialty = locale === "bn" && d.specialtyBn ? d.specialtyBn : d.specialty;
     return specialty ? `${name} — ${specialty}` : name;
   };
-
-  async function submitBooking(e: React.FormEvent) {
-    e.preventDefault();
-    if (!facility) return;
-    setBooking(true);
-    setBookError("");
-    try {
-      const res = await fetch("/api/healthcare/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          doctorId,
-          dghsId: facility.dghsId,
-          patientName,
-          patientPhone,
-          scheduledAt,
-          notes,
-        }),
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        setBookError(json.error ?? t.healthcareBookError);
-        return;
-      }
-      setBooked(true);
-      setPatientName("");
-      setPatientPhone("");
-      setScheduledAt("");
-      setNotes("");
-    } catch {
-      setBookError(t.healthcareBookError);
-    } finally {
-      setBooking(false);
-    }
-  }
 
   if (loading) {
     return <p className="text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">{t.loading}</p>;
@@ -241,7 +202,7 @@ export function HealthcareInstitutionView({ dghsId }: { dghsId: string }) {
                   </p>
                 ) : null}
                 <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-                  {formatSchedule(d.schedules, weekdayLabel)}
+                  {formatSchedule(d.schedules, weekdayLabel, t.healthcarePatientsPerDay)}
                 </p>
                 {d.phone ? (
                   <a
@@ -258,83 +219,12 @@ export function HealthcareInstitutionView({ dghsId }: { dghsId: string }) {
       </section>
 
       {doctors.length > 0 ? (
-        <section className="rounded-2xl border border-[color-mix(in_oklab,var(--blood)_20%,white)] bg-[linear-gradient(165deg,#fffdfa_0%,#ffffff_50%,#fff0ee_100%)] p-5 shadow-[0_12px_36px_rgba(110,18,32,0.08)] md:p-6">
-          <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
-            {t.healthcareBookTitle}
-          </h3>
-          <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
-            {t.healthcareBookHint}
-          </p>
-
-          {booked ? (
-            <p className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-              {t.healthcareBookSuccess}
-            </p>
-          ) : null}
-
-          <form className="mt-4 space-y-4" onSubmit={(e) => void submitBooking(e)}>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">{t.healthcareSelectDoctor}</span>
-              <select
-                className="field"
-                required
-                value={doctorId}
-                onChange={(e) => setDoctorId(e.target.value)}
-              >
-                <option value="">{t.healthcareSelectDoctor}</option>
-                {doctors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {doctorLabel(d)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">{t.healthcarePatientName}</span>
-                <input
-                  className="field"
-                  required
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">{t.healthcarePatientPhone}</span>
-                <input
-                  className="field"
-                  type="tel"
-                  required
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
-                />
-              </label>
-            </div>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">{t.healthcarePreferredTime}</span>
-              <input
-                className="field"
-                type="datetime-local"
-                required
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">{t.healthcareNotes}</span>
-              <textarea
-                className="field min-h-[88px]"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t.healthcareNotesPlaceholder}
-              />
-            </label>
-            {bookError ? <p className="text-sm text-[var(--blood)]">{bookError}</p> : null}
-            <button type="submit" className="btn-glass-primary" disabled={booking}>
-              {booking ? t.loading : t.healthcareBookSubmit}
-            </button>
-          </form>
-        </section>
+        <HealthcareAppointmentBooking
+          doctors={doctors}
+          dghsId={facility.dghsId}
+          facilityName={facilityName}
+          defaultDoctorId={doctors.length === 1 ? doctors[0].id : undefined}
+        />
       ) : null}
     </div>
   );
