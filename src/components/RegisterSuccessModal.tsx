@@ -41,9 +41,9 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
   const [pushBusy, setPushBusy] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
-  const [pushDone, setPushDone] = useState<"idle" | "on" | "skipped" | "denied">(
-    "idle",
-  );
+  const [pushDone, setPushDone] = useState<
+    "idle" | "on" | "inapp-only" | "skipped" | "denied"
+  >("idle");
   const showPushPrompt = pushSupported && pushDone === "idle";
 
   useEffect(() => {
@@ -57,6 +57,7 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
     try {
       const result = await enableWebPush({ recordIntent: true });
       if (result === "granted") setPushDone("on");
+      else if (result === "granted-inapp-only") setPushDone("inapp-only");
       else if (result === "denied") setPushDone("denied");
       else setPushDone("skipped");
     } catch {
@@ -181,6 +182,11 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
         {pushDone === "on" ? (
           <p className="mt-4 text-center text-sm font-medium text-[var(--sage)]">
             {t.registerPushOn}
+          </p>
+        ) : null}
+        {pushDone === "inapp-only" ? (
+          <p className="mt-4 text-center text-sm font-medium text-[color-mix(in_oklab,var(--blood)_85%,black)]">
+            {t.registerPushInAppOnly}
           </p>
         ) : null}
         {pushDone === "denied" ? (

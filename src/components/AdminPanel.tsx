@@ -164,7 +164,10 @@ export function AdminPanel() {
   const [pushAllow, setPushAllow] = useState<{
     donorCount: number;
     allowedUsers: number;
+    realPushUsers: number;
+    permissionOnlyUsers: number;
     subscriptions: number;
+    realSubscriptions: number;
     donors: Array<{
       id: string;
       name: string;
@@ -172,12 +175,18 @@ export function AdminPanel() {
       phone: string;
       bloodGroup: string;
       allowed: boolean;
+      realPush: boolean;
+      permissionOnly: boolean;
       subscriptionCount: number;
+      realSubscriptionCount: number;
     }>;
   }>({
     donorCount: 0,
     allowedUsers: 0,
+    realPushUsers: 0,
+    permissionOnlyUsers: 0,
     subscriptions: 0,
+    realSubscriptions: 0,
     donors: [],
   });
   const [notifSaving, setNotifSaving] = useState(false);
@@ -371,7 +380,10 @@ export function AdminPanel() {
       setPushAllow({
         donorCount: Number(data.pushAllow.donorCount) || 0,
         allowedUsers: Number(data.pushAllow.allowedUsers) || 0,
+        realPushUsers: Number(data.pushAllow.realPushUsers) || 0,
+        permissionOnlyUsers: Number(data.pushAllow.permissionOnlyUsers) || 0,
         subscriptions: Number(data.pushAllow.subscriptions) || 0,
+        realSubscriptions: Number(data.pushAllow.realSubscriptions) || 0,
         donors: Array.isArray(data.pushAllow.donors)
           ? data.pushAllow.donors.map(
               (d: {
@@ -381,7 +393,10 @@ export function AdminPanel() {
                 phone?: string;
                 bloodGroup?: string;
                 allowed?: boolean;
+                realPush?: boolean;
+                permissionOnly?: boolean;
                 subscriptionCount?: number;
+                realSubscriptionCount?: number;
               }) => ({
                 id: String(d.id || ""),
                 name: String(d.name || ""),
@@ -389,7 +404,10 @@ export function AdminPanel() {
                 phone: String(d.phone || ""),
                 bloodGroup: String(d.bloodGroup || ""),
                 allowed: Boolean(d.allowed),
+                realPush: Boolean(d.realPush),
+                permissionOnly: Boolean(d.permissionOnly),
                 subscriptionCount: Number(d.subscriptionCount) || 0,
+                realSubscriptionCount: Number(d.realSubscriptionCount) || 0,
               }),
             )
           : [],
@@ -1636,9 +1654,10 @@ export function AdminPanel() {
                 </p>
                 <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_72%,white)]">
                   {t.pushAllowStatsBody
-                    .replace("{allowed}", String(pushAllow.allowedUsers))
+                    .replace("{real}", String(pushAllow.realPushUsers))
+                    .replace("{partial}", String(pushAllow.permissionOnlyUsers))
                     .replace("{donors}", String(pushAllow.donorCount))
-                    .replace("{subs}", String(pushAllow.subscriptions))}
+                    .replace("{subs}", String(pushAllow.realSubscriptions))}
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                   {t.pushAllowListHint}
@@ -1676,12 +1695,16 @@ export function AdminPanel() {
                               {d.bloodGroup}
                             </td>
                             <td className="px-3 py-2">
-                              {d.allowed ? (
+                              {d.realPush ? (
                                 <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--sage)_18%,white)] px-2 py-0.5 font-semibold text-[var(--sage)]">
                                   {t.pushAllowYes}
-                                  {d.subscriptionCount > 1
-                                    ? ` · ${d.subscriptionCount}`
+                                  {d.realSubscriptionCount > 1
+                                    ? ` · ${d.realSubscriptionCount}`
                                     : ""}
+                                </span>
+                              ) : d.permissionOnly ? (
+                                <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--gold)_20%,white)] px-2 py-0.5 font-semibold text-[color-mix(in_oklab,var(--gold)_70%,black)]">
+                                  {t.pushAllowPartial}
                                 </span>
                               ) : (
                                 <span className="inline-flex rounded-full bg-[color-mix(in_oklab,var(--blood)_12%,white)] px-2 py-0.5 font-semibold text-[var(--blood-deep)]">

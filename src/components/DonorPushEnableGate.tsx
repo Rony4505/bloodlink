@@ -9,7 +9,19 @@ import {
 } from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
 
-type GateStatus = "ask" | "on" | "denied" | "error";
+function isLikelyIosBrowserTab() {
+  if (typeof navigator === "undefined") return false;
+  const ios =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!ios) return false;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return !(
+    window.matchMedia("(display-mode: standalone)").matches || Boolean(nav.standalone)
+  );
+}
+
+type GateStatus = "ask" | "on" | "inapp-only" | "upgrade" | "denied" | "error";
 
 type Props = {
   /** When true, only runs if the visitor is a logged-in donor. */
@@ -23,15 +35,30 @@ type Props = {
 async function fetchPushStatus(): Promise<{
   ok: boolean;
   subscribed: boolean;
+  realPush: boolean;
+  permissionOnly: boolean;
 }> {
   try {
     const res = await fetch("/api/push/subscribe", { cache: "no-store" });
-    if (res.status === 401) return { ok: false, subscribed: false };
-    if (!res.ok) return { ok: true, subscribed: false };
-    const data = (await res.json()) as { subscribed?: boolean };
-    return { ok: true, subscribed: Boolean(data.subscribed) };
+    if (res.status === 401) {
+      return { ok: false, subscribed: false, realPush: false, permissionOnly: false };
+    }
+    if (!res.ok) {
+      return { ok: true, subscribed: false, realPush: false, permissionOnly: false };
+    }
+    const data = (await res.json()) as {
+      subscribed?: boolean;
+      realPush?: boolean;
+      permissionOnly?: boolean;
+    };
+    return {
+      ok: true,
+      subscribed: Boolean(data.subscribed),
+      realPush: Boolean(data.realPush),
+      permissionOnly: Boolean(data.permissionOnly),
+    };
   } catch {
-    return { ok: true, subscribed: false };
+    return { ok: true, subscribed: false, realPush: false, permissionOnly: false };
   }
 }
 
@@ -74,14 +101,31 @@ export function DonorPushEnableGate({
       }
       if (cancelled) return;
 
-      if (statusRes.subscribed) {
+      if (statusRes.realPush) {
         localStorage.setItem("bloodlink_push_on", "1");
+        localStorage.removeItem("bloodlink_push_inapp_only");
         setOpen(false);
         setCard(false);
         return;
       }
 
+      if (statusRes.permissionOnly) {
+        localStorage.setItem("bloodlink_push_inapp_only", "1");
+        localStorage.removeItem("bloodlink_push_on");
+        if (isWebPushSupported() && !isLikelyIosBrowserTab()) {
+          setStatus("upgrade");
+          setHint(t.pushUpgradeHint);
+        } else {
+          setStatus("inapp-only");
+          setHint(t.pushIosPwaRequired);
+        }
+        if (modal) setOpen(true);
+        if (showCard) setCard(true);
+        return;
+      }
+
       localStorage.removeItem("bloodlink_push_on");
+      localStorage.removeItem("bloodlink_push_inapp_only");
 
       // Always offer Allow — never block iPhone/other browsers behind Close-only UI.
       if (canAskNotificationPermission() && Notification.permission === "denied") {
@@ -102,8 +146,16 @@ export function DonorPushEnableGate({
         if (cancelled) return;
         if (result === "granted") {
           localStorage.setItem("bloodlink_push_on", "1");
+          localStorage.removeItem("bloodlink_push_inapp_only");
           setOpen(false);
           setCard(false);
+          return;
+        }
+        if (result === "granted-inapp-only") {
+          setStatus("inapp-only");
+          setHint(isLikelyIosBrowserTab() ? t.pushIosPwaRequired : t.pushInAppOnlyHint);
+          if (modal) setOpen(true);
+          if (showCard) setCard(true);
           return;
         }
       }
@@ -126,10 +178,16 @@ export function DonorPushEnableGate({
       if (result === "granted") {
         setStatus("on");
         localStorage.setItem("bloodlink_push_on", "1");
+        localStorage.removeItem("bloodlink_push_inapp_only");
         window.setTimeout(() => {
           setOpen(false);
           setCard(false);
         }, 900);
+        return;
+      }
+      if (result === "granted-inapp-only") {
+        setStatus("inapp-only");
+        setHint(isLikelyIosBrowserTab() ? t.pushIosPwaRequired : t.pushInAppOnlyHint);
         return;
       }
       if (result === "denied") {
@@ -154,11 +212,13 @@ export function DonorPushEnableGate({
   const bodyText =
     status === "denied"
       ? t.pushDenied
+      : status === "inapp-only" || status === "upgrade"
+        ? hint || t.pushInAppOnlyHint
       : status === "error"
         ? hint || t.pushEnableError
         : t.registerPushBody;
 
-  const showAllowActions = status === "ask" || status === "error";
+  const showAllowActions = status === "ask" || status === "error" || status === "upgrade";
 
   const panel = (
     <>
@@ -181,6 +241,12 @@ export function DonorPushEnableGate({
         <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
       ) : null}
 
+      {status === "inapp-only" ? (
+        <p className="mt-4 text-sm font-medium text-[color-mix(in_oklab,var(--blood)_85%,black)]">
+          {t.registerPushInAppOnly}
+        </p>
+      ) : null}
+
       {showAllowActions ? (
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <button
@@ -189,7 +255,11 @@ export function DonorPushEnableGate({
             onClick={() => void onAllow()}
             className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
           >
-            {busy ? t.loading : t.registerPushAllow}
+            {busy
+              ? t.loading
+              : status === "upgrade"
+                ? t.pushUpgradeAllow
+                : t.registerPushAllow}
           </button>
           <button
             type="button"
@@ -198,6 +268,16 @@ export function DonorPushEnableGate({
             className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
           >
             {t.registerPushSkip}
+          </button>
+        </div>
+      ) : status === "inapp-only" ? (
+        <div className="mt-5">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)]"
+          >
+            {t.close}
           </button>
         </div>
       ) : status === "denied" ? (
@@ -235,19 +315,27 @@ export function DonorPushEnableGate({
       {showCard && card && status !== "on" ? (
         <div className="mb-4 rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 shadow-sm">
           <p className="text-sm font-semibold text-[var(--blood-deep)]">
-            {t.registerPushTitle}
+            {status === "inapp-only" ? t.pushPhoneLockTitle : t.registerPushTitle}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
             {bodyText}
           </p>
-          {showAllowActions ? (
+          {status === "inapp-only" ? (
+            <p className="mt-2 text-xs font-medium text-[color-mix(in_oklab,var(--blood)_85%,black)]">
+              {t.registerPushInAppOnly}
+            </p>
+          ) : showAllowActions ? (
             <button
               type="button"
               disabled={busy}
               onClick={() => void onAllow()}
               className="btn-primary mt-3"
             >
-              {busy ? t.loading : t.registerPushAllow}
+              {busy
+                ? t.loading
+                : status === "upgrade"
+                  ? t.pushUpgradeAllow
+                  : t.registerPushAllow}
             </button>
           ) : null}
         </div>

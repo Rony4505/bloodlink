@@ -53,7 +53,9 @@ export function canAskNotificationPermission() {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
-export const LOCAL_PUSH_PERMISSION_PREFIX = "local-permission://";
+import { LOCAL_PUSH_PERMISSION_PREFIX } from "@/lib/push-subscription-utils";
+
+export { LOCAL_PUSH_PERMISSION_PREFIX };
 
 async function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!("Notification" in window)) return "denied";
@@ -140,7 +142,9 @@ async function subscribeFullWebPush(): Promise<boolean> {
 export async function enableWebPush(options?: {
   /** True when the user explicitly tapped Allow — record intent if APIs are limited. */
   recordIntent?: boolean;
-}): Promise<"granted" | "denied" | "unsupported" | "error"> {
+}): Promise<
+  "granted" | "granted-inapp-only" | "denied" | "unsupported" | "error"
+> {
   if (typeof window === "undefined") return "unsupported";
 
   const recordIntent = options?.recordIntent === true;
@@ -170,6 +174,7 @@ export async function enableWebPush(options?: {
       try {
         if (await subscribeFullWebPush()) {
           localStorage.setItem("bloodlink_push_on", "1");
+          localStorage.removeItem("bloodlink_push_inapp_only");
           return "granted";
         }
       } catch {
@@ -180,8 +185,9 @@ export async function enableWebPush(options?: {
     // Permission granted, or user tapped Allow on a limited browser (iOS tab, etc.)
     if (perm === "granted" || recordIntent) {
       if (await savePermissionOnly()) {
-        localStorage.setItem("bloodlink_push_on", "1");
-        return "granted";
+        localStorage.setItem("bloodlink_push_inapp_only", "1");
+        localStorage.removeItem("bloodlink_push_on");
+        return "granted-inapp-only";
       }
       return "error";
     }
@@ -189,8 +195,9 @@ export async function enableWebPush(options?: {
     return "denied";
   } catch {
     if (recordIntent && (await savePermissionOnly())) {
-      localStorage.setItem("bloodlink_push_on", "1");
-      return "granted";
+      localStorage.setItem("bloodlink_push_inapp_only", "1");
+      localStorage.removeItem("bloodlink_push_on");
+      return "granted-inapp-only";
     }
     return "error";
   }
