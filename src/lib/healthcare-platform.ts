@@ -286,13 +286,20 @@ export async function createHealthcareDoctor(input: {
   const data = await loadHealthcarePlatform();
   const company = findCompanyById(data, input.companyId);
   if (!company) return null;
-  if (!company.linkedDghsIds.includes(input.dghsId)) return null;
+  const dghsId = input.dghsId.trim() || company.linkedDghsIds[0] || "";
+  if (
+    dghsId &&
+    company.linkedDghsIds.length > 0 &&
+    !company.linkedDghsIds.includes(dghsId)
+  ) {
+    return null;
+  }
 
   const now = new Date().toISOString();
   const doctor: HealthcareDoctor = {
     id: newHealthcareId("hcd"),
     companyId: input.companyId,
-    dghsId: input.dghsId.trim(),
+    dghsId,
     name: input.name.trim(),
     nameBn: String(input.nameBn || "").trim(),
     specialty: String(input.specialty || "").trim(),
@@ -331,9 +338,17 @@ export async function updateHealthcareDoctor(
   const idx = data.doctors.findIndex((d) => d.id === doctorId && d.companyId === companyId);
   if (idx === -1) return null;
   const current = data.doctors[idx]!;
-  if (patch.dghsId) {
+  if (patch.dghsId !== undefined) {
     const company = findCompanyById(data, companyId);
-    if (!company?.linkedDghsIds.includes(patch.dghsId)) return null;
+    const nextDghsId = patch.dghsId.trim() || company?.linkedDghsIds[0] || "";
+    if (
+      nextDghsId &&
+      company?.linkedDghsIds.length &&
+      !company.linkedDghsIds.includes(nextDghsId)
+    ) {
+      return null;
+    }
+    patch = { ...patch, dghsId: nextDghsId };
   }
   const next: HealthcareDoctor = {
     ...current,
