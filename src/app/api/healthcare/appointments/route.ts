@@ -1,4 +1,8 @@
-import { createHealthcareAppointment, loadHealthcarePlatform } from "@/lib/healthcare-platform";
+import {
+  createHealthcareAppointment,
+  doctorVisibleAtFacility,
+  loadHealthcarePlatform,
+} from "@/lib/healthcare-platform";
 
 export async function POST(request: Request) {
   try {
@@ -10,20 +14,28 @@ export async function POST(request: Request) {
     const scheduledAt = String(body.scheduledAt || "").trim();
     const notes = String(body.notes || "").trim();
 
-    if (!doctorId || !dghsId || !patientName || !patientPhone || !scheduledAt) {
+    if (!doctorId || !patientName || !patientPhone || !scheduledAt) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const platform = await loadHealthcarePlatform();
     const doctor = platform.doctors.find((d) => d.id === doctorId && d.enabled);
-    if (!doctor || doctor.dghsId !== dghsId) {
+    if (!doctor) {
+      return Response.json({ error: "Doctor not found" }, { status: 404 });
+    }
+
+    const company = platform.companies.find((c) => c.id === doctor.companyId);
+    const effectiveDghsId =
+      dghsId || doctor.dghsId || company?.linkedDghsIds[0] || "";
+
+    if (dghsId && !doctorVisibleAtFacility(platform, doctor, dghsId)) {
       return Response.json({ error: "Doctor not found" }, { status: 404 });
     }
 
     const appointment = await createHealthcareAppointment({
       companyId: doctor.companyId,
       doctorId,
-      dghsId,
+      dghsId: effectiveDghsId,
       patientName,
       patientPhone,
       scheduledAt,

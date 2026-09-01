@@ -149,11 +149,64 @@ export function findCompanyById(
   return data.companies.find((c) => c.id === companyId) ?? null;
 }
 
+export function doctorVisibleAtFacility(
+  data: HealthcarePlatformData,
+  doctor: HealthcareDoctor,
+  facilityDghsId: string,
+): boolean {
+  if (!doctor.enabled) return false;
+  const company = findCompanyById(data, doctor.companyId);
+  if (!company?.enabled) return false;
+
+  if (doctor.dghsId === facilityDghsId) return true;
+
+  if (company.linkedDghsIds.includes(facilityDghsId)) {
+    return !doctor.dghsId || doctor.dghsId === facilityDghsId;
+  }
+
+  return false;
+}
+
 export function doctorsForFacility(
   data: HealthcarePlatformData,
   dghsId: string,
 ): HealthcareDoctor[] {
-  return data.doctors.filter((d) => d.dghsId === dghsId && d.enabled);
+  return data.doctors.filter((d) => doctorVisibleAtFacility(data, d, dghsId));
+}
+
+export function doctorsForPublicCompany(
+  data: HealthcarePlatformData,
+  companyId: string,
+): HealthcareDoctor[] {
+  const company = findCompanyById(data, companyId);
+  if (!company?.enabled) return [];
+  return data.doctors.filter((d) => d.companyId === companyId && d.enabled);
+}
+
+function normSearch(s: string) {
+  return s.trim().toLowerCase();
+}
+
+export function searchPublicHealthcareCompanies(
+  data: HealthcarePlatformData,
+  params: { q?: string; district?: string; upazila?: string },
+): HealthcareCompany[] {
+  const q = normSearch(params.q ?? "");
+  const district = normSearch(params.district ?? "");
+  const upazila = normSearch(params.upazila ?? "");
+
+  return data.companies.filter((company) => {
+    if (!company.enabled) return false;
+    const hasDoctors = data.doctors.some((d) => d.companyId === company.id && d.enabled);
+    if (!hasDoctors) return false;
+    if (district && normSearch(company.district) !== district) return false;
+    if (upazila && normSearch(company.upazila) !== upazila) return false;
+    if (!q) return true;
+    const hay = [company.name, company.nameBn, company.contactPhone, company.district, company.upazila]
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
 }
 
 export function doctorsForCompany(
