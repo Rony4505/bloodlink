@@ -64,6 +64,7 @@ export const BANNER_PAGES: BannerPage[] = [
   "requests",
   "about",
   "ambulance",
+  "healthcare",
   "all",
 ];
 

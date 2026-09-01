@@ -258,6 +258,7 @@ export type BannerPage =
   | "requests"
   | "about"
   | "ambulance"
+  | "healthcare"
   | "all";
 
 export type BannerPlacement = "after-hero" | "mid-content" | "before-footer";

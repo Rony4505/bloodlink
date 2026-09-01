@@ -19,6 +19,7 @@ export function SiteFooter({ showStoryForm = true }: { showStoryForm?: boolean }
     { href: "/register", label: t.becomeDonor },
     { href: "/requests", label: t.requestBlood },
     { href: "/ambulance", label: t.ambulance },
+    { href: "/healthcare", label: t.healthcareNav },
     { href: "/warnings", label: t.warningsNav },
     { href: "/about", label: t.about },
     { href: "/privacy", label: t.privacy },
