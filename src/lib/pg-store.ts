@@ -455,12 +455,13 @@ export async function loadHealthcareCountsFromPostgres(): Promise<{
 
 export async function saveHealthcareToPostgres(
   data: HealthcarePlatformRow,
+  options: { allowShrink?: boolean } = {},
 ): Promise<void> {
   await ensureHealthcareTable();
   const existing = await loadHealthcareCountsFromPostgres();
   const next = healthcareCounts(data);
 
-  if (existing) {
+  if (existing && !options.allowShrink) {
     const hadData =
       existing.companies > 0 || existing.doctors > 0 || existing.appointments > 0;
     const isEmpty = next.companies === 0 && next.doctors === 0 && next.appointments === 0;
@@ -474,6 +475,9 @@ export async function saveHealthcareToPostgres(
     }
     if (existing.doctors > 0 && next.doctors === 0) {
       throw new Error("[healthcare] Refusing to wipe doctors from Postgres");
+    }
+    if (existing.appointments > 0 && next.appointments === 0) {
+      throw new Error("[healthcare] Refusing to wipe appointments from Postgres");
     }
   }
 
