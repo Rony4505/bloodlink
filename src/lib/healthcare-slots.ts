@@ -119,13 +119,29 @@ export function getMonthAvailability(
   return days;
 }
 
+function usedSerialsForDay(
+  appointments: HealthcareAppointment[],
+  doctorId: string,
+  dateStr: string,
+): Set<number> {
+  const used = new Set<number>();
+  for (const appt of activeAppointments(appointments, doctorId)) {
+    if (appointmentDate(appt) !== dateStr) continue;
+    const n = parseInt(appt.serialNumber, 10);
+    if (n > 0) used.add(n);
+  }
+  return used;
+}
+
 export function nextSerialNumber(
   doctorId: string,
   dateStr: string,
   appointments: HealthcareAppointment[],
 ): string {
-  const count = bookedCountForDay(appointments, doctorId, dateStr);
-  return String(count + 1).padStart(3, "0");
+  const used = usedSerialsForDay(appointments, doctorId, dateStr);
+  let n = 1;
+  while (used.has(n)) n += 1;
+  return String(n).padStart(3, "0");
 }
 
 export function getDayBookingInfo(

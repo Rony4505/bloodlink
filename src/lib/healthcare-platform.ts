@@ -4,6 +4,11 @@ import {
   canBookDate,
   nextSerialNumber,
 } from "@/lib/healthcare-slots";
+import {
+  hasDatabaseUrl,
+  loadHealthcareFromPostgres,
+  saveHealthcareToPostgres,
+} from "@/lib/pg-store";
 import path from "path";
 import { randomBytes } from "crypto";
 
@@ -45,7 +50,7 @@ export type HealthcareAppointment = {
   slotEnd: string;
   serialNumber: string;
   status: "pending" | "confirmed" | "completed" | "cancelled";
-  source: "online" | "phone";
+  source: "online" | "manual";
   notes: string;
   createdAt: string;
 };
@@ -70,8 +75,6 @@ export type HealthcarePlatformData = {
   doctors: HealthcareDoctor[];
   appointments: HealthcareAppointment[];
 };
-
-const SEED_FILE = path.join(process.cwd(), "src", "data", "healthcare-platform.json");
 
 function dataDir(): string {
   const configured = process.env.DATA_DIR?.trim();
@@ -104,7 +107,10 @@ function normalizeAppointment(raw: Partial<HealthcareAppointment>): HealthcareAp
     slotEnd: String(raw.slotEnd || ""),
     serialNumber: String(raw.serialNumber || ""),
     status: raw.status || "pending",
-    source: raw.source || "online",
+    source:
+      String(raw.source || "") === "manual" || String(raw.source || "") === "phone"
+        ? "manual"
+        : "online",
     notes: String(raw.notes || ""),
     createdAt: String(raw.createdAt || new Date().toISOString()),
   };
@@ -130,29 +136,65 @@ async function ensureDataDir() {
   }
 }
 
-export async function loadHealthcarePlatform(): Promise<HealthcarePlatformData> {
+function hasStoredData(data: HealthcarePlatformData): boolean {
+  return data.companies.length > 0 || data.doctors.length > 0 || data.appointments.length > 0;
+}
+
+async function readHealthcareFile(): Promise<HealthcarePlatformData | null> {
   await ensureDataDir();
-  const file = dataFilePath();
   try {
-    const raw = await readFile(file, "utf8");
+    const raw = await readFile(dataFilePath(), "utf8");
     return normalizeData(JSON.parse(raw) as HealthcarePlatformData);
   } catch {
-    try {
-      const seed = await readFile(SEED_FILE, "utf8");
-      const parsed = normalizeData(JSON.parse(seed) as HealthcarePlatformData);
-      await saveHealthcarePlatform(parsed);
-      return parsed;
-    } catch {
-      const fresh = emptyData();
-      await saveHealthcarePlatform(fresh);
-      return fresh;
-    }
+    return null;
   }
 }
 
-export async function saveHealthcarePlatform(data: HealthcarePlatformData): Promise<void> {
+async function writeHealthcareFile(data: HealthcarePlatformData): Promise<void> {
   await ensureDataDir();
   await writeFile(dataFilePath(), JSON.stringify(normalizeData(data), null, 2), "utf8");
+}
+
+export async function loadHealthcarePlatform(): Promise<HealthcarePlatformData> {
+  if (hasDatabaseUrl()) {
+    try {
+      const fromPg = await loadHealthcareFromPostgres();
+      const normalizedPg = fromPg
+        ? normalizeData(fromPg as Partial<HealthcarePlatformData>)
+        : null;
+      if (normalizedPg && hasStoredData(normalizedPg)) {
+        return normalizedPg;
+      }
+      const fromFile = await readHealthcareFile();
+      if (fromFile && hasStoredData(fromFile)) {
+        await saveHealthcareToPostgres(fromFile);
+        return fromFile;
+      }
+      if (normalizedPg) return normalizedPg;
+    } catch (err) {
+      console.error("[healthcare] Postgres load failed, falling back to file", err);
+    }
+  }
+
+  const fromFile = await readHealthcareFile();
+  if (fromFile) return fromFile;
+
+  return emptyData();
+}
+
+export async function saveHealthcarePlatform(data: HealthcarePlatformData): Promise<void> {
+  const normalized = normalizeData(data);
+
+  if (hasDatabaseUrl()) {
+    await saveHealthcareToPostgres(normalized);
+  }
+
+  try {
+    await writeHealthcareFile(normalized);
+  } catch (err) {
+    if (!hasDatabaseUrl()) throw err;
+    console.error("[healthcare] File mirror save failed", err);
+  }
 }
 
 export function newHealthcareToken(): string {

@@ -377,3 +377,114 @@ export async function loadUploadFromPostgres(
     return null;
   }
 }
+
+type HealthcarePlatformRow = {
+  companies?: unknown[];
+  doctors?: unknown[];
+  appointments?: unknown[];
+};
+
+let healthcareTableReady: Promise<void> | null = null;
+
+async function ensureHealthcareTable(): Promise<void> {
+  if (!healthcareTableReady) {
+    healthcareTableReady = (async () => {
+      await ensureTable();
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS healthcare_platform (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          data JSONB NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+    })().catch((err) => {
+      healthcareTableReady = null;
+      throw err;
+    });
+  }
+  await healthcareTableReady;
+}
+
+function healthcareCounts(data: HealthcarePlatformRow | null | undefined): {
+  companies: number;
+  doctors: number;
+  appointments: number;
+} {
+  return {
+    companies: Array.isArray(data?.companies) ? data.companies.length : 0,
+    doctors: Array.isArray(data?.doctors) ? data.doctors.length : 0,
+    appointments: Array.isArray(data?.appointments) ? data.appointments.length : 0,
+  };
+}
+
+export async function loadHealthcareFromPostgres(): Promise<HealthcarePlatformRow | null> {
+  await ensureHealthcareTable();
+  const result = await getPool().query<{ data: HealthcarePlatformRow }>(
+    "SELECT data FROM healthcare_platform WHERE id = 1",
+  );
+  const row = result.rows[0];
+  if (!row?.data) return null;
+  return row.data;
+}
+
+export async function loadHealthcareCountsFromPostgres(): Promise<{
+  companies: number;
+  doctors: number;
+  appointments: number;
+} | null> {
+  await ensureHealthcareTable();
+  const result = await getPool().query<{
+    company_count: number;
+    doctor_count: number;
+    appointment_count: number;
+  }>(
+    `SELECT
+      COALESCE(jsonb_array_length(data->'companies'), 0)::int AS company_count,
+      COALESCE(jsonb_array_length(data->'doctors'), 0)::int AS doctor_count,
+      COALESCE(jsonb_array_length(data->'appointments'), 0)::int AS appointment_count
+     FROM healthcare_platform WHERE id = 1`,
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    companies: row.company_count,
+    doctors: row.doctor_count,
+    appointments: row.appointment_count,
+  };
+}
+
+export async function saveHealthcareToPostgres(
+  data: HealthcarePlatformRow,
+): Promise<void> {
+  await ensureHealthcareTable();
+  const existing = await loadHealthcareCountsFromPostgres();
+  const next = healthcareCounts(data);
+
+  if (existing) {
+    const hadData =
+      existing.companies > 0 || existing.doctors > 0 || existing.appointments > 0;
+    const isEmpty = next.companies === 0 && next.doctors === 0 && next.appointments === 0;
+    if (hadData && isEmpty) {
+      throw new Error(
+        "[healthcare] Refusing to overwrite Postgres healthcare data with empty store",
+      );
+    }
+    if (existing.companies > 0 && next.companies === 0) {
+      throw new Error("[healthcare] Refusing to wipe companies from Postgres");
+    }
+    if (existing.doctors > 0 && next.doctors === 0) {
+      throw new Error("[healthcare] Refusing to wipe doctors from Postgres");
+    }
+  }
+
+  await getPool().query(
+    `
+      INSERT INTO healthcare_platform (id, data, updated_at)
+      VALUES (1, $1::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET data = EXCLUDED.data,
+          updated_at = NOW()
+    `,
+    [JSON.stringify(data)],
+  );
+}
