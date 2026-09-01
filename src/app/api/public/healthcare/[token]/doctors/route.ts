@@ -22,6 +22,7 @@ function normalizeSchedules(raw: unknown): HealthcareDoctorSchedule[] {
         startTime: String(row.startTime || "09:00").slice(0, 5),
         endTime: String(row.endTime || "17:00").slice(0, 5),
         slotMinutes: Math.max(5, Number(row.slotMinutes) || 15),
+        maxPatients: Math.max(1, Math.min(500, Number(row.maxPatients) || 20)),
         notes: String(row.notes || "").trim(),
       };
     })

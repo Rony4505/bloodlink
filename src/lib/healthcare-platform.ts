@@ -1,4 +1,9 @@
 import { access, mkdir, readFile, writeFile } from "fs/promises";
+import {
+  bookingTimesForDay,
+  canBookDate,
+  nextSerialNumber,
+} from "@/lib/healthcare-slots";
 import path from "path";
 import { randomBytes } from "crypto";
 
@@ -24,6 +29,7 @@ export type HealthcareDoctorSchedule = {
   startTime: string;
   endTime: string;
   slotMinutes: number;
+  maxPatients: number;
   notes: string;
 };
 
@@ -35,6 +41,9 @@ export type HealthcareAppointment = {
   patientName: string;
   patientPhone: string;
   scheduledAt: string;
+  slotStart: string;
+  slotEnd: string;
+  serialNumber: string;
   status: "pending" | "confirmed" | "completed" | "cancelled";
   source: "online" | "phone";
   notes: string;
@@ -82,12 +91,33 @@ function emptyData(): HealthcarePlatformData {
   return { companies: [], doctors: [], appointments: [] };
 }
 
+function normalizeAppointment(raw: Partial<HealthcareAppointment>): HealthcareAppointment {
+  return {
+    id: String(raw.id || ""),
+    companyId: String(raw.companyId || ""),
+    doctorId: String(raw.doctorId || ""),
+    dghsId: String(raw.dghsId || ""),
+    patientName: String(raw.patientName || ""),
+    patientPhone: String(raw.patientPhone || ""),
+    scheduledAt: String(raw.scheduledAt || ""),
+    slotStart: String(raw.slotStart || raw.scheduledAt || ""),
+    slotEnd: String(raw.slotEnd || ""),
+    serialNumber: String(raw.serialNumber || ""),
+    status: raw.status || "pending",
+    source: raw.source || "online",
+    notes: String(raw.notes || ""),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+  };
+}
+
 function normalizeData(raw: Partial<HealthcarePlatformData> | null | undefined): HealthcarePlatformData {
   if (!raw) return emptyData();
   return {
     companies: Array.isArray(raw.companies) ? raw.companies : [],
     doctors: Array.isArray(raw.doctors) ? raw.doctors : [],
-    appointments: Array.isArray(raw.appointments) ? raw.appointments : [],
+    appointments: Array.isArray(raw.appointments)
+      ? raw.appointments.map((a) => normalizeAppointment(a as Partial<HealthcareAppointment>))
+      : [],
   };
 }
 
@@ -438,11 +468,25 @@ export async function createHealthcareAppointment(input: {
   dghsId: string;
   patientName: string;
   patientPhone: string;
-  scheduledAt: string;
+  scheduledAt?: string;
+  date?: string;
+  slotStart?: string;
   notes?: string;
   source?: HealthcareAppointment["source"];
-}): Promise<HealthcareAppointment> {
+  autoConfirm?: boolean;
+}): Promise<HealthcareAppointment | null> {
   const data = await loadHealthcarePlatform();
+  const doctor = data.doctors.find((d) => d.id === input.doctorId && d.enabled);
+  if (!doctor) return null;
+
+  const dateStr = (input.date || input.slotStart || input.scheduledAt || "").slice(0, 10);
+  if (!dateStr || dateStr.length < 10) return null;
+
+  if (!canBookDate(doctor, dateStr, data.appointments)) return null;
+
+  const { slotStart, slotEnd } = bookingTimesForDay(doctor, dateStr);
+  const serialNumber = nextSerialNumber(input.doctorId, dateStr, data.appointments);
+
   const appointment: HealthcareAppointment = {
     id: newHealthcareId("hca"),
     companyId: input.companyId,
@@ -450,8 +494,11 @@ export async function createHealthcareAppointment(input: {
     dghsId: input.dghsId,
     patientName: input.patientName.trim(),
     patientPhone: input.patientPhone.trim(),
-    scheduledAt: input.scheduledAt,
-    status: "pending",
+    scheduledAt: slotStart,
+    slotStart,
+    slotEnd,
+    serialNumber,
+    status: input.autoConfirm !== false ? "confirmed" : "pending",
     source: input.source ?? "online",
     notes: String(input.notes || "").trim(),
     createdAt: new Date().toISOString(),
@@ -464,14 +511,45 @@ export async function createHealthcareAppointment(input: {
 export async function updateHealthcareAppointment(
   appointmentId: string,
   companyId: string,
-  patch: Partial<Pick<HealthcareAppointment, "status" | "scheduledAt" | "notes">>,
+  patch: Partial<
+    Pick<HealthcareAppointment, "status" | "scheduledAt" | "slotStart" | "slotEnd" | "notes">
+  > & { date?: string },
 ): Promise<HealthcareAppointment | null> {
   const data = await loadHealthcarePlatform();
   const idx = data.appointments.findIndex(
     (a) => a.id === appointmentId && a.companyId === companyId,
   );
   if (idx === -1) return null;
-  data.appointments[idx] = { ...data.appointments[idx]!, ...patch };
+  const current = data.appointments[idx]!;
+  const doctor = data.doctors.find((d) => d.id === current.doctorId);
+  const nextSlot = patch.slotStart ?? patch.scheduledAt;
+  const nextDate = (patch.date || nextSlot || "").slice(0, 10);
+  const currentDate = (current.slotStart || current.scheduledAt).slice(0, 10);
+  const isReschedule = Boolean(nextDate && nextDate.length === 10 && nextDate !== currentDate);
+
+  if (isReschedule && doctor) {
+    const others = data.appointments.filter((a) => a.id !== appointmentId);
+    if (!canBookDate(doctor, nextDate, others)) return null;
+    const times = bookingTimesForDay(doctor, nextDate);
+    const serialNumber = nextSerialNumber(current.doctorId, nextDate, others);
+    data.appointments[idx] = {
+      ...current,
+      ...patch,
+      scheduledAt: times.slotStart,
+      slotStart: times.slotStart,
+      slotEnd: times.slotEnd,
+      serialNumber,
+      status: patch.status ?? current.status,
+    };
+  } else {
+    data.appointments[idx] = {
+      ...current,
+      ...patch,
+      scheduledAt: nextSlot ?? current.scheduledAt,
+      slotStart: nextSlot ?? current.slotStart,
+    };
+  }
+
   await saveHealthcarePlatform(data);
   return data.appointments[idx]!;
 }

@@ -56,6 +56,7 @@ type DayScheduleDraft = {
   selected: boolean;
   startTime: string;
   endTime: string;
+  maxPatients: number;
 };
 
 type DoctorDraft = {
@@ -74,6 +75,7 @@ function defaultDaySchedules(): DayScheduleDraft[] {
     selected: false,
     startTime: "09:00",
     endTime: "17:00",
+    maxPatients: 20,
   }));
 }
 
@@ -98,6 +100,7 @@ function schedulesToDayDrafts(schedules: HealthcareDoctorSchedule[]): DaySchedul
       selected: Boolean(row),
       startTime: row?.startTime ?? "09:00",
       endTime: row?.endTime ?? "17:00",
+      maxPatients: row?.maxPatients ?? 20,
     };
   });
 }
@@ -111,6 +114,7 @@ function dayDraftsToSchedules(days: DayScheduleDraft[]): HealthcareDoctorSchedul
       startTime: d.startTime,
       endTime: d.endTime,
       slotMinutes: 15,
+      maxPatients: Math.max(1, d.maxPatients || 20),
       notes: "",
     }));
 }
@@ -137,7 +141,7 @@ const emptyManualAppt = {
   dghsId: "",
   patientName: "",
   patientPhone: "",
-  scheduledAt: "",
+  date: "",
   notes: "",
 };
 
@@ -217,26 +221,63 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
   function formatSchedule(schedules: HealthcareDoctorSchedule[]) {
     if (!schedules.length) return "—";
     return schedules
-      .map((s) => `${weekdayLabel(s.weekday)} ${s.startTime}–${s.endTime}`)
+      .map(
+        (s) =>
+          `${weekdayLabel(s.weekday)} ${s.startTime}–${s.endTime} (${s.maxPatients || 20} ${t.healthcarePatientsPerDay})`,
+      )
       .join(" · ");
+  }
+
+  async function patchAppointment(input: {
+    appointmentId: string;
+    status?: HealthcareAppointment["status"];
+    date?: string;
+    notifyPatient?: boolean;
+  }) {
+    const res = await fetch(`${apiBase}/appointments`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const json = await res.json();
+      setError(json.error || t.errorGeneric);
+      return false;
+    }
+    setMessage(t.healthcareAppointmentUpdated);
+    void load();
+    return true;
+  }
+
+  async function cancelAppointment(appointmentId: string) {
+    if (!window.confirm(t.healthcareConfirmCancel)) return;
+    const notifyPatient = window.confirm(t.healthcareNotifyPatient);
+    if (!notifyPatient) {
+      setError(t.healthcareNotifyPatient);
+      return;
+    }
+    await patchAppointment({ appointmentId, status: "cancelled", notifyPatient: true });
+  }
+
+  async function rescheduleAppointment(appointmentId: string, date: string) {
+    if (!date) return;
+    const notifyPatient = window.confirm(t.healthcareNotifyPatient);
+    if (!notifyPatient) {
+      setError(t.healthcareNotifyPatient);
+      return;
+    }
+    await patchAppointment({ appointmentId, date, notifyPatient: true });
   }
 
   async function updateAppointmentStatus(
     appointmentId: string,
     status: HealthcareAppointment["status"],
   ) {
-    const res = await fetch(`${apiBase}/appointments`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appointmentId, status }),
-    });
-    if (!res.ok) {
-      const json = await res.json();
-      setError(json.error || t.errorGeneric);
+    if (status === "cancelled") {
+      await cancelAppointment(appointmentId);
       return;
     }
-    setMessage(t.healthcareAppointmentUpdated);
-    void load();
+    await patchAppointment({ appointmentId, status });
   }
 
   async function submitDoctor(e: React.FormEvent) {
@@ -352,9 +393,10 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
   function exportCsv() {
     if (!data?.appointments.length) return;
     const rows = [
-      ["patient", "phone", "status", "scheduledAt", "source", "notes"].join(","),
+      ["serial", "patient", "phone", "status", "scheduledAt", "source", "notes"].join(","),
       ...data.appointments.map((a) =>
         [
+          a.serialNumber || "",
           a.patientName,
           a.patientPhone,
           a.status,
@@ -458,6 +500,7 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
             <ul className="space-y-3">
               {filteredAppointments.map((a) => {
                 const doctor = data.doctors.find((d) => d.id === a.doctorId);
+                const rescheduleId = `reschedule-${a.id}`;
                 return (
                   <li
                     key={a.id}
@@ -465,7 +508,14 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold">{a.patientName}</p>
+                        <p className="font-semibold">
+                          {a.serialNumber ? (
+                            <span className="mr-2 font-[family-name:var(--font-display)] text-lg text-[var(--blood-deep)]">
+                              #{a.serialNumber}
+                            </span>
+                          ) : null}
+                          {a.patientName}
+                        </p>
                         <a
                           href={`tel:${a.patientPhone}`}
                           className="text-sm font-medium text-[var(--blood-deep)]"
@@ -480,6 +530,38 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
                           <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
                             {a.notes}
                           </p>
+                        ) : null}
+                        {a.status !== "cancelled" ? (
+                          <div className="mt-3 flex flex-wrap items-end gap-2">
+                            <label className="block text-xs">
+                              <span className="mb-1 block">{t.healthcareNewDate}</span>
+                              <input
+                                id={rescheduleId}
+                                className="field py-1 text-sm"
+                                type="date"
+                                defaultValue={(a.slotStart || a.scheduledAt).slice(0, 10)}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="btn-ghost px-3 py-1 text-xs"
+                              onClick={() => {
+                                const input = document.getElementById(
+                                  rescheduleId,
+                                ) as HTMLInputElement | null;
+                                void rescheduleAppointment(a.id, input?.value || "");
+                              }}
+                            >
+                              {t.healthcareRescheduleAppointment}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost px-3 py-1 text-xs text-[var(--blood)]"
+                              onClick={() => void cancelAppointment(a.id)}
+                            >
+                              {t.healthcareCancelAppointment}
+                            </button>
+                          </div>
                         ) : null}
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -557,9 +639,9 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
               <input
                 className="field"
                 required
-                type="datetime-local"
-                value={manualAppt.scheduledAt}
-                onChange={(e) => setManualAppt((a) => ({ ...a, scheduledAt: e.target.value }))}
+                type="date"
+                value={manualAppt.date}
+                onChange={(e) => setManualAppt((a) => ({ ...a, date: e.target.value }))}
               />
             </div>
             <button type="submit" className="btn-glass-primary mt-3">
@@ -684,7 +766,7 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
                     .map((day) => (
                       <li
                         key={day.weekday}
-                        className="grid gap-2 rounded-lg border border-[var(--line)] bg-white p-3 sm:grid-cols-[88px_1fr_1fr]"
+                        className="grid gap-2 rounded-lg border border-[var(--line)] bg-white p-3 sm:grid-cols-[72px_1fr_1fr_88px]"
                       >
                         <span className="self-center text-sm font-semibold">
                           {weekdayLabel(day.weekday)}
@@ -712,6 +794,28 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
                             value={day.endTime}
                             onChange={(e) =>
                               updateDoctorDayTime(day.weekday, "endTime", e.target.value)
+                            }
+                          />
+                        </label>
+                        <label className="block text-xs">
+                          <span className="mb-1 block text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                            {t.healthcareMaxPatients}
+                          </span>
+                          <input
+                            className="field"
+                            type="number"
+                            min={1}
+                            max={500}
+                            value={day.maxPatients}
+                            onChange={(e) =>
+                              setDoctorDraft((draft) => ({
+                                ...draft,
+                                daySchedules: draft.daySchedules.map((d) =>
+                                  d.weekday === day.weekday
+                                    ? { ...d, maxPatients: Number(e.target.value) || 1 }
+                                    : d,
+                                ),
+                              }))
                             }
                           />
                         </label>

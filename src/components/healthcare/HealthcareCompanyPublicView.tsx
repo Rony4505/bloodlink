@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HealthcareAppointmentBooking } from "@/components/healthcare/HealthcareAppointmentBooking";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { HealthcareDoctorSchedule } from "@/lib/healthcare-platform";
 
@@ -44,10 +45,14 @@ const WEEKDAY_KEYS = [
 function formatSchedule(
   schedules: HealthcareDoctorSchedule[],
   weekdayLabel: (weekday: number) => string,
+  patientsLabel: string,
 ) {
   if (!schedules.length) return "—";
   return schedules
-    .map((s) => `${weekdayLabel(s.weekday)} ${s.startTime}–${s.endTime}`)
+    .map(
+      (s) =>
+        `${weekdayLabel(s.weekday)} ${s.startTime}–${s.endTime} (${s.maxPatients || 20} ${patientsLabel})`,
+    )
     .join(" · ");
 }
 
@@ -56,14 +61,6 @@ export function HealthcareCompanyPublicView({ companyId }: { companyId: string }
   const [data, setData] = useState<CompanyResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [doctorId, setDoctorId] = useState("");
-  const [patientName, setPatientName] = useState("");
-  const [patientPhone, setPatientPhone] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [notes, setNotes] = useState("");
-  const [booking, setBooking] = useState(false);
-  const [booked, setBooked] = useState(false);
-  const [bookError, setBookError] = useState("");
 
   const weekdayLabel = useCallback(
     (weekday: number) => {
@@ -85,7 +82,6 @@ export function HealthcareCompanyPublicView({ companyId }: { companyId: string }
         return;
       }
       setData(json);
-      if (json.doctors.length === 1) setDoctorId(json.doctors[0].id);
     } catch {
       setError(t.healthcareLoadError);
       setData(null);
@@ -111,41 +107,6 @@ export function HealthcareCompanyPublicView({ companyId }: { companyId: string }
     const specialty = locale === "bn" && d.specialtyBn ? d.specialtyBn : d.specialty;
     return specialty ? `${name} — ${specialty}` : name;
   };
-
-  async function submitBooking(e: React.FormEvent) {
-    e.preventDefault();
-    if (!company) return;
-    setBooking(true);
-    setBookError("");
-    try {
-      const res = await fetch("/api/healthcare/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          doctorId,
-          dghsId: company.linkedDghsIds[0] || "",
-          patientName,
-          patientPhone,
-          scheduledAt,
-          notes,
-        }),
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        setBookError(json.error ?? t.healthcareBookError);
-        return;
-      }
-      setBooked(true);
-      setPatientName("");
-      setPatientPhone("");
-      setScheduledAt("");
-      setNotes("");
-    } catch {
-      setBookError(t.healthcareBookError);
-    } finally {
-      setBooking(false);
-    }
-  }
 
   if (loading) {
     return <p className="text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">{t.loading}</p>;
@@ -219,7 +180,9 @@ export function HealthcareCompanyPublicView({ companyId }: { companyId: string }
                 {d.room ? (
                   <p className="mt-1 text-xs">{t.healthcareRoom}: {d.room}</p>
                 ) : null}
-                <p className="mt-1 text-sm">{formatSchedule(d.schedules, weekdayLabel)}</p>
+                <p className="mt-1 text-sm">
+                  {formatSchedule(d.schedules, weekdayLabel, t.healthcarePatientsPerDay)}
+                </p>
               </li>
             ))}
           </ul>
@@ -227,59 +190,12 @@ export function HealthcareCompanyPublicView({ companyId }: { companyId: string }
       </section>
 
       {doctors.length > 0 ? (
-        <section className="rounded-2xl border border-[color-mix(in_oklab,var(--blood)_20%,white)] bg-white/90 p-5 md:p-6">
-          <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
-            {t.healthcareBookTitle}
-          </h3>
-          {booked ? (
-            <p className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-              {t.healthcareBookSuccess}
-            </p>
-          ) : null}
-          <form className="mt-4 space-y-4" onSubmit={(e) => void submitBooking(e)}>
-            <select
-              className="field"
-              required
-              value={doctorId}
-              onChange={(e) => setDoctorId(e.target.value)}
-            >
-              <option value="">{t.healthcareSelectDoctor}</option>
-              {doctors.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {doctorLabel(d)}
-                </option>
-              ))}
-            </select>
-            <div className="grid gap-4 md:grid-cols-2">
-              <input
-                className="field"
-                required
-                placeholder={t.healthcarePatientName}
-                value={patientName}
-                onChange={(e) => setPatientName(e.target.value)}
-              />
-              <input
-                className="field"
-                required
-                type="tel"
-                placeholder={t.healthcarePatientPhone}
-                value={patientPhone}
-                onChange={(e) => setPatientPhone(e.target.value)}
-              />
-            </div>
-            <input
-              className="field"
-              type="datetime-local"
-              required
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-            />
-            {bookError ? <p className="text-sm text-[var(--blood)]">{bookError}</p> : null}
-            <button type="submit" className="btn-glass-primary" disabled={booking}>
-              {booking ? t.loading : t.healthcareBookSubmit}
-            </button>
-          </form>
-        </section>
+        <HealthcareAppointmentBooking
+          doctors={doctors}
+          dghsId={company.linkedDghsIds[0] || ""}
+          facilityName={companyName}
+          defaultDoctorId={doctors.length === 1 ? doctors[0].id : undefined}
+        />
       ) : null}
     </div>
   );
