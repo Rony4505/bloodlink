@@ -43,11 +43,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const dghsId = String(body?.dghsId || "").trim();
     const name = String(body?.name || "").trim();
-    if (!dghsId || !name) {
-      return NextResponse.json({ error: "dghsId and name required" }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: "name required" }, { status: 400 });
     }
+    const dghsId = String(body?.dghsId || company.linkedDghsIds[0] || "").trim();
 
     const doctor = await createHealthcareDoctor({
       companyId: company.id,

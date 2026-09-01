@@ -40,6 +40,7 @@ type DashboardData = {
 };
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
+const BD_WEEKEND = new Set([5, 6]);
 const WEEKDAY_KEYS = [
   "healthcareWeekSun",
   "healthcareWeekMon",
@@ -50,18 +51,86 @@ const WEEKDAY_KEYS = [
   "healthcareWeekSat",
 ] as const;
 
-const emptyDoctor = {
-  dghsId: "",
-  name: "",
-  nameBn: "",
-  specialty: "",
-  specialtyBn: "",
-  phone: "",
-  room: "",
-  weekday: 0,
-  startTime: "09:00",
-  endTime: "13:00",
+type DayScheduleDraft = {
+  weekday: number;
+  selected: boolean;
+  startTime: string;
+  endTime: string;
 };
+
+type DoctorDraft = {
+  name: string;
+  nameBn: string;
+  specialty: string;
+  specialtyBn: string;
+  phone: string;
+  room: string;
+  daySchedules: DayScheduleDraft[];
+};
+
+function defaultDaySchedules(): DayScheduleDraft[] {
+  return WEEKDAYS.map((weekday) => ({
+    weekday,
+    selected: false,
+    startTime: "09:00",
+    endTime: "17:00",
+  }));
+}
+
+function emptyDoctorDraft(): DoctorDraft {
+  return {
+    name: "",
+    nameBn: "",
+    specialty: "",
+    specialtyBn: "",
+    phone: "",
+    room: "",
+    daySchedules: defaultDaySchedules(),
+  };
+}
+
+function schedulesToDayDrafts(schedules: HealthcareDoctorSchedule[]): DayScheduleDraft[] {
+  const map = new Map(schedules.map((s) => [s.weekday, s]));
+  return WEEKDAYS.map((weekday) => {
+    const row = map.get(weekday);
+    return {
+      weekday,
+      selected: Boolean(row),
+      startTime: row?.startTime ?? "09:00",
+      endTime: row?.endTime ?? "17:00",
+    };
+  });
+}
+
+function dayDraftsToSchedules(days: DayScheduleDraft[]): HealthcareDoctorSchedule[] {
+  return days
+    .filter((d) => d.selected)
+    .map((d) => ({
+      id: `sch_${d.weekday}`,
+      weekday: d.weekday,
+      startTime: d.startTime,
+      endTime: d.endTime,
+      slotMinutes: 15,
+      notes: "",
+    }));
+}
+
+function scheduleSummaryLabel(
+  days: DayScheduleDraft[],
+  t: {
+    healthcareScheduleSummary: string;
+    healthcareScheduleSummaryFive: string;
+    healthcareScheduleSummarySeven: string;
+  },
+): string {
+  const selected = days.filter((d) => d.selected);
+  const count = selected.length;
+  if (count === 0) return "";
+  const weekendOff = !selected.some((d) => BD_WEEKEND.has(d.weekday));
+  if (count === 7) return t.healthcareScheduleSummarySeven;
+  if (count === 5 && weekendOff) return t.healthcareScheduleSummaryFive;
+  return t.healthcareScheduleSummary.replace("{count}", String(count));
+}
 
 const emptyManualAppt = {
   doctorId: "",
@@ -82,7 +151,7 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [doctorDraft, setDoctorDraft] = useState(emptyDoctor);
+  const [doctorDraft, setDoctorDraft] = useState<DoctorDraft>(emptyDoctorDraft);
   const [manualAppt, setManualAppt] = useState(emptyManualAppt);
   const [editingDoctorId, setEditingDoctorId] = useState<string | null>(null);
 
@@ -102,7 +171,6 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
       const payload = json as DashboardData;
       setData(payload);
       if (payload.facilities?.[0]) {
-        setDoctorDraft((d) => (d.dghsId ? d : { ...d, dghsId: payload.facilities[0]!.dghsId }));
         setManualAppt((a) => (a.dghsId ? a : { ...a, dghsId: payload.facilities[0]!.dghsId }));
       }
     } catch {
@@ -121,6 +189,16 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
     if (!data) return "";
     return locale === "bn" && data.company.nameBn ? data.company.nameBn : data.company.name;
   }, [data, locale]);
+
+  const scheduleSummary = useMemo(
+    () => scheduleSummaryLabel(doctorDraft.daySchedules, t),
+    [doctorDraft.daySchedules, t],
+  );
+
+  const companyDghsId = useMemo(() => {
+    if (!data) return "";
+    return data.company.linkedDghsIds[0] || data.facilities[0]?.dghsId || "";
+  }, [data]);
 
   const filteredAppointments = useMemo(() => {
     if (!data) return [];
@@ -165,23 +243,18 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
     e.preventDefault();
     setError("");
     setMessage("");
-    const schedules: HealthcareDoctorSchedule[] = [
-      {
-        id: `sch_${doctorDraft.weekday}`,
-        weekday: doctorDraft.weekday,
-        startTime: doctorDraft.startTime,
-        endTime: doctorDraft.endTime,
-        slotMinutes: 15,
-        notes: "",
-      },
-    ];
+    const schedules = dayDraftsToSchedules(doctorDraft.daySchedules);
+    if (!schedules.length) {
+      setError(t.healthcareSchedulePickDays);
+      return;
+    }
 
     const res = await fetch(`${apiBase}/doctors`, {
       method: editingDoctorId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         doctorId: editingDoctorId,
-        dghsId: doctorDraft.dghsId,
+        dghsId: companyDghsId || undefined,
         name: doctorDraft.name,
         nameBn: doctorDraft.nameBn,
         specialty: doctorDraft.specialty,
@@ -197,7 +270,7 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
       return;
     }
     setMessage(editingDoctorId ? t.healthcareDoctorUpdated : t.healthcareDoctorAdded);
-    setDoctorDraft((d) => ({ ...emptyDoctor, dghsId: d.dghsId }));
+    setDoctorDraft(emptyDoctorDraft());
     setEditingDoctorId(null);
     void load();
   }
@@ -217,21 +290,44 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
   }
 
   function startEditDoctor(doctor: HealthcareDoctor) {
-    const first = doctor.schedules[0];
     setEditingDoctorId(doctor.id);
     setDoctorDraft({
-      dghsId: doctor.dghsId,
       name: doctor.name,
       nameBn: doctor.nameBn,
       specialty: doctor.specialty,
       specialtyBn: doctor.specialtyBn,
       phone: doctor.phone,
       room: doctor.room,
-      weekday: first?.weekday ?? 0,
-      startTime: first?.startTime ?? "09:00",
-      endTime: first?.endTime ?? "13:00",
+      daySchedules: schedulesToDayDrafts(doctor.schedules),
     });
     setTab("doctors");
+  }
+
+  function toggleDoctorDay(weekday: number) {
+    setDoctorDraft((draft) => ({
+      ...draft,
+      daySchedules: draft.daySchedules.map((d) => {
+        if (d.weekday !== weekday) return d;
+        const selected = !d.selected;
+        if (selected && weekday === 5) {
+          return { ...d, selected: true, startTime: "09:00", endTime: "12:00" };
+        }
+        return { ...d, selected };
+      }),
+    }));
+  }
+
+  function updateDoctorDayTime(
+    weekday: number,
+    field: "startTime" | "endTime",
+    value: string,
+  ) {
+    setDoctorDraft((draft) => ({
+      ...draft,
+      daySchedules: draft.daySchedules.map((d) =>
+        d.weekday === weekday ? { ...d, [field]: value } : d,
+      ),
+    }));
   }
 
   async function submitManualAppointment(e: React.FormEvent) {
@@ -519,19 +615,6 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
               {editingDoctorId ? t.healthcareEditDoctor : t.healthcareAddDoctor}
             </h3>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <select
-                className="field md:col-span-2"
-                required
-                value={doctorDraft.dghsId}
-                onChange={(e) => setDoctorDraft((d) => ({ ...d, dghsId: e.target.value }))}
-              >
-                <option value="">{t.healthcareSelectFacility}</option>
-                {data.facilities.map((f) => (
-                  <option key={f.dghsId} value={f.dghsId}>
-                    {locale === "bn" && f.nameBn ? f.nameBn : f.name}
-                  </option>
-                ))}
-              </select>
               <input
                 className="field"
                 required
@@ -570,31 +653,72 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
                 value={doctorDraft.phone}
                 onChange={(e) => setDoctorDraft((d) => ({ ...d, phone: e.target.value }))}
               />
-              <select
-                className="field"
-                value={doctorDraft.weekday}
-                onChange={(e) =>
-                  setDoctorDraft((d) => ({ ...d, weekday: Number(e.target.value) }))
-                }
-              >
-                {WEEKDAYS.map((day) => (
-                  <option key={day} value={day}>
-                    {weekdayLabel(day)}
-                  </option>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--cream)]/50 p-4">
+              <p className="text-sm font-medium text-[var(--ink)]">{t.healthcareSchedulePickDays}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {doctorDraft.daySchedules.map((day) => (
+                  <button
+                    key={day.weekday}
+                    type="button"
+                    className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+                      day.selected
+                        ? "bg-[var(--blood-deep)] text-white"
+                        : "border border-[var(--line)] bg-white text-[var(--ink)]"
+                    }`}
+                    onClick={() => toggleDoctorDay(day.weekday)}
+                  >
+                    {weekdayLabel(day.weekday)}
+                  </button>
                 ))}
-              </select>
-              <input
-                className="field"
-                type="time"
-                value={doctorDraft.startTime}
-                onChange={(e) => setDoctorDraft((d) => ({ ...d, startTime: e.target.value }))}
-              />
-              <input
-                className="field"
-                type="time"
-                value={doctorDraft.endTime}
-                onChange={(e) => setDoctorDraft((d) => ({ ...d, endTime: e.target.value }))}
-              />
+              </div>
+              {scheduleSummary ? (
+                <p className="mt-3 text-sm font-semibold text-[var(--blood-deep)]">{scheduleSummary}</p>
+              ) : null}
+
+              {doctorDraft.daySchedules.some((d) => d.selected) ? (
+                <ul className="mt-4 space-y-3">
+                  {doctorDraft.daySchedules
+                    .filter((d) => d.selected)
+                    .map((day) => (
+                      <li
+                        key={day.weekday}
+                        className="grid gap-2 rounded-lg border border-[var(--line)] bg-white p-3 sm:grid-cols-[88px_1fr_1fr]"
+                      >
+                        <span className="self-center text-sm font-semibold">
+                          {weekdayLabel(day.weekday)}
+                        </span>
+                        <label className="block text-xs">
+                          <span className="mb-1 block text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                            {t.healthcareScheduleStart}
+                          </span>
+                          <input
+                            className="field"
+                            type="time"
+                            value={day.startTime}
+                            onChange={(e) =>
+                              updateDoctorDayTime(day.weekday, "startTime", e.target.value)
+                            }
+                          />
+                        </label>
+                        <label className="block text-xs">
+                          <span className="mb-1 block text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                            {t.healthcareScheduleEnd}
+                          </span>
+                          <input
+                            className="field"
+                            type="time"
+                            value={day.endTime}
+                            onChange={(e) =>
+                              updateDoctorDayTime(day.weekday, "endTime", e.target.value)
+                            }
+                          />
+                        </label>
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
             </div>
             <div className="mt-3 flex gap-2">
               <button type="submit" className="btn-glass-primary">
@@ -606,7 +730,7 @@ export function HealthcareCompanyDashboard({ token }: { token: string }) {
                   className="btn-ghost"
                   onClick={() => {
                     setEditingDoctorId(null);
-                    setDoctorDraft((d) => ({ ...emptyDoctor, dghsId: d.dghsId }));
+                    setDoctorDraft(emptyDoctorDraft());
                   }}
                 >
                   {t.cancel}
