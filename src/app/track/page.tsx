@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { FashionShell } from "@/components/fashion/FashionShell";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
 import type { FashionOrder } from "@/lib/fashion/types";
@@ -44,9 +45,9 @@ function TrackOrderContent() {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-2xl px-5 py-14 md:px-8 md:py-20">
-        <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold">অর্ডার ট্র্যাক করুন</h1>
-        <p className="mt-3 text-[#6f554a]">অর্ডার confirm-এর পর পাওয়া tracking number দিন</p>
+      <section className="mx-auto max-w-2xl px-5 py-14 text-[#e8eef7] md:px-8 md:py-20">
+        <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold text-white">অর্ডার ট্র্যাক করুন</h1>
+        <p className="mt-3 text-[#b8c9de]">অর্ডার confirm-এর পর পাওয়া tracking number দিন</p>
 
         <form onSubmit={handleSubmit} className="mt-8 flex gap-2">
           <input
@@ -64,7 +65,7 @@ function TrackOrderContent() {
         {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 
         {order ? (
-          <article className="mt-8 rounded-[2rem] border border-[#e8c4b0]/50 bg-white p-6 shadow-lg">
+          <article className={`mt-8 rounded-[2rem] border border-[#e8c4b0]/50 bg-white p-6 shadow-lg ${fashionLightSurfaceClass}`}>
             <div className="flex flex-wrap justify-between gap-3">
               <div>
                 <p className="text-sm text-[#9b7766]">Tracking Number</p>
@@ -74,10 +75,10 @@ function TrackOrderContent() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-[#9b7766]">Order ID</p>
-                <p className="font-semibold">{order.id}</p>
+                <p className="font-semibold text-[#4a3348]">{order.id}</p>
               </div>
             </div>
-            <p className="mt-4 text-lg font-semibold">{copy.orderStatus[order.status]}</p>
+            <p className="mt-4 text-lg font-semibold text-[#4a3348]">{copy.orderStatus[order.status]}</p>
             <p className="text-sm text-[#6f554a]">{order.customerName} · {formatBdt(order.total)}</p>
             <ul className="mt-6 space-y-3 border-t border-black/5 pt-4">
               {order.statusHistory?.map((h, i) => (

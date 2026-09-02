@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { formatBdt } from "@/lib/fashion/format";
 import { useCart } from "@/lib/fashion/cart-context";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { bangladeshDistricts } from "@/lib/fashion/districts";
 import type { CheckoutForm, FashionOrder } from "@/lib/fashion/types";
@@ -204,8 +205,8 @@ export function CartOrderSection({
         <p className="mt-3 text-sm text-[#8b6456]">{fc.cart.freeShipping}</p>
       </div>
 
-      <div className="rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold">{fc.cart.deliveryInfo}</h2>
+      <div className={`rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[#4a3348]">{fc.cart.deliveryInfo}</h2>
         <div className="mt-5 space-y-4">
           <Field label={fc.form.name} value={form.name} onChange={(v) => setForm((c) => ({ ...c, name: v }))} required />
           <Field label={fc.form.phone} value={form.phone} onChange={(v) => setForm((c) => ({ ...c, phone: v }))} required />

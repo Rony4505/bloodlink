@@ -22,7 +22,7 @@ export function ProductGrid({
     <div>
       {showRelatedTitle ? (
         <div className="mb-8">
-          <ProductGridTitle kind="related" />
+          <ProductGridTitle kind="related" onDark />
         </div>
       ) : null}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">

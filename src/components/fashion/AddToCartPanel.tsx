@@ -6,6 +6,7 @@ import { useCart } from "@/lib/fashion/cart-context";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { normalizeProductColors } from "@/lib/fashion/product-colors";
 import { productDefaultSize, productShowsSizes } from "@/lib/fashion/product-sizes";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { FashionButton } from "./FashionButton";
 
@@ -30,7 +31,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
   }
 
   return (
-    <div className="rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]">
+    <div className={`rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}>
       {!inStock ? (
         <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
           {fc.actions.outOfStock}

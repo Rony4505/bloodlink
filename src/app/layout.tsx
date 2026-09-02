@@ -141,11 +141,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        <meta name="theme-color" content={fashion ? "#faf8f6" : "#1c0a0c"} />
+        <meta name="theme-color" content={fashion ? "#0a1628" : "#1c0a0c"} />
       </head>
       <body
         className={`flex min-h-full flex-col antialiased ${
-          fashion ? "bg-[#faf8f6] text-[#241815]" : ""
+          fashion ? "bg-[#0a1628]" : ""
         }`}
       >
         <LocaleProvider>

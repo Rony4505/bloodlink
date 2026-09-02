@@ -16,12 +16,12 @@ export default async function CollectionsPage() {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-14 text-[#e8eef7] md:px-8 md:py-20">
         <div className="max-w-3xl">
-          <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold md:text-6xl">
+          <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold text-white md:text-6xl">
             সব কালেকশন
           </h1>
-          <p className="mt-4 text-base leading-8 text-[#6e5449]">
+          <p className="mt-4 text-base leading-8 text-[#b8c9de]">
             জামদানি, ফেস্টিভ, এবং ডেইলি এলিগেন্স—সব এডিট এক জায়গায়।
           </p>
         </div>

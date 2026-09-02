@@ -54,19 +54,19 @@ export default function AccountPage() {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-4xl px-5 py-14 md:px-8 md:py-20">
+      <section className="mx-auto max-w-4xl px-5 py-14 text-[#e8eef7] md:px-8 md:py-20">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold">{copy.account.dashboardTitle}</h1>
-            <p className="mt-2 text-[#6f554a]">{customer.name} · {customer.email}</p>
+            <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold text-white">{copy.account.dashboardTitle}</h1>
+            <p className="mt-2 text-[#b8c9de]">{customer.name} · {customer.email}</p>
           </div>
           <FashionButton variant="secondary" onClick={logout}>{copy.nav.logout}</FashionButton>
         </div>
 
         <div className="mt-10">
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold">{copy.account.notificationsTitle}</h2>
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">{copy.account.notificationsTitle}</h2>
           {notifications.length === 0 ? (
-            <p className="mt-4 text-[#6f554a]">{copy.account.noNotifications}</p>
+            <p className="mt-4 text-[#b8c9de]">{copy.account.noNotifications}</p>
           ) : (
             <div className="mt-4 space-y-3">
               {notifications.slice(0, 10).map((n) => {
@@ -74,9 +74,9 @@ export default function AccountPage() {
                 return (
                   <article
                     key={n.id}
-                    className={`rounded-2xl border p-4 ${unread ? "border-[#d4b896]/50 bg-[#faf0ea]" : "border-black/6 bg-white"}`}
+                    className={`rounded-2xl border p-4 text-[#4a3348] ${unread ? "border-[#d4b896]/50 bg-[#faf0ea]" : "border-black/6 bg-white"}`}
                   >
-                    <p className="font-semibold">{n.title}</p>
+                    <p className="font-semibold text-[#4a3348]">{n.title}</p>
                     <p className="mt-1 text-sm text-[#6f554a]">{n.body}</p>
                     {unread ? (
                       <button type="button" className="mt-2 text-xs font-semibold text-[#8f624e]" onClick={() => markRead(n.id)}>
@@ -91,9 +91,9 @@ export default function AccountPage() {
         </div>
 
         <div className="mt-10">
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold">{copy.account.ordersTitle}</h2>
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">{copy.account.ordersTitle}</h2>
           {orders.length === 0 ? (
-            <p className="mt-4 text-[#6f554a]">{copy.account.noOrders}</p>
+            <p className="mt-4 text-[#b8c9de]">{copy.account.noOrders}</p>
           ) : (
             <div className="mt-6 space-y-4">
               {orders.map((order) => (

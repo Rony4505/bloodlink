@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { FashionShell } from "@/components/fashion/FashionShell";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { PasswordField } from "@/components/fashion/PasswordField";
 import { copy } from "@/lib/fashion/copy";
 
@@ -102,15 +103,15 @@ export function LoginForm() {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-md px-5 py-20 md:px-8">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">
+      <section className="mx-auto max-w-md px-5 py-20 text-[#e8eef7] md:px-8">
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold text-white">
           {mode === "login" ? copy.account.loginTitle : "পাসওয়ার্ড রিসেট"}
         </h1>
 
         {mode === "login" ? (
           <form
             onSubmit={handleSubmit}
-            className="mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            className={`mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}
           >
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             <label className="block">
@@ -148,7 +149,7 @@ export function LoginForm() {
         {mode === "forgot" ? (
           <form
             onSubmit={sendForgotOtp}
-            className="mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            className={`mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}
           >
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             <p className="text-sm text-[#6f554a]">
@@ -217,7 +218,7 @@ export function LoginForm() {
         {mode === "forgot-otp" ? (
           <form
             onSubmit={verifyForgotOtp}
-            className="mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            className={`mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}
           >
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             {debugOtp ? (
@@ -243,7 +244,7 @@ export function LoginForm() {
         {mode === "forgot-reset" ? (
           <form
             onSubmit={resetPassword}
-            className="mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            className={`mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}
           >
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             <PasswordField
@@ -326,15 +327,15 @@ export function RegisterForm() {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-md px-5 py-20 md:px-8">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">
+      <section className="mx-auto max-w-md px-5 py-20 text-[#e8eef7] md:px-8">
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold text-white">
           {copy.account.registerTitle}
         </h1>
 
         {step === "form" ? (
           <form
             onSubmit={sendOtp}
-            className="mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            className={`mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}
           >
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             {(
@@ -395,7 +396,7 @@ export function RegisterForm() {
         ) : (
           <form
             onSubmit={verifyOtp}
-            className="mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]"
+            className={`mt-8 space-y-4 rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}
           >
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             <p className="text-sm text-[#6f554a]">
