@@ -6,6 +6,7 @@ import {
   getAppMode,
   pathMatchesPrefix,
 } from "@/lib/app-mode";
+import { shouldTrackVisit } from "@/lib/visitor-track-paths";
 
 function notFound(request: NextRequest, api: boolean) {
   if (api) {
@@ -16,6 +17,22 @@ function notFound(request: NextRequest, api: boolean) {
   return NextResponse.rewrite(url);
 }
 
+function trackVisit(request: NextRequest, pathname: string) {
+  if (!shouldTrackVisit(pathname)) return;
+
+  const url = new URL("/api/visit", request.url);
+  void fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-visit-forwarded-for": request.headers.get("x-forwarded-for") ?? "",
+      "x-visit-referrer": request.headers.get("referer") ?? "",
+      "x-visit-user-agent": request.headers.get("user-agent") ?? "",
+    },
+    body: JSON.stringify({ path: pathname }),
+  }).catch(() => undefined);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const mode = getAppMode();
@@ -24,6 +41,9 @@ export function middleware(request: NextRequest) {
   if (mode === "bloodlink") {
     if (pathMatchesPrefix(pathname, FASHION_PATH_PREFIXES)) {
       return notFound(request, isApi);
+    }
+    if (!isApi) {
+      trackVisit(request, pathname);
     }
     return NextResponse.next();
   }
