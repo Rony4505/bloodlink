@@ -152,6 +152,12 @@ select {
   color-scheme: light;
 }
 
+.field::placeholder,
+textarea.field::placeholder {
+  color: #6f554a;
+  opacity: 1;
+}
+
 .field:focus {
   border-color: #8f624e;
   box-shadow: 0 0 0 3px rgba(143, 98, 78, 0.2);

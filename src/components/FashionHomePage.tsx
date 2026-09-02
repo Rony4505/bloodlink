@@ -40,7 +40,7 @@ export async function FashionHomePage() {
   const displayCoupons = settings.showCouponsOnHome !== false ? coupons : [];
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(165deg,#0a1628_0%,#0f2744_45%,#122d52_100%)] pb-20 text-[#e8eef7] md:pb-0">
+    <main className="min-h-screen bg-[linear-gradient(165deg,#0a1628_0%,#0f2744_45%,#122d52_100%)] pb-20 md:pb-0">
       <TopLanguageBar />
       <ChatSupportWidget />
       <SiteEntryPopup />
@@ -52,7 +52,7 @@ export async function FashionHomePage() {
           <div className="hero-drift absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[#2a5f8f]/25 blur-3xl" />
         </div>
 
-        <div className="relative z-20 mx-auto max-w-7xl px-5 pb-16 pt-14 md:px-8 md:pb-24 md:pt-16">
+        <div className="relative z-20 mx-auto max-w-7xl px-5 pb-16 pt-14 text-[#e8eef7] md:px-8 md:pb-24 md:pt-16">
           <FashionHeader variant="light" />
 
           <div className="relative mt-6 space-y-5">

@@ -47,7 +47,7 @@ export function ProductPageDetails({
         </span>
       ) : null}
 
-      <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-bold leading-tight md:text-4xl">
+      <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-bold leading-tight text-[#e8eef7] md:text-4xl">
         {title}
       </h1>
 
@@ -62,8 +62,8 @@ export function ProductPageDetails({
         <ProductOrderPanel product={product} />
       </div>
 
-      <p className="mt-8 text-base leading-8 text-[#6c5247]">{description}</p>
-      <p className="mt-3 text-sm text-[#8b6456]">{product.fabric}</p>
+      <p className="mt-8 text-base leading-8 text-[#b8c9de]">{description}</p>
+      <p className="mt-3 text-sm text-[#8eb4d9]">{product.fabric}</p>
     </div>
   );
 }

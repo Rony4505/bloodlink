@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { copy } from "@/lib/fashion/copy";
 import type { ProductReview } from "@/lib/fashion/types";
 
@@ -50,10 +51,10 @@ export function ProductReviews({ productId }: { productId: string }) {
       : null;
 
   return (
-    <section className="mt-16 rounded-[2rem] border border-black/6 bg-white p-6 shadow-sm">
+    <section className={`mt-16 rounded-[2rem] border border-black/6 bg-white p-6 shadow-sm ${fashionLightSurfaceClass}`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold">
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[#4a3348]">
             {copy.reviews.title}
           </h2>
           {avg ? (
@@ -111,7 +112,7 @@ export function ProductReviews({ productId }: { productId: string }) {
           reviews.map((review) => (
             <article key={review.id} className="rounded-2xl border border-black/5 bg-[#fdf8f4] p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="font-semibold">{review.customerName}</p>
+                <p className="font-semibold text-[#4a3348]">{review.customerName}</p>
                 <p className="text-[#8f624e]">{"★".repeat(review.rating)}</p>
               </div>
               <p className="mt-2 text-sm leading-7 text-[#6c5247]">{review.comment}</p>

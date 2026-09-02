@@ -95,7 +95,7 @@ function ProductSection({
   const pageItems = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <section className="border-b border-black/5 bg-white">
+    <section className="border-b border-black/5 bg-white text-[#4a3348]">
       <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -180,7 +180,7 @@ export function HomeProductBrowse({
         />
       ) : null}
 
-      <section className="border-b border-black/5 bg-[#f3f1ef]">
+      <section className="border-b border-black/5 bg-[#f3f1ef] text-[#4a3348]">
         <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>

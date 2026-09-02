@@ -85,7 +85,7 @@ export function OrderBottomNav() {
       ) : null}
       <nav
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-[#e8d4e8]/70 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(74,51,72,0.08)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-[#c5d4e8]/40 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(10,22,40,0.15)] md:hidden"
       >
         {supportOpen ? (
           <div className="flex items-center justify-center gap-4 border-b border-[#e8d4e8]/50 px-4 py-3">
@@ -171,14 +171,14 @@ function BottomLink({
       aria-label={label}
       title={label}
       className={`relative flex flex-col items-center gap-1 px-1 py-1.5 text-[10px] font-semibold transition-colors ${
-        active ? "text-[#5c3d5e]" : "text-[#8a7490]"
+        active ? "text-[#5c3d5e]" : "text-[#3d4f63]"
       }`}
     >
       <span
         className={`flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 ease-out ${
           active
             ? "-translate-y-1 scale-110 bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-[0_8px_20px_rgba(157,107,138,0.35)] ring-2 ring-[#e8c4d8]/80"
-            : "bg-transparent text-current"
+            : "bg-[#eef3f8] text-[#2a3f55] shadow-sm"
         }`}
       >
         {children}
