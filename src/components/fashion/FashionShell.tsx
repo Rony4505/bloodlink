@@ -13,7 +13,7 @@ export function FashionShell({
   headerVariant?: "light" | "dark";
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-[linear-gradient(165deg,#0a1628_0%,#0f2744_45%,#122d52_100%)] pb-20 text-[#e8eef7] md:pb-0">
+    <div className="flex min-h-screen flex-col bg-[linear-gradient(165deg,#0a1628_0%,#0f2744_45%,#122d52_100%)] pb-20 md:pb-0">
       <TopLanguageBar />
       <ChatSupportWidget />
       <SiteEntryPopup />

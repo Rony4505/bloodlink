@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { localeEyebrowClass } from "@/lib/fashion/locale-text-style";
+import { localeEyebrowClass, localeEyebrowOnDarkClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { tSetting } from "@/lib/fashion/locale-settings";
 import type { FaqItem, StoreSettings } from "@/lib/fashion/types";
@@ -60,7 +60,7 @@ export function HomeHeroActions({
         </Link>
         <Link
           href={secondaryHref}
-          className="inline-flex items-center justify-center rounded-full border-2 border-[#e8b896] bg-white/85 px-6 py-3 text-sm font-semibold text-[#5c3d5e] shadow-sm transition hover:bg-[#faf0f5]"
+          className="inline-flex items-center justify-center rounded-full border-2 border-white bg-white px-6 py-3 text-sm font-bold text-[#0a1628] shadow-md transition hover:bg-[#e8eef7]"
         >
           {secondaryLabel || (locale === "bn" ? "ফিচার্ড প্রোডাক্ট" : "Featured product")}
         </Link>
@@ -169,13 +169,13 @@ export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
       ) : null}
 
       {settings.showFaq !== false && faqItems.length > 0 ? (
-        <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
+        <section className="mx-auto max-w-7xl px-5 py-20 text-[#e8eef7] md:px-8 md:py-24">
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
-              <p className={localeEyebrowClass(locale)}>
+              <p className={localeEyebrowOnDarkClass(locale)}>
                 {fc.home.faq}
               </p>
-              <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">
+              <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-bold text-white md:text-5xl">
                 {fc.home.faqTitle}
               </h2>
             </div>
@@ -183,9 +183,9 @@ export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
               {faqItems.map((item) => (
                 <article
                   key={item.question}
-                  className="rounded-[1.75rem] border border-black/6 bg-white p-6 shadow-[0_18px_60px_rgba(48,27,20,0.04)]"
+                  className="rounded-[1.75rem] border border-black/6 bg-white p-6 text-[#4a3348] shadow-[0_18px_60px_rgba(48,27,20,0.04)]"
                 >
-                  <h3 className="font-[family-name:var(--font-display)] text-2xl font-bold">
+                  <h3 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[#4a3348]">
                     {item.question}
                   </h3>
                   <p className="mt-3 text-base leading-8 text-[#634b42]">{item.answer}</p>

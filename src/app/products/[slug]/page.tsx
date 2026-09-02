@@ -36,7 +36,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-14 text-[#e8eef7] md:px-8 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <ProductGalleryCarousel
             images={getProductImages(product)}
