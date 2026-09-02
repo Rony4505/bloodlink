@@ -1206,6 +1206,13 @@ export function FashionAdminPanel() {
         subtitle={fc.admin.settingsHint}
         theme="gold"
         wide="xl"
+        footer={
+          settings ? (
+            <FashionButton className="w-full justify-center py-3.5 text-base" onClick={saveSettings}>
+              {fc.admin.settingsSaveAll}
+            </FashionButton>
+          ) : null
+        }
       >
         {settings ? (
           <SettingsEditor

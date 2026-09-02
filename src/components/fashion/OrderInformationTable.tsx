@@ -42,9 +42,9 @@ export function OrderInformationTable({
           <thead>
             <tr className="border-b border-[#e8d4e8]/40 bg-[#fdf8fb] text-left text-[11px] font-bold uppercase tracking-wide text-[#8a7490]">
               <th className="w-12 px-3 py-2.5">{fc.cart.delete}</th>
-              <th className="px-3 py-2.5">Product</th>
+              <th className="px-3 py-2.5">{fc.cart.productColumn}</th>
               <th className="w-28 px-3 py-2.5 text-center">{fc.actions.quantity}</th>
-              <th className="w-24 px-3 py-2.5 text-right">Price</th>
+              <th className="w-24 px-3 py-2.5 text-right">{fc.cart.priceColumn}</th>
             </tr>
           </thead>
           <tbody>

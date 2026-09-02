@@ -409,11 +409,9 @@ export function SettingsEditor({
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-[#7a5c50]">
-        প্রতিটি লেখার জন্য বাংলা ও English আলাদা রাখুন — language switch করলে সাইটে সেই ভাষা দেখাবে।
-      </p>
+      <p className="text-sm leading-relaxed text-[#7a5c50]">{fc.admin.settingsIntro}</p>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -432,7 +430,7 @@ export function SettingsEditor({
 
       {tab === "brand" ? (
         <div className="space-y-3">
-          <Field label="Brand name">
+          <Field label={fc.admin.settingsBrandName}>
             <input
               className="field"
               value={settings.brandName}
@@ -440,26 +438,26 @@ export function SettingsEditor({
             />
           </Field>
           <DualText
-            label="Tagline"
+            label={fc.admin.settingsTagline}
             bn={settings.brandTagline}
             en={settings.brandTaglineEn ?? ""}
             onBn={(v) => patch("brandTagline", v)}
             onEn={(v) => patch("brandTaglineEn", v)}
           />
           <DualText
-            label="Announcement"
+            label={fc.admin.settingsAnnouncement}
             bn={settings.announcementText ?? ""}
             en={settings.announcementTextEn ?? ""}
             onBn={(v) => patch("announcementText", v)}
             onEn={(v) => patch("announcementTextEn", v)}
           />
           <Toggle
-            label="Announcement দেখাও"
+            label={fc.admin.settingsShowAnnouncement}
             checked={Boolean(settings.announcementEnabled)}
             onChange={(v) => patch("announcementEnabled", v)}
           />
           <DualText
-            label="Free shipping note"
+            label={fc.admin.settingsFreeShippingNote}
             bn={settings.freeShippingNote ?? ""}
             en={settings.freeShippingNoteEn ?? ""}
             onBn={(v) => patch("freeShippingNote", v)}
@@ -471,14 +469,14 @@ export function SettingsEditor({
       {tab === "hero" ? (
         <div className="space-y-3">
           <DualText
-            label="Hero subtitle"
+            label={fc.admin.settingsHeroSubtitle}
             bn={settings.heroSubtitle ?? ""}
             en={settings.heroSubtitleEn ?? ""}
             onBn={(v) => patch("heroSubtitle", v)}
             onEn={(v) => patch("heroSubtitleEn", v)}
           />
           <DualText
-            label="Hero title"
+            label={fc.admin.settingsHeroTitle}
             bn={settings.heroTitle ?? ""}
             en={settings.heroTitleEn ?? ""}
             onBn={(v) => patch("heroTitle", v)}
@@ -486,7 +484,7 @@ export function SettingsEditor({
             multiline
           />
           <DualText
-            label="Hero description"
+            label={fc.admin.settingsHeroDescription}
             bn={settings.heroDescription ?? ""}
             en={settings.heroDescriptionEn ?? ""}
             onBn={(v) => patch("heroDescription", v)}
@@ -494,13 +492,13 @@ export function SettingsEditor({
             multiline
           />
           <DualText
-            label="Primary CTA label"
+            label={fc.admin.settingsPrimaryCta}
             bn={settings.heroCtaPrimaryLabel ?? ""}
             en={settings.heroCtaPrimaryLabelEn ?? ""}
             onBn={(v) => patch("heroCtaPrimaryLabel", v)}
             onEn={(v) => patch("heroCtaPrimaryLabelEn", v)}
           />
-          <Field label="Primary CTA link">
+          <Field label={fc.admin.settingsPrimaryCtaLink}>
             <input
               className="field"
               value={settings.heroCtaPrimaryHref ?? ""}
@@ -508,13 +506,13 @@ export function SettingsEditor({
             />
           </Field>
           <DualText
-            label="Secondary CTA (Featured) label"
+            label={fc.admin.settingsSecondaryCta}
             bn={settings.heroCtaSecondaryLabel ?? ""}
             en={settings.heroCtaSecondaryLabelEn ?? ""}
             onBn={(v) => patch("heroCtaSecondaryLabel", v)}
             onEn={(v) => patch("heroCtaSecondaryLabelEn", v)}
           />
-          <Field label="Secondary CTA link">
+          <Field label={fc.admin.settingsSecondaryCtaLink}>
             <input
               className="field"
               value={settings.heroCtaSecondaryHref ?? ""}
@@ -557,35 +555,35 @@ export function SettingsEditor({
 
       {tab === "contact" ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Phone">
+          <Field label={fc.admin.settingsPhone}>
             <input
               className="field"
               value={settings.contactPhone ?? ""}
               onChange={(e) => patch("contactPhone", e.target.value)}
             />
           </Field>
-          <Field label="WhatsApp (digits)">
+          <Field label={fc.admin.settingsWhatsapp}>
             <input
               className="field"
               value={settings.whatsapp ?? ""}
               onChange={(e) => patch("whatsapp", e.target.value)}
             />
           </Field>
-          <Field label="Email">
+          <Field label={fc.admin.settingsEmail}>
             <input
               className="field"
               value={settings.contactEmail ?? ""}
               onChange={(e) => patch("contactEmail", e.target.value)}
             />
           </Field>
-          <Field label="Facebook URL">
+          <Field label={fc.admin.settingsFacebook}>
             <input
               className="field"
               value={settings.facebookUrl ?? ""}
               onChange={(e) => patch("facebookUrl", e.target.value)}
             />
           </Field>
-          <Field label="Instagram URL">
+          <Field label={fc.admin.settingsInstagram}>
             <input
               className="field"
               value={settings.instagramUrl ?? ""}
@@ -594,7 +592,7 @@ export function SettingsEditor({
           </Field>
           <div className="sm:col-span-2">
             <DualText
-              label="Support note"
+              label={fc.admin.settingsSupportNote}
               bn={settings.supportNote ?? ""}
               en={settings.supportNoteEn ?? ""}
               onBn={(v) => patch("supportNote", v)}
@@ -603,7 +601,7 @@ export function SettingsEditor({
           </div>
           <div className="sm:col-span-2">
             <DualText
-              label="Footer text"
+              label={fc.admin.settingsFooterText}
               bn={settings.footerText ?? ""}
               en={settings.footerTextEn ?? ""}
               onBn={(v) => patch("footerText", v)}
@@ -617,21 +615,21 @@ export function SettingsEditor({
       {tab === "about" ? (
         <div className="space-y-3">
           <DualText
-            label="About subtitle"
+            label={fc.admin.settingsAboutSubtitle}
             bn={settings.aboutSubtitle ?? ""}
             en={settings.aboutSubtitleEn ?? ""}
             onBn={(v) => patch("aboutSubtitle", v)}
             onEn={(v) => patch("aboutSubtitleEn", v)}
           />
           <DualText
-            label="About title"
+            label={fc.admin.settingsAboutTitle}
             bn={settings.aboutTitle ?? ""}
             en={settings.aboutTitleEn ?? ""}
             onBn={(v) => patch("aboutTitle", v)}
             onEn={(v) => patch("aboutTitleEn", v)}
           />
           <DualText
-            label="About body"
+            label={fc.admin.settingsAboutBody}
             bn={settings.aboutText ?? ""}
             en={settings.aboutTextEn ?? ""}
             onBn={(v) => patch("aboutText", v)}
@@ -665,41 +663,41 @@ export function SettingsEditor({
         <div className="space-y-4">
           <div className="grid gap-2 sm:grid-cols-2">
             <Toggle
-              label="Homepage-এ কুপন দেখাও"
+              label={fc.admin.settingsShowCoupons}
               checked={settings.showCouponsOnHome !== false}
               onChange={(v) => patch("showCouponsOnHome", v)}
             />
             <Toggle
-              label="New products সেকশন"
+              label={fc.admin.settingsShowNewProducts}
               checked={settings.showNewProducts !== false}
               onChange={(v) => patch("showNewProducts", v)}
             />
             <Toggle
-              label="Offers সেকশন"
+              label={fc.admin.settingsShowOffers}
               checked={settings.showOffers !== false}
               onChange={(v) => patch("showOffers", v)}
             />
             <Toggle
-              label="Features / Why shoppers stay"
+              label={fc.admin.settingsShowFeatures}
               checked={settings.showFeatures !== false}
               onChange={(v) => patch("showFeatures", v)}
             />
             <Toggle
-              label="FAQ সেকশন"
+              label={fc.admin.settingsShowFaq}
               checked={settings.showFaq !== false}
               onChange={(v) => patch("showFaq", v)}
             />
           </div>
 
           <DualText
-            label="Features title"
+            label={fc.admin.settingsFeaturesTitle}
             bn={settings.featuresTitle ?? ""}
             en={settings.featuresTitleEn ?? ""}
             onBn={(v) => patch("featuresTitle", v)}
             onEn={(v) => patch("featuresTitleEn", v)}
           />
           <DualText
-            label="Features body"
+            label={fc.admin.settingsFeaturesBody}
             bn={settings.featuresBody ?? ""}
             en={settings.featuresBodyEn ?? ""}
             onBn={(v) => patch("featuresBody", v)}
@@ -728,14 +726,14 @@ export function SettingsEditor({
             {(settings.faqs ?? []).map((item, index) => (
               <div key={index} className="space-y-2 rounded-xl border border-black/6 bg-white/60 p-3">
                 <DualText
-                  label="Question"
+                  label={fc.admin.settingsFaqQuestion}
                   bn={item.question}
                   en={settings.faqsEn?.[index]?.question ?? ""}
                   onBn={(v) => updateFaq(index, "question", v, "bn")}
                   onEn={(v) => updateFaq(index, "question", v, "en")}
                 />
                 <DualText
-                  label="Answer"
+                  label={fc.admin.settingsFaqAnswer}
                   bn={item.answer}
                   en={settings.faqsEn?.[index]?.answer ?? ""}
                   onBn={(v) => updateFaq(index, "answer", v, "bn")}
@@ -751,7 +749,7 @@ export function SettingsEditor({
       {tab === "pricing" ? (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Default pricing mode">
+            <Field label={fc.admin.settingsPricingMode}>
               <select
                 className="field"
                 value={settings.pricingMode}
@@ -763,7 +761,7 @@ export function SettingsEditor({
                 <option value="manual">Manual</option>
               </select>
             </Field>
-            <Field label="Default markup %">
+            <Field label={fc.admin.settingsMarkup}>
               <input
                 className="field"
                 type="number"
@@ -779,11 +777,11 @@ export function SettingsEditor({
               Top Buying User (VIP) discount
             </p>
             <Toggle
-              label="VIP discount চালু"
+              label={fc.admin.settingsVipEnabled}
               checked={settings.vipEnabled !== false}
               onChange={(v) => patch("vipEnabled", v)}
             />
-            <Field label="মিনিমাম মোট কেনাকাটা (৳) — এত টাকার বেশি কিনলে VIP">
+            <Field label={fc.admin.settingsVipMinSpend}>
               <input
                 className="field"
                 type="number"
@@ -792,7 +790,7 @@ export function SettingsEditor({
                 onChange={(e) => patch("vipMinSpend", Number(e.target.value) || 0)}
               />
             </Field>
-            <Field label="VIP discount %">
+            <Field label={fc.admin.settingsVipDiscount}>
               <input
                 className="field"
                 type="number"
@@ -808,14 +806,14 @@ export function SettingsEditor({
             <p className="text-xs font-semibold uppercase tracking-wider text-[#9b7766]">
               Admin login security
             </p>
-            <Field label="Admin username">
+            <Field label={fc.admin.settingsAdminUsername}>
               <input
                 className="field"
                 value={settings.adminUsername ?? "founder"}
                 onChange={(e) => patch("adminUsername", e.target.value)}
               />
             </Field>
-            <Field label="Admin Gmail (OTP)">
+            <Field label={fc.admin.settingsAdminEmail}>
               <input
                 className="field"
                 type="email"
@@ -823,7 +821,7 @@ export function SettingsEditor({
                 onChange={(e) => patch("adminEmail", e.target.value)}
               />
             </Field>
-            <Field label="Admin phone (OTP)">
+            <Field label={fc.admin.settingsAdminPhone}>
               <input
                 className="field"
                 value={settings.adminPhone ?? ""}
@@ -837,14 +835,14 @@ export function SettingsEditor({
       {tab === "seo" ? (
         <div className="space-y-3">
           <DualText
-            label="Meta title"
+            label={fc.admin.settingsMetaTitle}
             bn={settings.metaTitle ?? ""}
             en={settings.metaTitleEn ?? ""}
             onBn={(v) => patch("metaTitle", v)}
             onEn={(v) => patch("metaTitleEn", v)}
           />
           <DualText
-            label="Meta description"
+            label={fc.admin.settingsMetaDescription}
             bn={settings.metaDescription ?? ""}
             en={settings.metaDescriptionEn ?? ""}
             onBn={(v) => patch("metaDescription", v)}
@@ -967,12 +965,6 @@ export function SettingsEditor({
           ) : null}
         </div>
       ) : null}
-
-      <div className="sticky bottom-0 border-t border-black/5 bg-white/80 pt-4 backdrop-blur">
-        {tab !== "backup" ? (
-          <FashionButton onClick={onSave}>{fc.admin.settingsSaveAll}</FashionButton>
-        ) : null}
-      </div>
     </div>
   );
 }

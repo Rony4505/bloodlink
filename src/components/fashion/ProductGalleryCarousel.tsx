@@ -172,7 +172,11 @@ function ThumbnailStrip({
               ? "border-[#9d6b8a] ring-2 ring-[#9d6b8a]/30"
               : "border-[#e8c4b0]/60 hover:border-[#9d6b8a]"
           }`}
-          onClick={() => onSelect(imageIndex)}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onSelect(imageIndex);
+          }}
         >
           <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-lg" />
         </button>
@@ -287,6 +291,7 @@ export function ProductGalleryCarousel({
           onClick={() => setLightbox(true)}
         >
           <ProductImage
+            key={mainSrc}
             src={mainSrc}
             alt={`${alt} ${selectedIndex + 1}`}
             className="h-full rounded-none"

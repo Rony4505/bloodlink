@@ -13,7 +13,6 @@ export function ProductCard({ product }: { product: Product }) {
   const showStrike = product.offerActive || product.compareAtPrice;
   const strikePrice = product.offerActive ? product.price : product.compareAtPrice;
   const title = locale === "bn" ? product.nameBn : product.name;
-  const subtitle = locale === "bn" ? product.name : product.nameBn;
   const description = locale === "bn" ? product.descriptionBn : product.description;
 
   return (
@@ -31,7 +30,6 @@ export function ProductCard({ product }: { product: Product }) {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div>
               <h3 className="font-[family-name:var(--font-display)] text-base font-bold leading-snug sm:text-2xl">{title}</h3>
-              <p className="mt-0.5 hidden text-sm text-[#8b6456] sm:block">{subtitle}</p>
             </div>
             <div className="text-left sm:text-right">
               <p className="text-sm font-semibold text-[#8f624e] sm:text-base">

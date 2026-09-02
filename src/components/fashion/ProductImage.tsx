@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/fashion/cn";
 import { fashionStockImage, WORKING_FASHION_STOCK_IMAGES } from "@/lib/fashion/product-image-fixes";
 
@@ -18,9 +18,12 @@ export function ProductImage({
   className?: string;
   priority?: boolean;
 }) {
-  const initial = src?.trim() || FALLBACK_SRC;
-  const [resolved, setResolved] = useState(initial);
+  const [resolved, setResolved] = useState(() => src?.trim() || FALLBACK_SRC);
   const isLocal = resolved.startsWith("/");
+
+  useEffect(() => {
+    setResolved(src?.trim() || FALLBACK_SRC);
+  }, [src]);
 
   return (
     <div

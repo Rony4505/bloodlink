@@ -18,14 +18,13 @@ export function ProductPageDetails({
   const price = getEffectivePrice(product);
   const originalPrice = product.offerActive ? product.price : product.compareAtPrice;
   const title = locale === "bn" ? product.nameBn : product.name;
-  const subtitle = locale === "bn" ? product.name : product.nameBn;
   const description = locale === "bn" ? product.descriptionBn : product.description;
 
   return (
     <div>
       <nav className="text-sm text-[#8a7490]">
         <Link href="/" className="hover:text-[#5c3d5e]">
-          Home
+          {fc.product.home}
         </Link>
         {categoryTitle ? (
           <>
@@ -51,7 +50,6 @@ export function ProductPageDetails({
       <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-bold leading-tight md:text-4xl">
         {title}
       </h1>
-      <p className="mt-1 text-base text-[#8b6456]">{subtitle}</p>
 
       <div className="mt-4 flex items-center gap-3">
         <p className="text-3xl font-bold text-[#8f624e]">{formatBdt(price)}</p>
