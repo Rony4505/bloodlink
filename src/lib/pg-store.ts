@@ -492,3 +492,152 @@ export async function saveHealthcareToPostgres(
     [JSON.stringify(data)],
   );
 }
+
+type VisitRow = {
+  id: string;
+  path: string;
+  referrer: string | null;
+  district: string | null;
+  city: string | null;
+  country: string | null;
+  ip_hash: string;
+  donor_id: string | null;
+  user_agent: string | null;
+  created_at: Date;
+};
+
+let visitsTableReady: Promise<void> | null = null;
+
+async function ensureVisitsTable(): Promise<void> {
+  if (!visitsTableReady) {
+    visitsTableReady = (async () => {
+      await ensureTable();
+      await getPool().query(`
+        CREATE TABLE IF NOT EXISTS bloodlink_visits (
+          id TEXT PRIMARY KEY,
+          path TEXT NOT NULL,
+          referrer TEXT,
+          district TEXT,
+          city TEXT,
+          country TEXT,
+          ip_hash TEXT NOT NULL,
+          donor_id TEXT,
+          user_agent TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+      await getPool().query(`
+        CREATE INDEX IF NOT EXISTS bloodlink_visits_created_at_idx
+          ON bloodlink_visits (created_at DESC);
+      `);
+      await getPool().query(`
+        CREATE INDEX IF NOT EXISTS bloodlink_visits_district_idx
+          ON bloodlink_visits (district);
+      `);
+      await getPool().query(`
+        CREATE INDEX IF NOT EXISTS bloodlink_visits_ip_path_idx
+          ON bloodlink_visits (ip_hash, path, created_at DESC);
+      `);
+    })().catch((err) => {
+      visitsTableReady = null;
+      throw err;
+    });
+  }
+  await visitsTableReady;
+}
+
+function rowToVisit(row: VisitRow) {
+  return {
+    id: row.id,
+    path: row.path,
+    referrer: row.referrer,
+    district: row.district,
+    city: row.city,
+    country: row.country,
+    ipHash: row.ip_hash,
+    donorId: row.donor_id,
+    userAgent: row.user_agent,
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : new Date(row.created_at).toISOString(),
+  };
+}
+
+export async function insertVisitToPostgres(visit: {
+  id: string;
+  path: string;
+  referrer: string | null;
+  district: string | null;
+  city: string | null;
+  country: string | null;
+  ipHash: string;
+  donorId: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}): Promise<void> {
+  await ensureVisitsTable();
+  await getPool().query(
+    `
+      INSERT INTO bloodlink_visits (
+        id, path, referrer, district, city, country, ip_hash, donor_id, user_agent, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz)
+    `,
+    [
+      visit.id,
+      visit.path,
+      visit.referrer,
+      visit.district,
+      visit.city,
+      visit.country,
+      visit.ipHash,
+      visit.donorId,
+      visit.userAgent,
+      visit.createdAt,
+    ],
+  );
+}
+
+export async function recentDuplicateVisitInPostgres(
+  ipHash: string,
+  visitPath: string,
+  withinMinutes: number,
+): Promise<boolean> {
+  await ensureVisitsTable();
+  const result = await getPool().query<{ id: string }>(
+    `
+      SELECT id FROM bloodlink_visits
+      WHERE ip_hash = $1
+        AND path = $2
+        AND created_at >= NOW() - ($3::text || ' minutes')::interval
+      LIMIT 1
+    `,
+    [ipHash, visitPath, String(withinMinutes)],
+  );
+  return result.rows.length > 0;
+}
+
+export async function listVisitsFromPostgres(fromIso: string) {
+  await ensureVisitsTable();
+  const result = await getPool().query<VisitRow>(
+    `
+      SELECT id, path, referrer, district, city, country, ip_hash, donor_id, user_agent, created_at
+      FROM bloodlink_visits
+      WHERE created_at >= $1::timestamptz
+      ORDER BY created_at DESC
+    `,
+    [fromIso],
+  );
+  return result.rows.map(rowToVisit);
+}
+
+export async function pruneOldVisitsFromPostgres(retentionDays: number): Promise<void> {
+  await ensureVisitsTable();
+  await getPool().query(
+    `
+      DELETE FROM bloodlink_visits
+      WHERE created_at < NOW() - ($1::text || ' days')::interval
+    `,
+    [String(retentionDays)],
+  );
+}
