@@ -106,6 +106,12 @@ export const dictionaries = {
     adminAnalyticsLoadFailed: "Could not load visitor analytics.",
     adminAnalyticsPrivacyNote:
       "District is estimated from IP and may be wrong on mobile data or VPN. Raw IP is never stored — only a hashed fingerprint.",
+    adminNewDonorAlerts: "New donor registrations",
+    adminMarkAllRead: "Mark all read",
+    adminPushTitle: "Admin phone notifications",
+    adminPushBody:
+      "Allow push here once so you get instant alerts when someone registers as a new donor.",
+    adminPushAllow: "Allow admin push",
     volunteerAdd: "Add volunteer",
     volunteerAddSimpleHint: "Only 4 things needed. Extra details are optional.",
     volunteerMoreDetails: "More details (optional)",
@@ -944,6 +950,12 @@ export const dictionaries = {
     adminAnalyticsLoadFailed: "ভিজিটর তথ্য লোড করা যায়নি।",
     adminAnalyticsPrivacyNote:
       "জেলা IP থেকে অনুমান — মোবাইল ডেটা/VPN-এ ভুল হতে পারে। কাঁচা IP সংরক্ষণ হয় না, শুধু হ্যাশ।",
+    adminNewDonorAlerts: "নতুন donor registration",
+    adminMarkAllRead: "সব পড়া হয়েছে",
+    adminPushTitle: "অ্যাডমিন ফোন নোটিফিকেশন",
+    adminPushBody:
+      "একবার Allow দিন — নতুন কেউ register করলে সাথে সাথে push alert পাবেন।",
+    adminPushAllow: "অ্যাডমিন push অনুমতি",
     volunteerAdd: "ভলান্টিয়ার যোগ",
     volunteerAddSimpleHint: "মাত্র ৪টা জিনিস লাগবে। বাকিটা চাইলে পরে দিবেন।",
     volunteerMoreDetails: "আরো তথ্য (ঐচ্ছিক)",

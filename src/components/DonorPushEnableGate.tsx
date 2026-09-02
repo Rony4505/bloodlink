@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
+  clearPushPromptSnooze,
+  isPushPromptSnoozed,
+  markPushPromptShownThisSession,
+  shouldAutoTryPushSubscribe,
+  snoozePushPrompt,
+  wasPushPromptShownThisSession,
+} from "@/lib/push-prompt-state";
+import {
   canAskNotificationPermission,
   enableWebPush,
   isWebPushSupported,
@@ -41,8 +49,8 @@ async function fetchPushStatus(): Promise<{
 }
 
 /**
- * Existing logged-in donors without a saved push subscription get an Allow
- * prompt on every browser — including iPhone Safari/Chrome.
+ * Logged-in donors without deliverable push get a prompt — once per session
+ * (or on dashboard card), not on every page navigation.
  */
 export function DonorPushEnableGate({
   requireLogin = true,
@@ -63,6 +71,10 @@ export function DonorPushEnableGate({
       await new Promise((r) => setTimeout(r, 120));
       if (cancelled) return;
 
+      if (isPushPromptSnoozed()) {
+        return;
+      }
+
       if (requireLogin) {
         let ok = await loadLoggedIn({ force: true });
         if (!ok) {
@@ -81,6 +93,7 @@ export function DonorPushEnableGate({
 
       if (statusRes.subscribed) {
         localStorage.setItem("bloodlink_push_on", "1");
+        clearPushPromptSnooze();
         setOpen(false);
         setCard(false);
         return;
@@ -91,22 +104,27 @@ export function DonorPushEnableGate({
       if (statusRes.permissionOnly) {
         setStatus("permission_only");
         setHint(t.pushIosPwaRequired);
-        if (modal) setOpen(true);
+        if (showCard) setCard(true);
+        if (modal && !wasPushPromptShownThisSession()) {
+          markPushPromptShownThisSession();
+          setOpen(true);
+        }
+        return;
+      }
+
+      if (canAskNotificationPermission() && Notification.permission === "denied") {
+        setStatus("denied");
         if (showCard) setCard(true);
         return;
       }
 
-      // Always offer Allow — never block iPhone/other browsers behind Close-only UI.
-      if (canAskNotificationPermission() && Notification.permission === "denied") {
-        setStatus("denied");
-      } else {
-        setStatus("ask");
-        if (!isWebPushSupported()) {
-          setHint(t.pushIosHint);
-        }
+      setStatus("ask");
+      if (!isWebPushSupported()) {
+        setHint(t.pushIosHint);
       }
 
       if (
+        shouldAutoTryPushSubscribe() &&
         canAskNotificationPermission() &&
         Notification.permission === "granted" &&
         isWebPushSupported()
@@ -115,21 +133,31 @@ export function DonorPushEnableGate({
         if (cancelled) return;
         if (result === "granted") {
           localStorage.setItem("bloodlink_push_on", "1");
+          clearPushPromptSnooze();
           setOpen(false);
           setCard(false);
           return;
         }
       }
 
-      if (modal) setOpen(true);
       if (showCard) setCard(true);
+      if (modal && !wasPushPromptShownThisSession()) {
+        markPushPromptShownThisSession();
+        setOpen(true);
+      }
     }
 
     void boot();
     return () => {
       cancelled = true;
     };
-  }, [requireLogin, showCard, modal, t.pushIosHint]);
+  }, [requireLogin, showCard, modal, t.pushIosHint, t.pushIosPwaRequired]);
+
+  function dismissPrompt() {
+    snoozePushPrompt(30);
+    setOpen(false);
+    setCard(false);
+  }
 
   async function onAllow() {
     setBusy(true);
@@ -137,16 +165,26 @@ export function DonorPushEnableGate({
     try {
       const result = await enableWebPush({ recordIntent: true });
       if (result === "granted") {
-        setStatus("on");
-        localStorage.setItem("bloodlink_push_on", "1");
-        window.setTimeout(() => {
-          setOpen(false);
-          setCard(false);
-        }, 900);
-        return;
+        const statusRes = await fetchPushStatus();
+        if (statusRes.subscribed) {
+          setStatus("on");
+          localStorage.setItem("bloodlink_push_on", "1");
+          clearPushPromptSnooze();
+          window.setTimeout(() => {
+            setOpen(false);
+            setCard(false);
+          }, 900);
+          return;
+        }
+        if (statusRes.permissionOnly) {
+          setStatus("permission_only");
+          setHint(t.pushIosPwaRequired);
+          return;
+        }
       }
       if (result === "denied") {
         setStatus("denied");
+        snoozePushPrompt(30);
         return;
       }
       if (result === "unsupported") {
@@ -169,9 +207,9 @@ export function DonorPushEnableGate({
       ? t.pushDenied
       : status === "permission_only"
         ? t.pushIosPwaRequired
-      : status === "error"
-        ? hint || t.pushEnableError
-        : t.registerPushBody;
+        : status === "error"
+          ? hint || t.pushEnableError
+          : t.registerPushBody;
 
   const showAllowActions = status === "ask" || status === "error" || status === "permission_only";
 
@@ -209,7 +247,7 @@ export function DonorPushEnableGate({
           <button
             type="button"
             disabled={busy}
-            onClick={() => setOpen(false)}
+            onClick={dismissPrompt}
             className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
           >
             {t.registerPushSkip}
@@ -222,7 +260,7 @@ export function DonorPushEnableGate({
           </p>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={dismissPrompt}
             className="inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)]"
           >
             {t.close}
@@ -256,14 +294,24 @@ export function DonorPushEnableGate({
             {bodyText}
           </p>
           {showAllowActions ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void onAllow()}
-              className="btn-primary mt-3"
-            >
-              {busy ? t.loading : t.registerPushAllow}
-            </button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onAllow()}
+                className="btn-primary"
+              >
+                {busy ? t.loading : t.registerPushAllow}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={dismissPrompt}
+                className="btn-ghost"
+              >
+                {t.registerPushSkip}
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}

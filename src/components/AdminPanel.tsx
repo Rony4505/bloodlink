@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminPopup, AdminSettingsPanel } from "@/components/AdminPopup";
 import { AdminAnalyticsPanel } from "@/components/AdminAnalyticsPanel";
 import { AdminHealthcarePanel } from "@/components/AdminHealthcarePanel";
+import { AdminPushEnableGate } from "@/components/AdminPushEnableGate";
 import { AdminVolunteersPanel } from "@/components/AdminVolunteersPanel";
 import { DonationBadge } from "@/components/DonationBadge";
 import { PasswordField } from "@/components/PasswordField";
@@ -186,6 +187,18 @@ export function AdminPanel() {
     deliverableSubscriptions: 0,
     donors: [],
   });
+  const [adminAlerts, setAdminAlerts] = useState<
+    Array<{
+      id: string;
+      title: string;
+      body: string;
+      titleBn?: string;
+      bodyBn?: string;
+      read: boolean;
+      createdAt: string;
+    }>
+  >([]);
+  const [adminAlertsUnread, setAdminAlertsUnread] = useState(0);
   const [notifSaving, setNotifSaving] = useState(false);
   const [broadcastDraft, setBroadcastDraft] = useState({
     titleEn: "",
@@ -302,6 +315,31 @@ export function AdminPanel() {
       const changeData = await changeRes.json();
       setChangeRequests(changeData.requests || []);
     }
+    await loadAdminAlerts();
+  }
+
+  async function loadAdminAlerts() {
+    try {
+      const res = await fetch("/api/admin/notifications", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        items?: typeof adminAlerts;
+        unread?: number;
+      };
+      setAdminAlerts(Array.isArray(data.items) ? data.items : []);
+      setAdminAlertsUnread(Number(data.unread) || 0);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function markAdminAlertsRead() {
+    await fetch("/api/admin/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "read-all" }),
+    });
+    await loadAdminAlerts();
   }
 
   async function decideChange(id: string, decision: "approved" | "rejected") {
@@ -911,6 +949,14 @@ export function AdminPanel() {
       .finally(() => setChecking(false));
   }, []);
 
+  useEffect(() => {
+    if (!authed) return;
+    const id = window.setInterval(() => {
+      void loadAdminAlerts();
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, [authed]);
+
   async function login(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -1077,6 +1123,34 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-6">
+      <AdminPushEnableGate />
+
+      {adminAlertsUnread > 0 ? (
+        <div className="rounded-2xl border border-[color-mix(in_oklab,var(--blood)_25%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-5 py-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-[var(--blood-deep)]">
+                {t.adminNewDonorAlerts} ({adminAlertsUnread})
+              </p>
+              <ul className="mt-2 space-y-2 text-sm">
+                {adminAlerts
+                  .filter((n) => !n.read)
+                  .slice(0, 5)
+                  .map((n) => (
+                    <li key={n.id} className="text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+                      <strong>{n.titleBn || n.title}</strong>
+                      <span className="block text-xs">{n.bodyBn || n.body}</span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+            <button type="button" className="btn-ghost shrink-0" onClick={() => void markAdminAlertsRead()}>
+              {t.adminMarkAllRead}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 px-5 py-4">
         <div className="flex flex-wrap gap-2">
           <button

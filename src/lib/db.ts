@@ -14,11 +14,13 @@ import path from "path";
 import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
 import { DEFAULT_PRIVACY_BN, DEFAULT_PRIVACY_EN } from "./defaults";
+import { ADMIN_NOTIFY_USER_ID } from "./admin-notify-user";
 import {
   bloodRequestTexts,
   contactChangeResultTexts,
   dailyReminderTexts,
   goldBlessingTexts,
+  newDonorAdminTexts,
   withBilingual,
 } from "./notification-text";
 import {
@@ -1100,8 +1102,83 @@ export async function createDonor(
     });
     db.donors.push(donor);
     await persist(db);
+    void notifyAdminNewDonorRegistration(donor).catch((err) => {
+      console.error("[bloodlink] admin new-donor notify failed:", err);
+    });
     return donor;
   });
+}
+
+export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<void> {
+  const texts = withBilingual(newDonorAdminTexts(donor));
+  await withWrite(async (db) => {
+    db.notifications.push({
+      id: randomUUID(),
+      userId: ADMIN_NOTIFY_USER_ID,
+      ...texts,
+      type: "new_donor",
+      href: "/bloodlinkbd.admin.rony4505",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    await persist(db);
+  });
+
+  void import("./web-push-send")
+    .then((m) =>
+      m.sendWebPushToUsers([ADMIN_NOTIFY_USER_ID], {
+        title: texts.titleBn || texts.title,
+        body: texts.bodyBn || texts.body,
+        url: "/bloodlinkbd.admin.rony4505",
+        tag: `new-donor-${donor.id}`,
+      }),
+    )
+    .catch(() => undefined);
+}
+
+export async function listAdminNotifications() {
+  const db = await ensureDb();
+  return db.notifications
+    .filter((n) => n.userId === ADMIN_NOTIFY_USER_ID)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function markAdminNotificationRead(id: string): Promise<boolean> {
+  return withWrite(async (db) => {
+    const item = db.notifications.find(
+      (n) => n.id === id && n.userId === ADMIN_NOTIFY_USER_ID,
+    );
+    if (!item) return false;
+    item.read = true;
+    await persist(db);
+    return true;
+  });
+}
+
+export async function markAllAdminNotificationsRead(): Promise<void> {
+  return withWrite(async (db) => {
+    for (const n of db.notifications) {
+      if (n.userId === ADMIN_NOTIFY_USER_ID) n.read = true;
+    }
+    await persist(db);
+  });
+}
+
+export async function upsertAdminPushSubscription(input: {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}): Promise<void> {
+  await upsertPushSubscription({
+    userId: ADMIN_NOTIFY_USER_ID,
+    endpoint: input.endpoint,
+    p256dh: input.p256dh,
+    auth: input.auth,
+  });
+}
+
+export async function adminHasDeliverablePush(): Promise<boolean> {
+  return donorHasDeliverablePushSubscription(ADMIN_NOTIFY_USER_ID);
 }
 
 export async function listDonorsByVolunteer(
