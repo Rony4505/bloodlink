@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ProductImage } from "@/components/fashion/ProductImage";
 import { formatBdt } from "@/lib/fashion/format";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { CartItem } from "@/lib/fashion/types";
 
@@ -27,7 +28,7 @@ export function OrderInformationTable({
   const grandTotal = Math.max(0, subtotal - discount) + (deliveryAreaSelected ? shipping : 0);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#e8d4e8]/60 bg-white shadow-sm">
+    <div className={`overflow-hidden rounded-2xl border border-[#e8d4e8]/60 bg-white shadow-sm ${fashionLightSurfaceClass}`}>
       <div className="flex items-center justify-between border-b border-[#e8d4e8]/50 bg-[#faf4f8] px-4 py-3">
         <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-[#5c3d5e]">
           {fc.cart.orderInformation}

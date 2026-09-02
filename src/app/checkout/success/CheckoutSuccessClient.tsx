@@ -27,9 +27,9 @@ export default function CheckoutSuccessClient() {
 
   return (
     <FashionShell>
-      <section className="mx-auto max-w-3xl px-5 py-20 text-center md:px-8">
-        <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold md:text-6xl">{copy.checkout.successTitle}</h1>
-        <p className="mt-5 text-lg leading-8 text-[#6f554a]">{copy.checkout.successBody}</p>
+      <section className="mx-auto max-w-3xl px-5 py-20 text-center text-[#e8eef7] md:px-8">
+        <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold text-white md:text-6xl">{copy.checkout.successTitle}</h1>
+        <p className="mt-5 text-lg leading-8 text-[#b8c9de]">{copy.checkout.successBody}</p>
         {order?.trackingNumber ? (
           <div className="mt-8 rounded-[2rem] border border-[#e8c4b0]/50 bg-[#faf0ea] p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9b7766]">আপনার Tracking Number</p>

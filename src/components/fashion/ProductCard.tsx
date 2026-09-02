@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Product } from "@/lib/fashion/types";
 import { formatBdt } from "@/lib/fashion/format";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { ProductCardGallery } from "./ProductGalleryCarousel";
 
@@ -16,7 +17,7 @@ export function ProductCard({ product }: { product: Product }) {
   const description = locale === "bn" ? product.descriptionBn : product.description;
 
   return (
-    <article className="group overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_24px_80px_rgba(48,27,20,0.06)] transition hover:-translate-y-1">
+    <article className={`group overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_24px_80px_rgba(48,27,20,0.06)] transition hover:-translate-y-1 ${fashionLightSurfaceClass}`}>
       <Link href={`/products/${product.slug}`} prefetch className="block">
         <div className={`relative overflow-hidden ${product.tone}`}>
           <ProductCardGallery product={product} alt={title} className="h-40 rounded-none sm:h-56 md:h-72" />
@@ -29,7 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="p-3 sm:p-6">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div>
-              <h3 className="font-[family-name:var(--font-display)] text-base font-bold leading-snug sm:text-2xl">{title}</h3>
+              <h3 className="font-[family-name:var(--font-display)] text-base font-bold leading-snug text-[#4a3348] sm:text-2xl">{title}</h3>
             </div>
             <div className="text-left sm:text-right">
               <p className="text-sm font-semibold text-[#8f624e] sm:text-base">

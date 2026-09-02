@@ -60,9 +60,11 @@ export function HomeHeroActions({
         </Link>
         <Link
           href={secondaryHref}
-          className="inline-flex items-center justify-center rounded-full border-2 border-white bg-white px-6 py-3 text-sm font-bold text-[#0a1628] shadow-md transition hover:bg-[#e8eef7]"
+          className="inline-flex items-center justify-center rounded-full border-2 border-white bg-white px-6 py-3 text-sm font-bold !text-[#0a1628] shadow-md transition hover:bg-[#e8eef7]"
         >
-          {secondaryLabel || (locale === "bn" ? "ফিচার্ড প্রোডাক্ট" : "Featured product")}
+          <span className="text-[#0a1628]">
+            {secondaryLabel || (locale === "bn" ? "ফিচার্ড প্রোডাক্ট" : "Featured product")}
+          </span>
         </Link>
       </div>
     </div>

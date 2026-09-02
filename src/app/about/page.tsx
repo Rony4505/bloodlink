@@ -5,6 +5,8 @@ import { FashionShell } from "@/components/fashion/FashionShell";
 import { isFashionMode } from "@/lib/app-mode";
 import { getStoreSettings } from "@/lib/fashion/store";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   if (isFashionMode()) {
     const settings = await getStoreSettings();

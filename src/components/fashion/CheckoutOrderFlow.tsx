@@ -10,6 +10,7 @@ import {
   writeCheckoutDraft,
 } from "@/lib/fashion/checkout-draft";
 import { useCart } from "@/lib/fashion/cart-context";
+import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { bangladeshDistricts } from "@/lib/fashion/districts";
 import type { CheckoutForm, FashionOrder } from "@/lib/fashion/types";
@@ -174,7 +175,7 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
 
   if (items.length === 0) {
     return (
-      <div className="rounded-[2rem] border border-black/6 bg-white p-10 text-center shadow-[0_24px_80px_rgba(48,27,20,0.06)]">
+      <div className={`rounded-[2rem] border border-black/6 bg-white p-10 text-center shadow-[0_24px_80px_rgba(48,27,20,0.06)] ${fashionLightSurfaceClass}`}>
         <p className="text-lg text-[#6f554a]">{fc.checkout.empty}</p>
         <div className="mt-6">
           <FashionButton href="/collections">{fc.checkout.continueShopping}</FashionButton>
@@ -205,7 +206,7 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
         {fc.checkout.confirmHint}
       </p>
 
-      <div className="space-y-4 rounded-2xl border border-[#e8d4e8]/60 bg-white p-5 shadow-sm">
+      <div className={`space-y-4 rounded-2xl border border-[#e8d4e8]/60 bg-white p-5 shadow-sm ${fashionLightSurfaceClass}`}>
         <IconField
           icon="👤"
           label={`${fc.form.name} *`}
