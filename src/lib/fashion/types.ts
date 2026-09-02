@@ -160,6 +160,8 @@ export type Product = {
   descriptionBn: string;
   fabric: string;
   sizes: string[];
+  /** When false, storefront hides size picker and uses Free Size for cart. Default true. */
+  showSizes?: boolean;
   colors: ProductColor[];
   tone: string;
   imageUrl: string;

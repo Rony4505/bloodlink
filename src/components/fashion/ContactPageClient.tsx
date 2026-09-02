@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
+import { localeEyebrowClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { StoreSettings } from "@/lib/fashion/types";
 
 export function ContactPageClient() {
-  const { fc } = useFashionCopy();
+  const { fc, locale } = useFashionCopy();
   const [sent, setSent] = useState(false);
   const [settings, setSettings] = useState<Partial<StoreSettings>>({});
 
@@ -32,7 +33,7 @@ export function ContactPageClient() {
     <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
       <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <div>
-          <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9b7766]">
+          <p className={localeEyebrowClass(locale)}>
             {fc.contact.label}
           </p>
           <h1 className="mt-3 font-[family-name:var(--font-display)] text-5xl font-bold md:text-6xl">

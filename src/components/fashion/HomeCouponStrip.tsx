@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Coupon, Product } from "@/lib/fashion/types";
 import { formatBdt } from "@/lib/fashion/format";
+import { localeEyebrowClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { FashionModalPortal } from "./FashionModalPortal";
 
@@ -38,7 +39,7 @@ export function HomeCouponStrip({
       >
         <div className="mx-auto max-w-7xl">
           <div className="mb-4 text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#9d6b8a]">
+            <p className={localeEyebrowClass(locale, "text-[11px] font-semibold text-[#9d6b8a]")}>
               {fc.couponLabel}
             </p>
             <p className="mt-1 text-xs text-[#8a7490]">
@@ -81,7 +82,7 @@ export function HomeCouponStrip({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#9b7766]">
+                <p className={localeEyebrowClass(locale, "text-xs font-semibold text-[#9b7766]")}>
                   {fc.couponDetails}
                 </p>
                 <h3 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold text-[#8f624e]">
