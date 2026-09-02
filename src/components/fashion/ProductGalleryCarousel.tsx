@@ -157,25 +157,33 @@ function ThumbnailStrip({
   selectedIndex: number;
   onSelect: (index: number) => void;
 }) {
-  const thumbImages = images
-    .map((src, imageIndex) => ({ src, imageIndex }))
-    .filter(({ imageIndex }) => imageIndex !== selectedIndex);
-
-  if (thumbImages.length === 0) return null;
+  if (images.length <= 1) return null;
 
   return (
     <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-black/5 bg-white/95 p-2 sm:p-3">
-      {thumbImages.map(({ src, imageIndex }) => (
-        <button
-          key={`${src}-${imageIndex}`}
-          type="button"
-          aria-label={`View image ${imageIndex + 1}`}
-          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-[#e8c4b0]/60 transition hover:border-[#9d6b8a] sm:h-16 sm:w-16"
-          onClick={() => onSelect(imageIndex)}
-        >
-          <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-lg" />
-        </button>
-      ))}
+      {images.map((src, imageIndex) => {
+        const isActive = imageIndex === selectedIndex;
+        return (
+          <button
+            key={`${src}-${imageIndex}`}
+            type="button"
+            aria-label={`View image ${imageIndex + 1}`}
+            aria-current={isActive ? "true" : undefined}
+            className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-16 sm:w-16 ${
+              isActive
+                ? "border-[#9d6b8a] ring-2 ring-[#9d6b8a]/35"
+                : "border-[#e8c4b0]/60 hover:border-[#9d6b8a]"
+            }`}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onSelect(imageIndex);
+            }}
+          >
+            <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-lg" />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -286,6 +294,7 @@ export function ProductGalleryCarousel({
           onClick={() => setLightbox(true)}
         >
           <ProductImage
+            key={mainSrc}
             src={mainSrc}
             alt={`${alt} ${selectedIndex + 1}`}
             className="h-full rounded-none"
