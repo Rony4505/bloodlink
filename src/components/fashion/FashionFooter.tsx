@@ -19,7 +19,7 @@ function FooterIconLink({
   external?: boolean;
 }) {
   const className =
-    "flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e8d4e8]/60 bg-white/70 text-[#5c3d5e] transition hover:-translate-y-0.5 hover:border-[#9d6b8a]/50 hover:bg-white hover:shadow-md";
+    "flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-[#d8e4f2] transition hover:-translate-y-0.5 hover:border-[#8eb4d9]/50 hover:bg-white/15 hover:shadow-md";
 
   if (external) {
     return (
@@ -62,17 +62,17 @@ export function FashionFooter() {
   );
 
   return (
-    <footer className="border-t border-[#dccde0]/80 bg-[linear-gradient(165deg,#f3ebe3_0%,#ebe0d6_45%,#e2d4c8_100%)] px-5 py-14 text-[#4a3348] md:px-8">
+    <footer className="border-t border-white/10 bg-[linear-gradient(165deg,#081220_0%,#0a1628_45%,#0f2744_100%)] px-5 py-14 text-[#d8e4f2] md:px-8">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
-          <p className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-[0.18em] uppercase text-[#5c3d5e]">
+          <p className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-[0.18em] uppercase text-white">
             {brand}
           </p>
-          <p className="mt-4 max-w-md text-base leading-8 text-[#6e5870]">{blurb}</p>
+          <p className="mt-4 max-w-md text-base leading-8 text-[#b8c9de]">{blurb}</p>
         </div>
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#9d6b8a]">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#8eb4d9]">
             {fc.footer.explore}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -92,7 +92,7 @@ export function FashionFooter() {
         </div>
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#9d6b8a]">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#8eb4d9]">
             {fc.footer.support}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -115,7 +115,7 @@ export function FashionFooter() {
         </div>
       </div>
 
-      <div className="mx-auto mt-10 max-w-7xl border-t border-[#dccde0] pt-6 text-sm text-[#8a7490]">
+      <div className="mx-auto mt-10 max-w-7xl border-t border-white/10 pt-6 text-sm text-[#8ea8c4]">
         © {new Date().getFullYear()} {brand}. {fc.footer.rights}
       </div>
     </footer>

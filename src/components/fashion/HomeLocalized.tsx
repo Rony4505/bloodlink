@@ -41,14 +41,14 @@ export function HomeHeroActions({
 
   return (
     <div className="pt-14 md:pt-16">
-      <span className="inline-flex rounded-full border border-[#dccde0]/70 bg-white/70 px-4 py-2 text-sm font-medium text-[#6e5870] backdrop-blur">
+      <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-[#c5d4e8] backdrop-blur">
         {heroSubtitle}
       </span>
-      <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold text-[#4a3348] md:text-7xl">
+      <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-display)] text-5xl leading-tight font-bold text-white md:text-7xl">
         {heroTitle}
       </h1>
       {heroDescription ? (
-        <p className="mt-6 max-w-2xl text-base leading-8 text-[#6e5870] md:text-lg">{heroDescription}</p>
+        <p className="mt-6 max-w-2xl text-base leading-8 text-[#b8c9de] md:text-lg">{heroDescription}</p>
       ) : null}
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -87,7 +87,7 @@ export function HomeStatsStrip({ settings }: { settings: StoreSettings }) {
   ];
 
   return (
-    <section className="border-b border-black/5 bg-[#f7f7f5]">
+    <section className="border-b border-white/10 bg-[linear-gradient(180deg,#0d1f38_0%,#0a1628_100%)]">
       <div className="mx-auto grid max-w-7xl gap-4 px-5 py-10 sm:grid-cols-3 md:px-8 md:py-12">
         {stats.map(([value, label]) => (
           <div
