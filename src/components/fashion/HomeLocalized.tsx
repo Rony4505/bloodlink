@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { localeEyebrowClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { tSetting } from "@/lib/fashion/locale-settings";
 import type { FaqItem, StoreSettings } from "@/lib/fashion/types";
@@ -142,7 +143,7 @@ export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
         <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
           <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="rounded-[2rem] border border-[#e8d4e8]/60 bg-[linear-gradient(145deg,#fdf8f5,#f5e8f0_55%,#ebe0f5)] p-8 text-[#4a3348] shadow-[0_30px_90px_rgba(122,85,128,0.08)]">
-              <p className="text-sm font-medium uppercase tracking-[0.28em] text-[#9d6b8a]">
+              <p className={localeEyebrowClass(locale, "text-sm font-medium text-[#9d6b8a]")}>
                 {fc.home.whyStay}
               </p>
               <h2 className="mt-4 font-[family-name:var(--font-display)] text-4xl font-bold text-[#5c3d5e]">
@@ -171,7 +172,7 @@ export function HomeLowerSections({ settings }: { settings: StoreSettings }) {
         <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9b7766]">
+              <p className={localeEyebrowClass(locale)}>
                 {fc.home.faq}
               </p>
               <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">

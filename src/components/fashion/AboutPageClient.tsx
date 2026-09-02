@@ -1,5 +1,6 @@
 "use client";
 
+import { localeEyebrowClass } from "@/lib/fashion/locale-text-style";
 import { tSetting } from "@/lib/fashion/locale-settings";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { StoreSettings } from "@/lib/fashion/types";
@@ -16,7 +17,7 @@ export function AboutPageClient({ settings }: { settings: StoreSettings }) {
   return (
     <section className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
       <div className="max-w-3xl">
-        <p className="text-sm font-medium uppercase tracking-[0.3em] text-[#9b7766]">
+        <p className={localeEyebrowClass(locale)}>
           {tSetting(settings, "aboutSubtitle", "aboutSubtitleEn", locale, "Our story")}
         </p>
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-5xl font-bold md:text-6xl">

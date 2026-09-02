@@ -5,6 +5,7 @@ import { ProductGrid } from "@/components/fashion/ProductGrid";
 import { VisibleSelect } from "@/components/fashion/VisibleSelect";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { sortProductsByDisplayPriority } from "@/lib/fashion/product-sort";
+import { localeEyebrowClass } from "@/lib/fashion/locale-text-style";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import type { Category, Product } from "@/lib/fashion/types";
 
@@ -78,12 +79,14 @@ function ProductSection({
   products,
   sort,
   onSortChange,
+  locale,
 }: {
   title: string;
   subtitle?: string;
   products: Product[];
   sort: PriceSort;
   onSortChange: (value: PriceSort) => void;
+  locale: "bn" | "en";
 }) {
   const sorted = useMemo(() => sortProducts(products, sort), [products, sort]);
   const [page, setPage] = useState(1);
@@ -96,7 +99,7 @@ function ProductSection({
       <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.28em] text-[#9b7766]">{title}</p>
+            <p className={localeEyebrowClass(locale)}>{title}</p>
             {subtitle ? (
               <p className="mt-2 max-w-2xl text-base leading-7 text-[#6e5449]">{subtitle}</p>
             ) : null}
@@ -134,7 +137,7 @@ export function HomeProductBrowse({
   showNewProducts?: boolean;
   showOffers?: boolean;
 }) {
-  const { fc } = useFashionCopy();
+  const { fc, locale } = useFashionCopy();
   const [categorySlug, setCategorySlug] = useState("");
   const [categorySort, setCategorySort] = useState<PriceSort>("default");
   const [newSort, setNewSort] = useState<PriceSort>("default");
@@ -162,6 +165,7 @@ export function HomeProductBrowse({
           products={offerProducts}
           sort={offerSort}
           onSortChange={setOfferSort}
+          locale={locale}
         />
       ) : null}
 
@@ -172,6 +176,7 @@ export function HomeProductBrowse({
           products={newProducts}
           sort={newSort}
           onSortChange={setNewSort}
+          locale={locale}
         />
       ) : null}
 
@@ -179,7 +184,7 @@ export function HomeProductBrowse({
         <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.28em] text-[#9b7766]">
+              <p className={localeEyebrowClass(locale)}>
                 {fc.home.categoryTitle}
               </p>
               <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold md:text-4xl">

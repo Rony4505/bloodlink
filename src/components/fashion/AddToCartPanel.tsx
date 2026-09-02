@@ -5,6 +5,7 @@ import type { Product } from "@/lib/fashion/types";
 import { useCart } from "@/lib/fashion/cart-context";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { normalizeProductColors } from "@/lib/fashion/product-colors";
+import { productDefaultSize, productShowsSizes } from "@/lib/fashion/product-sizes";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { FashionButton } from "./FashionButton";
 
@@ -12,7 +13,8 @@ export function AddToCartPanel({ product }: { product: Product }) {
   const { fc } = useFashionCopy();
   const { addItem } = useCart();
   const colors = normalizeProductColors(product.colors);
-  const [size, setSize] = useState(product.sizes[0] ?? "Free Size");
+  const showsSizes = productShowsSizes(product);
+  const [size, setSize] = useState(productDefaultSize(product));
   const [color, setColor] = useState(colors[0]?.name ?? "Default");
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -35,27 +37,29 @@ export function AddToCartPanel({ product }: { product: Product }) {
         </p>
       ) : null}
 
-      <div>
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">
-          {fc.actions.size}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {product.sizes.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setSize(option)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                size === option
-                  ? "bg-[#2b1d19] text-white"
-                  : "border border-black/8 bg-[#faf4f0] text-[#5b4339]"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
+      {showsSizes ? (
+        <div>
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">
+            {fc.actions.size}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {product.sizes.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setSize(option)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  size === option
+                    ? "bg-[#2b1d19] text-white"
+                    : "border border-black/8 bg-[#faf4f0] text-[#5b4339]"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="mt-6">
         <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#9b7766]">

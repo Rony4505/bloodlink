@@ -46,7 +46,7 @@ type OffersSubTab = "offers" | "advertisement";
 
 const emptyProduct: ProductInput = {
   name: "", nameBn: "", price: 0, buyPrice: 0, categorySlug: "festive",
-  description: "", descriptionBn: "", fabric: "", sizes: ["S", "M", "L"],
+  description: "", descriptionBn: "", fabric: "", sizes: ["S", "M", "L"], showSizes: true,
   colors: [
     { name: "Black", hex: "#1c1412" },
     { name: "White", hex: "#f7f4f1" },
@@ -397,7 +397,7 @@ export function FashionAdminPanel() {
       setCategories(updatedCategories);
     }
 
-    if (!form.sizes.length) {
+    if (form.showSizes !== false && !form.sizes.length) {
       showSuccess("রং/সাইজ লাগবে", "কমপক্ষে একটি সাইজ সিলেক্ট করুন", "rose");
       return;
     }
@@ -1323,6 +1323,19 @@ export function FashionAdminPanel() {
               ) : null}
             </div>
             <div className="block">
+              <label className="flex items-center gap-2 text-sm text-[#9b7766]">
+                <input
+                  type="checkbox"
+                  checked={form.showSizes !== false}
+                  onChange={(e) =>
+                    setForm((c) => ({ ...c, showSizes: e.target.checked }))
+                  }
+                />
+                কাস্টমার সাইজ সিলেক্ট করতে পারবে
+              </label>
+            </div>
+            {form.showSizes !== false ? (
+            <div className="block">
               <span className="text-sm text-[#9b7766]">সাইজ</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {[...(settings?.availableSizes ?? []), ...form.sizes].filter((s, i, arr) => arr.indexOf(s) === i).map((size) => (
@@ -1341,6 +1354,9 @@ export function FashionAdminPanel() {
                 <FashionButton type="button" variant="secondary" onClick={() => void addProductSize()}>যোগ</FashionButton>
               </div>
             </div>
+            ) : (
+              <p className="text-sm text-[#9b7766]">সাইজ অফ — কাস্টমার পেজে সাইজ দেখাবে না (Free Size ধরে নেওয়া হবে)</p>
+            )}
             <div className="block">
               <span className="text-sm text-[#9b7766]">রং (কাস্টমার সিলেক্ট করবে)</span>
               <div className="mt-2 flex flex-wrap gap-2">

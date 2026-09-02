@@ -6,6 +6,7 @@ import type { Product, StoreSettings } from "@/lib/fashion/types";
 import { useCart } from "@/lib/fashion/cart-context";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { normalizeProductColors } from "@/lib/fashion/product-colors";
+import { productDefaultSize, productShowsSizes } from "@/lib/fashion/product-sizes";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { copy } from "@/lib/fashion/copy";
 
@@ -30,7 +31,8 @@ export function ProductOrderPanel({ product }: { product: Product }) {
     () => normalizeProductColors(product.colors),
     [product.colors],
   );
-  const [size, setSize] = useState(product.sizes[0] ?? "Free Size");
+  const showsSizes = productShowsSizes(product);
+  const [size, setSize] = useState(productDefaultSize(product));
   const [color, setColor] = useState(colors[0]?.name ?? "Default");
   const [quantity, setQuantity] = useState(1);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
@@ -45,10 +47,10 @@ export function ProductOrderPanel({ product }: { product: Product }) {
     product.id.replace(/\D/g, "").slice(-8) || product.id.slice(-8);
 
   useEffect(() => {
-    setSize(product.sizes[0] ?? "Free Size");
+    setSize(productDefaultSize(product));
     setColor(normalizeProductColors(product.colors)[0]?.name ?? "Default");
     setQuantity(1);
-  }, [product.id, product.sizes, product.colors]);
+  }, [product.id, product.sizes, product.colors, product.showSizes]);
 
   useEffect(() => {
     fetch("/api/fashion/settings")
@@ -138,25 +140,29 @@ export function ProductOrderPanel({ product }: { product: Product }) {
           {fc.product.selectVariant}
         </p>
 
-        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
-          {fc.product.selectSize}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {product.sizes.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setSize(option)}
-              className={`min-w-11 rounded-lg border px-3 py-2 text-sm font-bold transition ${
-                size === option
-                  ? "border-[#5c3d5e] bg-white text-[#5c3d5e] shadow-sm"
-                  : "border-[#e8d4e8]/70 bg-white/70 text-[#8a7490]"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
+        {showsSizes ? (
+          <>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
+              {fc.product.selectSize}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {product.sizes.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSize(option)}
+                  className={`min-w-11 rounded-lg border px-3 py-2 text-sm font-bold transition ${
+                    size === option
+                      ? "border-[#5c3d5e] bg-white text-[#5c3d5e] shadow-sm"
+                      : "border-[#e8d4e8]/70 bg-white/70 text-[#8a7490]"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
 
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
           {fc.product.selectColor}
