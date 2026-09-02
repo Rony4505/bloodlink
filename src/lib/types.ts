@@ -185,7 +185,8 @@ export type AppNotification = {
     | "daily_update"
     | "system"
     | "contact_change"
-    | "gold_blessing";
+    | "gold_blessing"
+    | "new_donor";
   href: string;
   postId?: string | null;
   read: boolean;

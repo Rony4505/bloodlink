@@ -19,7 +19,6 @@ export default function HealthcareManagePage({
       subtitle={t.healthcareCompanyPortalHint}
       showAds={false}
       showStoryForm={false}
-      skipDonorPushGate
     >
       <HealthcareCompanyDashboard token={token} />
     </PageShell>

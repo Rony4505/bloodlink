@@ -1,5 +1,15 @@
-import type { AppNotification, BloodPost } from "./types";
+import type { AppNotification, BloodPost, Donor } from "./types";
 import type { Locale } from "./i18n/dictionaries";
+
+export function newDonorAdminTexts(donor: Pick<Donor, "name" | "bloodGroup" | "district" | "area">) {
+  const place = [donor.area, donor.district].filter(Boolean).join(", ");
+  return {
+    titleEn: "New donor registered",
+    titleBn: "নতুন donor registration",
+    bodyEn: `${donor.name} joined BloodLink (${donor.bloodGroup}${place ? ` · ${place}` : ""}).`,
+    bodyBn: `${donor.name} BloodLink-এ যোগ দিয়েছেন (${donor.bloodGroup}${place ? ` · ${place}` : ""})।`,
+  };
+}
 
 export function bloodRequestTexts(post: BloodPost) {
   return {
