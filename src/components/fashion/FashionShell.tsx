@@ -4,6 +4,7 @@ import { OrderBottomNav } from "./OrderBottomNav";
 import { SiteEntryPopup } from "./SiteEntryPopup";
 import { TopLanguageBar } from "./LanguageSwitcher";
 import { ChatSupportWidget } from "./ChatSupportWidget";
+import { DeveloperWatermark } from "./DeveloperCredit";
 
 export function FashionShell({
   children,
@@ -23,6 +24,7 @@ export function FashionShell({
         </div>
       </div>
       <div className="flex-1">{children}</div>
+      <DeveloperWatermark />
       <FashionFooter />
       <OrderBottomNav />
     </div>

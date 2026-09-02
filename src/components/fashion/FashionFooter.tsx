@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DeveloperCreditFooter } from "./DeveloperCredit";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { tSetting } from "@/lib/fashion/locale-settings";
 import { copy } from "@/lib/fashion/copy";
@@ -118,6 +119,7 @@ export function FashionFooter() {
       <div className="mx-auto mt-10 max-w-7xl border-t border-white/10 pt-6 text-sm text-[#8ea8c4]">
         © {new Date().getFullYear()} {brand}. {fc.footer.rights}
       </div>
+      <DeveloperCreditFooter />
     </footer>
   );
 }

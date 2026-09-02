@@ -10,6 +10,7 @@ import { PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { HomeCouponStrip } from "@/components/fashion/HomeCouponStrip";
 import { TopLanguageBar } from "@/components/fashion/LanguageSwitcher";
 import { ChatSupportWidget } from "@/components/fashion/ChatSupportWidget";
+import { DeveloperWatermark } from "@/components/fashion/DeveloperCredit";
 import { AnnouncementBar } from "@/components/fashion/AnnouncementBar";
 import { OrderBottomNav } from "@/components/fashion/OrderBottomNav";
 import { SiteEntryPopup } from "@/components/fashion/SiteEntryPopup";
@@ -81,6 +82,7 @@ export async function FashionHomePage() {
 
       <HomeStatsStrip settings={settings} />
       <HomeLowerSections settings={settings} />
+      <DeveloperWatermark />
       <FashionFooter />
       <OrderBottomNav />
     </main>

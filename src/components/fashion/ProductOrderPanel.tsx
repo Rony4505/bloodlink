@@ -104,21 +104,21 @@ export function ProductOrderPanel({ product }: { product: Product }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-1 text-sm text-[#8a7490]">
+      <div className="flex flex-wrap items-center gap-1 text-sm text-[#b8c9de]">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
             className={
-              i < Math.round(avgRating) ? "text-[#c9852d]" : "text-[#ddd0d8]"
+              i < Math.round(avgRating) ? "text-[#f0b429]" : "text-[#4a6080]"
             }
           >
             ★
           </span>
         ))}
-        <span className="ml-1 font-semibold text-[#5c3d5e]">
+        <span className="ml-1 font-semibold text-white">
           {reviewCount ? `${avgRating.toFixed(2)}/5` : "0.00/5"}
         </span>
-        <a href="#reviews" className="ml-2 underline-offset-2 hover:underline">
+        <a href="#reviews" className="ml-2 text-[#8eb4d9] underline-offset-2 hover:text-white hover:underline">
           {fc.product.seeReviews}
         </a>
       </div>
@@ -190,28 +190,28 @@ export function ProductOrderPanel({ product }: { product: Product }) {
         </div>
       </div>
 
-      <p className="text-sm">
-        <span className="font-bold text-[#4a3348]">{fc.product.brand} :</span>{" "}
-        <span className="text-[#5c3d5e]">
+      <p className="text-sm text-[#e8eef7]">
+        <span className="font-bold text-[#8eb4d9]">{fc.product.brand} :</span>{" "}
+        <span className="font-semibold text-white">
           {settings?.brandName ?? copy.brand}
         </span>
       </p>
 
       <div>
-        <div className="inline-flex items-center rounded-lg border border-[#e8d4e8]/70 bg-white">
+        <div className="inline-flex items-center rounded-lg border border-[#c5d4e8]/50 bg-white text-[#4a3348] shadow-sm">
           <button
             type="button"
-            className="px-4 py-2 text-lg"
+            className="px-4 py-2 text-lg font-bold text-[#4a3348]"
             onClick={() => setQuantity((v) => Math.max(1, v - 1))}
           >
             −
           </button>
-          <span className="min-w-10 text-center text-sm font-bold">
+          <span className="min-w-10 text-center text-sm font-bold text-[#4a3348]">
             {quantity}
           </span>
           <button
             type="button"
-            className="px-4 py-2 text-lg"
+            className="px-4 py-2 text-lg font-bold text-[#4a3348] disabled:opacity-40"
             onClick={() => setQuantity((v) => Math.min(product.stock, v + 1))}
             disabled={quantity >= product.stock}
           >
@@ -253,7 +253,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
           href={`${whatsapp.wa}?text=${encodeURIComponent(`${title} — ${fc.product.askAbout}`)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#5c3d5e] bg-white px-4 py-3 text-sm font-bold text-[#5c3d5e]"
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#8eb4d9] bg-white px-4 py-3 text-sm font-bold !text-[#0a1628] shadow-sm transition hover:bg-[#e8eef7]"
         >
           💬 {fc.product.askAbout}
         </a>
