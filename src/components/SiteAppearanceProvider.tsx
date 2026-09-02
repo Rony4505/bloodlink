@@ -61,7 +61,7 @@ export function SiteAppearanceProvider({
     return {
       appearance,
       brand: isFashionClient
-        ? "Smart craft corner"
+        ? "Noorzaa"
         : appearance.brand || t.brand,
       tagline: isFashionClient
         ? bn

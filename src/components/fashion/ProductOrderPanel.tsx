@@ -8,7 +8,6 @@ import { getEffectivePrice } from "@/lib/fashion/pricing";
 import { normalizeProductColors } from "@/lib/fashion/product-colors";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { copy } from "@/lib/fashion/copy";
-import { formatBdt } from "@/lib/fashion/format";
 
 function formatPhoneLink(raw?: string) {
   const digits = (raw ?? "").replace(/\D/g, "");
@@ -89,28 +88,6 @@ export function ProductOrderPanel({ product }: { product: Product }) {
     [settings],
   );
 
-  const deliveryNote = useMemo(() => {
-    const rules = settings?.deliveryRules?.filter((r) => r.active) ?? [];
-    if (!rules.length) return settings?.supportNote || copy.cart.freeShipping;
-
-    const defaultRule = rules.find((r) => r.district === "*");
-    const areaRules = rules.filter((r) => r.district !== "*");
-    const parts: string[] = [];
-
-    for (const rule of areaRules) {
-      const label =
-        locale === "bn" && rule.district === "Dhaka" ? "ঢাকা" : rule.district;
-      parts.push(`${label}: ${formatBdt(rule.fee)}`);
-    }
-
-    if (defaultRule) {
-      const defaultLabel = locale === "bn" ? "অন্যান্য জেলা" : "Other areas";
-      parts.push(`${defaultLabel}: ${formatBdt(defaultRule.fee)}`);
-    }
-
-    return parts.join(" · ");
-  }, [settings, locale]);
-
   function addToCart(redirect?: "checkout") {
     if (!inStock || quantity > product.stock) return;
     if (!color) return;
@@ -122,12 +99,6 @@ export function ProductOrderPanel({ product }: { product: Product }) {
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   }
-
-  const selectVariantLabel =
-    locale === "bn" ? "ভ্যারিয়েন্ট সিলেক্ট করুন:" : "Select Variant:";
-  const selectColorLabel =
-    locale === "bn" ? "রং সিলেক্ট করুন:" : "Select Color:";
-  const selectSizeLabel = locale === "bn" ? "সাইজ:" : "Size:";
 
   return (
     <div className="space-y-4">
@@ -146,12 +117,12 @@ export function ProductOrderPanel({ product }: { product: Product }) {
           {reviewCount ? `${avgRating.toFixed(2)}/5` : "0.00/5"}
         </span>
         <a href="#reviews" className="ml-2 underline-offset-2 hover:underline">
-          See Reviews
+          {fc.product.seeReviews}
         </a>
       </div>
 
       <div className="relative overflow-hidden rounded-xl bg-[linear-gradient(135deg,#e8c4d8,#c9a0b8)] px-4 py-2.5 text-sm font-bold text-[#3d2440]">
-        Product code : {productCode}
+        {fc.product.productCode} : {productCode}
         <span className="pointer-events-none absolute right-0 top-0 h-full w-6 bg-[linear-gradient(135deg,#c9a0b8,#b088a8)] [clip-path:polygon(100%_0,0_0,100%_100%)]" />
       </div>
 
@@ -159,16 +130,16 @@ export function ProductOrderPanel({ product }: { product: Product }) {
         <p className="flex items-center gap-2 text-sm font-semibold text-[#2f6b4f]">
           <span aria-hidden>✓</span>
           {inStock
-            ? `Available Stock: ${product.stock} ${fc.home.pieces} remaining`
+            ? `${fc.product.availableStock}: ${product.stock} ${fc.product.remaining}`
             : fc.actions.outOfStock}
         </p>
 
         <p className="mt-4 text-sm font-bold text-[#5c3d5e]">
-          {selectVariantLabel}
+          {fc.product.selectVariant}
         </p>
 
         <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
-          {selectSizeLabel}
+          {fc.product.selectSize}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {product.sizes.map((option) => (
@@ -188,7 +159,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
         </div>
 
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7490]">
-          {selectColorLabel}
+          {fc.product.selectColor}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {colors.map((option) => (
@@ -214,7 +185,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
       </div>
 
       <p className="text-sm">
-        <span className="font-bold text-[#4a3348]">Brand :</span>{" "}
+        <span className="font-bold text-[#4a3348]">{fc.product.brand} :</span>{" "}
         <span className="text-[#5c3d5e]">
           {settings?.brandName ?? copy.brand}
         </span>
@@ -258,7 +229,7 @@ export function ProductOrderPanel({ product }: { product: Product }) {
           onClick={() => addToCart("checkout")}
           className="rounded-xl bg-[#2b1d19] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
         >
-          Buy Now
+          {fc.product.buyNow}
         </button>
       </div>
 
@@ -273,21 +244,14 @@ export function ProductOrderPanel({ product }: { product: Product }) {
 
       {whatsapp ? (
         <a
-          href={`${whatsapp.wa}?text=${encodeURIComponent(`${title} — ${fc.actions.addToCart}?`)}`}
+          href={`${whatsapp.wa}?text=${encodeURIComponent(`${title} — ${fc.product.askAbout}`)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#5c3d5e] bg-white px-4 py-3 text-sm font-bold text-[#5c3d5e]"
         >
-          💬 Ask about this product
+          💬 {fc.product.askAbout}
         </a>
       ) : null}
-
-      <div className="flex gap-3 rounded-xl border border-[#e8d4e8]/50 bg-[#faf0f5] px-4 py-3 text-sm leading-relaxed text-[#5c4860]">
-        <span aria-hidden className="text-lg">
-          📦
-        </span>
-        <p>{deliveryNote}</p>
-      </div>
     </div>
   );
 }

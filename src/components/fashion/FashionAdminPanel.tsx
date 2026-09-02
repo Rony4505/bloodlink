@@ -14,6 +14,7 @@ import { OrderInvoiceView } from "@/components/fashion/admin/OrderInvoiceView";
 import { ReportContent, type ReportType } from "@/components/fashion/admin/ReportContent";
 import { SettingsEditor } from "@/components/fashion/admin/SettingsEditor";
 import { adminThemes, type AdminTheme } from "@/components/fashion/admin/admin-themes";
+import { exportReportCsv } from "@/lib/fashion/export-report";
 import { copy } from "@/lib/fashion/copy";
 import {
   DEFAULT_AVAILABLE_COLORS,
@@ -1254,7 +1255,8 @@ export function FashionAdminPanel() {
             <div className="mb-4 flex items-center justify-between print:hidden">
               <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold">রিপোর্ট</h2>
               <div className="flex gap-2">
-                <button type="button" onClick={() => window.print()} className="rounded-full bg-[#ebe3da] px-4 py-2 text-sm font-semibold">{copy.actions.print} / PDF</button>
+                <button type="button" onClick={() => window.print()} className="rounded-full bg-[#ebe3da] px-4 py-2 text-sm font-semibold">{copy.actions.print}</button>
+                <button type="button" onClick={() => exportReportCsv(reportType, orders)} className="rounded-full bg-[#d8e8d8] px-4 py-2 text-sm font-semibold">{fc.admin.exportExcel}</button>
                 <button type="button" onClick={() => setReportType(null)} className="rounded-full bg-white px-3 py-1 text-sm">✕</button>
               </div>
             </div>

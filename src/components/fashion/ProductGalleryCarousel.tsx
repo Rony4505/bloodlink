@@ -157,20 +157,21 @@ function ThumbnailStrip({
   selectedIndex: number;
   onSelect: (index: number) => void;
 }) {
-  const thumbImages = images
-    .map((src, imageIndex) => ({ src, imageIndex }))
-    .filter(({ imageIndex }) => imageIndex !== selectedIndex);
-
-  if (thumbImages.length === 0) return null;
+  if (images.length <= 1) return null;
 
   return (
     <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-black/5 bg-white/95 p-2 sm:p-3">
-      {thumbImages.map(({ src, imageIndex }) => (
+      {images.map((src, imageIndex) => (
         <button
           key={`${src}-${imageIndex}`}
           type="button"
           aria-label={`View image ${imageIndex + 1}`}
-          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-[#e8c4b0]/60 transition hover:border-[#9d6b8a] sm:h-16 sm:w-16"
+          aria-current={imageIndex === selectedIndex ? "true" : undefined}
+          className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-16 sm:w-16 ${
+            imageIndex === selectedIndex
+              ? "border-[#9d6b8a] ring-2 ring-[#9d6b8a]/30"
+              : "border-[#e8c4b0]/60 hover:border-[#9d6b8a]"
+          }`}
           onClick={() => onSelect(imageIndex)}
         >
           <ProductImage src={src} alt={`${alt} ${imageIndex + 1}`} className="h-full w-full rounded-lg" />

@@ -1,6 +1,7 @@
 import type { Product } from "@/lib/fashion/types";
 import { ProductCard } from "./ProductCard";
 import { ProductGridTitle } from "./ProductGridTitle";
+import { ScrollReveal } from "./ScrollReveal";
 
 export function ProductGrid({
   products,
@@ -25,8 +26,10 @@ export function ProductGrid({
         </div>
       ) : null}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+        {products.map((product, index) => (
+          <ScrollReveal key={product.id} delayMs={(index % 6) * 70}>
+            <ProductCard product={product} />
+          </ScrollReveal>
         ))}
       </div>
     </div>

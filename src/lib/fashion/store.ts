@@ -36,15 +36,7 @@ import {
   saveFashionStoreToPostgres,
 } from "../pg-store";
 
-const defaultCoupons: Coupon[] = [
-  {
-    id: "cp-smartcraft10",
-    code: "SMARTCRAFT10",
-    discountType: "percent",
-    discountValue: 10,
-    active: true,
-  },
-];
+const defaultCoupons: Coupon[] = [];
 
 function defaultAdminPassword(): string {
   // Do not fall back to BloodLink ADMIN_PASSWORD — that locked founders out on shared Railway.
@@ -277,7 +269,7 @@ async function buildStoreFromParsed(
   if (Array.isArray(parsed.products)) {
     products = parsed.products.map((p) => migrateProduct(p, settings));
   } else if (allowSeedFallback) {
-    products = rawSeedProducts.map((p) => migrateProduct(p, settings));
+    products = [];
   } else {
     throw new Error("[fashion-store] store file exists but products array is missing or invalid");
   }
@@ -528,7 +520,7 @@ async function createInitialStore(): Promise<FashionStore> {
   return {
     settings,
     categories: defaultCategories,
-    products: rawSeedProducts.map((p) => migrateProduct(p, settings)),
+    products: [],
     customers: [],
     orders: [],
     coupons: defaultCoupons,

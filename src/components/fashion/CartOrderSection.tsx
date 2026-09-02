@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { FashionButton } from "@/components/fashion/FashionButton";
-import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
 import { useCart } from "@/lib/fashion/cart-context";
+import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { bangladeshDistricts } from "@/lib/fashion/districts";
 import type { CheckoutForm, FashionOrder } from "@/lib/fashion/types";
 
@@ -67,6 +67,7 @@ export function CartOrderSection({
 }) {
   const router = useRouter();
   const { items, clearCart } = useCart();
+  const { fc } = useFashionCopy();
   const [form, setForm] = useState<CheckoutForm>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [shipping, setShipping] = useState(0);
@@ -76,7 +77,8 @@ export function CartOrderSection({
   const [districtSearch, setDistrictSearch] = useState("");
   const [message, setMessage] = useState("");
   const discount = couponDiscount + vipDiscount;
-  const orderTotal = Math.max(0, subtotal - discount) + shipping;
+  const deliverySelected = Boolean(form.district?.trim());
+  const orderTotal = Math.max(0, subtotal - discount) + (deliverySelected ? shipping : 0);
 
   const filteredDistricts = districts.filter((d) =>
     !districtSearch.trim()
@@ -135,10 +137,10 @@ export function CartOrderSection({
     const data = await res.json();
     if (data.valid) {
       setCouponDiscount(data.discount);
-      setCouponMessage(`কুপন প্রয়োগ: ${data.coupon.code}`);
+      setCouponMessage(`${fc.cart.couponApplied}: ${data.coupon.code}`);
     } else {
       setCouponDiscount(0);
-      setCouponMessage(data.error ?? "কুপন সঠিক নয়");
+      setCouponMessage(data.error ?? fc.cart.couponInvalid);
     }
   }
 
@@ -157,7 +159,7 @@ export function CartOrderSection({
     setSubmitting(false);
 
     if (!res.ok) {
-      setMessage(data.error ?? "অর্ডার করা যায়নি");
+      setMessage(data.error ?? fc.cart.orderFailed);
       return;
     }
 
@@ -171,49 +173,49 @@ export function CartOrderSection({
     <form onSubmit={handleConfirm} className="mt-10 space-y-6">
       <div className="rounded-[2rem] border border-[#e8c4b0]/50 bg-[linear-gradient(165deg,#fffaf7,#f5ebe3)] p-6 shadow-[0_20px_60px_rgba(48,27,20,0.06)]">
         <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[#2b1d19]">
-          {copy.cart.summary}
+          {fc.cart.summary}
         </h2>
         <div className="mt-5 space-y-3 text-[#5b4339]">
           <div className="flex justify-between">
-            <span>{copy.cart.subtotal}</span>
+            <span>{fc.cart.subtotal}</span>
             <span className="font-semibold">{formatBdt(subtotal)}</span>
           </div>
           {discount > 0 ? (
             <div className="flex justify-between text-[#8f624e]">
-              <span>{copy.cart.discount}</span>
+              <span>{fc.cart.discount}</span>
               <span className="font-semibold">-{formatBdt(discount)}</span>
             </div>
           ) : null}
           <div className="flex justify-between">
-            <span>{copy.cart.shipping}</span>
+            <span>{fc.cart.shipping}</span>
             <span className="font-semibold">
               {!form.district?.trim()
-                ? formatBdt(0)
+                ? fc.cart.selectDeliveryArea
                 : shipping === 0
-                  ? "Free"
+                  ? fc.cart.freeDelivery
                   : formatBdt(shipping)}
             </span>
           </div>
           <div className="flex justify-between border-t border-[#e8c4b0]/40 pt-3 text-lg font-bold text-[#2b1d19]">
-            <span>{copy.cart.total}</span>
+            <span>{fc.cart.total}</span>
             <span>{formatBdt(orderTotal)}</span>
           </div>
         </div>
-        <p className="mt-3 text-sm text-[#8b6456]">{copy.cart.freeShipping}</p>
+        <p className="mt-3 text-sm text-[#8b6456]">{fc.cart.freeShipping}</p>
       </div>
 
       <div className="rounded-[2rem] border border-black/6 bg-white p-6 shadow-[0_24px_80px_rgba(48,27,20,0.06)]">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold">ডেলিভারি তথ্য</h2>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold">{fc.cart.deliveryInfo}</h2>
         <div className="mt-5 space-y-4">
-          <Field label={copy.form.name} value={form.name} onChange={(v) => setForm((c) => ({ ...c, name: v }))} required />
-          <Field label={copy.form.phone} value={form.phone} onChange={(v) => setForm((c) => ({ ...c, phone: v }))} required />
-          <Field label={copy.form.email} value={form.email} onChange={(v) => setForm((c) => ({ ...c, email: v }))} type="email" />
-          <Field label={copy.form.address} value={form.address} onChange={(v) => setForm((c) => ({ ...c, address: v }))} required multiline />
+          <Field label={fc.form.name} value={form.name} onChange={(v) => setForm((c) => ({ ...c, name: v }))} required />
+          <Field label={fc.form.phone} value={form.phone} onChange={(v) => setForm((c) => ({ ...c, phone: v }))} required />
+          <Field label={fc.form.email} value={form.email} onChange={(v) => setForm((c) => ({ ...c, email: v }))} type="email" />
+          <Field label={fc.form.address} value={form.address} onChange={(v) => setForm((c) => ({ ...c, address: v }))} required multiline />
           <div>
-            <label className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.form.district}</label>
+            <label className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{fc.form.district}</label>
             <input
               className="field mt-2"
-              placeholder="জেলা সার্চ..."
+              placeholder={fc.cart.districtSearch}
               value={districtSearch}
               onChange={(e) => setDistrictSearch(e.target.value)}
             />
@@ -224,7 +226,7 @@ export function CartOrderSection({
               required
               size={Math.min(6, Math.max(4, filteredDistricts.length + 1))}
             >
-              <option value="">Delivery area select করুন</option>
+              <option value="">{fc.checkout.selectDeliveryArea}</option>
               {filteredDistricts.map((district) => (
                 <option key={district} value={district}>
                   {district}
@@ -232,24 +234,24 @@ export function CartOrderSection({
               ))}
             </select>
           </div>
-          <Field label={copy.form.note} value={form.note ?? ""} onChange={(v) => setForm((c) => ({ ...c, note: v }))} multiline />
+          <Field label={fc.form.note} value={form.note ?? ""} onChange={(v) => setForm((c) => ({ ...c, note: v }))} multiline />
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.cart.coupon}</p>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{fc.cart.coupon}</p>
             <div className="mt-2 flex gap-2">
               <input
                 className="field flex-1"
-                placeholder="কুপন কোড"
+                placeholder={fc.cart.coupon}
                 value={form.couponCode ?? ""}
                 onChange={(e) => setForm((c) => ({ ...c, couponCode: e.target.value }))}
               />
               <FashionButton type="button" variant="secondary" onClick={() => void applyCoupon()}>
-                প্রয়োগ
+                {fc.cart.applyCoupon}
               </FashionButton>
             </div>
             {couponMessage ? <p className="mt-2 text-sm text-[#8b6456]">{couponMessage}</p> : null}
           </div>
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{copy.form.payment}</p>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{fc.form.payment}</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               {(["cod", "bkash", "nagad"] as const).map((method) => (
                 <label
@@ -267,7 +269,7 @@ export function CartOrderSection({
                     checked={form.paymentMethod === method}
                     onChange={() => setForm((c) => ({ ...c, paymentMethod: method }))}
                   />
-                  {method === "cod" ? "COD" : method === "bkash" ? "bKash" : "Nagad"}
+                  {method === "cod" ? fc.form.cod : method === "bkash" ? fc.form.bkash : fc.form.nagad}
                 </label>
               ))}
             </div>
@@ -278,10 +280,10 @@ export function CartOrderSection({
       {message ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{message}</p> : null}
 
       <FashionButton type="submit" disabled={submitting} className="w-full justify-center py-4 text-base">
-        {submitting ? "অর্ডার হচ্ছে..." : "অর্ডার কনফার্ম করুন"}
+        {submitting ? fc.cart.ordering : fc.cart.confirmOrder}
       </FashionButton>
       <FashionButton href="/collections" variant="secondary" className="w-full justify-center">
-        {copy.actions.continueShopping}
+        {fc.checkout.continueShopping}
       </FashionButton>
     </form>
   );

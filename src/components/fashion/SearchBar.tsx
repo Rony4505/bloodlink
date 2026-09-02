@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { copy } from "@/lib/fashion/copy";
+import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 
 export function SearchBar({ variant = "light" }: { variant?: "light" | "dark" }) {
   const router = useRouter();
+  const { fc } = useFashionCopy();
   const [query, setQuery] = useState("");
 
   function handleSubmit(event: FormEvent) {
@@ -22,7 +23,7 @@ export function SearchBar({ variant = "light" }: { variant?: "light" | "dark" })
             ? "w-full rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/60 backdrop-blur"
             : "field rounded-full py-2 text-sm"
         }
-        placeholder={copy.search.placeholder}
+        placeholder={fc.search.placeholder}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />

@@ -1,7 +1,7 @@
 import type { Category, StoreSettings } from "./types";
 
 export const defaultSettings: StoreSettings = {
-  brandName: "Smart craft corner",
+  brandName: "Noorzaa",
   brandTagline: "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন",
   brandTaglineEn: "Luxury fashion for Bangladeshi women",
   defaultMarkupPercent: 35,
@@ -15,9 +15,9 @@ export const defaultSettings: StoreSettings = {
   heroSubtitle: "বাংলাদেশি নারীদের জন্য কিউরেটেড কালেকশন",
   heroSubtitleEn: "Curated collections for Bangladeshi women",
   heroDescription:
-    "Smart craft corner-এ premium fabric, soft colors, festive ও daily wear—সব এক জায়গায়।",
+    "Noorzaa-তে premium fabric, soft colors, festive ও daily wear—সব এক জায়গায়।",
   heroDescriptionEn:
-    "Smart craft corner brings premium fabric, soft colors, and festive or daily wear in one place.",
+    "Noorzaa brings premium fabric, soft colors, and festive or daily wear in one place.",
   heroCtaPrimaryLabel: "কালেকশন দেখুন",
   heroCtaPrimaryLabelEn: "Shop collections",
   heroCtaPrimaryHref: "/collections",
@@ -33,7 +33,7 @@ export const defaultSettings: StoreSettings = {
   heroStat3Value: "4.9/5",
   heroStat3Label: "কাস্টমার রেটিং",
   heroStat3LabelEn: "Customer rating",
-  contactEmail: "hello@smartcraftcorner.com",
+  contactEmail: "hello@noorzaa.com",
   contactPhone: "+880 1XXX-XXXXXX",
   whatsapp: "8801700000000",
   supportNote: "ঢাকা ডেলিভারি + সারা দেশে কুরিয়ার",
@@ -49,9 +49,9 @@ export const defaultSettings: StoreSettings = {
   aboutSubtitle: "আমাদের গল্প",
   aboutSubtitleEn: "Our story",
   aboutText:
-    "Smart craft corner শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience বাংলাদেশি নারীদের কাছে সহজ ও elegant করে তোলা।",
+    "Noorzaa শুরু হয়েছিল একটি সহজ বিশ্বাস থেকে—premium fashion-এর experience বাংলাদেশি নারীদের কাছে সহজ ও elegant করে তোলা।",
   aboutTextEn:
-    "Smart craft corner began with a simple belief—making premium fashion feel easy and elegant for Bangladeshi women.",
+    "Noorzaa began with a simple belief—making premium fashion feel easy and elegant for Bangladeshi women.",
   aboutPillars: [
     {
       title: "কিউরেটেড, crowded নয়",
@@ -138,14 +138,14 @@ export const defaultSettings: StoreSettings = {
         "Yes — selected festive pieces include custom measurement consultation and preorder slots.",
     },
   ],
-  showCouponsOnHome: true,
+  showCouponsOnHome: false,
   showNewProducts: true,
-  showOffers: true,
+  showOffers: false,
   showFeatures: true,
   showTestimonials: false,
   showFaq: true,
-  metaTitle: "Smart craft corner — বাংলাদেশি নারীদের লাক্সারি ফ্যাশন",
-  metaTitleEn: "Smart craft corner — Luxury fashion for Bangladeshi women",
+  metaTitle: "Noorzaa — বাংলাদেশি নারীদের লাক্সারি ফ্যাশন",
+  metaTitleEn: "Noorzaa — Luxury fashion for Bangladeshi women",
   metaDescription:
     "প্রিমিয়াম জামদানি, ফেস্টিভ ও ডেইলি এলিগেন্স কালেকশন—সারা বাংলাদেশে ডেলিভারি।",
   metaDescriptionEn:
@@ -171,7 +171,7 @@ export const defaultSettings: StoreSettings = {
   vipMinSpend: 20000,
   vipDiscountPercent: 5,
   adminUsername: "founder",
-  adminEmail: "hello@smartcraftcorner.com",
+  adminEmail: "hello@noorzaa.com",
   adminPhone: "8801700000000",
 };
 
