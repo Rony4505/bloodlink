@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 
 type FacilityRef = {
   dghsId: string;
+  slug?: string;
   name: string;
   nameBn: string;
 };
@@ -415,7 +416,7 @@ export function AdminHealthcareCompaniesPanel() {
                           {f.name}{" "}
                           <a
                             className="text-[var(--blood-deep)] underline"
-                            href={`/healthcare/i/${f.dghsId}`}
+                            href={`/healthcare/i/${encodeURIComponent(f.slug || f.dghsId)}`}
                             target="_blank"
                             rel="noreferrer"
                           >

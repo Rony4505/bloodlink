@@ -1,16 +1,16 @@
-import { getHealthcareFacilityById } from "@/lib/healthcare-facilities";
+import { getHealthcareFacilityBySlugOrId } from "@/lib/healthcare-facilities";
 import { doctorsForFacility, loadHealthcarePlatform } from "@/lib/healthcare-platform";
 
 type Params = { params: Promise<{ dghsId: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { dghsId } = await params;
-  const facility = await getHealthcareFacilityById(dghsId);
+  const facility = await getHealthcareFacilityBySlugOrId(dghsId);
   if (!facility) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
   const platform = await loadHealthcarePlatform();
-  const doctors = doctorsForFacility(platform, dghsId).map((d) => ({
+  const doctors = doctorsForFacility(platform, facility.dghsId).map((d) => ({
     id: d.id,
     name: d.name,
     nameBn: d.nameBn,

@@ -1,6 +1,6 @@
 import {
   doctorsForPublicCompany,
-  findCompanyById,
+  findCompanyByIdOrSlug,
   loadHealthcarePlatform,
 } from "@/lib/healthcare-platform";
 
@@ -9,12 +9,12 @@ type Params = { params: Promise<{ companyId: string }> };
 export async function GET(_request: Request, { params }: Params) {
   const { companyId } = await params;
   const platform = await loadHealthcarePlatform();
-  const company = findCompanyById(platform, companyId);
+  const company = findCompanyByIdOrSlug(platform, companyId);
   if (!company || !company.enabled) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  const doctors = doctorsForPublicCompany(platform, companyId).map((d) => ({
+  const doctors = doctorsForPublicCompany(platform, company.id).map((d) => ({
     id: d.id,
     name: d.name,
     nameBn: d.nameBn,
@@ -28,6 +28,7 @@ export async function GET(_request: Request, { params }: Params) {
   return Response.json({
     company: {
       id: company.id,
+      slug: company.linkToken,
       name: company.name,
       nameBn: company.nameBn,
       contactPhone: company.contactPhone,

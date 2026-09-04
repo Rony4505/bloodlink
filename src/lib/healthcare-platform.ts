@@ -19,6 +19,10 @@ import {
   loadHealthcareFromPostgres,
   saveHealthcareToPostgres,
 } from "@/lib/pg-store";
+import {
+  looksLikeRandomPortalToken,
+  uniqueSlug,
+} from "@/lib/url-slug";
 import path from "path";
 import { randomBytes } from "crypto";
 
@@ -452,8 +456,8 @@ export async function companyDefaultsFromDghs(linkedDghsIds: string[]): Promise<
   };
 }
 
-export function newHealthcareToken(): string {
-  return randomBytes(18).toString("base64url");
+export function newHealthcareToken(name: string, taken: Iterable<string>): string {
+  return uniqueSlug(name || "hospital", taken);
 }
 
 export function newHealthcareId(prefix: string): string {
@@ -464,9 +468,17 @@ export function findCompanyByLinkToken(
   data: HealthcarePlatformData,
   token: string,
 ): HealthcareCompany | null {
-  const clean = token.trim();
+  const clean = decodeURIComponent(token.trim());
   if (!clean) return null;
-  return data.companies.find((c) => c.linkToken === clean && c.enabled) ?? null;
+  return (
+    data.companies.find((c) => c.linkToken === clean && c.enabled) ??
+    data.companies.find(
+      (c) =>
+        c.enabled &&
+        String(c.linkToken || "").toLowerCase() === clean.toLowerCase(),
+    ) ??
+    null
+  );
 }
 
 export function findCompanyById(
@@ -474,6 +486,52 @@ export function findCompanyById(
   companyId: string,
 ): HealthcareCompany | null {
   return data.companies.find((c) => c.id === companyId) ?? null;
+}
+
+/** Resolve public company by internal id OR name-based linkToken slug. */
+export function findCompanyByIdOrSlug(
+  data: HealthcarePlatformData,
+  key: string,
+): HealthcareCompany | null {
+  const clean = key.trim();
+  if (!clean) return null;
+  return (
+    findCompanyById(data, clean) ||
+    data.companies.find((c) => c.linkToken === clean) ||
+    null
+  );
+}
+
+/** Rewrite old random hospital portal tokens to name-based slugs. */
+export async function ensureHealthcareNameLinkTokens(): Promise<number> {
+  const current = await loadHealthcarePlatform();
+  if (
+    !current.companies.some((c) => looksLikeRandomPortalToken(c.linkToken))
+  ) {
+    return 0;
+  }
+  return withHealthcareWrite(async (data) => {
+    let changed = 0;
+    const taken = new Set(
+      data.companies
+        .map((c) => String(c.linkToken || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const now = new Date().toISOString();
+    for (let i = 0; i < data.companies.length; i++) {
+      const company = data.companies[i]!;
+      if (!looksLikeRandomPortalToken(company.linkToken)) continue;
+      taken.delete(String(company.linkToken || "").toLowerCase());
+      const next = newHealthcareToken(
+        company.name || company.nameBn || "hospital",
+        taken,
+      );
+      taken.add(next.toLowerCase());
+      data.companies[i] = { ...company, linkToken: next, updatedAt: now };
+      changed += 1;
+    }
+    return changed;
+  });
 }
 
 export function doctorVisibleAtFacility(
@@ -567,13 +625,15 @@ export async function createHealthcareCompany(input: {
       : [];
     const defaults = await companyDefaultsFromDghs(linkedDghsIds);
     const now = new Date().toISOString();
+    const name = input.name.trim() || defaults.name || "";
+    const taken = data.companies.map((c) => c.linkToken);
     const company: HealthcareCompany = {
       id: newHealthcareId("hco"),
-      name: input.name.trim() || defaults.name || "",
+      name,
       nameBn: String(input.nameBn || defaults.nameBn || "").trim(),
       contactPhone: String(input.contactPhone || defaults.contactPhone || "").trim(),
       contactEmail: String(input.contactEmail || defaults.contactEmail || "").trim(),
-      linkToken: newHealthcareToken(),
+      linkToken: newHealthcareToken(name || String(input.nameBn || "hospital"), taken),
       enabled: true,
       linkedDghsIds,
       district: String(input.district || defaults.district || "").trim(),
@@ -614,14 +674,24 @@ export async function updateHealthcareCompany(
       patch.linkedDghsIds !== undefined
         ? await companyDefaultsFromDghs(linkedDghsIds)
         : {};
+    const nextName =
+      patch.name !== undefined ? patch.name.trim() : current.name || defaults.name || "";
+    const nextNameBn =
+      patch.nameBn !== undefined
+        ? patch.nameBn.trim()
+        : current.nameBn || defaults.nameBn || "";
+    let linkToken = current.linkToken;
+    if (patch.name !== undefined || patch.nameBn !== undefined) {
+      const taken = data.companies
+        .filter((_, i) => i !== idx)
+        .map((c) => c.linkToken);
+      linkToken = newHealthcareToken(nextName || nextNameBn || "hospital", taken);
+    }
     const next: HealthcareCompany = {
       ...current,
       ...patch,
-      name: patch.name !== undefined ? patch.name.trim() : current.name || defaults.name || "",
-      nameBn:
-        patch.nameBn !== undefined
-          ? patch.nameBn.trim()
-          : current.nameBn || defaults.nameBn || "",
+      name: nextName,
+      nameBn: nextNameBn,
       contactPhone:
         patch.contactPhone !== undefined
           ? patch.contactPhone.trim()
@@ -631,6 +701,7 @@ export async function updateHealthcareCompany(
           ? patch.contactEmail.trim()
           : current.contactEmail || defaults.contactEmail || "",
       linkedDghsIds,
+      linkToken,
       district:
         patch.district !== undefined
           ? patch.district.trim()
@@ -665,9 +736,16 @@ export async function regenerateHealthcareCompanyToken(
   return withHealthcareWrite((data) => {
     const idx = data.companies.findIndex((c) => c.id === companyId);
     if (idx === -1) return null;
+    const current = data.companies[idx]!;
+    const taken = data.companies
+      .filter((_, i) => i !== idx)
+      .map((c) => c.linkToken);
     data.companies[idx] = {
-      ...data.companies[idx]!,
-      linkToken: newHealthcareToken(),
+      ...current,
+      linkToken: newHealthcareToken(
+        current.name || current.nameBn || "hospital",
+        taken,
+      ),
       updatedAt: new Date().toISOString(),
     };
     return data.companies[idx]!;

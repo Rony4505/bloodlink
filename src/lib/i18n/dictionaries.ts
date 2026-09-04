@@ -253,13 +253,15 @@ export const dictionaries = {
     volunteerNoNotifications: "No messages yet.",
     volunteerVerbalSite: "Website",
     volunteerVerbalPath: "Page",
-    volunteerVerbalCode: "Link code (say in parts)",
+    volunteerVerbalCode: "Name in the link",
     volunteerVerbalSay:
-      'Say: "{host} slash {path}", then read the code in groups.',
+      'Say the full link: "{host}" then the path with the volunteer name.',
     volunteerVerbalJoinHint:
-      "Easy to say on phone — share site, page join, then the code.",
+      "Donor register link uses the volunteer’s name — easy to share.",
     volunteerVerbalWorkHint:
-      "Your private dashboard link — site, page work, then the code.",
+      "Private work dashboard link uses the volunteer’s name.",
+    volunteerVerbalNameHint:
+      "URL uses the person’s / hospital name (not a random number code).",
     volunteerShareUrl: "Share",
     volunteerDetailTitle: "Volunteer work details",
     volunteerTotalWorkCount: "Total counted",
@@ -666,8 +668,9 @@ export const dictionaries = {
     healthcareOpenPortal: "Open portal",
     healthcareLinkedFacilities: "Linked facilities",
     healthcareViewPublic: "Public page",
-    healthcarePortalUrlLabel: "Company portal link",
-    healthcarePortalUrlHint: "Share this link with hospital staff — bookmark on phone.",
+    healthcarePortalUrlLabel: "Hospital portal link",
+    healthcarePortalUrlHint:
+      "Share with hospital staff — the link uses the hospital name.",
     healthcareCompanyPortal: "Healthcare portal",
     healthcareCompanyPortalHint: "Manage appointments, doctors, and weekly schedules.",
     healthcarePortalLink: "Portal link",
@@ -1097,13 +1100,15 @@ export const dictionaries = {
     volunteerNoNotifications: "এখনো কোনো বার্তা নেই।",
     volunteerVerbalSite: "ওয়েবসাইট",
     volunteerVerbalPath: "পেজ",
-    volunteerVerbalCode: "লিংক কোড (অংশে অংশে বলুন)",
+    volunteerVerbalCode: "লিংকে নাম",
     volunteerVerbalSay:
-      'বলুন: "{host} স্ল্যাশ {path}", তারপর কোডটা অংশে অংশে পড়ুন।',
+      'পুরো লিংক বলুন: "{host}" তারপর নামসহ পাথ।',
     volunteerVerbalJoinHint:
-      "ফোনে বলতে সহজ — সাইট, join পেজ, তারপর কোড।",
+      "ডোনার রেজিস্টার লিংকে ভলান্টিয়ারের নাম থাকে — শেয়ার করতে সহজ।",
     volunteerVerbalWorkHint:
-      "আপনার প্রাইভেট ড্যাশবোর্ড — সাইট, work পেজ, তারপর কোড।",
+      "কাজের ড্যাশবোর্ড লিংকে ভলান্টিয়ারের নাম থাকে।",
+    volunteerVerbalNameHint:
+      "লিংকে নাম থাকে (র‍্যান্ডম নম্বর কোড নয়)।",
     volunteerShareUrl: "শেয়ার",
     volunteerDetailTitle: "স্বেচ্ছাসেবকের কাজের বিস্তারিত",
     volunteerTotalWorkCount: "মোট গণনা",
@@ -1512,8 +1517,9 @@ export const dictionaries = {
     healthcareOpenPortal: "পোর্টাল খুলুন",
     healthcareLinkedFacilities: "লিংক করা প্রতিষ্ঠান",
     healthcareViewPublic: "পাবলিক পেজ",
-    healthcarePortalUrlLabel: "কোম্পানি পোর্টাল লিংক",
-    healthcarePortalUrlHint: "হাসপাতাল স্টাফের সাথে শেয়ার করুন — ফোনে বুকমার্ক রাখুন।",
+    healthcarePortalUrlLabel: "হাসপাতাল পোর্টাল লিংক",
+    healthcarePortalUrlHint:
+      "হাসপাতাল স্টাফের সাথে শেয়ার করুন — লিংকে হাসপাতালের নাম থাকে।",
     healthcareCompanyPortal: "স্বাস্থ্য পোর্টাল",
     healthcareCompanyPortalHint: "অ্যাপয়েন্টমেন্ট, ডাক্তার ও সাপ্তাহিক সময়সূচি ম্যানেজ করুন।",
     healthcarePortalLink: "পোর্টাল লিংক",

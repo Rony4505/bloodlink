@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { getHealthcareFacilityById } from "@/lib/healthcare-facilities";
+import {
+  facilityPublicSlug,
+  getHealthcareFacilityById,
+} from "@/lib/healthcare-facilities";
 import {
   appointmentsForCompany,
   createHealthcareCompany,
   deleteHealthcareCompany,
   doctorsForCompany,
+  ensureHealthcareNameLinkTokens,
   loadHealthcarePlatform,
   regenerateHealthcareCompanyToken,
   updateHealthcareCompany,
@@ -18,6 +22,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await ensureHealthcareNameLinkTokens();
   const data = await loadHealthcarePlatform();
   const companies = await Promise.all(
     data.companies.map(async (company) => {
@@ -27,8 +32,13 @@ export async function GET() {
         company.linkedDghsIds.map(async (id) => {
           const facility = await getHealthcareFacilityById(id);
           return facility
-            ? { dghsId: facility.dghsId, name: facility.name, nameBn: facility.nameBn }
-            : { dghsId: id, name: id, nameBn: "" };
+            ? {
+                dghsId: facility.dghsId,
+                slug: facilityPublicSlug(facility),
+                name: facility.name,
+                nameBn: facility.nameBn,
+              }
+            : { dghsId: id, slug: id, name: id, nameBn: "" };
         }),
       );
       return {
