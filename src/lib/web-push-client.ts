@@ -23,10 +23,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-function isLikelyIos() {
+/** True for iPhone/iPad (including iPadOS desktop UA). Android must stay false. */
+export function isLikelyIos() {
   if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  // Android devices can spoof quirks in in-app browsers — never treat as iOS.
+  if (/Android/i.test(ua)) return false;
   return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    /iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
   );
 }
