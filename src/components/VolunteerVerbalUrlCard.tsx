@@ -36,7 +36,7 @@ export function VolunteerVerbalUrlCard({ kind, token, origin, compact }: Props) 
       try {
         await navigator.share({
           title: "BloodLink BD",
-          text: `${link.host} / ${link.path} — ${link.code}`,
+          text: link.url,
           url: link.url,
         });
         return;
@@ -53,24 +53,12 @@ export function VolunteerVerbalUrlCard({ kind, token, origin, compact }: Props) 
       {!compact ? (
         <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_58%,white)]">{hint}</p>
       ) : null}
-      <div className="mt-3 space-y-2 text-sm">
-        <p>
-          <span className="font-medium text-[var(--ink)]">{t.volunteerVerbalSite}: </span>
-          <span className="font-mono">{link.host}</span>
-        </p>
-        <p>
-          <span className="font-medium text-[var(--ink)]">{t.volunteerVerbalPath}: </span>
-          <span className="font-mono uppercase">{link.path}</span>
-        </p>
-        <p>
-          <span className="font-medium text-[var(--ink)]">{t.volunteerVerbalCode}: </span>
-          <span className="font-mono text-base tracking-wide text-[var(--blood-deep)]">
-            {link.code}
-          </span>
-        </p>
-      </div>
-      <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-        {t.volunteerVerbalSay.replace("{host}", link.host).replace("{path}", link.path)}
+      <p className="mt-3 break-all font-mono text-sm font-semibold text-[var(--blood-deep)]">
+        {link.host}
+        {link.friendlyPath}
+      </p>
+      <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+        {t.volunteerVerbalNameHint}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" className="btn-ghost px-3 py-1 text-xs" onClick={() => void copyUrl()}>

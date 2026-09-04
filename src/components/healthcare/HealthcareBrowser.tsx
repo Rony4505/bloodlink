@@ -7,6 +7,7 @@ import type { HealthcareFacility } from "@/lib/healthcare-facilities";
 
 type CompanySummary = {
   id: string;
+  slug?: string;
   name: string;
   nameBn: string;
   contactPhone: string;
@@ -15,8 +16,10 @@ type CompanySummary = {
   doctorCount: number;
 };
 
+type FacilityHit = HealthcareFacility & { slug?: string };
+
 type SearchResponse = {
-  items: HealthcareFacility[];
+  items: FacilityHit[];
   companies?: CompanySummary[];
   total: number;
   page: number;
@@ -181,7 +184,7 @@ export function HealthcareBrowser() {
             {(data.companies ?? []).map((c) => (
               <li key={c.id}>
                 <Link
-                  href={`/healthcare/c/${c.id}`}
+                  href={`/healthcare/c/${encodeURIComponent(c.slug || c.id)}`}
                   className="group flex h-full flex-col rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,white)] bg-[linear-gradient(165deg,#fff5f8_0%,#ffffff_60%,#fffdfa_100%)] p-4 shadow-[0_10px_30px_rgba(110,18,32,0.06)] transition hover:-translate-y-0.5"
                 >
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--blood)]">
@@ -224,7 +227,7 @@ export function HealthcareBrowser() {
             {data.items.map((f) => (
               <li key={f.dghsId}>
                 <Link
-                  href={`/healthcare/i/${f.dghsId}`}
+                  href={`/healthcare/i/${encodeURIComponent(f.slug || f.dghsId)}`}
                   className="group flex h-full flex-col rounded-2xl border border-[color-mix(in_oklab,var(--blood)_18%,white)] bg-[linear-gradient(165deg,#fffdfa_0%,#ffffff_55%,#fff5f3_100%)] p-4 shadow-[0_10px_30px_rgba(110,18,32,0.06)] transition hover:-translate-y-0.5 hover:border-[color-mix(in_oklab,var(--blood)_35%,white)] hover:shadow-[0_16px_40px_rgba(110,18,32,0.12)]"
                 >
                   <div className="flex items-start gap-3">

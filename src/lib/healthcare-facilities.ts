@@ -1,6 +1,8 @@
 import { readFile } from "fs/promises";
 import path from "path";
 
+import { slugifyName, uniqueSlug } from "@/lib/url-slug";
+
 export type HealthcareFacility = {
   dghsId: string;
   code: string;
@@ -41,6 +43,27 @@ const DATA_FILE = path.join(
 let cached: HealthcareFacilitiesDataset | null = null;
 let cachedAt = 0;
 const CACHE_MS = 60_000;
+let slugByDghsId: Map<string, string> | null = null;
+let facilityBySlug: Map<string, HealthcareFacility> | null = null;
+
+function rebuildFacilitySlugIndex(dataset: HealthcareFacilitiesDataset) {
+  slugByDghsId = new Map();
+  facilityBySlug = new Map();
+  const taken: string[] = [];
+  for (const f of dataset.facilities) {
+    const base = slugifyName(
+      [f.name || f.nameBn, f.district, f.upazila].filter(Boolean).join(" "),
+    );
+    const slug = uniqueSlug(base, taken);
+    taken.push(slug);
+    slugByDghsId.set(f.dghsId, slug);
+    facilityBySlug.set(slug, f);
+  }
+}
+
+function ensureFacilitySlugIndex(dataset: HealthcareFacilitiesDataset) {
+  if (!slugByDghsId || !facilityBySlug) rebuildFacilitySlugIndex(dataset);
+}
 
 export async function loadHealthcareFacilities(): Promise<HealthcareFacilitiesDataset> {
   const now = Date.now();
@@ -48,6 +71,7 @@ export async function loadHealthcareFacilities(): Promise<HealthcareFacilitiesDa
   const raw = await readFile(DATA_FILE, "utf8");
   cached = JSON.parse(raw) as HealthcareFacilitiesDataset;
   cachedAt = now;
+  rebuildFacilitySlugIndex(cached);
   return cached;
 }
 
@@ -169,4 +193,30 @@ export async function getHealthcareFacilityById(
 ): Promise<HealthcareFacility | null> {
   const dataset = await loadHealthcareFacilities();
   return dataset.facilities.find((f) => f.dghsId === dghsId) ?? null;
+}
+
+/** Public URL slug from hospital name (+ location), not the DGHS number. */
+export function facilityPublicSlug(
+  facility: Pick<HealthcareFacility, "dghsId" | "name" | "nameBn" | "district" | "upazila">,
+): string {
+  if (cached) ensureFacilitySlugIndex(cached);
+  const fromIndex = slugByDghsId?.get(facility.dghsId);
+  if (fromIndex) return fromIndex;
+  return slugifyName(
+    [facility.name || facility.nameBn, facility.district, facility.upazila]
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
+export async function getHealthcareFacilityBySlugOrId(
+  key: string,
+): Promise<HealthcareFacility | null> {
+  const clean = decodeURIComponent(key.trim());
+  if (!clean) return null;
+  const dataset = await loadHealthcareFacilities();
+  ensureFacilitySlugIndex(dataset);
+  const byId = dataset.facilities.find((f) => f.dghsId === clean);
+  if (byId) return byId;
+  return facilityBySlug?.get(clean) ?? null;
 }

@@ -24,6 +24,10 @@ import {
   withBilingual,
 } from "./notification-text";
 import {
+  looksLikeRandomPortalToken,
+  uniqueSlug,
+} from "./url-slug";
+import {
   bangladeshDateKey,
   bangladeshHour,
   daysBetweenDateKeys,
@@ -284,8 +288,8 @@ function normalizePendingSuccessStory(
   };
 }
 
-function newVolunteerLinkToken(): string {
-  return randomBytes(18).toString("base64url");
+function newVolunteerLinkToken(name: string, taken: Iterable<string>): string {
+  return uniqueSlug(name || "volunteer", taken);
 }
 
 function normalizeVolunteer(
@@ -303,7 +307,9 @@ function normalizeVolunteer(
     username: String(raw.username || "").trim().toLowerCase(),
     passwordHash: String(raw.passwordHash || ""),
     enabled: raw.enabled !== false,
-    linkToken: String(raw.linkToken || "").trim() || newVolunteerLinkToken(),
+    linkToken:
+      String(raw.linkToken || "").trim() ||
+      newVolunteerLinkToken(String(raw.name || "volunteer"), []),
     notificationsEnabled: raw.notificationsEnabled !== false,
     createdAt: String(raw.createdAt || new Date().toISOString()),
     updatedAt: String(raw.updatedAt || raw.createdAt || new Date().toISOString()),
@@ -2043,7 +2049,39 @@ export async function getPrivacyContent(): Promise<{
   return { bn: admin.privacyBn, en: admin.privacyEn };
 }
 
+/** Rewrite old random tokens to name-based slugs (e.g. /work/karim-ahmed). */
+export async function ensureVolunteerNameLinkTokens(): Promise<number> {
+  const db = await ensureDb();
+  const volunteers = db.volunteers || [];
+  if (!volunteers.some((v) => looksLikeRandomPortalToken(String(v.linkToken || "")))) {
+    return 0;
+  }
+  return withWrite(async (writeDb) => {
+    writeDb.volunteers = writeDb.volunteers || [];
+    let changed = 0;
+    const taken = new Set(
+      writeDb.volunteers
+        .map((v) => String(v.linkToken || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const now = new Date().toISOString();
+    for (let i = 0; i < writeDb.volunteers.length; i++) {
+      const v = normalizeVolunteer(writeDb.volunteers[i]);
+      if (!v) continue;
+      if (!looksLikeRandomPortalToken(v.linkToken)) continue;
+      taken.delete(v.linkToken.toLowerCase());
+      const next = newVolunteerLinkToken(v.name, taken);
+      taken.add(next.toLowerCase());
+      writeDb.volunteers[i] = { ...v, linkToken: next, updatedAt: now };
+      changed += 1;
+    }
+    if (changed) await persist(writeDb);
+    return changed;
+  });
+}
+
 export async function listVolunteers(): Promise<Volunteer[]> {
+  await ensureVolunteerNameLinkTokens();
   const db = await ensureDb();
   return (db.volunteers || [])
     .map((v) => normalizeVolunteer(v))
@@ -2061,11 +2099,12 @@ export async function findVolunteerByLinkToken(
   token: string,
 ): Promise<Volunteer | null> {
   const db = await ensureDb();
-  const key = token.trim();
+  const key = decodeURIComponent(token.trim());
   if (!key) return null;
-  const found = (db.volunteers || []).find(
-    (v) => String(v.linkToken || "") === key,
-  );
+  const found = (db.volunteers || []).find((v) => {
+    const t = String(v.linkToken || "");
+    return t === key || t.toLowerCase() === key.toLowerCase();
+  });
   return found ? normalizeVolunteer(found) : null;
 }
 
@@ -2195,10 +2234,14 @@ export async function createVolunteer(
       throw new Error("Username already taken");
     }
     const now = new Date().toISOString();
+    const taken = db.volunteers.map((v) => String(v.linkToken || ""));
+    const linkToken =
+      String(input.linkToken || "").trim() ||
+      newVolunteerLinkToken(input.name, taken);
     const volunteer = normalizeVolunteer({
       ...input,
       username,
-      linkToken: input.linkToken || newVolunteerLinkToken(),
+      linkToken,
       notificationsEnabled: input.notificationsEnabled !== false,
       id: randomUUID(),
       createdAt: now,
@@ -2208,6 +2251,30 @@ export async function createVolunteer(
     db.volunteers.push(volunteer);
     await persist(db);
     return volunteer;
+  });
+}
+
+export async function regenerateVolunteerLinkToken(
+  id: string,
+): Promise<Volunteer | null> {
+  return withWrite(async (db) => {
+    db.volunteers = db.volunteers || [];
+    const index = db.volunteers.findIndex((v) => v.id === id);
+    if (index === -1) return null;
+    const current = normalizeVolunteer(db.volunteers[index]);
+    if (!current) return null;
+    const taken = db.volunteers
+      .filter((_, i) => i !== index)
+      .map((v) => String(v.linkToken || ""));
+    const merged = normalizeVolunteer({
+      ...current,
+      linkToken: newVolunteerLinkToken(current.name, taken),
+      updatedAt: new Date().toISOString(),
+    });
+    if (!merged) return null;
+    db.volunteers[index] = merged;
+    await persist(db);
+    return merged;
   });
 }
 
@@ -2226,8 +2293,9 @@ export async function updateVolunteer(
       | "username"
       | "passwordHash"
       | "notificationsEnabled"
+      | "linkToken"
     >
-  >,
+  > & { regenerateToken?: boolean },
 ): Promise<Volunteer | null> {
   return withWrite(async (db) => {
     db.volunteers = db.volunteers || [];
@@ -2241,13 +2309,42 @@ export async function updateVolunteer(
       );
       if (clash) throw new Error("Username already taken");
     }
+    const current = db.volunteers[index]!;
+    const nextName =
+      patch.name !== undefined ? String(patch.name).trim() : current.name;
+    let linkToken = current.linkToken;
+    if (patch.regenerateToken || patch.linkToken !== undefined) {
+      const taken = db.volunteers
+        .filter((_, i) => i !== index)
+        .map((v) => String(v.linkToken || ""));
+      linkToken =
+        patch.linkToken !== undefined && String(patch.linkToken).trim()
+          ? String(patch.linkToken).trim()
+          : newVolunteerLinkToken(nextName, taken);
+    } else if (
+      patch.name !== undefined &&
+      looksLikeRandomPortalToken(String(current.linkToken || ""))
+    ) {
+      const taken = db.volunteers
+        .filter((_, i) => i !== index)
+        .map((v) => String(v.linkToken || ""));
+      linkToken = newVolunteerLinkToken(nextName, taken);
+    } else if (patch.name !== undefined) {
+      // Keep URL readable: refresh slug from the new name when possible.
+      const taken = db.volunteers
+        .filter((_, i) => i !== index)
+        .map((v) => String(v.linkToken || ""));
+      linkToken = newVolunteerLinkToken(nextName, taken);
+    }
     const merged = normalizeVolunteer({
-      ...db.volunteers[index],
+      ...current,
       ...patch,
+      name: nextName,
+      linkToken,
       username:
         patch.username !== undefined
           ? patch.username.trim().toLowerCase()
-          : db.volunteers[index].username,
+          : current.username,
       updatedAt: new Date().toISOString(),
     });
     if (!merged) return null;

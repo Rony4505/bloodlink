@@ -20,6 +20,7 @@ export type HealthcareVerbalLink = {
   path: string;
   code: string;
   url: string;
+  friendlyPath: string;
 };
 
 export function healthcareVerbalLink(
@@ -27,11 +28,13 @@ export function healthcareVerbalLink(
   origin = siteOrigin(),
 ): HealthcareVerbalLink {
   const host = origin.replace(/^https?:\/\//, "");
+  const friendlyPath = healthcareManagePath(token);
   const url = healthcareManageUrl(token, origin);
   return {
     host,
     path: "healthcare/manage",
     code: verbalTokenCode(token),
     url,
+    friendlyPath,
   };
 }

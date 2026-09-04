@@ -45,8 +45,9 @@ export function formatVolunteerDateTime(iso: string, locale = "bn-BD"): string {
   }
 }
 
-/** Split token into spoken chunks (e.g. ABCD · EFGH · HIJK). */
+/** Split token into spoken chunks only for old random codes. */
 export function verbalTokenCode(token: string): string {
+  if (token.includes("-") || token.length < 18) return token;
   const clean = token.replace(/[^a-zA-Z0-9]/g, "");
   const parts: string[] = [];
   for (let i = 0; i < clean.length; i += 4) {
@@ -60,6 +61,8 @@ export type VolunteerVerbalLink = {
   path: "join" | "work";
   code: string;
   url: string;
+  /** Full path shown to humans, e.g. /work/karim-ahmed */
+  friendlyPath: string;
 };
 
 export function volunteerVerbalLink(
@@ -68,11 +71,13 @@ export function volunteerVerbalLink(
   origin = siteOrigin(),
 ): VolunteerVerbalLink {
   const host = origin.replace(/^https?:\/\//, "");
+  const pathSeg = kind === "join" ? volunteerJoinPath(token) : volunteerWorkPath(token);
   const url = kind === "join" ? volunteerJoinUrl(token, origin) : volunteerWorkUrl(token, origin);
   return {
     host,
     path: kind,
     code: verbalTokenCode(token),
     url,
+    friendlyPath: pathSeg,
   };
 }

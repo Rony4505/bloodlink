@@ -1,5 +1,9 @@
-import { searchHealthcareFacilities } from "@/lib/healthcare-facilities";
-import { loadHealthcarePlatform, searchPublicHealthcareCompanies } from "@/lib/healthcare-platform";
+import { facilityPublicSlug, searchHealthcareFacilities } from "@/lib/healthcare-facilities";
+import {
+  ensureHealthcareNameLinkTokens,
+  loadHealthcarePlatform,
+  searchPublicHealthcareCompanies,
+} from "@/lib/healthcare-platform";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,10 +22,12 @@ export async function GET(request: Request) {
     limit: Number(searchParams.get("limit") || "30"),
   });
 
+  await ensureHealthcareNameLinkTokens();
   const platform = await loadHealthcarePlatform();
   const companies = searchPublicHealthcareCompanies(platform, { q, district, upazila }).map(
     (c) => ({
       id: c.id,
+      slug: c.linkToken,
       name: c.name,
       nameBn: c.nameBn,
       contactPhone: c.contactPhone,
@@ -31,5 +37,10 @@ export async function GET(request: Request) {
     }),
   );
 
-  return Response.json({ ...result, companies });
+  const items = result.items.map((f) => ({
+    ...f,
+    slug: facilityPublicSlug(f),
+  }));
+
+  return Response.json({ ...result, items, companies });
 }
