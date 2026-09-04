@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
+import {
+  markPushPromptAccepted,
+  snoozePushPrompt,
+} from "@/lib/push-prompt-state";
 import { enableWebPush } from "@/lib/web-push-client";
 
 export type RegisteredDonorSummary = {
@@ -56,10 +60,18 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
     setPushBusy(true);
     try {
       const result = await enableWebPush({ recordIntent: true });
-      if (result === "granted") setPushDone("on");
-      else if (result === "denied") setPushDone("denied");
-      else setPushDone("skipped");
+      if (result === "granted") {
+        markPushPromptAccepted();
+        setPushDone("on");
+      } else if (result === "denied") {
+        snoozePushPrompt(30);
+        setPushDone("denied");
+      } else {
+        snoozePushPrompt(30);
+        setPushDone("skipped");
+      }
     } catch {
+      snoozePushPrompt(30);
       setPushDone("skipped");
     } finally {
       setPushBusy(false);
@@ -169,7 +181,10 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
               <button
                 type="button"
                 disabled={pushBusy}
-                onClick={() => setPushDone("skipped")}
+                onClick={() => {
+                  snoozePushPrompt(30);
+                  setPushDone("skipped");
+                }}
                 className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
               >
                 {t.registerPushSkip}
