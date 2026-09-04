@@ -206,7 +206,11 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
 
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => {
+            // Leaving without Allow/Not now = ask again after 30 days
+            if (pushDone === "idle") snoozePushPrompt(30);
+            onContinue();
+          }}
           className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#265a42]"
         >
           {t.registerSuccessCta}
