@@ -60,18 +60,19 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
     setPushBusy(true);
     try {
       const result = await enableWebPush({ recordIntent: true });
-      if (result === "granted") {
+      if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
         setPushDone("on");
       } else if (result === "denied") {
         snoozePushPrompt(30);
         setPushDone("denied");
       } else {
-        snoozePushPrompt(30);
+        // Failed to create a real subscription — ask again soon (1 day)
+        snoozePushPrompt(1);
         setPushDone("skipped");
       }
     } catch {
-      snoozePushPrompt(30);
+      snoozePushPrompt(1);
       setPushDone("skipped");
     } finally {
       setPushBusy(false);

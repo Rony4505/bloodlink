@@ -59,6 +59,13 @@ export function canAskNotificationPermission() {
 
 export const LOCAL_PUSH_PERMISSION_PREFIX = "local-permission://";
 
+export type EnableWebPushResult =
+  | "granted"
+  | "permission_only"
+  | "denied"
+  | "unsupported"
+  | "error";
+
 async function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!("Notification" in window)) return "denied";
   if (Notification.permission === "granted") return "granted";
@@ -74,6 +81,7 @@ async function requestNotificationPermission(): Promise<NotificationPermission> 
   return await result;
 }
 
+/** iPhone browser-tab only — cannot receive background Web Push. */
 async function savePermissionOnly(): Promise<boolean> {
   try {
     const res = await withTimeout(
@@ -83,7 +91,7 @@ async function savePermissionOnly(): Promise<boolean> {
         credentials: "same-origin",
         body: JSON.stringify({ permissionOnly: true }),
       }),
-      12_000,
+      15_000,
       "perm-save",
     );
     return res.ok;
@@ -92,33 +100,37 @@ async function savePermissionOnly(): Promise<boolean> {
   }
 }
 
-async function subscribeFullWebPush(): Promise<boolean> {
+async function subscribeFullWebPushOnce(): Promise<boolean> {
   const reg = await withTimeout(
     (async () =>
       (await navigator.serviceWorker.getRegistration("/sw.js")) ||
       (await navigator.serviceWorker.register("/sw.js")))(),
-    5_000,
+    12_000,
     "sw-register",
   );
-  await withTimeout(navigator.serviceWorker.ready, 5_000, "sw-ready");
+  await withTimeout(navigator.serviceWorker.ready, 12_000, "sw-ready");
 
   const keyRes = await withTimeout(
     fetch("/api/push/subscribe", { cache: "no-store", credentials: "same-origin" }),
-    10_000,
+    12_000,
     "vapid",
   );
   if (!keyRes.ok) return false;
   const { publicKey } = (await keyRes.json()) as { publicKey?: string | null };
   if (!publicKey) return false;
 
-  const sub = await withTimeout(
-    reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    }),
-    10_000,
-    "subscribe",
-  );
+  // Reuse existing subscription when possible (faster / fewer browser prompts).
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await withTimeout(
+      reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      }),
+      20_000,
+      "subscribe",
+    );
+  }
   const json = sub.toJSON();
   const save = await withTimeout(
     fetch("/api/push/subscribe", {
@@ -130,21 +142,36 @@ async function subscribeFullWebPush(): Promise<boolean> {
         keys: json.keys,
       }),
     }),
-    12_000,
+    15_000,
     "save-sub",
   );
   return save.ok;
 }
 
+async function subscribeFullWebPush(): Promise<boolean> {
+  try {
+    if (await subscribeFullWebPushOnce()) return true;
+  } catch {
+    /* retry once */
+  }
+  await new Promise((r) => setTimeout(r, 400));
+  try {
+    return await subscribeFullWebPushOnce();
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Allow-button handler. Never hangs: SW/permission steps are time-boxed.
- * On iPhone browser tabs (no real PushManager flow), saves a permission marker
- * after the user taps Allow so the action always completes.
+ * Allow-button handler.
+ * - Android / desktop Chrome/Firefox: MUST save a real PushSubscription (deliverable).
+ * - iPhone browser tab: permission-only marker (OS cannot deliver background push).
+ * Never mark non-iOS as success with only a browser permission marker.
  */
 export async function enableWebPush(options?: {
   /** True when the user explicitly tapped Allow — record intent if APIs are limited. */
   recordIntent?: boolean;
-}): Promise<"granted" | "denied" | "unsupported" | "error"> {
+}): Promise<EnableWebPushResult> {
   if (typeof window === "undefined") return "unsupported";
 
   const recordIntent = options?.recordIntent === true;
@@ -161,7 +188,7 @@ export async function enableWebPush(options?: {
     if ("Notification" in window) {
       if (Notification.permission === "denied") return "denied";
       try {
-        perm = await withTimeout(requestNotificationPermission(), 8_000, "permission");
+        perm = await withTimeout(requestNotificationPermission(), 12_000, "permission");
       } catch {
         perm = Notification.permission;
       }
@@ -170,38 +197,35 @@ export async function enableWebPush(options?: {
       return "unsupported";
     }
 
+    // Non-iPhone: require a real subscription. Do NOT fall back to permission-only.
     if (perm === "granted" && canFullPush) {
-      try {
-        if (await subscribeFullWebPush()) {
-          localStorage.setItem("bloodlink_push_on", "1");
-          return "granted";
-        }
-      } catch {
-        /* fall through to permission-only */
-      }
-    }
-
-    // Permission granted in browser tab only — do NOT mark as fully enabled.
-    if (perm === "granted" || recordIntent) {
-      if (iosBrowserTab) {
-        if (await savePermissionOnly()) {
-          return "granted";
-        }
-        return "error";
-      }
-      if (await savePermissionOnly()) {
+      if (await subscribeFullWebPush()) {
         localStorage.setItem("bloodlink_push_on", "1");
         return "granted";
       }
       return "error";
     }
 
-    return "denied";
-  } catch {
-    if (recordIntent && !iosBrowserTab && (await savePermissionOnly())) {
-      localStorage.setItem("bloodlink_push_on", "1");
-      return "granted";
+    // iPhone browser tab only — save permission marker so admin can see they allowed.
+    if (iosBrowserTab && (perm === "granted" || recordIntent)) {
+      if (await savePermissionOnly()) {
+        return "permission_only";
+      }
+      return "error";
     }
+
+    // iPhone as installed PWA with PushManager should have taken canFullPush path.
+    if (perm === "granted" && isLikelyIos() && isStandalonePwa()) {
+      if (canFullPush && (await subscribeFullWebPush())) {
+        localStorage.setItem("bloodlink_push_on", "1");
+        return "granted";
+      }
+      if (await savePermissionOnly()) return "permission_only";
+      return "error";
+    }
+
+    return perm === "granted" ? "error" : "denied";
+  } catch {
     return "error";
   }
 }

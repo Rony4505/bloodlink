@@ -40,9 +40,21 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // iPhone Safari/Chrome (and other partial browsers): user allowed notifications
-    // in the browser prompt, but PushManager/subscription may be unavailable.
+    // iPhone Safari/Chrome tabs only — Android/desktop must send a real PushSubscription.
     if (body.permissionOnly === true) {
+      const ua = request.headers.get("user-agent") || "";
+      const android = /Android/i.test(ua);
+      const ios =
+        /iPhone|iPad|iPod/i.test(ua) && !/Android/i.test(ua);
+      if (android || (!ios && /Chrome|Chromium|Firefox|Edg\//i.test(ua))) {
+        return NextResponse.json(
+          {
+            error: "Full Web Push subscription required on this device",
+            code: "FULL_PUSH_REQUIRED",
+          },
+          { status: 400 },
+        );
+      }
       await upsertPushSubscription({
         userId: donor.id,
         endpoint: `local-permission://${donor.id}`,
