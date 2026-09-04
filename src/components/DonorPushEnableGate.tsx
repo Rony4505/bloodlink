@@ -13,6 +13,7 @@ import {
 import {
   canAskNotificationPermission,
   enableWebPush,
+  isLikelyIos,
   isWebPushSupported,
 } from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
@@ -102,8 +103,15 @@ export function DonorPushEnableGate({
       localStorage.removeItem("bloodlink_push_on");
 
       if (statusRes.permissionOnly) {
-        setStatus("permission_only");
-        setHint(t.pushIosPwaRequired);
+        // Only iPhone browser tabs need the Home Screen / PWA instructions.
+        // Android (incl. Messenger in-app) must keep the simple Allow prompt.
+        if (isLikelyIos()) {
+          setStatus("permission_only");
+          setHint(t.pushIosPwaRequired);
+        } else {
+          setStatus("ask");
+          setHint("");
+        }
         if (showCard) setCard(true);
         if (modal && !wasPushPromptShownThisSession()) {
           markPushPromptShownThisSession();
@@ -119,8 +127,10 @@ export function DonorPushEnableGate({
       }
 
       setStatus("ask");
-      if (!isWebPushSupported()) {
+      if (!isWebPushSupported() && isLikelyIos()) {
         setHint(t.pushIosHint);
+      } else {
+        setHint("");
       }
 
       if (
@@ -177,8 +187,13 @@ export function DonorPushEnableGate({
           return;
         }
         if (statusRes.permissionOnly) {
-          setStatus("permission_only");
-          setHint(t.pushIosPwaRequired);
+          if (isLikelyIos()) {
+            setStatus("permission_only");
+            setHint(t.pushIosPwaRequired);
+          } else {
+            setStatus("ask");
+            setHint("");
+          }
           return;
         }
       }
@@ -205,7 +220,7 @@ export function DonorPushEnableGate({
   const bodyText =
     status === "denied"
       ? t.pushDenied
-      : status === "permission_only"
+      : status === "permission_only" && isLikelyIos()
         ? t.pushIosPwaRequired
         : status === "error"
           ? hint || t.pushEnableError
