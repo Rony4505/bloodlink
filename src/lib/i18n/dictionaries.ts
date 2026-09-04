@@ -380,8 +380,8 @@ export const dictionaries = {
     registerSuccessCta: "Go to my dashboard",
     registerPushTitle: "Allow notifications?",
     registerPushBody:
-      "Get alerts for blood needs and reminders even when BloodLink is closed (internet on).",
-    registerPushAllow: "Allow notifications",
+      "Get blood need alerts and reminders on this phone.",
+    registerPushAllow: "Allow",
     registerPushSkip: "Not now",
     registerPushOn: "Notifications enabled.",
     personalInfo: "Personal info",
@@ -825,15 +825,15 @@ export const dictionaries = {
     pushIosHint:
       "On iPhone, if the system prompt appears tap Allow. For background alerts, also add BloodLink to your Home Screen.",
     pushEnableError: "Could not enable alerts. Tap Allow again, or try Chrome.",
-    pushAllowStats: "Phone alerts allowed",
+    pushAllowStats: "Who turned notifications on",
     pushAllowStatsBody:
-      "{allowed} of {donors} accounts receive real phone push ({subs} devices). {partial} allowed notifications in browser only (iPhone needs Home Screen app).",
+      "{allowed} of {donors} donors get phone alerts ({subs} devices). {partial} allowed in browser only.",
     pushAllowListHint:
-      "Browsers must approve once. iPhone Safari/Chrome tabs cannot receive background push — add BloodLink to Home Screen, open from there, then tap Allow again.",
-    pushAllowStatus: "Push",
-    pushAllowYes: "Delivering",
-    pushAllowPartial: "iPhone/browser only",
-    pushAllowNo: "Not yet",
+      "List below shows every donor and whether notifications are on. Delivering = phone can receive push.",
+    pushAllowStatus: "Notifications",
+    pushAllowYes: "On",
+    pushAllowPartial: "Browser only",
+    pushAllowNo: "Off",
     pushIosPwaRequired:
       "You allowed notifications, but this iPhone browser cannot deliver background alerts. Add BloodLink to your Home Screen (Share → Add to Home Screen), open the app from there, then tap Allow again.",
     adminPublishedStories: "Published success stories",
@@ -1225,8 +1225,8 @@ export const dictionaries = {
     registerSuccessCta: "ড্যাশবোর্ডে যান",
     registerPushTitle: "নোটিফিকেশন অনুমতি দেবেন?",
     registerPushBody:
-      "BloodLink বন্ধ থাকলেও ইন্টারনেট চালু থাকলে রক্তের প্রয়োজন ও রিমাইন্ডারের অ্যালার্ট পাবেন।",
-    registerPushAllow: "নোটিফিকেশন অনুমতি দিন",
+      "এই ফোনে রক্তের প্রয়োজন ও রিমাইন্ডারের অ্যালার্ট পাবেন।",
+    registerPushAllow: "অনুমতি দিন",
     registerPushSkip: "এখন না",
     registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
     personalInfo: "ব্যক্তিগত তথ্য",
@@ -1671,15 +1671,15 @@ export const dictionaries = {
     pushIosHint:
       "iPhone-এ সিস্টেম পারমিশন এলে Allow দিন। ব্যাকগ্রাউন্ড অ্যালার্টের জন্য Home Screen-এ BloodLink অ্যাড করা ভালো।",
     pushEnableError: "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome ব্যবহার করুন।",
-    pushAllowStats: "ফোন অ্যালার্ট অনুমতি",
+    pushAllowStats: "কারা নোটিফিকেশন চালু করেছে",
     pushAllowStatsBody:
-      "{donors}টি অ্যাকাউন্টের মধ্যে {allowed}জন আসল ফোন পুশ পায় ({subs} ডিভাইস)। {partial}জন শুধু ব্রাউজারে Allow করেছে (iPhone-এ Home Screen অ্যাপ লাগবে)।",
+      "{donors}জন ডোনারের মধ্যে {allowed}জন ফোন অ্যালার্ট পায় ({subs} ডিভাইস)। {partial}জন শুধু ব্রাউজারে Allow করেছে।",
     pushAllowListHint:
-      "ব্রাউজারে একবার Allow করতে হয়। iPhone Safari/Chrome ট্যাবে ব্যাকগ্রাউন্ড পুশ আসে না — Home Screen-এ যোগ করে সেখান থেকে খুলে আবার Allow করুন।",
-    pushAllowStatus: "পুশ",
-    pushAllowYes: "পুশ যাচ্ছে",
-    pushAllowPartial: "শুধু ব্রাউজার/iPhone",
-    pushAllowNo: "এখনো না",
+      "নিচের তালিকায় প্রতিটি ডোনার ও নোটিফিকেশন অন/অফ দেখা যায়। On = ফোনে পুশ যেতে পারে।",
+    pushAllowStatus: "নোটিফিকেশন",
+    pushAllowYes: "অন",
+    pushAllowPartial: "শুধু ব্রাউজার",
+    pushAllowNo: "অফ",
     pushIosPwaRequired:
       "আপনি Allow করেছেন, কিন্তু এই iPhone ব্রাউজার থেকে ব্যাকগ্রাউন্ড অ্যালার্ট যায় না। Home Screen-এ BloodLink যোগ করুন (Share → Add to Home Screen), সেখান থেকে খুলে আবার Allow চাপুন।",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",
