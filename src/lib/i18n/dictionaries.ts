@@ -388,6 +388,8 @@ export const dictionaries = {
     registerPushOn: "Notifications enabled.",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
+    donationInfoOptionalHint:
+      "Last donation date, total donations, and health notes are optional — you can leave them blank.",
     alreadyDonor: "Already registered?",
     loginTitle: "Donor login",
     loginSubtitle: "Manage your profile and donation date securely.",
@@ -514,6 +516,7 @@ export const dictionaries = {
     formGuide: "Use real hospital, patient, and phone details so donors can help quickly.",
     footerNote: "BloodLink · Bangladesh",
     loading: "Loading…",
+    optional: "optional",
     errorGeneric: "Something went wrong. Please try again.",
     allFields: "Please fill all required fields.",
     markAllRead: "Mark all read",
@@ -1236,6 +1239,8 @@ export const dictionaries = {
     registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
+    donationInfoOptionalHint:
+      "শেষ রক্তদানের তারিখ, মোট রক্তদান সংখ্যা ও স্বাস্থ্য নোট ঐচ্ছিক — খালি রাখলেও রেজিস্ট্রেশন হবে।",
     alreadyDonor: "আগে রেজিস্টার করেছেন?",
     loginTitle: "ডোনার লগইন",
     loginSubtitle: "নিরাপদে আপনার প্রোফাইল ও রক্তদানের তারিখ পরিচালনা করুন।",
@@ -1363,6 +1368,7 @@ export const dictionaries = {
       "হাসপাতাল, রোগী ও সঠিক ফোন নম্বর দিন, যাতে ডোনার দ্রুত সাহায্য করতে পারেন।",
     footerNote: "BloodLink · বাংলাদেশ",
     loading: "লোড হচ্ছে…",
+    optional: "ঐচ্ছিক",
     errorGeneric: "কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",
     allFields: "সব প্রয়োজনীয় ঘর পূরণ করুন।",
     markAllRead: "সব পঠিত করুন",
