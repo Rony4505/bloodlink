@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
-  clearPushPromptSnooze,
   hasAcceptedPushPrompt,
   isPushPromptSnoozed,
   markPushPromptAccepted,
