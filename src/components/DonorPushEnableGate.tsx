@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
   clearPushPromptSnooze,
+  hasAcceptedPushPrompt,
   isPushPromptSnoozed,
+  markPushPromptAccepted,
   markPushPromptShownThisSession,
   shouldAutoTryPushSubscribe,
   snoozePushPrompt,
@@ -50,8 +52,9 @@ async function fetchPushStatus(): Promise<{
 }
 
 /**
- * Logged-in donors without deliverable push get a prompt — once per session
- * (or on dashboard card), not on every page navigation.
+ * Push allow popup rules:
+ * - Allow once → never show again on this device
+ * - "Not now" / skip → show again after 30 days
  */
 export function DonorPushEnableGate({
   requireLogin = true,
@@ -72,6 +75,14 @@ export function DonorPushEnableGate({
       await new Promise((r) => setTimeout(r, 120));
       if (cancelled) return;
 
+      // Already allowed once on this browser — never nag again.
+      if (hasAcceptedPushPrompt()) {
+        setOpen(false);
+        setCard(false);
+        return;
+      }
+
+      // "Not now" — wait 30 days.
       if (isPushPromptSnoozed()) {
         return;
       }
@@ -92,36 +103,18 @@ export function DonorPushEnableGate({
       }
       if (cancelled) return;
 
-      if (statusRes.subscribed) {
-        localStorage.setItem("bloodlink_push_on", "1");
-        clearPushPromptSnooze();
+      // Already subscribed or previously allowed in browser → treat as done.
+      if (statusRes.subscribed || statusRes.permissionOnly) {
+        markPushPromptAccepted();
         setOpen(false);
         setCard(false);
         return;
       }
 
-      localStorage.removeItem("bloodlink_push_on");
-
-      if (statusRes.permissionOnly) {
-        // Only iPhone browser tabs need the Home Screen / PWA instructions.
-        // Android (incl. Messenger in-app) must keep the simple Allow prompt.
-        if (isLikelyIos()) {
-          setStatus("permission_only");
-          setHint(t.pushIosPwaRequired);
-        } else {
-          setStatus("ask");
-          setHint("");
-        }
-        if (showCard) setCard(true);
-        if (modal && !wasPushPromptShownThisSession()) {
-          markPushPromptShownThisSession();
-          setOpen(true);
-        }
-        return;
-      }
-
       if (canAskNotificationPermission() && Notification.permission === "denied") {
         setStatus("denied");
+        // Don't spam denied users — snooze like "Not now".
+        snoozePushPrompt(30);
         if (showCard) setCard(true);
         return;
       }
@@ -142,8 +135,7 @@ export function DonorPushEnableGate({
         const result = await enableWebPush();
         if (cancelled) return;
         if (result === "granted") {
-          localStorage.setItem("bloodlink_push_on", "1");
-          clearPushPromptSnooze();
+          markPushPromptAccepted();
           setOpen(false);
           setCard(false);
           return;
@@ -161,7 +153,7 @@ export function DonorPushEnableGate({
     return () => {
       cancelled = true;
     };
-  }, [requireLogin, showCard, modal, t.pushIosHint, t.pushIosPwaRequired]);
+  }, [requireLogin, showCard, modal, t.pushIosHint]);
 
   function dismissPrompt() {
     snoozePushPrompt(30);
@@ -175,27 +167,14 @@ export function DonorPushEnableGate({
     try {
       const result = await enableWebPush({ recordIntent: true });
       if (result === "granted") {
-        const statusRes = await fetchPushStatus();
-        if (statusRes.subscribed) {
-          setStatus("on");
-          localStorage.setItem("bloodlink_push_on", "1");
-          clearPushPromptSnooze();
-          window.setTimeout(() => {
-            setOpen(false);
-            setCard(false);
-          }, 900);
-          return;
-        }
-        if (statusRes.permissionOnly) {
-          if (isLikelyIos()) {
-            setStatus("permission_only");
-            setHint(t.pushIosPwaRequired);
-          } else {
-            setStatus("ask");
-            setHint("");
-          }
-          return;
-        }
+        // User allowed — never show this popup again on this device.
+        markPushPromptAccepted();
+        setStatus("on");
+        window.setTimeout(() => {
+          setOpen(false);
+          setCard(false);
+        }, 900);
+        return;
       }
       if (result === "denied") {
         setStatus("denied");
@@ -226,7 +205,7 @@ export function DonorPushEnableGate({
           ? hint || t.pushEnableError
           : t.registerPushBody;
 
-  const showAllowActions = status === "ask" || status === "error" || status === "permission_only";
+  const showAllowActions = status === "ask" || status === "error";
 
   const panel = (
     <>
