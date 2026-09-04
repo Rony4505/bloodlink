@@ -37,11 +37,20 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
     district: "Dhaka",
     area: "",
     lastDonationDate: "",
-    donationCount: 0,
+    donationCount: "" as number | "",
     bloodIssue: "",
   });
 
   const areaOptions = areasForDistrict(form.district);
+  const linkToken = (() => {
+    const raw = String(volunteerToken || "").trim();
+    if (!raw) return "";
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  })();
 
   async function sendOtps(e: React.FormEvent) {
     e.preventDefault();
@@ -49,19 +58,39 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
     setError("");
     setHint("");
     try {
+      const payload: Record<string, unknown> = {
+        action: "start",
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+        gender: form.gender,
+        bloodGroup: form.bloodGroup,
+        district: form.district,
+        area: form.area.trim(),
+        // Optional — omit when empty so they never block registration
+        lastDonationDate: form.lastDonationDate.trim() || null,
+        bloodIssue: form.bloodIssue.trim(),
+      };
+      if (form.donationCount !== "" && form.donationCount != null) {
+        payload.donationCount = Number(form.donationCount);
+      }
+      if (linkToken) payload.volunteerToken = linkToken;
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "start",
-          ...form,
-          lastDonationDate: form.lastDonationDate || null,
-          ...(volunteerToken ? { volunteerToken } : {}),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t.errorGeneric);
+        const fieldMsg =
+          data.fieldErrors &&
+          typeof data.fieldErrors === "object" &&
+          Object.values(data.fieldErrors as Record<string, string[]>)
+            .flat()
+            .filter(Boolean)[0];
+        setError(String(fieldMsg || data.error || t.errorGeneric));
         return;
       }
       setPendingId(data.pendingId);
@@ -309,6 +338,9 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
           <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
             {t.donationInfo}
           </h3>
+          <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+            {t.donationInfoOptionalHint}
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-medium">{t.bloodGroup}</span>
@@ -327,7 +359,12 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">{t.lastDonation}</span>
+              <span className="mb-1 block font-medium">
+                {t.lastDonation}{" "}
+                <span className="font-normal text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                  ({t.optional})
+                </span>
+              </span>
               <input
                 className="field"
                 type="date"
@@ -339,7 +376,12 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
             </label>
           </div>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium">{t.donationCountField}</span>
+            <span className="mb-1 block font-medium">
+              {t.donationCountField}{" "}
+              <span className="font-normal text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                ({t.optional})
+              </span>
+            </span>
             <input
               className="field"
               type="number"
@@ -349,13 +391,20 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
               onChange={(e) =>
                 setForm((f) => ({
                   ...f,
-                  donationCount: Number(e.target.value) || 0,
+                  donationCount:
+                    e.target.value === "" ? "" : Number(e.target.value) || 0,
                 }))
               }
+              placeholder="0"
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium">{t.bloodIssue}</span>
+            <span className="mb-1 block font-medium">
+              {t.bloodIssue}{" "}
+              <span className="font-normal text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                ({t.optional})
+              </span>
+            </span>
             <textarea
               className="field min-h-20"
               value={form.bloodIssue}

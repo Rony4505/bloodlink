@@ -230,7 +230,12 @@ export function VolunteerDonorPanel() {
           </select>
         </label>
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">{t.lastDonation}</span>
+          <span className="mb-1 block font-medium">
+            {t.lastDonation}{" "}
+            <span className="font-normal text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+              ({t.optional})
+            </span>
+          </span>
           <input
             className="field"
             type="date"
@@ -241,7 +246,12 @@ export function VolunteerDonorPanel() {
           />
         </label>
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">{t.donationCountField}</span>
+          <span className="mb-1 block font-medium">
+            {t.donationCountField}{" "}
+            <span className="font-normal text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+              ({t.optional})
+            </span>
+          </span>
           <input
             className="field"
             type="number"

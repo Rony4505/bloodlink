@@ -22,6 +22,8 @@ import {
   registerConfirmSchema,
   registerResendSchema,
   registerSchema,
+  coerceRegisterPayload,
+  formatRegisterValidationError,
 } from "@/lib/validations";
 
 function maskEmail(email: string): string {
@@ -60,10 +62,16 @@ async function resolveVolunteerToken(token: unknown) {
 }
 
 async function startRegistration(body: unknown) {
-  const parsed = registerSchema.safeParse(body);
+  const coerced = coerceRegisterPayload(body);
+  const parsed = registerSchema.safeParse(coerced);
   if (!parsed.success) {
+    const formatted = formatRegisterValidationError(parsed.error);
     return NextResponse.json(
-      { error: "Invalid registration data", details: parsed.error.flatten() },
+      {
+        error: formatted.error,
+        details: parsed.error.flatten(),
+        fieldErrors: formatted.fieldErrors,
+      },
       { status: 400 },
     );
   }

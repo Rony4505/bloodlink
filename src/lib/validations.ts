@@ -7,25 +7,113 @@ const bloodGroupSchema = z.enum(BLOOD_GROUPS);
 const districtSchema = z.enum(DISTRICTS);
 const genderSchema = z.enum(["male", "female"]);
 
+/** Normalize optional YYYY-MM-DD (or common variants). Invalid → null (optional fields). */
+export function normalizeOptionalIsoDate(value: unknown): string | null {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw || raw.toLowerCase() === "null" || raw.toLowerCase() === "undefined") {
+    return null;
+  }
+  // Already ISO date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const t = Date.parse(`${raw}T00:00:00Z`);
+    return Number.isFinite(t) ? raw : null;
+  }
+  // 2024-1-5 → 2024-01-05
+  const loose = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (loose) {
+    const y = loose[1]!;
+    const m = loose[2]!.padStart(2, "0");
+    const d = loose[3]!.padStart(2, "0");
+    const iso = `${y}-${m}-${d}`;
+    const t = Date.parse(`${iso}T00:00:00Z`);
+    return Number.isFinite(t) ? iso : null;
+  }
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmy = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (dmy) {
+    const iso = `${dmy[3]}-${dmy[2]!.padStart(2, "0")}-${dmy[1]!.padStart(2, "0")}`;
+    const t = Date.parse(`${iso}T00:00:00Z`);
+    return Number.isFinite(t) ? iso : null;
+  }
+  return null;
+}
+
+function normalizeOptionalDonationCount(value: unknown): number | undefined {
+  if (value == null || value === "") return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.max(0, Math.min(500, Math.floor(n)));
+}
+
+function normalizeBloodGroup(value: unknown): string {
+  return String(value || "")
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/＋/g, "+")
+    .replace(/－/g, "-")
+    .toUpperCase();
+}
+
+/** Pick + coerce register payload so extra keys (action, volunteerToken) never break validation. */
+export function coerceRegisterPayload(body: unknown): Record<string, unknown> {
+  const raw =
+    body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const lastDonationDate = normalizeOptionalIsoDate(raw.lastDonationDate);
+  const donationCount = normalizeOptionalDonationCount(raw.donationCount);
+  const bloodIssue =
+    raw.bloodIssue == null ? "" : String(raw.bloodIssue).trim().slice(0, 300);
+  return {
+    name: String(raw.name ?? "").trim(),
+    email: String(raw.email ?? "").trim(),
+    phone: String(raw.phone ?? "").trim(),
+    password: String(raw.password ?? ""),
+    gender: String(raw.gender ?? "male").trim().toLowerCase(),
+    bloodGroup: normalizeBloodGroup(raw.bloodGroup),
+    district: String(raw.district ?? "").trim(),
+    area: String(raw.area ?? "").trim(),
+    lastDonationDate,
+    bloodIssue,
+    ...(donationCount !== undefined ? { donationCount } : {}),
+  };
+}
+
 export const registerSchema = z.object({
-  name: z.string().trim().min(2).max(80),
+  name: z.string().trim().min(2, "Name is too short").max(80),
   /** Required — donor verification is Gmail OTP only. */
-  email: z.string().trim().email().max(120),
+  email: z.string().trim().email("Valid email required").max(120),
   phone: z
     .string()
     .trim()
-    .refine(isValidBdPhone, "Valid Bangladesh mobile required"),
-  password: z.string().min(8).max(72),
+    .refine(isValidBdPhone, "Valid Bangladesh mobile required (01XXXXXXXXX)"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72),
   gender: genderSchema,
   bloodGroup: bloodGroupSchema,
   district: districtSchema,
-  area: z.string().trim().min(2).max(80),
-  lastDonationDate: z
-    .union([z.string().date(), z.literal(""), z.null()])
-    .optional(),
+  area: z.string().trim().min(2, "Please select / enter area").max(80),
+  // Optional — empty/invalid dates already coerced to null
+  lastDonationDate: z.union([z.string().date(), z.null()]).optional().nullable(),
   bloodIssue: z.string().trim().max(300).optional().default(""),
-  donationCount: z.coerce.number().int().min(0).max(500).optional(),
+  donationCount: z.number().int().min(0).max(500).optional(),
 });
+
+/** Human-readable first validation error for API clients. */
+export function formatRegisterValidationError(
+  error: z.ZodError,
+): { error: string; fieldErrors: Record<string, string[]> } {
+  const flat = error.flatten();
+  const fieldErrors = flat.fieldErrors as Record<string, string[]>;
+  const firstField = Object.keys(fieldErrors)[0];
+  const firstMsg =
+    (firstField && fieldErrors[firstField]?.[0]) ||
+    flat.formErrors[0] ||
+    "Invalid registration data";
+  return { error: firstMsg, fieldErrors };
+}
 
 /** Login with Gmail or Bangladesh mobile + password. */
 export const loginSchema = z.object({
@@ -327,7 +415,8 @@ export const volunteerDonorCreateSchema = z.object({
   area: z.string().trim().min(2).max(80),
   lastDonationDate: z
     .union([z.string().date(), z.literal(""), z.null()])
-    .optional(),
+    .optional()
+    .nullable(),
   donationCount: z.coerce.number().int().min(0).max(500).optional(),
   /** Temporary password for the donor (they can log in later). */
   tempPassword: z.string().min(8).max(72),

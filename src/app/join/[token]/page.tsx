@@ -10,8 +10,14 @@ export default function VolunteerJoinPage({
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = use(params);
+  const { token: rawToken } = use(params);
   const { t } = useLocale();
+  let token = rawToken;
+  try {
+    token = decodeURIComponent(rawToken);
+  } catch {
+    token = rawToken;
+  }
 
   return (
     <PageShell
