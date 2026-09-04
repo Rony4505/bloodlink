@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
   canAskNotificationPermission,
-  enableWebPush,
   isWebPushSupported,
 } from "@/lib/web-push-client";
+
+const ADMIN_PUSH_DISMISS_KEY = "bloodlink_admin_push_dismissed";
+const ADMIN_PUSH_SESSION_KEY = "bloodlink_admin_push_asked_session";
+const ADMIN_PUSH_SNOOZE_KEY = "bloodlink_admin_push_snooze";
 
 async function fetchAdminPushStatus(): Promise<boolean> {
   try {
@@ -49,10 +52,13 @@ async function subscribeAdminPush(): Promise<boolean> {
   const { publicKey } = (await keyRes.json()) as { publicKey?: string | null };
   if (!publicKey) return false;
 
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
-  });
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+  }
   const json = sub.toJSON();
   const save = await fetch("/api/admin/push/subscribe", {
     method: "POST",
@@ -65,26 +71,54 @@ async function subscribeAdminPush(): Promise<boolean> {
   return save.ok;
 }
 
+function dismissForever() {
+  localStorage.setItem(ADMIN_PUSH_DISMISS_KEY, "1");
+  localStorage.removeItem(ADMIN_PUSH_SNOOZE_KEY);
+}
+
 /** One-time admin push enable card inside the owner console. */
 export function AdminPushEnableGate() {
   const { t } = useLocale();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       if (!canAskNotificationPermission()) return;
+      if (localStorage.getItem(ADMIN_PUSH_DISMISS_KEY) === "1") return;
+      if (sessionStorage.getItem(ADMIN_PUSH_SESSION_KEY) === "1") return;
+
       const subscribed = await fetchAdminPushStatus();
       if (cancelled) return;
       if (subscribed) {
         setDone(true);
+        dismissForever();
         return;
       }
-      if (Notification.permission === "denied") return;
-      const snoozed = localStorage.getItem("bloodlink_admin_push_snooze");
+
+      // Permission already granted — try silent subscribe instead of nagging.
+      if (Notification.permission === "granted" && isWebPushSupported()) {
+        const ok = await subscribeAdminPush();
+        if (cancelled) return;
+        if (ok) {
+          setDone(true);
+          dismissForever();
+          return;
+        }
+      }
+
+      if (Notification.permission === "denied") {
+        dismissForever();
+        return;
+      }
+
+      const snoozed = localStorage.getItem(ADMIN_PUSH_SNOOZE_KEY);
       if (snoozed && Date.now() < Date.parse(snoozed)) return;
+
+      sessionStorage.setItem(ADMIN_PUSH_SESSION_KEY, "1");
       setVisible(true);
     })();
     return () => {
@@ -100,6 +134,9 @@ export function AdminPushEnableGate() {
       <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
         {t.adminPushBody}
       </p>
+      {error ? (
+        <p className="mt-2 text-xs font-medium text-[var(--blood)]">{error}</p>
+      ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
@@ -107,16 +144,19 @@ export function AdminPushEnableGate() {
           className="btn-primary"
           onClick={() => {
             setBusy(true);
+            setError("");
             void (async () => {
               try {
                 const ok = isWebPushSupported()
                   ? await subscribeAdminPush()
                   : false;
                 if (ok) {
+                  dismissForever();
                   setDone(true);
                   setVisible(false);
                   return;
                 }
+                setError(t.pushEnableError);
               } finally {
                 setBusy(false);
               }
@@ -129,10 +169,8 @@ export function AdminPushEnableGate() {
           type="button"
           className="btn-ghost"
           onClick={() => {
-            localStorage.setItem(
-              "bloodlink_admin_push_snooze",
-              new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-            );
+            // Permanent dismiss — do not keep asking on every admin visit
+            dismissForever();
             setVisible(false);
           }}
         >

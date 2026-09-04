@@ -10,37 +10,50 @@ import {
   snoozePushPrompt,
   wasPushPromptShownThisSession,
 } from "@/lib/push-prompt-state";
-import { enableWebPush } from "@/lib/web-push-client";
+import { enableWebPush, isLikelyIos } from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
 
 type Props = {
   requireLogin?: boolean;
 };
 
-async function fetchAlreadyEnabled(): Promise<boolean> {
+type PushStatus = {
+  subscribed: boolean;
+  permissionOnly: boolean;
+};
+
+async function fetchPushStatus(): Promise<PushStatus> {
   try {
     const res = await fetch("/api/push/subscribe", { cache: "no-store" });
-    if (res.status === 401 || !res.ok) return false;
+    if (res.status === 401 || !res.ok) {
+      return { subscribed: false, permissionOnly: false };
+    }
     const data = (await res.json()) as {
       subscribed?: boolean;
       permissionOnly?: boolean;
     };
-    return Boolean(data.subscribed || data.permissionOnly);
+    return {
+      subscribed: Boolean(data.subscribed),
+      permissionOnly: Boolean(data.permissionOnly),
+    };
   } catch {
-    return false;
+    return { subscribed: false, permissionOnly: false };
   }
 }
 
 /**
  * Simple notification Allow popup for logged-in donors.
- * - Allow once → never again on this device
+ * - Full push (Android/desktop) → never ask again
+ * - iPhone browser-only → accept (OS limit)
  * - Not now → again after 30 days
+ * - Non-iPhone stuck on "browser only" → ask again / upgrade to real push
  */
 export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [failHint, setFailHint] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +62,7 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       await new Promise((r) => setTimeout(r, 200));
       if (cancelled) return;
 
-      if (hasAcceptedPushPrompt() || isPushPromptSnoozed()) return;
+      if (isPushPromptSnoozed()) return;
       if (wasPushPromptShownThisSession()) return;
 
       if (requireLogin) {
@@ -61,12 +74,44 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         if (!ok || cancelled) return;
       }
 
-      if (await fetchAlreadyEnabled()) {
+      const status = await fetchPushStatus();
+      if (cancelled) return;
+
+      // Real deliverable push — done forever on this device.
+      if (status.subscribed) {
         markPushPromptAccepted();
         return;
       }
-      if (cancelled) return;
 
+      // iPhone browser-only is the best we can do.
+      if (status.permissionOnly && isLikelyIos()) {
+        markPushPromptAccepted();
+        return;
+      }
+
+      // Non-iPhone with permission-only marker: try silent upgrade once.
+      if (status.permissionOnly && !isLikelyIos()) {
+        const upgraded = await enableWebPush({ recordIntent: true });
+        if (cancelled) return;
+        if (upgraded === "granted") {
+          markPushPromptAccepted();
+          return;
+        }
+        // Still broken — show Allow again (don't treat as accepted).
+        if (hasAcceptedPushPrompt()) {
+          // Clear false "accepted" from older buggy clients so we can re-ask.
+          try {
+            localStorage.removeItem("bloodlink_push_accepted");
+            localStorage.removeItem("bloodlink_push_on");
+          } catch {
+            /* ignore */
+          }
+        }
+      } else if (hasAcceptedPushPrompt()) {
+        return;
+      }
+
+      if (cancelled) return;
       markPushPromptShownThisSession();
       setOpen(true);
     }
@@ -84,20 +129,26 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
 
   async function onAllow() {
     setBusy(true);
+    setFailHint("");
     try {
       const result = await enableWebPush({ recordIntent: true });
-      if (result === "granted") {
+      if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
         setDone(true);
         window.setTimeout(() => setOpen(false), 800);
         return;
       }
-      // Denied or failed — treat like skip (ask again in 30 days)
-      snoozePushPrompt(30);
-      setOpen(false);
+      if (result === "denied") {
+        snoozePushPrompt(30);
+        setOpen(false);
+        return;
+      }
+      // Subscribe failed (common on slow Android) — short snooze, show hint
+      setFailHint(t.pushEnableError);
+      snoozePushPrompt(1);
     } catch {
-      snoozePushPrompt(30);
-      setOpen(false);
+      setFailHint(t.pushEnableError);
+      snoozePushPrompt(1);
     } finally {
       setBusy(false);
     }
@@ -122,6 +173,9 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
           {t.registerPushBody}
         </p>
+        {failHint ? (
+          <p className="mt-2 text-sm font-medium text-[var(--blood)]">{failHint}</p>
+        ) : null}
 
         {done ? (
           <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
