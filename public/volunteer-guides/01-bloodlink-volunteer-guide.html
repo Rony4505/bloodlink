@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <title>গাইড ১: BloodLink-এর কাজ ও ইউজারকে বোঝানো</title>
+  <style>
+    @font-face {
+      font-family: "NotoSansBengali";
+      src: url("/usr/share/fonts/truetype/noto/NotoSansBengali-Regular.ttf") format("truetype");
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "NotoSansBengali";
+      src: url("/usr/share/fonts/truetype/noto/NotoSansBengali-Bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+    @page { size: A4; margin: 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "NotoSansBengali", "Noto Sans Bengali", system-ui, sans-serif;
+      color: #1f1a17;
+      line-height: 1.55;
+      font-size: 12.5px;
+      margin: 0;
+    }
+    h1 {
+      font-size: 22px;
+      color: #6e1220;
+      margin: 0 0 6px;
+      line-height: 1.25;
+    }
+    h2 {
+      font-size: 15px;
+      color: #6e1220;
+      border-bottom: 2px solid #f0d7d2;
+      padding-bottom: 4px;
+      margin: 22px 0 8px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 13px;
+      margin: 14px 0 6px;
+      color: #3a221c;
+      page-break-after: avoid;
+    }
+    p, li { margin: 0 0 8px; }
+    .sub { color: #5c4a44; margin-bottom: 14px; }
+    .badge {
+      display: inline-block;
+      background: #6e1220;
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .card {
+      background: #fff8f4;
+      border: 1px solid #ead8d1;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 10px 0 14px;
+      page-break-inside: avoid;
+    }
+    .say {
+      background: #f4fff8;
+      border-left: 4px solid #2f6b4f;
+      padding: 10px 12px;
+      margin: 8px 0 12px;
+      border-radius: 0 10px 10px 0;
+      page-break-inside: avoid;
+    }
+    .say strong { color: #2f6b4f; }
+    ol.steps { padding-left: 18px; }
+    ol.steps li { margin-bottom: 10px; }
+    figure.shot {
+      margin: 10px 0 16px;
+      page-break-inside: avoid;
+      border: 1px solid #e6d7d0;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    figure.shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    figcaption {
+      font-size: 11px;
+      color: #6a564e;
+      padding: 7px 10px;
+      background: #faf4f0;
+      border-top: 1px solid #eadfd8;
+    }
+    .footer {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #7a6660;
+      border-top: 1px solid #ead8d1;
+      padding-top: 8px;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 12px; }
+    th, td { border: 1px solid #e5d6cf; padding: 7px 8px; text-align: left; vertical-align: top; }
+    th { background: #fff1ec; color: #6e1220; }
+  </style>
+</head>
+<body>
+  <div class="badge">BloodLink BD · Volunteer Guide</div>
+  <h1>গাইড ১: BloodLink-এর কাজ ও ইউজারকে বোঝানো</h1>
+  <p class="sub">ভলান্টিয়ার প্রশিক্ষণ ম্যানুয়াল — স্ক্রিনশটসহ ধাপভিত্তিক নির্দেশনা</p>
+  
+  <div class="card">
+    <strong>এই গাইড কাকে?</strong> BloodLink ভলান্টিয়ারদের জন্য — যাতে সাধারণ ইউজার/ডোনারকে ওয়েবসাইটের কাজ সহজে বোঝাতে পারেন।
+  </div>
+
+  <h2>১. BloodLink কী?</h2>
+  <p>BloodLink BD একটি রক্তদাতা খোঁজা, রক্তের প্রয়োজন পোস্ট করা এবং ডোনার ম্যানেজমেন্টের ওয়েবসাইট। লক্ষ্য: দ্রুত রক্তদাতা সংযোগ ও জীবন বাঁচানো।</p>
+  
+  <figure class="shot">
+    <img src="screenshots/01-home.png" alt="হোমপেজ — এখান থেকেই ইউজারকে পরিচয় করিয়ে দিন" />
+    <figcaption>হোমপেজ — এখান থেকেই ইউজারকে পরিচয় করিয়ে দিন</figcaption>
+  </figure>
+
+  <h2>২. মূল কাজগুলো (ইউজারকে যা দেখাবেন)</h2>
+  <table>
+    <tr><th>কাজ</th><th>পেজ</th><th>ইউজার কী পাবে</th></tr>
+    <tr><td>ডোনার খোঁজা</td><td>/find</td><td>ব্লাড গ্রুপ, জেলা দিয়ে ডোনার খুঁজে ফোন করা</td></tr>
+    <tr><td>ডোনার রেজিস্ট্রেশন</td><td>/register</td><td>নিজে ডোনার হয়ে প্রোফাইল তৈরি</td></tr>
+    <tr><td>রক্তের প্রয়োজন পোস্ট</td><td>/requests</td><td>জরুরি রক্তের অনুরোধ দেখা/পোস্ট</td></tr>
+    <tr><td>লগইন ও ড্যাশবোর্ড</td><td>/login</td><td>প্রোফাইল, ডোনেশন তারিখ, নোটিফিকেশন</td></tr>
+    <tr><td>স্বাস্থ্য সেবা</td><td>/healthcare</td><td>হাসপাতাল খোঁজা ও অ্যাপয়েন্টমেন্ট</td></tr>
+  </table>
+
+  <h2>৩. ধাপে ধাপে ইউজারকে বোঝানোর স্ক্রিপ্ট</h2>
+
+  <h3>A) ডোনার খুঁজতে চাইলে</h3>
+  <div class="say"><strong>বলুন:</strong> “ব্লাড গ্রুপ ও এলাকা দিয়ে ডোনার খুঁজে সরাসরি কল করতে পারবেন।”</div>
+  <ol class="steps">
+    <li>হোম থেকে <strong>Find / খুঁজুন</strong> মেনু দেখান।</li>
+    <li>ব্লাড গ্রুপ + জেলা সিলেক্ট করতে বলুন।</li>
+    <li>ফলাফলে ফোন নম্বরে কল করতে দেখান।</li>
+  </ol>
+  
+  <figure class="shot">
+    <img src="screenshots/02-find.png" alt="ডোনার খোঁজার পেজ — ফিল্টার ও ফলাফল দেখান" />
+    <figcaption>ডোনার খোঁজার পেজ — ফিল্টার ও ফলাফল দেখান</figcaption>
+  </figure>
+
+  <h3>B) নিজে ডোনার হতে চাইলে</h3>
+  <div class="say"><strong>বলুন:</strong> “একবার রেজিস্টার করলে জরুরি প্রয়োজনে নোটিফিকেশন পেতে পারেন।”</div>
+  <ol class="steps">
+    <li><strong>Register</strong> পেজ খুলুন।</li>
+    <li>নাম, মোবাইল, ব্লাড গ্রুপ, জেলা সঠিকভাবে দিতে বলুন।</li>
+    <li>OTP দিয়ে ভেরিফাই → Allow notifications (পারলে)।</li>
+  </ol>
+  
+  <figure class="shot">
+    <img src="screenshots/03-register.png" alt="রেজিস্ট্রেশন ফর্ম — ধাপগুলো একসাথে দেখান" />
+    <figcaption>রেজিস্ট্রেশন ফর্ম — ধাপগুলো একসাথে দেখান</figcaption>
+  </figure>
+
+  <h3>C) রক্তের প্রয়োজন পোস্ট</h3>
+  <div class="say"><strong>বলুন:</strong> “হাসপাতাল/রোগীর জন্য জরুরি রক্তের অনুরোধ পোস্ট করতে পারবেন।”</div>
+  
+  <figure class="shot">
+    <img src="screenshots/04-requests.png" alt="রক্তের প্রয়োজন / রিকোয়েস্ট পেজ" />
+    <figcaption>রক্তের প্রয়োজন / রিকোয়েস্ট পেজ</figcaption>
+  </figure>
+
+  <h3>D) লগইন ও নিজের প্রোফাইল</h3>
+  <div class="say"><strong>বলুন:</strong> “লগইন করে শেষ রক্তদানের তারিখ আপডেট রাখলে সঠিকভাবে উপলব্ধ দেখাবে।”</div>
+  
+  <figure class="shot">
+    <img src="screenshots/05-login.png" alt="ডোনার লগইন পেজ" />
+    <figcaption>ডোনার লগইন পেজ</figcaption>
+  </figure>
+
+  <h3>E) সাইট সম্পর্কে বিশ্বাস তৈরি</h3>
+  
+  <figure class="shot">
+    <img src="screenshots/06-about.png" alt="About পেজ — বিশ্বাসযোগ্যতা বোঝাতে ব্যবহার করুন" />
+    <figcaption>About পেজ — বিশ্বাসযোগ্যতা বোঝাতে ব্যবহার করুন</figcaption>
+  </figure>
+
+  <h2>৪. ভলান্টিয়ারের নিজের কাজ (BloodLink অংশে)</h2>
+  <ul>
+    <li>প্রতি মাসে টার্গেট অনুযায়ী নতুন ডোনার রেজিস্টার/অ্যাড করা</li>
+    <li>ডোনারকে সঠিক তথ্য দিতে সাহায্য করা</li>
+    <li>জরুরি রক্তের ক্ষেত্রে ডোনার–রোগী সংযোগ</li>
+    <li>নোটিফিকেশন Allow করতে উৎসাহ দেওয়া</li>
+    <li>ভুল তথ্য থাকলে অ্যাডমিনকে জানানো</li>
+  </ul>
+
+  <h2>৫. দ্রুত FAQ</h2>
+  <div class="card">
+    <p><strong>প্রশ্ন:</strong> অ্যাপ ডাউনলোড লাগে?<br/><strong>উত্তর:</strong> না, ব্রাউজার/ওয়েবসাইটই যথেষ্ট। iPhone-এ Home Screen-এ যোগ করলে সুবিধা হয়।</p>
+    <p><strong>প্রশ্ন:</strong> তথ্য কি নিরাপদ?<br/><strong>উত্তর:</strong> লগইন ও OTP দিয়ে অ্যাকাউন্ট সুরক্ষিত। ফোন নম্বর শুধু প্রয়োজনমতো যোগাযোগের জন্য।</p>
+    <p><strong>প্রশ্ন:</strong> টাকা লাগে?<br/><strong>উত্তর:</strong> ডোনার রেজিস্ট্রেশন ও খোঁজা বিনামূল্যে।</p>
+  </div>
+  
+  <div class="footer">
+    BloodLink BD — bloodlinkbd.org · এই গাইড শুধুমাত্র ভলান্টিয়ার প্রশিক্ষণের জন্য।
+  </div>
+</body>
+</html>
