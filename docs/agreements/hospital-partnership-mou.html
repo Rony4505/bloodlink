@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <title>BloodLink BD — Hospital Partnership Agreement</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&family=Source+Serif+4:wght@500;600;700&display=swap");
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #e8e4dc;
+      padding: 24px;
+      font-family: "Noto Sans Bengali", "Source Serif 4", serif;
+      color: #1a2332;
+    }
+
+    .page {
+      width: 794px;
+      min-height: 1123px;
+      margin: 0 auto;
+      background:
+        linear-gradient(180deg, #fffdf8 0%, #f7f3ea 100%);
+      border: 1px solid #c5b89a;
+      box-shadow: 0 8px 28px rgba(40, 30, 10, 0.18);
+      padding: 48px 52px 40px;
+      position: relative;
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border: 1.5px solid #8b1e2d;
+      pointer-events: none;
+    }
+
+    .page::after {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid #c9a227;
+      pointer-events: none;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #8b1e2d;
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      font-family: "Source Serif 4", serif;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #8b1e2d;
+      line-height: 1.15;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: #5a4a3a;
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .doc-title {
+      margin-top: 14px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a2332;
+    }
+
+    .doc-title-en {
+      font-size: 13px;
+      color: #5a4a3a;
+      margin-top: 2px;
+      font-family: "Source Serif 4", serif;
+      font-style: italic;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 16px;
+      color: #3d3428;
+      position: relative;
+      z-index: 1;
+    }
+
+    .meta strong { color: #8b1e2d; }
+
+    .intro {
+      font-size: 13.5px;
+      line-height: 1.65;
+      margin-bottom: 14px;
+      text-align: justify;
+      position: relative;
+      z-index: 1;
+    }
+
+    .parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .party {
+      border: 1px solid #d4c7a8;
+      background: rgba(255, 255, 255, 0.55);
+      padding: 10px 12px;
+    }
+
+    .party h3 {
+      font-size: 12px;
+      color: #8b1e2d;
+      margin-bottom: 6px;
+      letter-spacing: 0.03em;
+    }
+
+    .party p {
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+
+    .blank {
+      display: inline-block;
+      min-width: 160px;
+      border-bottom: 1px dotted #5a4a3a;
+      color: #1a2332;
+      font-weight: 600;
+      padding: 0 4px;
+    }
+
+    h2 {
+      font-size: 14px;
+      color: #8b1e2d;
+      margin: 12px 0 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    ol.terms {
+      padding-left: 22px;
+      font-size: 12.5px;
+      line-height: 1.58;
+      position: relative;
+      z-index: 1;
+    }
+
+    ol.terms li { margin-bottom: 6px; text-align: justify; }
+
+    .note {
+      margin-top: 12px;
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #4a3f32;
+      background: rgba(139, 30, 45, 0.06);
+      border-left: 3px solid #8b1e2d;
+      padding: 8px 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin-top: 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sig h4 {
+      font-size: 12.5px;
+      color: #8b1e2d;
+      margin-bottom: 28px;
+    }
+
+    .sig .line {
+      border-top: 1px solid #1a2332;
+      padding-top: 6px;
+      font-size: 11.5px;
+      line-height: 1.55;
+      color: #3d3428;
+    }
+
+    .footer {
+      margin-top: 22px;
+      text-align: center;
+      font-size: 10.5px;
+      color: #6a5a48;
+      border-top: 1px solid #d4c7a8;
+      padding-top: 10px;
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="agreement">
+    <div class="header">
+      <div class="brand">BloodLink BD</div>
+      <div class="brand-sub">bloodlinkbd.org · Humanitarian Blood &amp; Healthcare Platform</div>
+      <div class="doc-title">হাসপাতাল অংশীদারিত্ব চুক্তিপত্র</div>
+      <div class="doc-title-en">Hospital Partnership / Memorandum of Understanding (MoU)</div>
+    </div>
+
+    <div class="meta">
+      <div>চুক্তি নং: <strong>BL-HOSP-____/20__</strong></div>
+      <div>তারিখ: <strong>____ / ____ / 20____</strong></div>
+    </div>
+
+    <p class="intro">
+      এই চুক্তিপত্রটি নিম্নলিখিত দুই পক্ষের মধ্যে স্বেচ্ছায় সম্পাদিত হইল। উদ্দেশ্য:
+      BloodLink BD প্ল্যাটফর্মে হাসপাতাল/স্বাস্থ্যকেন্দ্র যুক্ত করা, অনলাইন উপস্থিতি,
+      ডাক্তার সিডিউল, অ্যাপয়েন্টমেন্ট ব্যবস্থাপনা এবং জরুরি রক্তদাতা সংযোগে সহযোগিতা।
+    </p>
+
+    <div class="parties">
+      <div class="party">
+        <h3>প্রথম পক্ষ (First Party)</h3>
+        <p>
+          <strong>BloodLink BD</strong><br />
+          ওয়েবসাইট: bloodlinkbd.org<br />
+          ইমেইল: bloodlinkbd@gmail.com<br />
+          প্রতিনিধি: _______________________
+        </p>
+      </div>
+      <div class="party">
+        <h3>দ্বিতীয় পক্ষ (Second Party)</h3>
+        <p>
+          হাসপাতালের নাম: <span class="blank">________________</span><br />
+          ঠিকানা / জেলা: <span class="blank">________________</span><br />
+          মোবাইল: <span class="blank">________________</span><br />
+          কর্তৃপক্ষের নাম ও পদবী: _______________
+        </p>
+      </div>
+    </div>
+
+    <h2>শর্তাবলি / Terms</h2>
+    <ol class="terms">
+      <li>
+        <strong>প্ল্যাটফর্ম তালিকাভুক্তি:</strong> দ্বিতীয় পক্ষের হাসপাতাল BloodLink BD-এর
+        স্বাস্থ্যসেবা সেকশনে তালিকাভুক্ত হবে; রোগীরা নাম/জেলা দিয়ে খুঁজে ডাক্তার সিডিউল ও
+        অ্যাপয়েন্টমেন্ট দেখতে পারবে।
+      </li>
+      <li>
+        <strong>ম্যানেজমেন্ট পোর্টাল:</strong> প্রথম পক্ষ একটি প্রাইভেট পোর্টাল লিংক প্রদান করবে।
+        দ্বিতীয় পক্ষ সেই লিংক দিয়ে ডাক্তার, সময়সূচি ও অ্যাপয়েন্টমেন্ট ম্যানেজ করবে।
+      </li>
+      <li>
+        <strong>তথ্যের সঠিকতা:</strong> হাসপাতালের নাম, ঠিকানা, যোগাযোগ, ডাক্তার ও সিডিউলের
+        সঠিকতা রক্ষা করা দ্বিতীয় পক্ষের দায়িত্ব। ভুল তথ্য থাকলে অবিলম্বে আপডেট করতে হবে।
+      </li>
+      <li>
+        <strong>রক্তদাতা সংযোগ:</strong> জরুরি রক্তের প্রয়োজনে BloodLink BD ডোনার নেটওয়ার্ক
+        সহায়তা করতে পারে। রক্তদান শুধুমাত্র বৈধ হাসপাতাল/চ্যানেলের মাধ্যমে হতে হবে।
+      </li>
+      <li>
+        <strong>কোনো আর্থিক চার্জ নয় (ডিফল্ট):</strong> এই অংশীদারিত্ব মানবিক সহযোগিতার ভিত্তিতে।
+        কোনো পক্ষ অন্য পক্ষের কাছ থেকে প্ল্যাটফর্ম তালিকাভুক্তির জন্য অগ্রিম/গোপন ফি দাবি করবে না,
+        যতক্ষণ না আলাদা লিখিত সমঝোতা হয়।
+      </li>
+      <li>
+        <strong>গোপনীয়তা ও নিরাপত্তা:</strong> রোগী/ডোনারের ব্যক্তিগত তথ্য অননুমোদিতভাবে
+        প্রকাশ বা বাণিজ্যিক কাজে ব্যবহার করা যাবে না।
+      </li>
+      <li>
+        <strong>দায় সীমা:</strong> BloodLink BD কেবল ডিজিটাল সংযোগ প্ল্যাটফর্ম। চিকিৎসা ফলাফল,
+        ব্যক্তিগত যোগাযোগজনিত প্রতারণা বা হাসপাতালের অভ্যন্তরীণ সেবার দায় প্রথম পক্ষ গ্রহণ করে না।
+      </li>
+      <li>
+        <strong>মেয়াদ ও বাতিল:</strong> চুক্তি স্বাক্ষরের তারিখ থেকে কার্যকর। যেকোনো পক্ষ
+        ৭ (সাত) দিনের লিখিত নোটিশে সহযোগিতা স্থগিত/বাতিল করতে পারবে।
+      </li>
+    </ol>
+
+    <div class="note">
+      <strong>নোট:</strong> এটি একটি সহযোগিতা/MoU টেমপ্লেট। হাসপাতালের নাম, ঠিকানা ও তারিখ খালি ঘরে
+      পূরণ করে স্বাক্ষর করুন। প্রয়োজনে স্থানীয় আইন/হাসপাতাল নীতি অনুযায়ী সংশোধন করা যাবে।
+    </div>
+
+    <div class="signatures">
+      <div class="sig">
+        <h4>প্রথম পক্ষের স্বাক্ষর<br />(BloodLink BD)</h4>
+        <div class="line">
+          নাম: ___________________________<br />
+          পদবী: __________________________<br />
+          তারিখ: ____ / ____ / 20____<br />
+          সিল / স্বাক্ষর
+        </div>
+      </div>
+      <div class="sig">
+        <h4>দ্বিতীয় পক্ষের স্বাক্ষর<br />(হাসপাতাল কর্তৃপক্ষ)</h4>
+        <div class="line">
+          নাম: ___________________________<br />
+          পদবী: __________________________<br />
+          তারিখ: ____ / ____ / 20____<br />
+          সিল / স্বাক্ষর
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      BloodLink BD · Hospital Partnership MoU Template · যেকোনো হাসপাতাল/ডায়াগনস্টিক সেন্টারের জন্য প্রযোজ্য · bloodlinkbd.org
+    </div>
+  </div>
+</body>
+</html>
