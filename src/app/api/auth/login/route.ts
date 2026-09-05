@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSession, toSafeDonor, verifyPassword } from "@/lib/auth";
-import { findDonorByEmail, findDonorByPhone } from "@/lib/db";
+import { findDonorByEmail, findDonorByPhone, updateDonor } from "@/lib/db";
 import { isValidBdPhone, normalizePhone } from "@/lib/privacy";
 import { loginSchema } from "@/lib/validations";
 
@@ -36,7 +36,11 @@ export async function POST(request: Request) {
     }
 
     await createSession(donor.id);
-    return NextResponse.json({ ok: true, donor: await toSafeDonor(donor) });
+    const updated =
+      (await updateDonor(donor.id, {
+        lastLoginAt: new Date().toISOString(),
+      })) || donor;
+    return NextResponse.json({ ok: true, donor: await toSafeDonor(updated) });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

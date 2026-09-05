@@ -68,9 +68,6 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       // Once per browser session (each new login = new session → ask again).
       if (wasPushPromptShownThisSession()) return;
 
-      // Already allowed on this browser — never show the popup again.
-      if (shouldSkipPushPrompt()) return;
-
       if (requireLogin) {
         let ok = await loadLoggedIn({ force: true });
         if (!ok) {
@@ -89,7 +86,7 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         return;
       }
 
-      // iPhone browser-only is the best we can do.
+      // iPhone browser-only is the best we can do (already saved on server).
       if (status.permissionOnly && isLikelyIos()) {
         markPushPromptAccepted();
         return;
@@ -112,8 +109,19 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         return;
       }
 
+      // Browser already granted, but server has no row yet — sync so admin sees Allow.
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        markPushPromptAccepted();
+        const synced = await enableWebPush({ recordIntent: true });
+        if (cancelled) return;
+        if (synced === "granted" || synced === "permission_only") {
+          markPushPromptAccepted();
+          return;
+        }
+        // Fall through and show popup so they can retry Allow.
+      }
+
+      // Local "accepted" alone is not enough — only skip after server sync above.
+      if (shouldSkipPushPrompt() && (status.subscribed || status.permissionOnly)) {
         return;
       }
 

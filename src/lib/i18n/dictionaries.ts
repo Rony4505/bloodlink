@@ -843,6 +843,9 @@ export const dictionaries = {
     pushAllowYes: "On",
     pushAllowPartial: "Browser only",
     pushAllowNo: "Off",
+    pushAllowLoginCol: "Last login",
+    pushAllowWhoAllowed: "Who allowed",
+    pushAllowNobodyYet: "Nobody has allowed push yet.",
     pushIosPwaRequired:
       "You allowed notifications, but this iPhone browser cannot deliver background alerts. Add BloodLink to your Home Screen (Share → Add to Home Screen), open the app from there, then tap Allow again.",
     adminPublishedStories: "Published success stories",
@@ -1698,6 +1701,9 @@ export const dictionaries = {
     pushAllowYes: "অন",
     pushAllowPartial: "শুধু ব্রাউজার",
     pushAllowNo: "অফ",
+    pushAllowLoginCol: "শেষ লগইন",
+    pushAllowWhoAllowed: "কারা Allow করেছে",
+    pushAllowNobodyYet: "এখনো কেউ push Allow করেনি।",
     pushIosPwaRequired:
       "আপনি Allow করেছেন, কিন্তু এই iPhone ব্রাউজার থেকে ব্যাকগ্রাউন্ড অ্যালার্ট যায় না। Home Screen-এ BloodLink যোগ করুন (Share → Add to Home Screen), সেখান থেকে খুলে আবার Allow চাপুন।",
     adminPublishedStories: "প্রকাশিত সফলতার গল্প",

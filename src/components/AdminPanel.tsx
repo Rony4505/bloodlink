@@ -178,6 +178,8 @@ export function AdminPanel() {
       pushStatus: "deliverable" | "permission_only" | "none";
       subscriptionCount: number;
       deliverableCount: number;
+      allowedAt: string | null;
+      lastLoginAt: string | null;
     }>;
   }>({
     donorCount: 0,
@@ -430,6 +432,8 @@ export function AdminPanel() {
                 allowed?: boolean;
                 subscriptionCount?: number;
                 deliverableCount?: number;
+                allowedAt?: string | null;
+                lastLoginAt?: string | null;
               }) => ({
                 id: String(d.id || ""),
                 name: String(d.name || ""),
@@ -441,6 +445,8 @@ export function AdminPanel() {
                   (d.allowed ? "deliverable" : "none"),
                 subscriptionCount: Number(d.subscriptionCount) || 0,
                 deliverableCount: Number(d.deliverableCount) || 0,
+                allowedAt: d.allowedAt ? String(d.allowedAt) : null,
+                lastLoginAt: d.lastLoginAt ? String(d.lastLoginAt) : null,
               }),
             )
           : [],
@@ -1740,15 +1746,33 @@ export function AdminPanel() {
                 <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                   {t.pushAllowListHint}
                 </p>
+                {pushAllow.donors.filter((d) => d.pushStatus !== "none").length ? (
+                  <p className="mt-2 text-xs font-medium text-[var(--blood-deep)]">
+                    {t.pushAllowWhoAllowed}:{" "}
+                    {pushAllow.donors
+                      .filter((d) => d.pushStatus !== "none")
+                      .slice(0, 12)
+                      .map((d) => d.name)
+                      .join(", ")}
+                    {pushAllow.donors.filter((d) => d.pushStatus !== "none").length > 12
+                      ? "…"
+                      : ""}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    {t.pushAllowNobodyYet}
+                  </p>
+                )}
                 {pushAllow.donors.length ? (
                   <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-[var(--line)] bg-white/90">
                     <table className="w-full min-w-[28rem] text-left text-xs">
                       <thead className="sticky top-0 bg-[color-mix(in_oklab,var(--sand)_40%,white)] text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
                         <tr>
                           <th className="px-3 py-2 font-semibold">{t.name}</th>
-                          <th className="px-3 py-2 font-semibold">{t.email}</th>
+                          <th className="px-3 py-2 font-semibold">{t.phone}</th>
                           <th className="px-3 py-2 font-semibold">{t.bloodGroup}</th>
                           <th className="px-3 py-2 font-semibold">{t.pushAllowStatus}</th>
+                          <th className="px-3 py-2 font-semibold">{t.pushAllowLoginCol}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1759,15 +1783,12 @@ export function AdminPanel() {
                           >
                             <td className="px-3 py-2">
                               <p className="font-semibold text-[var(--ink)]">{d.name}</p>
-                              <p className="mt-0.5 font-mono text-[10px] text-[color-mix(in_oklab,var(--ink)_45%,white)]">
-                                {d.id.slice(0, 8)}…
-                              </p>
-                              <p className="mt-0.5 text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                                {d.phone}
+                              <p className="mt-0.5 text-[10px] text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                                {d.email}
                               </p>
                             </td>
-                            <td className="px-3 py-2 text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-                              {d.email}
+                            <td className="px-3 py-2 font-mono text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                              {d.phone}
                             </td>
                             <td className="px-3 py-2 font-semibold text-[var(--blood-deep)]">
                               {d.bloodGroup}
@@ -1789,6 +1810,16 @@ export function AdminPanel() {
                                   {t.pushAllowNo}
                                 </span>
                               )}
+                              {d.allowedAt ? (
+                                <p className="mt-1 text-[10px] text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                                  {new Date(d.allowedAt).toLocaleString()}
+                                </p>
+                              ) : null}
+                            </td>
+                            <td className="px-3 py-2 text-[10px] text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                              {d.lastLoginAt
+                                ? new Date(d.lastLoginAt).toLocaleString()
+                                : "—"}
                             </td>
                           </tr>
                         ))}

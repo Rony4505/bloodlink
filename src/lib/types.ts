@@ -35,6 +35,8 @@ export type Donor = {
   volunteerSource: "link" | "manual" | null;
   /** Manual adds need admin approval before counting as volunteer work. */
   volunteerApproved: boolean;
+  /** Last successful donor login (ISO). */
+  lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
