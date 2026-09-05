@@ -72,3 +72,14 @@ export function shouldAutoTryPushSubscribe(): boolean {
   sessionStorage.setItem(AUTO_TRY_KEY, "1");
   return true;
 }
+
+/** True when this browser already allowed notifications — never show the popup again. */
+export function shouldSkipPushPrompt(): boolean {
+  if (typeof window === "undefined") return true;
+  if (hasAcceptedPushPrompt()) return true;
+  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    markPushPromptAccepted();
+    return true;
+  }
+  return false;
+}

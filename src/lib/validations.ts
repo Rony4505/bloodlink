@@ -419,7 +419,7 @@ export const volunteerDonorCreateSchema = z.object({
     .nullable(),
   donationCount: z.coerce.number().int().min(0).max(500).optional(),
   /** Temporary password for the donor (they can log in later). */
-  tempPassword: z.string().min(8).max(72),
+  tempPassword: z.string().min(6).max(72),
 });
 
 export const volunteerDonorUpdateSchema = z.object({

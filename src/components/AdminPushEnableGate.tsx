@@ -99,15 +99,20 @@ export function AdminPushEnableGate() {
         return;
       }
 
-      // Permission already granted — try silent subscribe instead of nagging.
-      if (Notification.permission === "granted" && isWebPushSupported()) {
-        const ok = await subscribeAdminPush();
-        if (cancelled) return;
-        if (ok) {
-          setDone(true);
-          dismissForever();
-          return;
+      // Already allowed — never show the prompt again; try silent subscribe.
+      if (Notification.permission === "granted") {
+        if (isWebPushSupported()) {
+          const ok = await subscribeAdminPush();
+          if (cancelled) return;
+          if (ok) {
+            setDone(true);
+            dismissForever();
+            return;
+          }
         }
+        // Permission granted counts as Allow — stop asking even if subscribe fails.
+        dismissForever();
+        return;
       }
 
       if (Notification.permission === "denied") {
