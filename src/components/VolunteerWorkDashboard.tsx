@@ -48,6 +48,7 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [manual, setManual] = useState({
     name: "",
     phone: "",
@@ -90,31 +91,63 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
     e.preventDefault();
     setError("");
     setMessage("");
-    const res = await fetch(
-      `/api/public/volunteer/${encodeURIComponent(token)}/donors`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(manual),
-      },
-    );
-    const json = await res.json();
-    if (!res.ok) {
-      setError(json.error || t.errorGeneric);
+
+    const name = manual.name.trim();
+    const phone = manual.phone.trim();
+    const area = manual.area.trim();
+    const tempPassword = manual.tempPassword;
+    if (name.length < 2 || area.length < 2) {
+      setError(t.errorGeneric);
       return;
     }
-    setMessage(t.volunteerManualSaved);
-    setShowManual(false);
-    setManual({
-      name: "",
-      phone: "",
-      gender: "male",
-      bloodGroup: "O+",
-      district: "Dhaka",
-      area: "",
-      tempPassword: "",
-    });
-    void load();
+    const digits = phone.replace(/\D/g, "").replace(/^880/, "0");
+    if (!/^01[3-9]\d{8}$/.test(digits)) {
+      setError(t.phone);
+      return;
+    }
+    if (tempPassword.length < 6) {
+      setError(t.passwordHint);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/public/volunteer/${encodeURIComponent(token)}/donors`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...manual, name, phone, area, tempPassword }),
+        },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const details = json?.details?.fieldErrors || json?.details?.formErrors;
+        let detailMsg = "";
+        if (details && typeof details === "object") {
+          const parts = Object.values(details).flat().filter(Boolean);
+          if (parts.length) detailMsg = String(parts[0]);
+        }
+        setError(detailMsg || json.error || t.errorGeneric);
+        return;
+      }
+      setMessage(t.volunteerManualSaved);
+      setShowManual(false);
+      setManual({
+        name: "",
+        phone: "",
+        gender: "male",
+        bloodGroup: "O+",
+        district: "Dhaka",
+        area: "",
+        tempPassword: "",
+      });
+      void load();
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading && !data) {
@@ -291,14 +324,19 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
                 <option key={a} value={a} />
               ))}
             </datalist>
+            {error ? <p className="text-sm font-medium text-[var(--blood)]">{error}</p> : null}
+            {message ? <p className="text-sm font-medium text-[var(--sage)]">{message}</p> : null}
             <PasswordField
               label={t.volunteerTempPassword}
               value={manual.tempPassword}
               onChange={(tempPassword) => setManual((m) => ({ ...m, tempPassword }))}
               autoComplete="new-password"
+              required
+              minLength={6}
+              hint={t.passwordHint}
             />
-            <button type="submit" className="btn-primary">
-              {t.volunteerSaveManual}
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? t.loading : t.volunteerSaveManual}
             </button>
           </form>
         ) : null}

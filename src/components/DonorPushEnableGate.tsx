@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
-  clearPushPromptAccepted,
   clearPushPromptSnooze,
   markPushPromptAccepted,
   markPushPromptShownThisSession,
+  shouldSkipPushPrompt,
   snoozePushPrompt,
   wasPushPromptShownThisSession,
 } from "@/lib/push-prompt-state";
@@ -43,7 +43,7 @@ async function fetchPushStatus(): Promise<PushStatus> {
 
 /**
  * Notification Allow popup for logged-in donors.
- * Keeps asking on every new login until push is actually enabled.
+ * Asks until the user allows notifications; once allowed, never shows again on this browser.
  * - Real push (Android/desktop) → stop asking
  * - iPhone browser permission-only → stop asking (OS limit)
  * - Not now → hide this session only; next login asks again
@@ -67,6 +67,9 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
 
       // Once per browser session (each new login = new session → ask again).
       if (wasPushPromptShownThisSession()) return;
+
+      // Already allowed on this browser — never show the popup again.
+      if (shouldSkipPushPrompt()) return;
 
       if (requireLogin) {
         let ok = await loadLoggedIn({ force: true });
@@ -92,9 +95,6 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         return;
       }
 
-      // Not enabled yet — never trust local "accepted" alone; keep asking.
-      clearPushPromptAccepted();
-
       // Non-iPhone with stale permission-only: try silent upgrade first.
       if (status.permissionOnly && !isLikelyIos()) {
         const upgraded = await enableWebPush({ recordIntent: true });
@@ -109,6 +109,11 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       // Browser hard-blocked notifications — short pause only.
       if (typeof Notification !== "undefined" && Notification.permission === "denied") {
         snoozePushPrompt(1);
+        return;
+      }
+
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        markPushPromptAccepted();
         return;
       }
 

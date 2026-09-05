@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
+import {
+  markPushPromptAccepted,
+  shouldSkipPushPrompt,
+} from "@/lib/push-prompt-state";
 
 type GateStatus = "loading" | "ask" | "on" | "denied" | "error";
 
@@ -38,6 +42,19 @@ export function VolunteerPushEnableGate({
       setStatus("error");
       return;
     }
+
+    // Already allowed — never show the blocking popup again.
+    if (
+      shouldSkipPushPrompt() ||
+      (typeof Notification !== "undefined" && Notification.permission === "granted")
+    ) {
+      markPushPromptAccepted();
+      setStatus("on");
+      setInlineOn(true);
+      setOpen(false);
+      return;
+    }
+
     try {
       const res = await fetch(
         `/api/public/volunteer/${encodeURIComponent(token)}/push`,

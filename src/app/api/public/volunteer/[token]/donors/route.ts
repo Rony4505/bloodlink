@@ -24,8 +24,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const parsed = volunteerDonorCreateSchema.safeParse(body);
     if (!parsed.success) {
+      const flat = parsed.error.flatten();
+      const first =
+        Object.values(flat.fieldErrors).flat()[0] ||
+        flat.formErrors[0] ||
+        "Invalid donor data";
       return NextResponse.json(
-        { error: "Invalid donor data", details: parsed.error.flatten() },
+        { error: String(first), details: flat },
         { status: 400 },
       );
     }

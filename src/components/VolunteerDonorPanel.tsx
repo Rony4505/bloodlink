@@ -160,7 +160,7 @@ export function VolunteerDonorPanel() {
               setForm((f) => ({ ...f, tempPassword: e.target.value }))
             }
             required
-            minLength={8}
+            minLength={6}
             autoComplete="off"
           />
         </label>
