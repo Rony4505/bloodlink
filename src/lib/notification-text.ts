@@ -1,8 +1,23 @@
 import type { AppNotification, BloodPost, Donor } from "./types";
 import type { Locale } from "./i18n/dictionaries";
 
-export function newDonorAdminTexts(donor: Pick<Donor, "name" | "bloodGroup" | "district" | "area">) {
+export function newDonorAdminTexts(
+  donor: Pick<Donor, "name" | "bloodGroup" | "district" | "area"> & {
+    volunteerSource?: "link" | "manual" | null;
+    volunteerApproved?: boolean;
+  },
+) {
   const place = [donor.area, donor.district].filter(Boolean).join(", ");
+  const pendingManual =
+    donor.volunteerSource === "manual" && donor.volunteerApproved === false;
+  if (pendingManual) {
+    return {
+      titleEn: "Volunteer donor pending approval",
+      titleBn: "Volunteer donor অনুমোদনের অপেক্ষায়",
+      bodyEn: `${donor.name} was added manually by a volunteer (${donor.bloodGroup}${place ? ` · ${place}` : ""}). Approve in Volunteers.`,
+      bodyBn: `${donor.name}-কে একজন volunteer ম্যানুয়ালি যোগ করেছেন (${donor.bloodGroup}${place ? ` · ${place}` : ""})। Volunteers ট্যাব থেকে Approve করুন।`,
+    };
+  }
   return {
     titleEn: "New donor registered",
     titleBn: "নতুন donor registration",

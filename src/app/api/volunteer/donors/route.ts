@@ -104,6 +104,8 @@ export async function POST(request: Request) {
       pendingResetChannel: null,
       pendingResetExpiresAt: null,
       createdByVolunteerId: volunteer.id,
+      volunteerSource: "manual",
+      volunteerApproved: false,
     });
 
     return NextResponse.json({
@@ -117,7 +119,9 @@ export async function POST(request: Request) {
         area: donor.area,
         gender: donor.gender,
         donationCount: donor.donationCount,
+        volunteerApproved: donor.volunteerApproved,
       },
+      message: "Donor saved — waiting for admin approval.",
     });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });

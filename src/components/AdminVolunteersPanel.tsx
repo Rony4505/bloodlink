@@ -115,6 +115,7 @@ export function AdminVolunteersPanel() {
       bloodGroup: string;
       district: string;
       area: string;
+      phone?: string;
       createdAt: string;
       volunteerName: string;
     }[]
@@ -471,7 +472,8 @@ export function AdminVolunteersPanel() {
                 <div>
                   <p className="font-medium">{d.name} · {d.bloodGroup}</p>
                   <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
-                    {d.area}, {d.district} · {d.volunteerName}
+                    {d.area}, {d.district}
+                    {d.phone ? ` · ${d.phone}` : ""} · {d.volunteerName}
                   </p>
                 </div>
                 <div className="flex gap-2">
