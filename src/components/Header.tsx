@@ -63,6 +63,15 @@ function GlobeIcon() {
   );
 }
 
+function HealthcareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]">
+      <path strokeLinejoin="round" d="M4 20V8l8-5 8 5v12H4z" />
+      <path strokeLinecap="round" d="M12 11v6M9 14h6" />
+    </svg>
+  );
+}
+
 export function Header({ compact = false }: { compact?: boolean }) {
   const { t, locale, toggleLocale } = useLocale();
   const pathname = usePathname();
@@ -106,6 +115,17 @@ export function Header({ compact = false }: { compact?: boolean }) {
           }
         />
         <nav className="flex shrink-0 items-center justify-end gap-0.5 text-sm text-white sm:gap-2">
+          <Link
+            href="/healthcare"
+            className={navItemClass}
+            aria-label={t.healthcareNav}
+            title={t.healthcareNav}
+          >
+            <NavIcon>
+              <HealthcareIcon />
+            </NavIcon>
+            <span className="hidden sm:inline">{t.healthcareNav}</span>
+          </Link>
           {loggedIn ? (
             <>
               <NotificationBell />
