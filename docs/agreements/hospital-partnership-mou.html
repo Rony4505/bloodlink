@@ -18,12 +18,11 @@
     .page {
       width: 794px;
       min-height: 1123px;
-      margin: 0 auto;
-      background:
-        linear-gradient(180deg, #fffdf8 0%, #f7f3ea 100%);
+      margin: 0 auto 32px;
+      background: linear-gradient(180deg, #fffdf8 0%, #f7f3ea 100%);
       border: 1px solid #c5b89a;
       box-shadow: 0 8px 28px rgba(40, 30, 10, 0.18);
-      padding: 48px 52px 40px;
+      padding: 44px 48px 36px;
       position: relative;
     }
 
@@ -45,16 +44,16 @@
 
     .header {
       text-align: center;
-      padding-bottom: 16px;
+      padding-bottom: 12px;
       border-bottom: 2px solid #8b1e2d;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
     }
 
     .brand {
       font-family: "Source Serif 4", serif;
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 700;
       letter-spacing: 0.04em;
       color: #8b1e2d;
@@ -62,22 +61,22 @@
     }
 
     .brand-sub {
-      font-size: 12px;
+      font-size: 11px;
       color: #5a4a3a;
-      margin-top: 4px;
+      margin-top: 3px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     .doc-title {
-      margin-top: 14px;
-      font-size: 20px;
+      margin-top: 10px;
+      font-size: 18px;
       font-weight: 700;
       color: #1a2332;
     }
 
     .doc-title-en {
-      font-size: 13px;
+      font-size: 12px;
       color: #5a4a3a;
       margin-top: 2px;
       font-family: "Source Serif 4", serif;
@@ -88,7 +87,7 @@
       display: flex;
       justify-content: space-between;
       font-size: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       color: #3d3428;
       position: relative;
       z-index: 1;
@@ -97,9 +96,9 @@
     .meta strong { color: #8b1e2d; }
 
     .intro {
-      font-size: 13.5px;
-      line-height: 1.65;
-      margin-bottom: 14px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      margin-bottom: 12px;
       text-align: justify;
       position: relative;
       z-index: 1;
@@ -107,9 +106,9 @@
 
     .parties {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1.15fr;
       gap: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       position: relative;
       z-index: 1;
     }
@@ -120,6 +119,13 @@
       padding: 10px 12px;
     }
 
+    .party-second {
+      display: grid;
+      grid-template-columns: 1fr 92px;
+      gap: 10px;
+      align-items: start;
+    }
+
     .party h3 {
       font-size: 12px;
       color: #8b1e2d;
@@ -128,91 +134,201 @@
     }
 
     .party p {
-      font-size: 12.5px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .photo-box {
+      width: 92px;
+      height: 112px;
+      border: 1.5px dashed #8b1e2d;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6px;
+      flex-shrink: 0;
+    }
+
+    .photo-box .ph-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #8b1e2d;
+      line-height: 1.3;
+    }
+
+    .photo-box .ph-sub {
+      font-size: 9px;
+      color: #6a5a48;
+      margin-top: 4px;
+      line-height: 1.25;
     }
 
     .blank {
       display: inline-block;
-      min-width: 160px;
+      min-width: 120px;
       border-bottom: 1px dotted #5a4a3a;
-      color: #1a2332;
-      font-weight: 600;
       padding: 0 4px;
     }
 
     h2 {
-      font-size: 14px;
+      font-size: 13.5px;
       color: #8b1e2d;
-      margin: 12px 0 6px;
+      margin: 10px 0 5px;
       position: relative;
       z-index: 1;
     }
 
     ol.terms {
-      padding-left: 22px;
-      font-size: 12.5px;
-      line-height: 1.58;
+      padding-left: 20px;
+      font-size: 12px;
+      line-height: 1.5;
       position: relative;
       z-index: 1;
     }
 
-    ol.terms li { margin-bottom: 6px; text-align: justify; }
+    ol.terms li { margin-bottom: 5px; text-align: justify; }
 
-    .note {
-      margin-top: 12px;
-      font-size: 11.5px;
-      line-height: 1.5;
-      color: #4a3f32;
-      background: rgba(139, 30, 45, 0.06);
-      border-left: 3px solid #8b1e2d;
-      padding: 8px 10px;
+    .fee-box {
+      margin-top: 8px;
+      border: 1px solid #d4c7a8;
+      background: rgba(255, 255, 255, 0.65);
+      padding: 10px 12px;
       position: relative;
       z-index: 1;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .fee-box h3 {
+      font-size: 12.5px;
+      color: #8b1e2d;
+      margin-bottom: 6px;
+    }
+
+    .fee-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      margin-top: 6px;
+    }
+
+    .fee-field {
+      border-bottom: 1px dotted #5a4a3a;
+      min-height: 22px;
+      padding-bottom: 2px;
+    }
+
+    .fee-field span {
+      color: #5a4a3a;
+      font-size: 11px;
     }
 
     .signatures {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 28px;
-      margin-top: 28px;
+      gap: 24px;
+      margin-top: 22px;
       position: relative;
       z-index: 1;
     }
 
     .sig h4 {
-      font-size: 12.5px;
+      font-size: 12px;
       color: #8b1e2d;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .sig .line {
       border-top: 1px solid #1a2332;
       padding-top: 6px;
-      font-size: 11.5px;
-      line-height: 1.55;
+      font-size: 11px;
+      line-height: 1.5;
       color: #3d3428;
     }
 
     .footer {
-      margin-top: 22px;
+      margin-top: 18px;
       text-align: center;
       font-size: 10.5px;
       color: #6a5a48;
       border-top: 1px solid #d4c7a8;
-      padding-top: 10px;
+      padding-top: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Payment ledger page */
+    .ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 11.5px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .ledger-table th,
+    .ledger-table td {
+      border: 1px solid #c5b89a;
+      padding: 8px 6px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .ledger-table th {
+      background: rgba(139, 30, 45, 0.1);
+      color: #8b1e2d;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .ledger-table td {
+      height: 34px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .ledger-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      font-size: 12px;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .ledger-info .row {
+      border-bottom: 1px dotted #5a4a3a;
+      padding-bottom: 3px;
+      min-height: 24px;
+    }
+
+    .ledger-info .row span {
+      color: #5a4a3a;
+      font-size: 11px;
+    }
+
+    .ack {
+      margin-top: 16px;
+      font-size: 11.5px;
+      line-height: 1.5;
+      text-align: justify;
       position: relative;
       z-index: 1;
     }
   </style>
 </head>
 <body>
+  <!-- PAGE 1: Partnership agreement -->
   <div class="page" id="agreement">
     <div class="header">
       <div class="brand">BloodLink BD</div>
       <div class="brand-sub">bloodlinkbd.org · Humanitarian Blood &amp; Healthcare Platform</div>
       <div class="doc-title">হাসপাতাল অংশীদারিত্ব চুক্তিপত্র</div>
-      <div class="doc-title-en">Hospital Partnership / Memorandum of Understanding (MoU)</div>
+      <div class="doc-title-en">Hospital Partnership Agreement</div>
     </div>
 
     <div class="meta">
@@ -238,16 +354,23 @@
       </div>
       <div class="party">
         <h3>দ্বিতীয় পক্ষ (Second Party)</h3>
-        <p>
-          হাসপাতালের নাম: <span class="blank">________________</span><br />
-          ঠিকানা / জেলা: <span class="blank">________________</span><br />
-          মোবাইল: <span class="blank">________________</span><br />
-          কর্তৃপক্ষের নাম ও পদবী: _______________
-        </p>
+        <div class="party-second">
+          <p>
+            হাসপাতালের নাম: _______________<br />
+            ঠিকানা / জেলা: _______________<br />
+            মোবাইল: _______________________<br />
+            কর্তৃপক্ষের নাম: _______________<br />
+            পদবী: _________________________
+          </p>
+          <div class="photo-box">
+            <div class="ph-label">পাসপোর্ট<br />সাইজ ছবি</div>
+            <div class="ph-sub">দ্বিতীয় পক্ষ<br />(কর্তৃপক্ষ)</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <h2>শর্তাবলি / Terms</h2>
+    <h2>শর্তাবলি</h2>
     <ol class="terms">
       <li>
         <strong>প্ল্যাটফর্ম তালিকাভুক্তি:</strong> দ্বিতীয় পক্ষের হাসপাতাল BloodLink BD-এর
@@ -267,9 +390,8 @@
         সহায়তা করতে পারে। রক্তদান শুধুমাত্র বৈধ হাসপাতাল/চ্যানেলের মাধ্যমে হতে হবে।
       </li>
       <li>
-        <strong>কোনো আর্থিক চার্জ নয় (ডিফল্ট):</strong> এই অংশীদারিত্ব মানবিক সহযোগিতার ভিত্তিতে।
-        কোনো পক্ষ অন্য পক্ষের কাছ থেকে প্ল্যাটফর্ম তালিকাভুক্তির জন্য অগ্রিম/গোপন ফি দাবি করবে না,
-        যতক্ষণ না আলাদা লিখিত সমঝোতা হয়।
+        <strong>সার্ভিস ফি:</strong> দ্বিতীয় পক্ষ প্রথম পক্ষকে নিচের ঘরে লিখিত মাসিক অথবা
+        বার্ষিক ফি প্রদান করবে। ফির পরিমাণ ও ধরন হাতে লিখে নির্ধারণ করতে হবে।
       </li>
       <li>
         <strong>গোপনীয়তা ও নিরাপত্তা:</strong> রোগী/ডোনারের ব্যক্তিগত তথ্য অননুমোদিতভাবে
@@ -281,13 +403,19 @@
       </li>
       <li>
         <strong>মেয়াদ ও বাতিল:</strong> চুক্তি স্বাক্ষরের তারিখ থেকে কার্যকর। যেকোনো পক্ষ
-        ৭ (সাত) দিনের লিখিত নোটিশে সহযোগিতা স্থগিত/বাতিল করতে পারবে।
+        ৭ (সাত) দিনের লিখিত নোটিশে সহযোগিতা স্থগিত/বাতিল করতে পারবে। ফি বকেয়া থাকলে
+        প্রথম পক্ষ তালিকা স্থগিত রাখতে পারবে।
       </li>
     </ol>
 
-    <div class="note">
-      <strong>নোট:</strong> এটি একটি সহযোগিতা/MoU টেমপ্লেট। হাসপাতালের নাম, ঠিকানা ও তারিখ খালি ঘরে
-      পূরণ করে স্বাক্ষর করুন। প্রয়োজনে স্থানীয় আইন/হাসপাতাল নীতি অনুযায়ী সংশোধন করা যাবে।
+    <div class="fee-box">
+      <h3>সার্ভিস ফি (হাতে লিখুন)</h3>
+      <div class="fee-row">
+        <div class="fee-field"><span>ফি ধরন (মাসিক / বার্ষিক):</span><br />&nbsp;</div>
+        <div class="fee-field"><span>ফি পরিমাণ (৳):</span><br />&nbsp;</div>
+        <div class="fee-field"><span>পেমেন্ট শুরুর তারিখ:</span><br />&nbsp;</div>
+        <div class="fee-field"><span>পরবর্তী পেমেন্ট তারিখ:</span><br />&nbsp;</div>
+      </div>
     </div>
 
     <div class="signatures">
@@ -312,7 +440,81 @@
     </div>
 
     <div class="footer">
-      BloodLink BD · Hospital Partnership MoU Template · যেকোনো হাসপাতাল/ডায়াগনস্টিক সেন্টারের জন্য প্রযোজ্য · bloodlinkbd.org
+      BloodLink BD · bloodlinkbd.org
+    </div>
+  </div>
+
+  <!-- PAGE 2: Payment / transaction ledger -->
+  <div class="page" id="payment-ledger">
+    <div class="header">
+      <div class="brand">BloodLink BD</div>
+      <div class="brand-sub">bloodlinkbd.org · Humanitarian Blood &amp; Healthcare Platform</div>
+      <div class="doc-title">আর্থিক লেনদেন রেকর্ড</div>
+      <div class="doc-title-en">Hospital Service Fee Payment Record</div>
+    </div>
+
+    <div class="meta">
+      <div>চুক্তি নং: <strong>BL-HOSP-____/20__</strong></div>
+      <div>তারিখ: <strong>____ / ____ / 20____</strong></div>
+    </div>
+
+    <div class="ledger-info">
+      <div class="row"><span>হাসপাতালের নাম:</span></div>
+      <div class="row"><span>যোগাযোগ (মোবাইল):</span></div>
+      <div class="row"><span>ফি ধরন (মাসিক / বার্ষিক):</span></div>
+      <div class="row"><span>নির্ধারিত ফি (৳):</span></div>
+    </div>
+
+    <h2>পেমেন্ট হিসাব (হাতে লিখুন)</h2>
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th style="width:8%">ক্রম</th>
+          <th style="width:16%">তারিখ</th>
+          <th style="width:14%">পরিমাণ (৳)</th>
+          <th style="width:16%">মাধ্যম</th>
+          <th style="width:18%">ট্রানজেকশন আইডি</th>
+          <th style="width:14%">প্রাপ্তিকারী</th>
+          <th style="width:14%">স্বাক্ষর</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>১</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>২</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৩</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৪</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৫</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৬</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৭</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৮</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>৯</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>১০</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>১১</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>১২</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+
+    <div class="signatures">
+      <div class="sig">
+        <h4>প্রথম পক্ষ<br />(BloodLink BD)</h4>
+        <div class="line">
+          নাম: ___________________________<br />
+          তারিখ: ____ / ____ / 20____<br />
+          সিল / স্বাক্ষর
+        </div>
+      </div>
+      <div class="sig">
+        <h4>দ্বিতীয় পক্ষ<br />(হাসপাতাল কর্তৃপক্ষ)</h4>
+        <div class="line">
+          নাম: ___________________________<br />
+          তারিখ: ____ / ____ / 20____<br />
+          সিল / স্বাক্ষর
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      BloodLink BD · bloodlinkbd.org
     </div>
   </div>
 </body>
