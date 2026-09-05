@@ -14,7 +14,11 @@ import {
   regenerateHealthcareCompanyToken,
   updateHealthcareCompany,
 } from "@/lib/healthcare-platform";
-import { healthcareManageUrl } from "@/lib/healthcare-urls";
+import {
+  healthcareCompanyBannerUrl,
+  healthcareCompanyPublicUrl,
+  healthcareManageUrl,
+} from "@/lib/healthcare-urls";
 
 export async function GET() {
   const ok = await isAdminAuthenticated();
@@ -44,6 +48,8 @@ export async function GET() {
       return {
         ...company,
         portalUrl: healthcareManageUrl(company.linkToken),
+        publicUrl: healthcareCompanyPublicUrl(company.linkToken),
+        bannerUrl: healthcareCompanyBannerUrl(company.linkToken),
         doctorCount: doctors.length,
         appointmentCount: appointments.length,
         pendingAppointments: appointments.filter((a) => a.status === "pending").length,
@@ -91,7 +97,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      company: { ...company, portalUrl: healthcareManageUrl(company.linkToken) },
+      company: {
+        ...company,
+        portalUrl: healthcareManageUrl(company.linkToken),
+        publicUrl: healthcareCompanyPublicUrl(company.linkToken),
+        bannerUrl: healthcareCompanyBannerUrl(company.linkToken),
+      },
     });
   } catch {
     return NextResponse.json({ error: "Failed to create company" }, { status: 500 });
@@ -118,7 +129,12 @@ export async function PATCH(request: Request) {
       }
       return NextResponse.json({
         ok: true,
-        company: { ...company, portalUrl: healthcareManageUrl(company.linkToken) },
+        company: {
+          ...company,
+          portalUrl: healthcareManageUrl(company.linkToken),
+          publicUrl: healthcareCompanyPublicUrl(company.linkToken),
+          bannerUrl: healthcareCompanyBannerUrl(company.linkToken),
+        },
       });
     }
 
@@ -139,7 +155,12 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      company: { ...company, portalUrl: healthcareManageUrl(company.linkToken) },
+      company: {
+        ...company,
+        portalUrl: healthcareManageUrl(company.linkToken),
+        publicUrl: healthcareCompanyPublicUrl(company.linkToken),
+        bannerUrl: healthcareCompanyBannerUrl(company.linkToken),
+      },
     });
   } catch {
     return NextResponse.json({ error: "Failed to update company" }, { status: 500 });

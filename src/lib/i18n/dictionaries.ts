@@ -649,7 +649,7 @@ export const dictionaries = {
     healthcareFacilitiesTab: "DGHS facilities",
     healthcareCompanyAddTitle: "Add healthcare company",
     healthcareCompanyAddHint:
-      "Create a company portal URL — staff manage doctors and appointments without login.",
+      "Create a company portal — a unique print-ready QR banner opens automatically for reception.",
     healthcareCompanyName: "Company / hospital name",
     healthcareCompanyNameBn: "Name (Bangla)",
     healthcareCompanyPhone: "Contact phone",
@@ -659,6 +659,8 @@ export const dictionaries = {
       "Link a DGHS facility to auto-fill name, phone, email, district and upazila.",
     healthcareCompanyCreate: "Create company",
     healthcareCompanyCreated: "Company created.",
+    healthcareCompanyCreatedBanner:
+      "Company created. Print the QR banner and give it to the hospital for reception.",
     healthcareCompanyUpdated: "Company updated.",
     healthcareCompanyDeleted: "Company deleted.",
     healthcareCompanyDeleteConfirm: "Delete this company and all its doctors/appointments?",
@@ -674,6 +676,17 @@ export const dictionaries = {
     healthcareOpenPortal: "Open portal",
     healthcareLinkedFacilities: "Linked facilities",
     healthcareViewPublic: "Public page",
+    healthcareQrPrintBanner: "Print QR banner",
+    healthcareQrBannerAdminHint:
+      "Print this unique QR placard (A5 / table-stand). Patients scan it to open this hospital’s BloodLink healthcare page and book services.",
+    healthcareQrPrint: "Print banner",
+    healthcareQrOpenPage: "Open patient page",
+    healthcareQrEyebrow: "Healthcare services",
+    healthcareQrAlt: "Scan QR for healthcare services",
+    healthcareQrScanHint: "Scan this QR to book doctors & services",
+    healthcareQrScanSub: "Opens this hospital’s page on BloodLink BD — appointments in one scan.",
+    healthcareQrPrintHint:
+      "Print on A5 paper (or table-stand insert). Place on the reception desk.",
     healthcarePortalUrlLabel: "Hospital portal link",
     healthcarePortalUrlHint:
       "Share with hospital staff — the link uses the hospital name.",
@@ -1507,7 +1520,7 @@ export const dictionaries = {
     healthcareFacilitiesTab: "DGHS প্রতিষ্ঠান",
     healthcareCompanyAddTitle: "স্বাস্থ্য কোম্পানি যোগ করুন",
     healthcareCompanyAddHint:
-      "কোম্পানি পোর্টাল লিংক তৈরি করুন — স্টাফ লগইন ছাড়াই ডাক্তার ও অ্যাপয়েন্টমেন্ট ম্যানেজ করবে।",
+      "কোম্পানি তৈরি হলেই প্রিন্টযোগ্য ইউনিক QR ব্যানার খুলবে — রিসেপশনে লাগানোর জন্য।",
     healthcareCompanyName: "কোম্পানি / হাসপাতালের নাম",
     healthcareCompanyNameBn: "নাম (বাংলা)",
     healthcareCompanyPhone: "যোগাযোগের ফোন",
@@ -1517,6 +1530,8 @@ export const dictionaries = {
       "DGHS প্রতিষ্ঠান লিংক করলে নাম, ফোন, ইমেইল, জেলা ও উপজেলা অটো পূরণ হবে।",
     healthcareCompanyCreate: "কোম্পানি তৈরি করুন",
     healthcareCompanyCreated: "কোম্পানি তৈরি হয়েছে।",
+    healthcareCompanyCreatedBanner:
+      "কোম্পানি তৈরি হয়েছে। QR ব্যানার প্রিন্ট করে প্রতিষ্ঠানকে দিন — রিসেপশনে লাগাবে।",
     healthcareCompanyUpdated: "আপডেট হয়েছে।",
     healthcareCompanyDeleted: "কোম্পানি ডিলিট হয়েছে।",
     healthcareCompanyDeleteConfirm: "এই কোম্পানি ও সব ডাক্তার/অ্যাপয়েন্টমেন্ট ডিলিট করবেন?",
@@ -1532,6 +1547,18 @@ export const dictionaries = {
     healthcareOpenPortal: "পোর্টাল খুলুন",
     healthcareLinkedFacilities: "লিংক করা প্রতিষ্ঠান",
     healthcareViewPublic: "পাবলিক পেজ",
+    healthcareQrPrintBanner: "QR ব্যানার প্রিন্ট",
+    healthcareQrBannerAdminHint:
+      "এই ইউনিক QR প্ল্যাকার্ড (A5 / টেবিল স্ট্যান্ড) প্রিন্ট করুন। রোগী স্ক্যান করে এই হাসপাতালের BloodLink স্বাস্থ্যসেবা পেজ খুলে অ্যাপয়েন্টমেন্ট নিতে পারবে।",
+    healthcareQrPrint: "ব্যানার প্রিন্ট করুন",
+    healthcareQrOpenPage: "রোগীর পেজ খুলুন",
+    healthcareQrEyebrow: "স্বাস্থ্যসেবা",
+    healthcareQrAlt: "স্বাস্থ্যসেবার জন্য QR স্ক্যান করুন",
+    healthcareQrScanHint: "QR স্ক্যান করে ডাক্তার ও সেবা নিন",
+    healthcareQrScanSub:
+      "BloodLink BD-তে এই প্রতিষ্ঠানের পেজ খুলবে — এক স্ক্যানে অ্যাপয়েন্টমেন্ট।",
+    healthcareQrPrintHint:
+      "A5 কাগজে প্রিন্ট করুন (বা টেবিল স্ট্যান্ড ইনসার্ট)। রিসেপশন ডেস্কে রাখুন।",
     healthcarePortalUrlLabel: "হাসপাতাল পোর্টাল লিংক",
     healthcarePortalUrlHint:
       "হাসপাতাল স্টাফের সাথে শেয়ার করুন — লিংকে হাসপাতালের নাম থাকে।",
