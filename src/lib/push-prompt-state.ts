@@ -1,7 +1,7 @@
 const SNOOZE_KEY = "bloodlink_push_snooze_until";
 const SESSION_ASKED_KEY = "bloodlink_push_asked_this_session";
 const AUTO_TRY_KEY = "bloodlink_push_auto_try";
-/** User tapped Allow once — never show the modal again on this device. */
+/** User successfully enabled push (deliverable or iOS permission-only). */
 const ACCEPTED_KEY = "bloodlink_push_accepted";
 
 export function isPushPromptSnoozed(): boolean {
@@ -16,8 +16,11 @@ export function isPushPromptSnoozed(): boolean {
   return true;
 }
 
-/** User chose "Not now" — hide the modal for a while (default 30 days). */
-export function snoozePushPrompt(days = 30): void {
+/**
+ * Temporary hide only (e.g. browser hard-denied).
+ * "Not now" must NOT use a long snooze — ask again on every new login.
+ */
+export function snoozePushPrompt(days = 1): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(
     SNOOZE_KEY,
@@ -30,7 +33,7 @@ export function clearPushPromptSnooze(): void {
   localStorage.removeItem(SNOOZE_KEY);
 }
 
-/** True after the user has successfully tapped Allow on this browser. */
+/** True after a successful Allow on this browser (local hint only). */
 export function hasAcceptedPushPrompt(): boolean {
   if (typeof window === "undefined") return false;
   return (
@@ -44,6 +47,13 @@ export function markPushPromptAccepted(): void {
   localStorage.setItem(ACCEPTED_KEY, "1");
   localStorage.setItem("bloodlink_push_on", "1");
   clearPushPromptSnooze();
+}
+
+/** Clear false "accepted" so we keep asking until real push is on. */
+export function clearPushPromptAccepted(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ACCEPTED_KEY);
+  localStorage.removeItem("bloodlink_push_on");
 }
 
 export function wasPushPromptShownThisSession(): boolean {

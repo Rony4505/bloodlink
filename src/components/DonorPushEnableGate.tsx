@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
-  hasAcceptedPushPrompt,
-  isPushPromptSnoozed,
+  clearPushPromptAccepted,
+  clearPushPromptSnooze,
   markPushPromptAccepted,
   markPushPromptShownThisSession,
   snoozePushPrompt,
@@ -42,11 +42,11 @@ async function fetchPushStatus(): Promise<PushStatus> {
 }
 
 /**
- * Simple notification Allow popup for logged-in donors.
- * - Full push (Android/desktop) → never ask again
- * - iPhone browser-only → accept (OS limit)
- * - Not now → again after 30 days
- * - Non-iPhone stuck on "browser only" → ask again / upgrade to real push
+ * Notification Allow popup for logged-in donors.
+ * Keeps asking on every new login until push is actually enabled.
+ * - Real push (Android/desktop) → stop asking
+ * - iPhone browser permission-only → stop asking (OS limit)
+ * - Not now → hide this session only; next login asks again
  */
 export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const { t } = useLocale();
@@ -62,7 +62,10 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       await new Promise((r) => setTimeout(r, 200));
       if (cancelled) return;
 
-      if (isPushPromptSnoozed()) return;
+      // Drop old 30-day snoozes so past "Not now" users get asked again.
+      clearPushPromptSnooze();
+
+      // Once per browser session (each new login = new session → ask again).
       if (wasPushPromptShownThisSession()) return;
 
       if (requireLogin) {
@@ -89,7 +92,10 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         return;
       }
 
-      // Non-iPhone with permission-only marker: try silent upgrade once.
+      // Not enabled yet — never trust local "accepted" alone; keep asking.
+      clearPushPromptAccepted();
+
+      // Non-iPhone with stale permission-only: try silent upgrade first.
       if (status.permissionOnly && !isLikelyIos()) {
         const upgraded = await enableWebPush({ recordIntent: true });
         if (cancelled) return;
@@ -97,21 +103,15 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
           markPushPromptAccepted();
           return;
         }
-        // Still broken — show Allow again (don't treat as accepted).
-        if (hasAcceptedPushPrompt()) {
-          // Clear false "accepted" from older buggy clients so we can re-ask.
-          try {
-            localStorage.removeItem("bloodlink_push_accepted");
-            localStorage.removeItem("bloodlink_push_on");
-          } catch {
-            /* ignore */
-          }
-        }
-      } else if (hasAcceptedPushPrompt()) {
-        return;
       }
 
       if (cancelled) return;
+      // Browser hard-blocked notifications — short pause only.
+      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+        snoozePushPrompt(1);
+        return;
+      }
+
       markPushPromptShownThisSession();
       setOpen(true);
     }
@@ -123,7 +123,7 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
   }, [requireLogin]);
 
   function onSkip() {
-    snoozePushPrompt(30);
+    // This session only — next login will ask again until Allow.
     setOpen(false);
   }
 
@@ -139,16 +139,15 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         return;
       }
       if (result === "denied") {
-        snoozePushPrompt(30);
+        setFailHint(t.pushDenied);
+        snoozePushPrompt(1);
         setOpen(false);
         return;
       }
-      // Subscribe failed (common on slow Android) — short snooze, show hint
       setFailHint(t.pushEnableError);
-      snoozePushPrompt(1);
+      // Stay open so they can tap Allow again this session.
     } catch {
       setFailHint(t.pushEnableError);
-      snoozePushPrompt(1);
     } finally {
       setBusy(false);
     }

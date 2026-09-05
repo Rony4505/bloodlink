@@ -64,15 +64,14 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
         markPushPromptAccepted();
         setPushDone("on");
       } else if (result === "denied") {
-        snoozePushPrompt(30);
+        // Browser blocked — short pause; login later will ask again if possible
+        snoozePushPrompt(1);
         setPushDone("denied");
       } else {
-        // Failed to create a real subscription — ask again soon (1 day)
-        snoozePushPrompt(1);
+        // Subscribe failed — keep asking on next login (no long snooze)
         setPushDone("skipped");
       }
     } catch {
-      snoozePushPrompt(1);
       setPushDone("skipped");
     } finally {
       setPushBusy(false);
@@ -183,7 +182,7 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
                 type="button"
                 disabled={pushBusy}
                 onClick={() => {
-                  snoozePushPrompt(30);
+                  // No long snooze — DonorPushEnableGate will ask again on next login
                   setPushDone("skipped");
                 }}
                 className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
@@ -208,8 +207,7 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
         <button
           type="button"
           onClick={() => {
-            // Leaving without Allow/Not now = ask again after 30 days
-            if (pushDone === "idle") snoozePushPrompt(30);
+            // Skip / leave without Allow → ask again on every next login
             onContinue();
           }}
           className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#265a42]"
