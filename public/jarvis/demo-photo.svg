@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Demo webcam photo">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#134e4a"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="320" cy="200" r="72" fill="#fde68a" opacity="0.9"/>
+  <rect x="180" y="290" width="280" height="120" rx="24" fill="#5eead4" opacity="0.35"/>
+  <text x="320" y="430" fill="#ecfdf5" font-family="system-ui,sans-serif" font-size="28" text-anchor="middle">Demo Camera Capture</text>
+</svg>
