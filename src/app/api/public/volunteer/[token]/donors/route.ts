@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth";
 import {
+  claimExistingDonorForVolunteer,
   createDonor,
-  findDonorByPhone,
   findVolunteerByLinkToken,
 } from "@/lib/db";
 import { normalizePhone } from "@/lib/privacy";
@@ -36,9 +36,42 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const phone = normalizePhone(parsed.data.phone);
-    if (await findDonorByPhone(phone)) {
+
+    // Donor already self-registered → link as this volunteer's pending work.
+    const claim = await claimExistingDonorForVolunteer(volunteer.id, phone);
+    if (claim.status === "claimed") {
+      return NextResponse.json({
+        ok: true,
+        claimed: true,
+        donor: {
+          id: claim.donor.id,
+          name: claim.donor.name,
+          bloodGroup: claim.donor.bloodGroup,
+          district: claim.donor.district,
+          area: claim.donor.area,
+          createdAt: claim.donor.createdAt,
+          volunteerApproved: claim.donor.volunteerApproved,
+        },
+        message:
+          "Donor already registered — linked to your work. Waiting for admin approval to count.",
+        code: "claimed_existing",
+      });
+    }
+    if (claim.status === "already_yours") {
       return NextResponse.json(
-        { error: "A donor with this phone already exists" },
+        {
+          error: "This donor is already on your list.",
+          code: "already_yours",
+        },
+        { status: 409 },
+      );
+    }
+    if (claim.status === "claimed_by_other") {
+      return NextResponse.json(
+        {
+          error: "This donor is already linked to another volunteer's work.",
+          code: "claimed_by_other",
+        },
         { status: 409 },
       );
     }
@@ -67,6 +100,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({
       ok: true,
+      claimed: false,
       donor: {
         id: donor.id,
         name: donor.name,
@@ -77,6 +111,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         volunteerApproved: donor.volunteerApproved,
       },
       message: "Donor saved — waiting for admin approval to count.",
+      code: "created",
     });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
