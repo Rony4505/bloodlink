@@ -116,7 +116,7 @@ function dataBackupsDir(): string {
   return path.join(dataDir(), "healthcare-backups");
 }
 
-const MEMORY_TTL_MS = 20_000;
+const MEMORY_TTL_MS = 5 * 60_000; // warm platform blob between admin/public hits
 const MAX_ROTATING_BACKUPS = 30;
 
 let writeQueue: Promise<void> = Promise.resolve();

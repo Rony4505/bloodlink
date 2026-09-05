@@ -42,27 +42,39 @@ const DATA_FILE = path.join(
 
 let cached: HealthcareFacilitiesDataset | null = null;
 let cachedAt = 0;
-const CACHE_MS = 60_000;
+const CACHE_MS = 6 * 60 * 60 * 1000; // keep DGHS catalog warm — avoids 11MB re-parse
 let slugByDghsId: Map<string, string> | null = null;
 let facilityBySlug: Map<string, HealthcareFacility> | null = null;
+let facilityById: Map<string, HealthcareFacility> | null = null;
 
 function rebuildFacilitySlugIndex(dataset: HealthcareFacilitiesDataset) {
   slugByDghsId = new Map();
   facilityBySlug = new Map();
-  const taken: string[] = [];
+  facilityById = new Map();
+  const taken = new Set<string>();
   for (const f of dataset.facilities) {
-    const base = slugifyName(
+    facilityById.set(f.dghsId, f);
+    const root = slugifyName(
       [f.name || f.nameBn, f.district, f.upazila].filter(Boolean).join(" "),
     );
-    const slug = uniqueSlug(base, taken);
-    taken.push(slug);
+    let slug = root;
+    if (taken.has(slug)) {
+      for (let i = 2; i < 10000; i++) {
+        const candidate = `${root.slice(0, Math.max(1, 64 - `-${i}`.length))}-${i}`;
+        if (!taken.has(candidate)) {
+          slug = candidate;
+          break;
+        }
+      }
+    }
+    taken.add(slug);
     slugByDghsId.set(f.dghsId, slug);
     facilityBySlug.set(slug, f);
   }
 }
 
 function ensureFacilitySlugIndex(dataset: HealthcareFacilitiesDataset) {
-  if (!slugByDghsId || !facilityBySlug) rebuildFacilitySlugIndex(dataset);
+  if (!slugByDghsId || !facilityBySlug || !facilityById) rebuildFacilitySlugIndex(dataset);
 }
 
 export async function loadHealthcareFacilities(): Promise<HealthcareFacilitiesDataset> {
@@ -192,7 +204,8 @@ export async function getHealthcareFacilityById(
   dghsId: string,
 ): Promise<HealthcareFacility | null> {
   const dataset = await loadHealthcareFacilities();
-  return dataset.facilities.find((f) => f.dghsId === dghsId) ?? null;
+  ensureFacilitySlugIndex(dataset);
+  return facilityById?.get(dghsId) ?? null;
 }
 
 /** Public URL slug from hospital name (+ location), not the DGHS number. */
@@ -216,7 +229,5 @@ export async function getHealthcareFacilityBySlugOrId(
   if (!clean) return null;
   const dataset = await loadHealthcareFacilities();
   ensureFacilitySlugIndex(dataset);
-  const byId = dataset.facilities.find((f) => f.dghsId === clean);
-  if (byId) return byId;
-  return facilityBySlug?.get(clean) ?? null;
+  return facilityById?.get(clean) ?? facilityBySlug?.get(clean) ?? null;
 }

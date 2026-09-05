@@ -460,6 +460,18 @@ textarea.field::placeholder {
     color: black !important;
   }
 
+  /* Healthcare QR banner: keep cream card + maroon text (do not flatten to B/W). */
+  body.healthcare-qr-print-mode {
+    background: #fffaf7 !important;
+    color: #1c1412 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body.healthcare-qr-print-mode .healthcare-qr-toolbar,
+  body.healthcare-qr-print-mode .healthcare-qr-toolbar * {
+    display: none !important;
+  }
+
   .print\:shadow-none,
   section,
   ul,

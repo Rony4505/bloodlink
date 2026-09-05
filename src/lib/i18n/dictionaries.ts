@@ -110,7 +110,7 @@ export const dictionaries = {
     adminMarkAllRead: "Mark all read",
     adminPushTitle: "Admin phone notifications",
     adminPushBody:
-      "Allow push here once so you get instant alerts when someone registers as a new donor.",
+      "Allow once so you get phone alerts for new donor registrations and new blood requests. Permission alone is not enough — wait until Allow finishes saving.",
     adminPushAllow: "Allow admin push",
     volunteerAdd: "Add volunteer",
     volunteerAddSimpleHint: "Only 4 things needed. Extra details are optional.",
@@ -686,7 +686,7 @@ export const dictionaries = {
     healthcareQrScanHint: "Scan this QR to book doctors & services",
     healthcareQrScanSub: "Opens this hospital’s page on BloodLink BD — appointments in one scan.",
     healthcareQrPrintHint:
-      "Print on A5 paper (or table-stand insert). Place on the reception desk.",
+      "Print on A5 (or table-stand insert). In the print dialog choose A5 if available, turn on Background graphics, and turn off Headers & Footers.",
     healthcarePortalUrlLabel: "Hospital portal link",
     healthcarePortalUrlHint:
       "Share with hospital staff — the link uses the hospital name.",
@@ -979,7 +979,7 @@ export const dictionaries = {
     adminMarkAllRead: "সব পড়া হয়েছে",
     adminPushTitle: "অ্যাডমিন ফোন নোটিফিকেশন",
     adminPushBody:
-      "একবার Allow দিন — নতুন কেউ register করলে সাথে সাথে push alert পাবেন।",
+      "একবার Allow দিন — নতুন donor register বা নতুন রক্তের চাহিদা পোস্ট হলে ফোনে alert পাবেন। শুধু browser permission যথেষ্ট নয় — Allow সম্পন্ন হয়ে সেভ হতে দিন।",
     adminPushAllow: "অ্যাডমিন push অনুমতি",
     volunteerAdd: "ভলান্টিয়ার যোগ",
     volunteerAddSimpleHint: "মাত্র ৪টা জিনিস লাগবে। বাকিটা চাইলে পরে দিবেন।",
@@ -1558,7 +1558,7 @@ export const dictionaries = {
     healthcareQrScanSub:
       "BloodLink BD-তে এই প্রতিষ্ঠানের পেজ খুলবে — এক স্ক্যানে অ্যাপয়েন্টমেন্ট।",
     healthcareQrPrintHint:
-      "A5 কাগজে প্রিন্ট করুন (বা টেবিল স্ট্যান্ড ইনসার্ট)। রিসেপশন ডেস্কে রাখুন।",
+      "A5 কাগজে প্রিন্ট করুন (বা টেবিল স্ট্যান্ড ইনসার্ট)। প্রিন্ট অপশনে A5 বেছে নিন, Background graphics চালু রাখুন, Headers & Footers বন্ধ করুন।",
     healthcarePortalUrlLabel: "হাসপাতাল পোর্টাল লিংক",
     healthcarePortalUrlHint:
       "হাসপাতাল স্টাফের সাথে শেয়ার করুন — লিংকে হাসপাতালের নাম থাকে।",

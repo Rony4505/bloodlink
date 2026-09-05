@@ -67,10 +67,13 @@ export function VolunteerPushEnableGate({
         try {
           const reg = await navigator.serviceWorker.register("/sw.js");
           await navigator.serviceWorker.ready;
-          const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
-          });
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicKey),
+            });
+          }
           const save = await fetch(
             `/api/public/volunteer/${encodeURIComponent(token)}/push`,
             {
@@ -124,10 +127,13 @@ export function VolunteerPushEnableGate({
       }
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
       const res = await fetch(
         `/api/public/volunteer/${encodeURIComponent(token)}/push`,
         {

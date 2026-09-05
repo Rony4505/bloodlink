@@ -1486,6 +1486,18 @@ export async function createPost(
         });
         notifyUserIds.push(donor.id);
       }
+      // Owner admin also gets the blood-need push (same device can keep admin + donor rows).
+      db.notifications.push({
+        id: randomUUID(),
+        userId: ADMIN_NOTIFY_USER_ID,
+        ...texts,
+        type: "blood_request",
+        href: `/requests/${next.id}`,
+        postId: next.id,
+        read: false,
+        createdAt,
+      });
+      notifyUserIds.push(ADMIN_NOTIFY_USER_ID);
     }
 
     await persist(db);
@@ -1861,8 +1873,10 @@ export async function upsertPushSubscription(input: {
 }): Promise<PushSubscriptionRecord> {
   return withWrite(async (db) => {
     if (!db.pushSubscriptions) db.pushSubscriptions = [];
+    // Key by (userId, endpoint) so admin + donor on the same phone keep separate rows.
+    // Never steal another role's subscription when they share one browser PushManager endpoint.
     const existing = db.pushSubscriptions.findIndex(
-      (s) => s.endpoint === input.endpoint,
+      (s) => s.endpoint === input.endpoint && s.userId === input.userId,
     );
     const record: PushSubscriptionRecord = {
       id: existing >= 0 ? db.pushSubscriptions[existing].id : randomUUID(),
@@ -1870,7 +1884,10 @@ export async function upsertPushSubscription(input: {
       endpoint: input.endpoint,
       p256dh: input.p256dh,
       auth: input.auth,
-      createdAt: new Date().toISOString(),
+      createdAt:
+        existing >= 0
+          ? db.pushSubscriptions[existing].createdAt
+          : new Date().toISOString(),
     };
     if (existing >= 0) db.pushSubscriptions[existing] = record;
     else db.pushSubscriptions.push(record);
