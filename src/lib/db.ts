@@ -1243,6 +1243,43 @@ export async function updateDonor(
   });
 }
 
+/**
+ * Link an already-registered donor to a volunteer's manual work (pending admin approval).
+ * Only allowed when the donor is not already attributed to another volunteer.
+ */
+export async function claimExistingDonorForVolunteer(
+  volunteerId: string,
+  phone: string,
+): Promise<
+  | { status: "claimed"; donor: Donor }
+  | { status: "already_yours"; donor: Donor }
+  | { status: "claimed_by_other" }
+  | { status: "not_found" }
+> {
+  const existing = await findDonorByPhone(phone);
+  if (!existing) return { status: "not_found" };
+
+  if (existing.createdByVolunteerId === volunteerId) {
+    return { status: "already_yours", donor: existing };
+  }
+  if (existing.createdByVolunteerId) {
+    return { status: "claimed_by_other" };
+  }
+
+  const donor = await updateDonor(existing.id, {
+    createdByVolunteerId: volunteerId,
+    volunteerSource: "manual",
+    volunteerApproved: false,
+  });
+  if (!donor) return { status: "not_found" };
+
+  void notifyAdminNewDonorRegistration(donor).catch((err) => {
+    console.error("[bloodlink] admin claim-donor notify failed:", err);
+  });
+
+  return { status: "claimed", donor };
+}
+
 export async function deleteDonor(id: string): Promise<boolean> {
   return withWrite(async (db) => {
     const before = db.donors.length;

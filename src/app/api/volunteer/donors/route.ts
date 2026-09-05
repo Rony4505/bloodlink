@@ -4,6 +4,7 @@ import {
   hashPassword,
 } from "@/lib/auth";
 import {
+  claimExistingDonorForVolunteer,
   createDonor,
   findDonorById,
   findDonorByPhone,
@@ -71,9 +72,44 @@ export async function POST(request: Request) {
     }
 
     const phone = normalizePhone(parsed.data.phone);
-    if (await findDonorByPhone(phone)) {
+
+    // Donor already self-registered → link as this volunteer's pending work.
+    const claim = await claimExistingDonorForVolunteer(volunteer.id, phone);
+    if (claim.status === "claimed") {
+      return NextResponse.json({
+        ok: true,
+        claimed: true,
+        donor: {
+          id: claim.donor.id,
+          name: claim.donor.name,
+          phone: claim.donor.phone,
+          bloodGroup: claim.donor.bloodGroup,
+          district: claim.donor.district,
+          area: claim.donor.area,
+          gender: claim.donor.gender,
+          donationCount: claim.donor.donationCount,
+          volunteerApproved: claim.donor.volunteerApproved,
+        },
+        message:
+          "Donor already registered — linked to your work. Waiting for admin approval.",
+        code: "claimed_existing",
+      });
+    }
+    if (claim.status === "already_yours") {
       return NextResponse.json(
-        { error: "A donor with this phone already exists" },
+        {
+          error: "This donor is already on your list.",
+          code: "already_yours",
+        },
+        { status: 409 },
+      );
+    }
+    if (claim.status === "claimed_by_other") {
+      return NextResponse.json(
+        {
+          error: "This donor is already linked to another volunteer's work.",
+          code: "claimed_by_other",
+        },
         { status: 409 },
       );
     }

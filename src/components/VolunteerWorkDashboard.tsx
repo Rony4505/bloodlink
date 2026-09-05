@@ -122,6 +122,14 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
       );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (json?.code === "already_yours") {
+          setError(t.volunteerDonorAlreadyYours);
+          return;
+        }
+        if (json?.code === "claimed_by_other") {
+          setError(t.volunteerDonorClaimedByOther);
+          return;
+        }
         const details = json?.details?.fieldErrors || json?.details?.formErrors;
         let detailMsg = "";
         if (details && typeof details === "object") {
@@ -131,7 +139,11 @@ export function VolunteerWorkDashboard({ token }: { token: string }) {
         setError(detailMsg || json.error || t.errorGeneric);
         return;
       }
-      setMessage(t.volunteerManualSaved);
+      setMessage(
+        json?.code === "claimed_existing" || json?.claimed
+          ? t.volunteerManualClaimed
+          : t.volunteerManualSaved,
+      );
       setShowManual(false);
       setManual({
         name: "",
