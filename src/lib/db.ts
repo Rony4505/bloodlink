@@ -205,6 +205,7 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
           ? raw.volunteerSource === "link"
           : true,
     available: isDonorAvailable(gender, lastDonationDate),
+    lastLoginAt: raw.lastLoginAt ? String(raw.lastLoginAt) : null,
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   };
@@ -1060,6 +1061,7 @@ export async function createDonor(
     | "pendingResetExpiresAt"
     | "volunteerSource"
     | "volunteerApproved"
+    | "lastLoginAt"
   > &
     Partial<
       Pick<
@@ -1226,6 +1228,7 @@ export async function updateDonor(
       | "createdByVolunteerId"
       | "volunteerSource"
       | "volunteerApproved"
+      | "lastLoginAt"
     >
   >,
 ): Promise<Donor | null> {
@@ -1771,17 +1774,24 @@ export async function countPushAllowStats(): Promise<{
     pushStatus: "deliverable" | "permission_only" | "none";
     subscriptionCount: number;
     deliverableCount: number;
+    allowedAt: string | null;
+    lastLoginAt: string | null;
   }>;
 }> {
   const db = await ensureDb();
   const list = db.pushSubscriptions || [];
   const countByUser = new Map<string, number>();
   const deliverableByUser = new Map<string, number>();
+  const latestSubByUser = new Map<string, string>();
   for (const s of list) {
     if (!s.userId) continue;
     countByUser.set(s.userId, (countByUser.get(s.userId) || 0) + 1);
     if (isDeliverablePushSubscription(s)) {
       deliverableByUser.set(s.userId, (deliverableByUser.get(s.userId) || 0) + 1);
+    }
+    const prev = latestSubByUser.get(s.userId);
+    if (!prev || String(s.createdAt) > prev) {
+      latestSubByUser.set(s.userId, String(s.createdAt || ""));
     }
   }
   const donors = [...db.donors]
@@ -1798,6 +1808,9 @@ export async function countPushAllowStats(): Promise<{
         pushStatus,
         subscriptionCount,
         deliverableCount,
+        allowedAt:
+          pushStatus === "none" ? null : latestSubByUser.get(d.id) || null,
+        lastLoginAt: d.lastLoginAt || null,
       };
     })
     .sort((a, b) => {
@@ -1805,6 +1818,9 @@ export async function countPushAllowStats(): Promise<{
         s === "deliverable" ? 0 : s === "permission_only" ? 1 : 2;
       const diff = rank(a.pushStatus) - rank(b.pushStatus);
       if (diff !== 0) return diff;
+      const aLogin = a.lastLoginAt || "";
+      const bLogin = b.lastLoginAt || "";
+      if (aLogin !== bLogin) return bLogin.localeCompare(aLogin);
       return a.name.localeCompare(b.name);
     });
   return {

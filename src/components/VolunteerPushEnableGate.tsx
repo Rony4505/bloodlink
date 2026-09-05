@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
+  clearPushPromptAccepted,
   markPushPromptAccepted,
   shouldSkipPushPrompt,
 } from "@/lib/push-prompt-state";
@@ -43,42 +44,66 @@ export function VolunteerPushEnableGate({
       return;
     }
 
-    // Already allowed — never show the blocking popup again.
-    if (
-      shouldSkipPushPrompt() ||
-      (typeof Notification !== "undefined" && Notification.permission === "granted")
-    ) {
-      markPushPromptAccepted();
-      setStatus("on");
-      setInlineOn(true);
-      setOpen(false);
-      return;
-    }
-
     try {
       const res = await fetch(
         `/api/public/volunteer/${encodeURIComponent(token)}/push`,
         { cache: "no-store" },
       );
-      if (!res.ok) {
-        setStatus("ask");
-        setOpen(true);
-        return;
+      if (res.ok) {
+        const data = (await res.json()) as { subscribed?: boolean };
+        if (data.subscribed) {
+          markPushPromptAccepted();
+          setStatus("on");
+          setInlineOn(true);
+          setOpen(false);
+          return;
+        }
       }
-      const data = (await res.json()) as { subscribed?: boolean };
-      if (data.subscribed) {
-        setStatus("on");
-        setInlineOn(true);
-        setOpen(false);
-        return;
+
+      // Browser already granted but server not subscribed yet — finish subscribe
+      // so admin can see this volunteer as Allow.
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        setStatus("loading");
+        try {
+          const reg = await navigator.serviceWorker.register("/sw.js");
+          await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+          const save = await fetch(
+            `/api/public/volunteer/${encodeURIComponent(token)}/push`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(sub.toJSON()),
+            },
+          );
+          if (save.ok) {
+            markPushPromptAccepted();
+            setStatus("on");
+            setInlineOn(true);
+            setOpen(false);
+            onSubscribed?.();
+            return;
+          }
+        } catch {
+          /* fall through to ask */
+        }
       }
+
+      if (shouldSkipPushPrompt()) {
+        // Local accept without server row — ask again so Allow can sync.
+        clearPushPromptAccepted();
+      }
+
       setStatus("ask");
       setOpen(true);
     } catch {
       setStatus("ask");
       setOpen(true);
     }
-  }, [notificationsEnabled, publicKey, token]);
+  }, [notificationsEnabled, publicKey, token, onSubscribed]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -115,6 +140,7 @@ export function VolunteerPushEnableGate({
         setStatus("error");
         return;
       }
+      markPushPromptAccepted();
       setStatus("on");
       setInlineOn(true);
       onSubscribed?.();

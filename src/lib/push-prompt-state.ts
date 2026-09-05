@@ -73,13 +73,11 @@ export function shouldAutoTryPushSubscribe(): boolean {
   return true;
 }
 
-/** True when this browser already allowed notifications — never show the popup again. */
+/**
+ * Local hint only — must NOT treat browser permission alone as "done".
+ * Server subscription (or permission-only row) is the source of truth for admin.
+ */
 export function shouldSkipPushPrompt(): boolean {
   if (typeof window === "undefined") return true;
-  if (hasAcceptedPushPrompt()) return true;
-  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-    markPushPromptAccepted();
-    return true;
-  }
-  return false;
+  return hasAcceptedPushPrompt();
 }
