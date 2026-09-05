@@ -2114,6 +2114,7 @@ export type VolunteerDonorSummary = {
   bloodGroup: string;
   district: string;
   area: string;
+  phone?: string;
   createdAt: string;
   volunteerSource: "link" | "manual" | null;
   volunteerApproved: boolean;
@@ -2161,12 +2162,11 @@ export async function listPendingVolunteerDonors(): Promise<
   );
   return db.donors
     .map((d) => normalizeDonor(d))
-    .filter(
-      (d) =>
-        d.createdByVolunteerId &&
-        d.volunteerSource === "manual" &&
-        !d.volunteerApproved,
-    )
+    .filter((d) => {
+      if (!d.createdByVolunteerId || d.volunteerApproved) return false;
+      // Manual adds (and older rows missing volunteerSource) need admin approval.
+      return d.volunteerSource === "manual" || d.volunteerSource == null;
+    })
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -2177,6 +2177,7 @@ export async function listPendingVolunteerDonors(): Promise<
       bloodGroup: d.bloodGroup,
       district: d.district,
       area: d.area,
+      phone: d.phone,
       createdAt: d.createdAt,
       volunteerSource: d.volunteerSource,
       volunteerApproved: d.volunteerApproved,
