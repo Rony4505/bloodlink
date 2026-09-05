@@ -31,6 +31,7 @@ function urlBase64ToUint8Array(base64String: string) {
   return output;
 }
 
+/** Save a real deliverable admin Web Push subscription. Never treat permission alone as success. */
 async function subscribeAdminPush(): Promise<boolean> {
   if (!isWebPushSupported()) return false;
   if (!("Notification" in window)) return false;
@@ -60,6 +61,8 @@ async function subscribeAdminPush(): Promise<boolean> {
     });
   }
   const json = sub.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+
   const save = await fetch("/api/admin/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -68,7 +71,10 @@ async function subscribeAdminPush(): Promise<boolean> {
       keys: json.keys,
     }),
   });
-  return save.ok;
+  if (!save.ok) return false;
+
+  // Confirm server actually has a deliverable row for admin.
+  return fetchAdminPushStatus();
 }
 
 function dismissForever() {
@@ -88,7 +94,6 @@ export function AdminPushEnableGate() {
     let cancelled = false;
     void (async () => {
       if (!canAskNotificationPermission()) return;
-      if (localStorage.getItem(ADMIN_PUSH_DISMISS_KEY) === "1") return;
       if (sessionStorage.getItem(ADMIN_PUSH_SESSION_KEY) === "1") return;
 
       const subscribed = await fetchAdminPushStatus();
@@ -99,7 +104,24 @@ export function AdminPushEnableGate() {
         return;
       }
 
-      // Already allowed — never show the prompt again; try silent subscribe.
+      // Recovery: older builds dismissed after browser Allow even when subscribe failed.
+      const wasDismissed = localStorage.getItem(ADMIN_PUSH_DISMISS_KEY) === "1";
+      if (wasDismissed) {
+        if (Notification.permission === "granted" && isWebPushSupported()) {
+          const ok = await subscribeAdminPush();
+          if (cancelled) return;
+          if (ok) {
+            setDone(true);
+            dismissForever();
+            return;
+          }
+          // Clear false dismiss so admin can tap Allow again and actually save.
+          localStorage.removeItem(ADMIN_PUSH_DISMISS_KEY);
+        } else {
+          return;
+        }
+      }
+
       if (Notification.permission === "granted") {
         if (isWebPushSupported()) {
           const ok = await subscribeAdminPush();
@@ -110,8 +132,9 @@ export function AdminPushEnableGate() {
             return;
           }
         }
-        // Permission granted counts as Allow — stop asking even if subscribe fails.
-        dismissForever();
+        // Permission alone is NOT enough — keep asking until deliverable subscribe works.
+        sessionStorage.setItem(ADMIN_PUSH_SESSION_KEY, "1");
+        setVisible(true);
         return;
       }
 
@@ -174,7 +197,6 @@ export function AdminPushEnableGate() {
           type="button"
           className="btn-ghost"
           onClick={() => {
-            // Permanent dismiss — do not keep asking on every admin visit
             dismissForever();
             setVisible(false);
           }}

@@ -35,6 +35,12 @@ export async function sendWebPushToUsers(
     );
 
     const subs = (await listPushSubscriptions(unique)).filter(isDeliverablePushSubscription);
+    // Same browser endpoint may be stored for admin + donor — send once per endpoint.
+    const byEndpoint = new Map<string, (typeof subs)[number]>();
+    for (const sub of subs) {
+      if (!byEndpoint.has(sub.endpoint)) byEndpoint.set(sub.endpoint, sub);
+    }
+    const uniqueSubs = [...byEndpoint.values()];
     let sent = 0;
     let failed = 0;
     const body = JSON.stringify({
@@ -45,7 +51,7 @@ export async function sendWebPushToUsers(
     });
 
     await Promise.all(
-      subs.map(async (sub) => {
+      uniqueSubs.map(async (sub) => {
         try {
           await webpush.sendNotification(
             {

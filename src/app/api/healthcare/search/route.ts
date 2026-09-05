@@ -1,13 +1,12 @@
-import { searchHealthcareFacilities } from "@/lib/healthcare-facilities";
+import { DISTRICTS } from "@/lib/districts";
 import {
-  ensureHealthcareNameLinkTokens,
   loadHealthcarePlatform,
   searchPublicHealthcareCompanies,
 } from "@/lib/healthcare-platform";
 
 /**
  * Public healthcare search: only registered (enabled) providers.
- * The full DGHS catalog stays admin-only — not listed on the public site.
+ * Avoids loading the ~11MB DGHS catalog on every keystroke.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,18 +14,6 @@ export async function GET(request: Request) {
   const district = searchParams.get("district") || undefined;
   const upazila = searchParams.get("upazila") || undefined;
 
-  // Keep facility index only for district/upazila filter options.
-  const meta = await searchHealthcareFacilities({
-    q: undefined,
-    district,
-    division: searchParams.get("division") || undefined,
-    upazila: undefined,
-    category: "all",
-    page: 1,
-    limit: 1,
-  });
-
-  await ensureHealthcareNameLinkTokens();
   const platform = await loadHealthcarePlatform();
   const companies = searchPublicHealthcareCompanies(platform, {
     q,
@@ -45,6 +32,22 @@ export async function GET(request: Request) {
     ).length,
   }));
 
+  const enabled = platform.companies.filter((c) => c.enabled);
+  const companyDistricts = [
+    ...new Set(enabled.map((c) => c.district).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b));
+  const districts =
+    companyDistricts.length > 0 ? companyDistricts : [...DISTRICTS];
+
+  const upazilaSource = district
+    ? enabled.filter(
+        (c) => c.district.trim().toLowerCase() === district.trim().toLowerCase(),
+      )
+    : enabled;
+  const upazilas = [
+    ...new Set(upazilaSource.map((c) => c.upazila).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b));
+
   return Response.json({
     items: [],
     companies,
@@ -52,7 +55,7 @@ export async function GET(request: Request) {
     page: 1,
     limit: companies.length || 1,
     totalPages: 1,
-    districts: meta.districts,
-    upazilas: meta.upazilas,
+    districts,
+    upazilas,
   });
 }

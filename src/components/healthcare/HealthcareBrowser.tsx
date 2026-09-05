@@ -62,8 +62,11 @@ export function HealthcareBrowser() {
   }, [q, district, upazila, t.healthcareLoadError]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const timer = window.setTimeout(() => {
+      void load();
+    }, q.trim() ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [load, q]);
 
   useEffect(() => {
     setUpazila("");
