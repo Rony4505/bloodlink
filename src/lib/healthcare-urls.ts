@@ -15,6 +15,30 @@ export function healthcareManageUrl(token: string, origin = siteOrigin()): strin
   return `${origin}${healthcareManagePath(token)}`;
 }
 
+/** Public patient page — QR codes point here so visitors book this institution. */
+export function healthcareCompanyPublicPath(slugOrId: string): string {
+  return `/healthcare/c/${encodeURIComponent(slugOrId)}`;
+}
+
+export function healthcareCompanyPublicUrl(
+  slugOrId: string,
+  origin = siteOrigin(),
+): string {
+  return `${origin}${healthcareCompanyPublicPath(slugOrId)}`;
+}
+
+/** Printable reception QR banner (A5 / table-stand). */
+export function healthcareCompanyBannerPath(slugOrId: string): string {
+  return `${healthcareCompanyPublicPath(slugOrId)}/banner`;
+}
+
+export function healthcareCompanyBannerUrl(
+  slugOrId: string,
+  origin = siteOrigin(),
+): string {
+  return `${origin}${healthcareCompanyBannerPath(slugOrId)}`;
+}
+
 export type HealthcareVerbalLink = {
   host: string;
   path: string;

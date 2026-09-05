@@ -24,6 +24,8 @@ type CompanyRow = {
   district: string;
   upazila: string;
   portalUrl: string;
+  publicUrl: string;
+  bannerUrl: string;
   doctorCount: number;
   appointmentCount: number;
   pendingAppointments: number;
@@ -131,8 +133,12 @@ export function AdminHealthcareCompaniesPanel() {
       setError(json.error || t.errorGeneric);
       return;
     }
-    setMessage(t.healthcareCompanyCreated);
+    setMessage(t.healthcareCompanyCreatedBanner);
     setDraft(emptyDraft);
+    const bannerUrl = String(json.company?.bannerUrl || "").trim();
+    if (bannerUrl) {
+      window.open(`${bannerUrl}?print=1`, "_blank", "noopener,noreferrer");
+    }
     void load();
   }
 
@@ -358,6 +364,14 @@ export function AdminHealthcareCompaniesPanel() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <a
+                  className="btn-primary px-3 py-1 text-xs"
+                  href={`${c.bannerUrl}?print=1`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t.healthcareQrPrintBanner}
+                </a>
                 <button
                   type="button"
                   className="btn-ghost px-3 py-1 text-xs"
@@ -385,8 +399,27 @@ export function AdminHealthcareCompaniesPanel() {
             </div>
             {expandedId === c.id ? (
               <div className="space-y-4 p-4">
+                <div className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_35%,white)] px-3 py-2 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                  {t.healthcareQrBannerAdminHint}
+                </div>
                 <HealthcareVerbalUrlCard token={c.linkToken} compact />
                 <div className="flex flex-wrap gap-2">
+                  <a
+                    className="btn-primary px-3 py-1 text-xs"
+                    href={`${c.bannerUrl}?print=1`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t.healthcareQrPrintBanner}
+                  </a>
+                  <a
+                    className="btn-ghost px-3 py-1 text-xs"
+                    href={c.publicUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t.healthcareViewPublic}
+                  </a>
                   <button
                     type="button"
                     className="btn-ghost px-3 py-1 text-xs"
@@ -397,7 +430,7 @@ export function AdminHealthcareCompaniesPanel() {
                     {t.healthcareRegenerateToken}
                   </button>
                   <a
-                    className="btn-primary px-3 py-1 text-xs"
+                    className="btn-ghost px-3 py-1 text-xs"
                     href={c.portalUrl}
                     target="_blank"
                     rel="noreferrer"
