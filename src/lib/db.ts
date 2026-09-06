@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
 import { DEFAULT_PRIVACY_BN, DEFAULT_PRIVACY_EN, OWNER_EMAIL } from "./defaults";
 import { ADMIN_NOTIFY_USER_ID } from "./admin-notify-user";
+import { BLOODLINK_OWNER_PATH } from "./bloodlink-admin-path";
 import { PUSH_SYSTEM_VERSION } from "./push-system";
 import {
   bloodRequestTexts,
@@ -1146,7 +1147,7 @@ export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<voi
       userId: ADMIN_NOTIFY_USER_ID,
       ...texts,
       type: "new_donor",
-      href: "/bloodlinkbd.admin.rony4505",
+      href: BLOODLINK_OWNER_PATH,
       read: false,
       createdAt: new Date().toISOString(),
     });
@@ -1158,7 +1159,7 @@ export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<voi
       m.sendWebPushToUsers([ADMIN_NOTIFY_USER_ID], {
         title: texts.titleBn || texts.title,
         body: texts.bodyBn || texts.body,
-        url: "/bloodlinkbd.admin.rony4505",
+        url: BLOODLINK_OWNER_PATH,
         tag: `new-donor-${donor.id}`,
       }),
     )

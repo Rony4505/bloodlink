@@ -1,2 +1,2 @@
-/** Hidden BloodLink owner/admin panel path — not linked in public UI. */
-export const BLOODLINK_OWNER_PATH = "/bloodlinkbd.admin.rony4505";
+/** BloodLink owner/admin panel path (login + console). */
+export const BLOODLINK_OWNER_PATH = "/admin";
