@@ -22,18 +22,11 @@ import {
   normalizeSiteAppearance,
 } from "@/lib/site-cms";
 import {
-  adminCredentialsSchema,
   notificationBroadcastSchema,
   notificationSettingsSchema,
   platformOptionsSchema,
 } from "@/lib/validations";
 import type { OrgBanner } from "@/lib/types";
-import { z } from "zod";
-
-const recoveryCodeSchema = z.object({
-  code: z.string().trim().min(4).max(10),
-});
-
 
 export async function GET() {
   const ok = await isAdminAuthenticated();
@@ -44,8 +37,9 @@ export async function GET() {
   const pushAllow = await countPushAllowStats();
   return NextResponse.json({
     username: admin.username,
-    verifyEmail: admin.verifyEmail || getAdminRecoveryEmail(),
-    recoveryEmail: getAdminRecoveryEmail(),
+    verifyEmail: getAdminRecoveryEmail(admin.verifyEmail),
+    recoveryEmail: getAdminRecoveryEmail(admin.verifyEmail),
+    pendingVerifyEmail: admin.pendingVerifyEmail || "",
     verifyPhone: "",
     emailVerified: admin.emailVerified,
     phoneVerified: false,
@@ -69,40 +63,24 @@ export async function PATCH(request: Request) {
   const body = await request.json();
   const action = body.action as string;
 
-  if (action === "credentials") {
-    const parsed = adminCredentialsSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+
+  if (action === "security-save-gmail") {
+    const email = String(body.email || "").trim().toLowerCase();
+    const currentPassword = String(body.currentPassword || "");
+    if (!email.includes("@") || !currentPassword) {
+      return NextResponse.json(
+        { error: "Gmail and present password are required." },
+        { status: 400 },
+      );
     }
     const admin = await getAdminSettings();
-    const valid = await verifyPassword(
-      parsed.data.currentPassword,
-      admin.passwordHash,
-    );
+    const valid = await verifyPassword(currentPassword, admin.passwordHash);
     if (!valid) {
       return NextResponse.json(
-        { error: "Current password is wrong" },
+        { error: "Present password is wrong." },
         { status: 401 },
       );
     }
-
-    const patch: {
-      username?: string;
-      passwordHash?: string;
-    } = {};
-    if (parsed.data.newUsername) patch.username = parsed.data.newUsername;
-    if (parsed.data.newPassword) {
-      patch.passwordHash = await hashPassword(parsed.data.newPassword);
-    }
-    if (!patch.username && !patch.passwordHash) {
-      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-    }
-    await updateAdminSettings(patch);
-    return NextResponse.json({ ok: true });
-  }
-
-  if (action === "verify-recovery-send") {
-    const email = getAdminRecoveryEmail();
     const code = makeCode();
     const delivery = await deliverEmailOtp(email, code, { allowInline: false });
     if (!delivery.delivered || delivery.mode !== "email") {
@@ -118,51 +96,168 @@ export async function PATCH(request: Request) {
       );
     }
     await updateAdminSettings({
-      verifyEmail: email,
-      emailVerified: false,
-      pendingEmailCodeHash: hashCode(code),
-      pendingPhoneCodeHash: null,
-      phoneVerified: false,
-      verifyPhone: "",
+      pendingVerifyEmail: email,
+      pendingEmailCodeHash: hashCode(`security-gmail:${code}`),
     });
     return NextResponse.json({
       ok: true,
+      purpose: "gmail",
       emailMasked: maskEmail(email),
       expiresInMinutes: 15,
     });
   }
 
-  if (action === "verify-recovery-confirm") {
-    const parsed = recoveryCodeSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
+  if (action === "security-confirm-gmail") {
+    const code = String(body.code || "").trim();
+    const currentPassword = String(body.currentPassword || "");
+    if (!code || !currentPassword) {
+      return NextResponse.json(
+        { error: "Present password and OTP are required." },
+        { status: 400 },
+      );
     }
     const admin = await getAdminSettings();
-    if (!admin.pendingEmailCodeHash) {
+    const valid = await verifyPassword(currentPassword, admin.passwordHash);
+    if (!valid) {
       return NextResponse.json(
-        { error: "No pending Gmail verification. Send OTP first." },
+        { error: "Present password is wrong." },
+        { status: 401 },
+      );
+    }
+    if (!admin.pendingVerifyEmail || !admin.pendingEmailCodeHash) {
+      return NextResponse.json(
+        { error: "No pending Gmail change. Save Gmail / send OTP first." },
         { status: 410 },
       );
     }
-    if (hashCode(parsed.data.code) !== admin.pendingEmailCodeHash) {
+    if (hashCode(`security-gmail:${code}`) !== admin.pendingEmailCodeHash) {
       return NextResponse.json(
         { error: "Incorrect verification code." },
         { status: 400 },
       );
     }
-    const email = getAdminRecoveryEmail();
+    const email = admin.pendingVerifyEmail.trim().toLowerCase();
     await updateAdminSettings({
       verifyEmail: email,
       emailVerified: true,
+      pendingVerifyEmail: null,
       pendingEmailCodeHash: null,
-      pendingPhoneCodeHash: null,
-      phoneVerified: false,
       verifyPhone: "",
+      phoneVerified: false,
     });
     return NextResponse.json({
       ok: true,
       emailVerified: true,
       verifyEmail: email,
+    });
+  }
+
+  if (action === "security-send-otp") {
+    const currentPassword = String(body.currentPassword || "");
+    if (!currentPassword) {
+      return NextResponse.json(
+        { error: "Present password is required to send OTP." },
+        { status: 400 },
+      );
+    }
+    const admin = await getAdminSettings();
+    const valid = await verifyPassword(currentPassword, admin.passwordHash);
+    if (!valid) {
+      return NextResponse.json(
+        { error: "Present password is wrong." },
+        { status: 401 },
+      );
+    }
+    const email = getAdminRecoveryEmail(admin.verifyEmail);
+    if (!email.includes("@")) {
+      return NextResponse.json(
+        { error: "Set a recovery Gmail in Security first." },
+        { status: 400 },
+      );
+    }
+    const code = makeCode();
+    const delivery = await deliverEmailOtp(email, code, { allowInline: false });
+    if (!delivery.delivered || delivery.mode !== "email") {
+      const detail = delivery.detail || "";
+      return NextResponse.json(
+        {
+          error: detail.toLowerCase().includes("resend_api_key")
+            ? "Could not send Gmail OTP. RESEND_API_KEY is not set."
+            : `Could not send Gmail OTP. ${detail}`,
+          detail,
+        },
+        { status: 503 },
+      );
+    }
+    await updateAdminSettings({
+      pendingEmailCodeHash: hashCode(`security-cred:${code}`),
+      pendingVerifyEmail: null,
+    });
+    return NextResponse.json({
+      ok: true,
+      purpose: "credentials",
+      emailMasked: maskEmail(email),
+      expiresInMinutes: 15,
+    });
+  }
+
+  if (action === "security-update-credentials") {
+    const currentPassword = String(body.currentPassword || "");
+    const code = String(body.code || "").trim();
+    const newUsername = String(body.newUsername || "").trim();
+    const newPassword = String(body.newPassword || "");
+    if (!currentPassword || !code) {
+      return NextResponse.json(
+        { error: "Present password and OTP are required." },
+        { status: 400 },
+      );
+    }
+    if (!newUsername && !newPassword) {
+      return NextResponse.json(
+        { error: "Enter a new username and/or new password." },
+        { status: 400 },
+      );
+    }
+    if (newUsername && newUsername.length < 3) {
+      return NextResponse.json(
+        { error: "Username must be at least 3 characters." },
+        { status: 400 },
+      );
+    }
+    if (newPassword && newPassword.length < 8) {
+      return NextResponse.json(
+        { error: "New password must be at least 8 characters." },
+        { status: 400 },
+      );
+    }
+    const admin = await getAdminSettings();
+    const valid = await verifyPassword(currentPassword, admin.passwordHash);
+    if (!valid) {
+      return NextResponse.json(
+        { error: "Present password is wrong." },
+        { status: 401 },
+      );
+    }
+    if (
+      !admin.pendingEmailCodeHash ||
+      hashCode(`security-cred:${code}`) !== admin.pendingEmailCodeHash
+    ) {
+      return NextResponse.json(
+        { error: "Incorrect or expired OTP. Tap Send OTP again." },
+        { status: 400 },
+      );
+    }
+    const patch: {
+      username?: string;
+      passwordHash?: string;
+      pendingEmailCodeHash: null;
+    } = { pendingEmailCodeHash: null };
+    if (newUsername) patch.username = newUsername.toLowerCase();
+    if (newPassword) patch.passwordHash = await hashPassword(newPassword);
+    await updateAdminSettings(patch);
+    return NextResponse.json({
+      ok: true,
+      username: patch.username || admin.username,
     });
   }
 

@@ -224,6 +224,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     phoneVerified: false,
     pendingEmailCodeHash: null,
     pendingPhoneCodeHash: null,
+    pendingVerifyEmail: null,
     pendingResetCodeHash: null,
     pendingResetExpiresAt: null,
     privacyBn: DEFAULT_PRIVACY_BN,
@@ -455,6 +456,8 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         vapidPublicKey: String(parsed.admin.vapidPublicKey || ""),
         vapidPrivateKey: String(parsed.admin.vapidPrivateKey || ""),
         pushSystemVersion: Number(parsed.admin.pushSystemVersion || 0) || 0,
+        pendingEmailCodeHash: parsed.admin.pendingEmailCodeHash ?? null,
+        pendingVerifyEmail: parsed.admin.pendingVerifyEmail ?? null,
         pendingResetCodeHash: parsed.admin.pendingResetCodeHash ?? null,
         pendingResetExpiresAt: parsed.admin.pendingResetExpiresAt ?? null,
       }
