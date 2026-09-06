@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
+import { PwaRegister } from "@/components/PwaRegister";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
@@ -129,6 +130,15 @@ export async function generateMetadata(): Promise<Metadata> {
       description: "Find blood donors across Bangladesh by blood group and location.",
       images: ["/bloodlink-logo.png"],
     },
+    appleWebApp: {
+      capable: true,
+      title: "BloodLink BD",
+      statusBarStyle: "black-translucent",
+    },
+    formatDetection: { telephone: false },
+    other: {
+      "mobile-web-app-capable": "yes",
+    },
     robots: { index: true, follow: true },
   };
 }
@@ -142,6 +152,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <meta name="theme-color" content={fashion ? "#0a1628" : "#1c0a0c"} />
+        <meta name="application-name" content={fashion ? "Noorzaa" : "BloodLink BD"} />
       </head>
       <body
         className={`flex min-h-full flex-col antialiased ${
@@ -150,7 +161,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       >
         <LocaleProvider>
           <CartProvider>
-            <SiteAppearanceProvider>{children}</SiteAppearanceProvider>
+            <SiteAppearanceProvider>
+              {!fashion ? <PwaRegister /> : null}
+              {children}
+            </SiteAppearanceProvider>
           </CartProvider>
         </LocaleProvider>
       </body>

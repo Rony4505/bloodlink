@@ -1,16 +1,60 @@
-/* BloodLink Web Push service worker v3 — shows alerts when the tab is closed. */
+/* BloodLink BD — PWA + Web Push service worker (Play Store / TWA ready). */
+const CACHE = "bloodlink-shell-v1";
+const PRECACHE = ["/", "/icons/icon-192.png", "/icons/icon-512.png"];
+
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
+      .catch(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+/** Network-first for navigations; keeps app usable offline for the shell. */
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          void caches.open(CACHE).then((c) => c.put("/", copy)).catch(() => undefined);
+          return res;
+        })
+        .catch(() => caches.match("/") || caches.match(req)),
+    );
+    return;
+  }
+
+  if (PRECACHE.some((p) => url.pathname === p)) {
+    event.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req)),
+    );
+  }
 });
 
 self.addEventListener("push", (event) => {
   let data = {
-    title: "BloodLink",
-    body: "নতুন নোটিফিকেশন — ওয়েবসাইটে দেখুন",
+    title: "BloodLink BD",
+    body: "নতুন নোটিফিকেশন — অ্যাপে দেখুন",
     url: "/notifications",
     tag: "bloodlink",
   };
@@ -23,10 +67,10 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "BloodLink", {
+    self.registration.showNotification(data.title || "BloodLink BD", {
       body: data.body || "",
-      icon: "/icon",
-      badge: "/icon",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
       tag: data.tag || "bloodlink",
       data: { url: data.url || "/notifications" },
       requireInteraction: true,
