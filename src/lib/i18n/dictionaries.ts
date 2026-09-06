@@ -457,7 +457,7 @@ export const dictionaries = {
     creatorAddress: "Feni Sadar, Feni",
     creatorEmailLabel: "Email",
     facebook: "Facebook",
-    creatorEmail: "bloodlinkbd@gmail.com",
+    creatorEmail: "bdbloodlink@gmail.com",
     aboutWarningTitle: "Important warnings",
     aboutWarning1:
       "Always contact donors yourself and verify details carefully. If anyone is cheated or harmed through personal contact, BloodLink BD management is not responsible.",
@@ -1337,7 +1337,7 @@ export const dictionaries = {
     creatorAddress: "ফেনী সদর, ফেনী",
     creatorEmailLabel: "ইমেইল",
     facebook: "Facebook",
-    creatorEmail: "bloodlinkbd@gmail.com",
+    creatorEmail: "bdbloodlink@gmail.com",
     aboutWarningTitle: "গুরুত্বপূর্ণ সতর্কবার্তা",
     aboutWarning1:
       "রক্তদাতার সাথে নিজে যোগাযোগ করুন এবং তথ্য যাচাই করে নিন। ব্যক্তিগত যোগাযোগের মাধ্যমে কেউ প্রতারিত হলে বা ক্ষতিগ্রস্ত হলে BloodLink BD কর্তৃপক্ষ দায়ী নয়।",

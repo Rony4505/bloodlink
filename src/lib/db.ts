@@ -13,7 +13,7 @@ import {
 import path from "path";
 import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
-import { DEFAULT_PRIVACY_BN, DEFAULT_PRIVACY_EN } from "./defaults";
+import { DEFAULT_PRIVACY_BN, DEFAULT_PRIVACY_EN, OWNER_EMAIL } from "./defaults";
 import { ADMIN_NOTIFY_USER_ID } from "./admin-notify-user";
 import { PUSH_SYSTEM_VERSION } from "./push-system";
 import {
@@ -218,7 +218,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
   return {
     username,
     passwordHash: await bcrypt.hash(password, 12),
-    verifyEmail: "",
+    verifyEmail: OWNER_EMAIL,
     verifyPhone: "",
     emailVerified: false,
     phoneVerified: false,

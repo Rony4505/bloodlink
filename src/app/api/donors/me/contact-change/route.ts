@@ -18,8 +18,8 @@ export async function GET() {
   const pending = await getPendingContactChange(current.id);
   return NextResponse.json({
     pending,
-    ownerEmail: admin.verifyEmail || OWNER_EMAIL,
-    ownerPhone: admin.verifyPhone || OWNER_PHONE,
+    ownerEmail: OWNER_EMAIL,
+    ownerPhone: OWNER_PHONE,
   });
 }
 
@@ -72,8 +72,8 @@ export async function POST(request: Request) {
       return NextResponse.json({
         ok: true,
         request: changeRequest,
-        ownerEmail: admin.verifyEmail || OWNER_EMAIL,
-        ownerPhone: admin.verifyPhone || OWNER_PHONE,
+        ownerEmail: OWNER_EMAIL,
+        ownerPhone: OWNER_PHONE,
       });
     } catch (err) {
       const code = err instanceof Error ? err.message : "";

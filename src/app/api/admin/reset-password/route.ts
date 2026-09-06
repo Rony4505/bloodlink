@@ -6,7 +6,10 @@ import {
   makeCode,
 } from "@/lib/auth";
 import { getAdminSettings, updateAdminSettings } from "@/lib/db";
-import { OWNER_EMAIL } from "@/lib/defaults";
+import {
+  getAdminRecoveryEmail,
+  maskEmail,
+} from "@/lib/admin-recovery";
 import { deliverEmailOtp } from "@/lib/otp-delivery";
 import { z } from "zod";
 
@@ -21,24 +24,6 @@ const confirmSchema = z.object({
 const verifySchema = z.object({
   code: z.string().trim().min(4).max(10),
 });
-
-function maskEmail(email: string): string {
-  const [user, domain] = email.split("@");
-  if (!user || !domain) return "***";
-  const visible = user.slice(0, Math.min(2, user.length));
-  return `${visible}***@${domain}`;
-}
-
-/** Gmail used for admin password / username recovery. */
-export function getAdminRecoveryEmail(verifyEmail?: string): string {
-  const fromEnv = process.env.ADMIN_RECOVERY_EMAIL?.trim().toLowerCase();
-  if (fromEnv) return fromEnv;
-  const fromSettings = String(verifyEmail || "")
-    .trim()
-    .toLowerCase();
-  if (fromSettings) return fromSettings;
-  return OWNER_EMAIL.trim().toLowerCase();
-}
 
 function verifiedAdminResetHash(expiresAt: string): string {
   return hashCode(`admin-reset-verified:${expiresAt}`);
@@ -65,8 +50,7 @@ export async function POST(request: Request) {
 }
 
 async function sendResetOtp() {
-  const admin = await getAdminSettings();
-  const email = getAdminRecoveryEmail(admin.verifyEmail);
+  const email = getAdminRecoveryEmail();
   if (!email.includes("@")) {
     return NextResponse.json(
       { error: "Admin recovery Gmail is not configured." },
