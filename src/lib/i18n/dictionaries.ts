@@ -853,10 +853,13 @@ export const dictionaries = {
     pushDeniedHint:
       "Open browser site settings → Notifications → Allow for bloodlinkbd.org, then tap Allow again.",
     pushUnsupported:
-      "Could not enable alerts in this browser. Tap Allow again, or try Chrome.",
+      "This browser cannot save phone alerts. On Android use Chrome; on iPhone open BloodLink from the Home Screen app.",
     pushIosHint:
-      "On iPhone, if the system prompt appears tap Allow. For background alerts, also add BloodLink to your Home Screen.",
-    pushEnableError: "Could not enable alerts. Tap Allow again, or try Chrome.",
+      "On iPhone, Chrome/Safari tabs cannot keep background admin alerts. Add BloodLink to Home Screen, open it from there, then tap Allow.",
+    pushEnableError:
+      "Could not enable alerts. Tap Allow again. On iPhone, open BloodLink from the Home Screen app first.",
+    adminPushIosBody:
+      "You are on an iPhone browser (Chrome/Safari). Phone alerts need the Home Screen app: Share → Add to Home Screen, open BloodLink from the icon, then tap Allow admin push.",
     pushAllowStats: "Who turned notifications on",
     pushAllowStatsBody:
       "{allowed} of {donors} donors get phone alerts ({subs} devices). {partial} allowed in browser only.",
@@ -1735,10 +1738,13 @@ export const dictionaries = {
     pushDeniedHint:
       "ব্রাউজার সাইট সেটিংস → Notifications → bloodlinkbd.org Allow করুন, তারপর আবার Allow চাপুন।",
     pushUnsupported:
-      "এই ব্রাউজারে অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome চেষ্টা করুন।",
+      "এই ব্রাউজারে ফোন অ্যালার্ট সেভ হয় না। Android-এ Chrome ব্যবহার করুন; iPhone-এ Home Screen অ্যাপ থেকে BloodLink খুলুন।",
     pushIosHint:
-      "iPhone-এ সিস্টেম পারমিশন এলে Allow দিন। ব্যাকগ্রাউন্ড অ্যালার্টের জন্য Home Screen-এ BloodLink অ্যাড করা ভালো।",
-    pushEnableError: "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন, অথবা Chrome ব্যবহার করুন।",
+      "iPhone-এ Chrome/Safari ট্যাব থেকে অ্যাডমিন ব্যাকগ্রাউন্ড অ্যালার্ট রাখা যায় না। Home Screen-এ BloodLink যোগ করে সেখান থেকে খুলে Allow দিন।",
+    pushEnableError:
+      "অ্যালার্ট চালু হয়নি। আবার Allow চাপুন। iPhone হলে আগে Home Screen অ্যাপ থেকে BloodLink খুলুন।",
+    adminPushIosBody:
+      "আপনি iPhone ব্রাউজারে আছেন (Chrome/Safari)। ফোন অ্যালার্টের জন্য Home Screen অ্যাপ লাগে: Share → Add to Home Screen, আইকন থেকে BloodLink খুলুন, তারপর অ্যাডমিন push অনুমতি দিন।",
     pushAllowStats: "কারা নোটিফিকেশন চালু করেছে",
     pushAllowStatsBody:
       "{donors}জন ডোনারের মধ্যে {allowed}জন ফোন অ্যালার্ট পায় ({subs} ডিভাইস)। {partial}জন শুধু ব্রাউজারে Allow করেছে।",
