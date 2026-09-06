@@ -1,4 +1,12 @@
-/* BloodLink Web Push service worker — shows notifications even when the site tab is closed. */
+/* BloodLink Web Push service worker v3 — shows alerts when the tab is closed. */
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   let data = {
     title: "BloodLink",
@@ -22,23 +30,27 @@ self.addEventListener("push", (event) => {
       tag: data.tag || "bloodlink",
       data: { url: data.url || "/notifications" },
       requireInteraction: true,
+      vibrate: [120, 60, 120],
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/notifications";
+  const url =
+    (event.notification.data && event.notification.data.url) || "/notifications";
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if ("focus" in client) {
-          client.navigate(url);
-          return client.focus();
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if ("focus" in client) {
+            client.navigate(url);
+            return client.focus();
+          }
         }
-      }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
-      return undefined;
-    }),
+        if (self.clients.openWindow) return self.clients.openWindow(url);
+        return undefined;
+      }),
   );
 });

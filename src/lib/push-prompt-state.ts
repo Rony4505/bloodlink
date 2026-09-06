@@ -1,11 +1,28 @@
-const SNOOZE_KEY = "bloodlink_push_snooze_until";
-const SESSION_ASKED_KEY = "bloodlink_push_asked_this_session";
-const AUTO_TRY_KEY = "bloodlink_push_auto_try";
-/** User successfully enabled push (deliverable or iOS permission-only). */
-const ACCEPTED_KEY = "bloodlink_push_accepted";
+import { PUSH_SYSTEM_VERSION, LEGACY_PUSH_STORAGE_KEYS } from "@/lib/push-system";
+
+const SNOOZE_KEY = "bloodlink_push_snooze_until_v3";
+const SESSION_ASKED_KEY = "bloodlink_push_asked_session_v3";
+const ACCEPTED_KEY = "bloodlink_push_accepted_v3";
+const VERSION_KEY = "bloodlink_push_prompt_v";
+
+/** One-time wipe of old broken "accepted/dismissed" flags so everyone is asked again. */
+export function migratePushPromptStorage(): void {
+  if (typeof window === "undefined") return;
+  const current = localStorage.getItem(VERSION_KEY);
+  if (current === String(PUSH_SYSTEM_VERSION)) return;
+  for (const key of LEGACY_PUSH_STORAGE_KEYS) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  }
+  localStorage.removeItem(SNOOZE_KEY);
+  localStorage.removeItem(ACCEPTED_KEY);
+  sessionStorage.removeItem(SESSION_ASKED_KEY);
+  localStorage.setItem(VERSION_KEY, String(PUSH_SYSTEM_VERSION));
+}
 
 export function isPushPromptSnoozed(): boolean {
   if (typeof window === "undefined") return true;
+  migratePushPromptStorage();
   const until = localStorage.getItem(SNOOZE_KEY);
   if (!until) return false;
   const ts = Date.parse(until);
@@ -16,10 +33,7 @@ export function isPushPromptSnoozed(): boolean {
   return true;
 }
 
-/**
- * Temporary hide only (e.g. browser hard-denied).
- * "Not now" must NOT use a long snooze — ask again on every new login.
- */
+/** Short pause only (hard browser deny). "Not now" must not use a long snooze. */
 export function snoozePushPrompt(days = 1): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(
@@ -33,31 +47,26 @@ export function clearPushPromptSnooze(): void {
   localStorage.removeItem(SNOOZE_KEY);
 }
 
-/** True after a successful Allow on this browser (local hint only). */
 export function hasAcceptedPushPrompt(): boolean {
   if (typeof window === "undefined") return false;
-  return (
-    localStorage.getItem(ACCEPTED_KEY) === "1" ||
-    localStorage.getItem("bloodlink_push_on") === "1"
-  );
+  migratePushPromptStorage();
+  return localStorage.getItem(ACCEPTED_KEY) === "1";
 }
 
 export function markPushPromptAccepted(): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(ACCEPTED_KEY, "1");
-  localStorage.setItem("bloodlink_push_on", "1");
   clearPushPromptSnooze();
 }
 
-/** Clear false "accepted" so we keep asking until real push is on. */
 export function clearPushPromptAccepted(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(ACCEPTED_KEY);
-  localStorage.removeItem("bloodlink_push_on");
 }
 
 export function wasPushPromptShownThisSession(): boolean {
   if (typeof window === "undefined") return true;
+  migratePushPromptStorage();
   return sessionStorage.getItem(SESSION_ASKED_KEY) === "1";
 }
 
@@ -66,18 +75,12 @@ export function markPushPromptShownThisSession(): void {
   sessionStorage.setItem(SESSION_ASKED_KEY, "1");
 }
 
-export function shouldAutoTryPushSubscribe(): boolean {
-  if (typeof window === "undefined") return false;
-  if (sessionStorage.getItem(AUTO_TRY_KEY) === "1") return false;
-  sessionStorage.setItem(AUTO_TRY_KEY, "1");
-  return true;
-}
-
 /**
- * Local hint only — must NOT treat browser permission alone as "done".
- * Server subscription (or permission-only row) is the source of truth for admin.
+ * Local hint only — server deliverable subscription is the source of truth.
+ * After rebuild, accepted is only set when subscribe actually succeeded.
  */
 export function shouldSkipPushPrompt(): boolean {
   if (typeof window === "undefined") return true;
+  migratePushPromptStorage();
   return hasAcceptedPushPrompt();
 }

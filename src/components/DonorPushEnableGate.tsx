@@ -6,6 +6,7 @@ import {
   clearPushPromptSnooze,
   markPushPromptAccepted,
   markPushPromptShownThisSession,
+  migratePushPromptStorage,
   shouldSkipPushPrompt,
   snoozePushPrompt,
   wasPushPromptShownThisSession,
@@ -62,7 +63,8 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       await new Promise((r) => setTimeout(r, 200));
       if (cancelled) return;
 
-      // Drop old 30-day snoozes so past "Not now" users get asked again.
+      // Push rebuild: clear stale local "accepted" flags so everyone Allows again.
+      migratePushPromptStorage();
       clearPushPromptSnooze();
 
       // Once per browser session (each new login = new session → ask again).
@@ -94,7 +96,11 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
 
       // Non-iPhone with stale permission-only: try silent upgrade first.
       if (status.permissionOnly && !isLikelyIos()) {
-        const upgraded = await enableWebPush({ recordIntent: true });
+        const upgraded = await enableWebPush({
+          recordIntent: true,
+          forceRefresh: true,
+          allowPermissionOnly: false,
+        });
         if (cancelled) return;
         if (upgraded === "granted") {
           markPushPromptAccepted();
@@ -111,7 +117,11 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
 
       // Browser already granted, but server has no row yet — sync so admin sees Allow.
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        const synced = await enableWebPush({ recordIntent: true });
+        const synced = await enableWebPush({
+          recordIntent: true,
+          forceRefresh: true,
+          allowPermissionOnly: isLikelyIos(),
+        });
         if (cancelled) return;
         if (synced === "granted" || synced === "permission_only") {
           markPushPromptAccepted();
@@ -144,7 +154,11 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     setBusy(true);
     setFailHint("");
     try {
-      const result = await enableWebPush({ recordIntent: true });
+      const result = await enableWebPush({
+        recordIntent: true,
+        forceRefresh: true,
+        allowPermissionOnly: isLikelyIos(),
+      });
       if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
         setDone(true);

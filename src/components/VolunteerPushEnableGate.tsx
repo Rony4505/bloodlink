@@ -6,6 +6,7 @@ import {
   clearPushPromptAccepted,
   markPushPromptAccepted,
   shouldSkipPushPrompt,
+  migratePushPromptStorage,
 } from "@/lib/push-prompt-state";
 
 type GateStatus = "loading" | "ask" | "on" | "denied" | "error";
@@ -39,6 +40,7 @@ export function VolunteerPushEnableGate({
   const [inlineOn, setInlineOn] = useState(false);
 
   const checkStatus = useCallback(async () => {
+    migratePushPromptStorage();
     if (!notificationsEnabled || !publicKey) {
       setStatus("error");
       return;

@@ -112,6 +112,10 @@ export const dictionaries = {
     adminPushBody:
       "Allow once so you get phone alerts for new donor registrations and new blood requests. Permission alone is not enough — wait until Allow finishes saving.",
     adminPushAllow: "Allow admin push",
+    adminPushActive: "Admin push is ON for this device.",
+    adminPushTest: "Send test push",
+    adminPushTestSent: "Test push sent ({sent}). Check this phone.",
+    adminPushBroadcast: "Notify all devices",
     volunteerAdd: "Add volunteer",
     volunteerAddSimpleHint: "Only 4 things needed. Extra details are optional.",
     volunteerMoreDetails: "More details (optional)",
@@ -981,6 +985,10 @@ export const dictionaries = {
     adminPushBody:
       "একবার Allow দিন — নতুন donor register বা নতুন রক্তের চাহিদা পোস্ট হলে ফোনে alert পাবেন। শুধু browser permission যথেষ্ট নয় — Allow সম্পন্ন হয়ে সেভ হতে দিন।",
     adminPushAllow: "অ্যাডমিন push অনুমতি",
+    adminPushActive: "এই ডিভাইসে অ্যাডমিন push চালু আছে।",
+    adminPushTest: "টেস্ট push পাঠান",
+    adminPushTestSent: "টেস্ট push পাঠানো হয়েছে ({sent})। এই ফোন চেক করুন।",
+    adminPushBroadcast: "সব ডিভাইসে নোটিফিকেশন পাঠান",
     volunteerAdd: "ভলান্টিয়ার যোগ",
     volunteerAddSimpleHint: "মাত্র ৪টা জিনিস লাগবে। বাকিটা চাইলে পরে দিবেন।",
     volunteerMoreDetails: "আরো তথ্য (ঐচ্ছিক)",
