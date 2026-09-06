@@ -4,25 +4,36 @@ import {
   hashCode,
   hashPassword,
   isAdminAuthenticated,
+  makeCode,
   verifyPassword,
 } from "@/lib/auth";
-import { getAdminSettings, updateAdminSettings, broadcastSystemAnnouncement, countPushAllowStats } from "@/lib/db";
-import { normalizePhone } from "@/lib/privacy";
+import {
+  getAdminSettings,
+  updateAdminSettings,
+  broadcastSystemAnnouncement,
+  countPushAllowStats,
+} from "@/lib/db";
+import { getAdminRecoveryEmail, maskEmail } from "@/lib/admin-recovery";
+import { deliverEmailOtp } from "@/lib/otp-delivery";
 import { normalizeNotificationSettings } from "@/lib/notification-settings";
-import { normalizeBanner, normalizeBannerSlideIntervalSec, normalizeSiteAppearance } from "@/lib/site-cms";
+import {
+  normalizeBanner,
+  normalizeBannerSlideIntervalSec,
+  normalizeSiteAppearance,
+} from "@/lib/site-cms";
 import {
   adminCredentialsSchema,
-  adminVerifyCodeSchema,
-  adminVerifySetupSchema,
   notificationBroadcastSchema,
   notificationSettingsSchema,
   platformOptionsSchema,
 } from "@/lib/validations";
 import type { OrgBanner } from "@/lib/types";
+import { z } from "zod";
 
-function makeCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
+const recoveryCodeSchema = z.object({
+  code: z.string().trim().min(4).max(10),
+});
+
 
 export async function GET() {
   const ok = await isAdminAuthenticated();
@@ -33,10 +44,11 @@ export async function GET() {
   const pushAllow = await countPushAllowStats();
   return NextResponse.json({
     username: admin.username,
-    verifyEmail: admin.verifyEmail,
-    verifyPhone: admin.verifyPhone,
+    verifyEmail: admin.verifyEmail || getAdminRecoveryEmail(),
+    recoveryEmail: getAdminRecoveryEmail(),
+    verifyPhone: "",
     emailVerified: admin.emailVerified,
-    phoneVerified: admin.phoneVerified,
+    phoneVerified: false,
     privacyBn: admin.privacyBn,
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
@@ -89,61 +101,69 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  if (action === "verify-setup") {
-    const parsed = adminVerifySetupSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid contact data" }, { status: 400 });
+  if (action === "verify-recovery-send") {
+    const email = getAdminRecoveryEmail();
+    const code = makeCode();
+    const delivery = await deliverEmailOtp(email, code, { allowInline: false });
+    if (!delivery.delivered || delivery.mode !== "email") {
+      const detail = delivery.detail || "";
+      return NextResponse.json(
+        {
+          error: detail.toLowerCase().includes("resend_api_key")
+            ? "Could not send Gmail OTP. RESEND_API_KEY is not set."
+            : `Could not send Gmail OTP. ${detail}`,
+          detail,
+        },
+        { status: 503 },
+      );
     }
-
-    const email = parsed.data.email || "";
-    const phone = parsed.data.phone ? normalizePhone(parsed.data.phone) : "";
-    const emailCode = email ? makeCode() : null;
-    const phoneCode = phone ? makeCode() : null;
-
     await updateAdminSettings({
       verifyEmail: email,
-      verifyPhone: phone,
-      emailVerified: email ? false : false,
-      phoneVerified: phone ? false : false,
-      pendingEmailCodeHash: emailCode ? hashCode(emailCode) : null,
-      pendingPhoneCodeHash: phoneCode ? hashCode(phoneCode) : null,
+      emailVerified: false,
+      pendingEmailCodeHash: hashCode(code),
+      pendingPhoneCodeHash: null,
+      phoneVerified: false,
+      verifyPhone: "",
     });
-
-    // Local/dev delivery: return codes once so owner can verify without SMS/SMTP yet
     return NextResponse.json({
       ok: true,
-      emailCode: emailCode || undefined,
-      phoneCode: phoneCode || undefined,
-      note: "Save these codes to complete verification. In production, send via email/SMS.",
+      emailMasked: maskEmail(email),
+      expiresInMinutes: 15,
     });
   }
 
-  if (action === "verify-code") {
-    const parsed = adminVerifyCodeSchema.safeParse(body);
+  if (action === "verify-recovery-confirm") {
+    const parsed = recoveryCodeSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid code" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
     }
     const admin = await getAdminSettings();
-    const hashed = hashCode(parsed.data.code);
-    if (parsed.data.channel === "email") {
-      if (!admin.pendingEmailCodeHash || admin.pendingEmailCodeHash !== hashed) {
-        return NextResponse.json({ error: "Wrong email code" }, { status: 400 });
-      }
-      await updateAdminSettings({
-        emailVerified: true,
-        pendingEmailCodeHash: null,
-      });
-      return NextResponse.json({ ok: true, emailVerified: true });
+    if (!admin.pendingEmailCodeHash) {
+      return NextResponse.json(
+        { error: "No pending Gmail verification. Send OTP first." },
+        { status: 410 },
+      );
     }
-
-    if (!admin.pendingPhoneCodeHash || admin.pendingPhoneCodeHash !== hashed) {
-      return NextResponse.json({ error: "Wrong phone code" }, { status: 400 });
+    if (hashCode(parsed.data.code) !== admin.pendingEmailCodeHash) {
+      return NextResponse.json(
+        { error: "Incorrect verification code." },
+        { status: 400 },
+      );
     }
+    const email = getAdminRecoveryEmail();
     await updateAdminSettings({
-      phoneVerified: true,
+      verifyEmail: email,
+      emailVerified: true,
+      pendingEmailCodeHash: null,
       pendingPhoneCodeHash: null,
+      phoneVerified: false,
+      verifyPhone: "",
     });
-    return NextResponse.json({ ok: true, phoneVerified: true });
+    return NextResponse.json({
+      ok: true,
+      emailVerified: true,
+      verifyEmail: email,
+    });
   }
 
   if (action === "platform-options") {

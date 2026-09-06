@@ -28,7 +28,7 @@ async function sendToSubscriptions(
 
   const keys = await ensureVapidKeys();
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT?.trim() || "mailto:hello@bloodlinkbd.org",
+    process.env.VAPID_SUBJECT?.trim() || "mailto:bdbloodlink@gmail.com",
     keys.publicKey,
     keys.privateKey,
   );

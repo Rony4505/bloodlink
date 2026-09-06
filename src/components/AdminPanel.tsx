@@ -132,7 +132,7 @@ export function AdminPanel() {
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
-    null | "storage" | "backup" | "features" | "notifications" | "appearance" | "ads" | "privacy" | "credentials" | "verify"
+    null | "storage" | "backup" | "features" | "notifications" | "appearance" | "ads" | "privacy" | "credentials" | "recovery"
   >(null);
   const [savePopup, setSavePopup] = useState(false);
 
@@ -1133,43 +1133,44 @@ export function AdminPanel() {
     await loadSettings();
   }
 
-  async function setupVerify(e: React.FormEvent) {
+  async function sendRecoveryOtp(e: React.FormEvent) {
     e.preventDefault();
     setSettingsMsg("");
+    setTempCodes("");
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "verify-setup",
-        email: verifyEmail,
-        phone: verifyPhone,
-      }),
+      body: JSON.stringify({ action: "verify-recovery-send" }),
     });
     const data = await res.json();
     if (!res.ok) {
       setSettingsMsg(data.error || t.errorGeneric);
       return;
     }
-    const bits = [];
-    if (data.emailCode) bits.push(`Email code: ${data.emailCode}`);
-    if (data.phoneCode) bits.push(`Phone code: ${data.phoneCode}`);
-    setTempCodes(bits.join(" | "));
+    setResetHint(`OTP sent to ${data.emailMasked || "bdbloodlink@gmail.com"}`);
     flashSaved(t.saved);
     await loadSettings();
   }
 
-  async function confirmCode(channel: "email" | "phone") {
-    const code = channel === "email" ? emailCode : phoneCode;
+  async function confirmRecoveryOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsMsg("");
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "verify-code", channel, code }),
+      body: JSON.stringify({ action: "verify-recovery-confirm", code: emailCode }),
     });
     const data = await res.json();
-    setSettingsMsg(res.ok ? t.saved : data.error || t.errorGeneric);
-    if (res.ok) setSavePopup(true);
+    if (!res.ok) {
+      setSettingsMsg(data.error || t.errorGeneric);
+      return;
+    }
+    setEmailCode("");
+    flashSaved("Recovery Gmail verified");
+    setSavePopup(true);
     await loadSettings();
   }
+
 
   if (checking) {
     return (
@@ -1851,7 +1852,7 @@ export function AdminPanel() {
               ["ads", t.orgBanners],
               ["privacy", t.adminPrivacy],
               ["credentials", t.changeCredentials],
-              ["verify", t.verifyContacts],
+              ["recovery", "Recovery Gmail"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -2363,6 +2364,11 @@ export function AdminPanel() {
                   </label>
                 </div>
               ))}
+                            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                Current password জানা থাকলে এখানেই username/password বদলান।
+                না জানলে logout করে login-এর <strong>Forgot username / password?</strong> ব্যবহার করুন — OTP যাবে{" "}
+                <span className="font-medium">bdbloodlink@gmail.com</span> এ।
+              </p>
               <button type="submit" className="btn-primary">
                 {t.saveChanges}
               </button>
@@ -2942,6 +2948,12 @@ export function AdminPanel() {
                 onChange={setNewPassword}
                 autoComplete="new-password"
               />
+              <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                Current password জানা থাকলে এখানেই username/password বদলান। না জানলে
+                logout করে login page-এ <strong>Forgot username / password?</strong>{" "}
+                ব্যবহার করুন — OTP যাবে{" "}
+                <span className="font-medium">bdbloodlink@gmail.com</span> এ।
+              </p>
               <button type="submit" className="btn-primary">
                 {t.saveChanges}
               </button>
@@ -2952,72 +2964,49 @@ export function AdminPanel() {
           </AdminSettingsPanel>
 
           <AdminSettingsPanel
-            open={settingsPanel === "verify"}
-            title={t.verifyContacts}
+            open={settingsPanel === "recovery"}
+            title="Recovery Gmail"
             onClose={() => setSettingsPanel(null)}
             wide
           >
             <div className="space-y-3">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-              {t.verifyContacts}
+              Recovery Gmail
             </h2>
-            <p className="mt-1 text-sm">
-              Email: {emailVerified ? t.verified : t.notVerified} · Phone:{" "}
-              {phoneVerified ? t.verified : t.notVerified}
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              Admin account <strong>bdbloodlink@gmail.com</strong> এর সাথে bind থাকবে।
+              এটা real Gmail verification — Forgot password OTP এখানেই যাবে।
             </p>
-            <form onSubmit={setupVerify} className="mt-3 space-y-3">
-              <input
-                className="field"
-                type="email"
-                placeholder={t.verifyEmail}
-                value={verifyEmail}
-                onChange={(e) => setVerifyEmail(e.target.value)}
-              />
-              <input
-                className="field"
-                placeholder={t.verifyPhone}
-                value={verifyPhone}
-                onChange={(e) => setVerifyPhone(e.target.value)}
-              />
+            <p className="text-sm">
+              Status:{" "}
+              <strong>{emailVerified ? t.verified : t.notVerified}</strong>
+              {" · "}
+              {verifyEmail || "bdbloodlink@gmail.com"}
+            </p>
+            <form onSubmit={sendRecoveryOtp} className="space-y-3">
               <button type="submit" className="btn-primary">
-                {t.sendCodes}
+                Send verification OTP to Gmail
               </button>
             </form>
-            {tempCodes ? (
-              <p className="mt-2 text-xs text-[var(--blood-deep)]">{tempCodes}</p>
+            <form onSubmit={confirmRecoveryOtp} className="mt-3 space-y-3">
+              <input
+                className="field"
+                placeholder="Enter Gmail OTP"
+                value={emailCode}
+                onChange={(e) => setEmailCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+              />
+              <button type="submit" className="btn-ghost w-full">
+                Confirm OTP & verify Gmail
+              </button>
+            </form>
+            {settingsMsg ? (
+              <p className="text-sm text-[var(--blood)]">{settingsMsg}</p>
             ) : null}
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <input
-                  className="field"
-                  placeholder={`Email ${t.enterCode}`}
-                  value={emailCode}
-                  onChange={(e) => setEmailCode(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-ghost w-full"
-                  onClick={() => confirmCode("email")}
-                >
-                  {t.verify} email
-                </button>
-              </div>
-              <div className="space-y-2">
-                <input
-                  className="field"
-                  placeholder={`Phone ${t.enterCode}`}
-                  value={phoneCode}
-                  onChange={(e) => setPhoneCode(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-ghost w-full"
-                  onClick={() => confirmCode("phone")}
-                >
-                  {t.verify} phone
-                </button>
-              </div>
-            </div>
+            {resetHint ? (
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+            ) : null}
           </div>
           </AdminSettingsPanel>
 
