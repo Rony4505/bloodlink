@@ -132,7 +132,7 @@ export function AdminPanel() {
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
-    null | "storage" | "backup" | "features" | "notifications" | "appearance" | "ads" | "privacy" | "credentials" | "recovery"
+    null | "storage" | "backup" | "features" | "notifications" | "appearance" | "ads" | "privacy" | "security"
   >(null);
   const [savePopup, setSavePopup] = useState(false);
 
@@ -147,6 +147,7 @@ export function AdminPanel() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [emailCode, setEmailCode] = useState("");
+  const [securityOtpMode, setSecurityOtpMode] = useState<null | "credentials" | "gmail">(null);
   const [phoneCode, setPhoneCode] = useState("");
   const [tempCodes, setTempCodes] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
@@ -1109,16 +1110,42 @@ export function AdminPanel() {
     if (res.ok) flashSaved(t.saved); else setSettingsMsg(t.errorGeneric);
   }
 
-  async function saveCredentials(e: React.FormEvent) {
-    e.preventDefault();
+
+  async function sendSecurityCredentialOtp() {
     setSettingsMsg("");
+    setEmailCode("");
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: "credentials",
+        action: "security-send-otp",
         currentPassword,
-        newUsername: newUsername || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setSettingsMsg(data.error || t.errorGeneric);
+      return;
+    }
+    setSecurityOtpMode("credentials");
+    setResetHint(`OTP sent to ${data.emailMasked || verifyEmail || "your Gmail"}.`);
+  }
+
+  async function submitSecurityCredentials(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsMsg("");
+    if (!emailCode.trim()) {
+      setSettingsMsg("Enter the Gmail OTP first.");
+      return;
+    }
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "security-update-credentials",
+        currentPassword,
+        code: emailCode,
+        newUsername: newUsername.trim() || undefined,
         newPassword: newPassword || undefined,
       }),
     });
@@ -1127,38 +1154,52 @@ export function AdminPanel() {
       setSettingsMsg(data.error || t.errorGeneric);
       return;
     }
-    flashSaved(t.saved);
     setCurrentPassword("");
     setNewPassword("");
+    setEmailCode("");
+    setSecurityOtpMode(null);
+    setResetHint("");
+    if (data.username) {
+      setNewUsername(data.username);
+      setSettingsUser(data.username);
+    }
+    flashSaved(t.saved);
+    setSavePopup(true);
     await loadSettings();
   }
 
-  async function sendRecoveryOtp(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveSecurityGmail() {
     setSettingsMsg("");
-    setTempCodes("");
+    setEmailCode("");
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "verify-recovery-send" }),
+      body: JSON.stringify({
+        action: "security-save-gmail",
+        email: verifyEmail,
+        currentPassword,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
       setSettingsMsg(data.error || t.errorGeneric);
       return;
     }
-    setResetHint(`OTP sent to ${data.emailMasked || "bdbloodlink@gmail.com"}`);
-    flashSaved(t.saved);
-    await loadSettings();
+    setSecurityOtpMode("gmail");
+    setResetHint(`OTP sent to ${data.emailMasked || verifyEmail}. Confirm to bind Gmail.`);
   }
 
-  async function confirmRecoveryOtp(e: React.FormEvent) {
+  async function confirmSecurityGmail(e: React.FormEvent) {
     e.preventDefault();
     setSettingsMsg("");
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "verify-recovery-confirm", code: emailCode }),
+      body: JSON.stringify({
+        action: "security-confirm-gmail",
+        code: emailCode,
+        currentPassword,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -1166,7 +1207,10 @@ export function AdminPanel() {
       return;
     }
     setEmailCode("");
-    flashSaved("Recovery Gmail verified");
+    setSecurityOtpMode(null);
+    setResetHint("");
+    if (data.verifyEmail) setVerifyEmail(data.verifyEmail);
+    flashSaved("Gmail verified");
     setSavePopup(true);
     await loadSettings();
   }
@@ -1851,8 +1895,7 @@ export function AdminPanel() {
               ["appearance", t.siteAppearance],
               ["ads", t.orgBanners],
               ["privacy", t.adminPrivacy],
-              ["credentials", t.changeCredentials],
-              ["recovery", "Recovery Gmail"],
+              ["security", "Security"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -2914,100 +2957,117 @@ export function AdminPanel() {
           </AdminSettingsPanel>
 
           <AdminSettingsPanel
-            open={settingsPanel === "credentials"}
-            title={t.changeCredentials}
-            onClose={() => setSettingsPanel(null)}
+            open={settingsPanel === "security"}
+            title="Security"
+            onClose={() => {
+              setSettingsPanel(null);
+              setSecurityOtpMode(null);
+              setEmailCode("");
+              setResetHint("");
+            }}
             wide
           >
-            <div className="space-y-3">
-            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-              {t.changeCredentials}
-            </h2>
-            <p className="mt-1 text-sm">
-              {t.adminUsername}: <strong>{settingsUser}</strong>
-            </p>
-            <form onSubmit={saveCredentials} className="mt-3 space-y-3">
+            <div className="space-y-4">
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+                Security
+              </h2>
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                Username বা password বদলাতে নিচে Send OTP চাপুন। Gmail বদলাতে present password
+                দিয়ে Save Gmail চাপুন — নতুন Gmail-এ OTP এসে confirm করতে হবে।
+              </p>
+
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">Username</span>
+                <input
+                  className="field"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  autoComplete="username"
+                />
+              </label>
+
+              <div className="space-y-2">
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">Gmail</span>
+                  <input
+                    className="field"
+                    type="email"
+                    value={verifyEmail}
+                    onChange={(e) => setVerifyEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    Status: {emailVerified ? t.verified : t.notVerified}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  className="btn-ghost w-full sm:w-auto"
+                  onClick={() => void saveSecurityGmail()}
+                >
+                  Save Gmail
+                </button>
+              </div>
+
               <PasswordField
-                id="admin-current-password"
-                label={t.currentPassword}
+                id="admin-security-current-password"
+                label="Present password"
                 value={currentPassword}
                 onChange={setCurrentPassword}
                 required
                 autoComplete="current-password"
               />
-              <input
-                className="field"
-                placeholder={t.newUsername}
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-              />
+
               <PasswordField
-                id="admin-new-password"
-                label={t.newPassword}
+                id="admin-security-new-password"
+                label="Set new password"
                 value={newPassword}
                 onChange={setNewPassword}
                 autoComplete="new-password"
               />
-              <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-                Current password জানা থাকলে এখানেই username/password বদলান। না জানলে
-                logout করে login page-এ <strong>Forgot username / password?</strong>{" "}
-                ব্যবহার করুন — OTP যাবে{" "}
-                <span className="font-medium">bdbloodlink@gmail.com</span> এ।
-              </p>
-              <button type="submit" className="btn-primary">
-                {t.saveChanges}
-              </button>
-            </form>
-          </div>
 
-          
-          </AdminSettingsPanel>
+              <button
+                type="button"
+                className="btn-primary w-full"
+                onClick={() => void sendSecurityCredentialOtp()}
+              >
+                Send OTP
+              </button>
 
-          <AdminSettingsPanel
-            open={settingsPanel === "recovery"}
-            title="Recovery Gmail"
-            onClose={() => setSettingsPanel(null)}
-            wide
-          >
-            <div className="space-y-3">
-            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-              Recovery Gmail
-            </h2>
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              Admin account <strong>bdbloodlink@gmail.com</strong> এর সাথে bind থাকবে।
-              এটা real Gmail verification — Forgot password OTP এখানেই যাবে।
-            </p>
-            <p className="text-sm">
-              Status:{" "}
-              <strong>{emailVerified ? t.verified : t.notVerified}</strong>
-              {" · "}
-              {verifyEmail || "bdbloodlink@gmail.com"}
-            </p>
-            <form onSubmit={sendRecoveryOtp} className="space-y-3">
-              <button type="submit" className="btn-primary">
-                Send verification OTP to Gmail
-              </button>
-            </form>
-            <form onSubmit={confirmRecoveryOtp} className="mt-3 space-y-3">
-              <input
-                className="field"
-                placeholder="Enter Gmail OTP"
-                value={emailCode}
-                onChange={(e) => setEmailCode(e.target.value)}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-              />
-              <button type="submit" className="btn-ghost w-full">
-                Confirm OTP & verify Gmail
-              </button>
-            </form>
-            {settingsMsg ? (
-              <p className="text-sm text-[var(--blood)]">{settingsMsg}</p>
-            ) : null}
-            {resetHint ? (
-              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
-            ) : null}
-          </div>
+              {securityOtpMode ? (
+                <form
+                  onSubmit={
+                    securityOtpMode === "gmail"
+                      ? confirmSecurityGmail
+                      : submitSecurityCredentials
+                  }
+                  className="space-y-3 border-t border-[var(--line)] pt-4"
+                >
+                  <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+                    {resetHint ||
+                      (securityOtpMode === "gmail"
+                        ? "Enter OTP sent to the new Gmail."
+                        : "Enter OTP to confirm username/password change.")}
+                  </p>
+                  <input
+                    className="field"
+                    placeholder="OTP"
+                    value={emailCode}
+                    onChange={(e) => setEmailCode(e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                  />
+                  <button type="submit" className="btn-primary w-full">
+                    Submit
+                  </button>
+                </form>
+              ) : null}
+
+              {settingsMsg ? (
+                <p className="text-sm text-[var(--blood)]">{settingsMsg}</p>
+              ) : null}
+            </div>
           </AdminSettingsPanel>
 
           <AdminPopup

@@ -50,7 +50,8 @@ export async function POST(request: Request) {
 }
 
 async function sendResetOtp() {
-  const email = getAdminRecoveryEmail();
+  const admin = await getAdminSettings();
+  const email = getAdminRecoveryEmail(admin.verifyEmail);
   if (!email.includes("@")) {
     return NextResponse.json(
       { error: "Admin recovery Gmail is not configured." },

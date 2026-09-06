@@ -307,6 +307,8 @@ export type AdminSettings = {
   phoneVerified: boolean;
   pendingEmailCodeHash: string | null;
   pendingPhoneCodeHash: string | null;
+  /** Pending new recovery Gmail awaiting OTP confirmation. */
+  pendingVerifyEmail: string | null;
   /** Gmail OTP hash for forgot-username/password recovery. */
   pendingResetCodeHash: string | null;
   pendingResetExpiresAt: string | null;

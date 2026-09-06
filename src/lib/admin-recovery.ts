@@ -1,7 +1,14 @@
 import { OWNER_EMAIL } from "@/lib/defaults";
 
-/** Official admin recovery Gmail (locked). Not editable from settings. */
-export function getAdminRecoveryEmail(): string {
+/**
+ * Admin recovery / security Gmail.
+ * Prefer the verified (or saved) admin verifyEmail; else env; else default owner inbox.
+ */
+export function getAdminRecoveryEmail(verifyEmail?: string | null): string {
+  const fromSettings = String(verifyEmail || "")
+    .trim()
+    .toLowerCase();
+  if (fromSettings.includes("@")) return fromSettings;
   const fromEnv = process.env.ADMIN_RECOVERY_EMAIL?.trim().toLowerCase();
   if (fromEnv) return fromEnv;
   return OWNER_EMAIL.trim().toLowerCase();
