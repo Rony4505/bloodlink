@@ -63,6 +63,20 @@ export async function POST(request: Request) {
       tag: `admin-test-${Date.now()}`,
     });
 
+    if (result.sent < 1) {
+      return NextResponse.json(
+        {
+          ok: false,
+          broadcast: false,
+          sent: 0,
+          failed: result.failed,
+          error:
+            "Admin push delivery failed. Tap Allow admin push again on this phone.",
+        },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       broadcast: false,
