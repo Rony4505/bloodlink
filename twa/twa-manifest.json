@@ -1,0 +1,62 @@
+{
+  "packageId": "org.bloodlinkbd.app",
+  "host": "bloodlinkbd.org",
+  "name": "BloodLink BD",
+  "launcherName": "BloodLink",
+  "display": "standalone",
+  "themeColor": "#9B1B2E",
+  "themeColorDark": "#1C0A0C",
+  "navigationColor": "#1C0A0C",
+  "navigationColorDark": "#1C0A0C",
+  "navigationDividerColor": "#1C0A0C",
+  "navigationDividerColorDark": "#1C0A0C",
+  "backgroundColor": "#1C0A0C",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://bloodlinkbd.org/icons/icon-512.png",
+  "maskableIconUrl": "https://bloodlinkbd.org/icons/icon-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android-keystore.jks",
+    "alias": "bloodlink"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Find donors",
+      "shortName": "Find",
+      "url": "/find",
+      "chosenIconUrl": "https://bloodlinkbd.org/icons/icon-192.png"
+    },
+    {
+      "name": "Notifications",
+      "shortName": "Alerts",
+      "url": "/notifications",
+      "chosenIconUrl": "https://bloodlinkbd.org/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap",
+  "webManifestUrl": "https://bloodlinkbd.org/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://bloodlinkbd.org/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedFolders": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": ""
+}

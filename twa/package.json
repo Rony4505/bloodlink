@@ -1,0 +1,8 @@
+{
+  "name": "bloodlink-twa",
+  "private": true,
+  "description": "Bubblewrap / Play Store packaging config for BloodLink BD. Does not affect website data.",
+  "scripts": {
+    "doctor": "node ./doctor.mjs"
+  }
+}
