@@ -1,4 +1,5 @@
-export const OWNER_EMAIL = "rjrony4505@gmail.com";
+/** Official BloodLink BD recovery / contact Gmail. */
+export const OWNER_EMAIL = "bdbloodlink@gmail.com";
 export const OWNER_PHONE = "+8801711934505";
 
 export const DEFAULT_PRIVACY_BN = `BloodLink কী করে

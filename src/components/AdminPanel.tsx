@@ -108,6 +108,12 @@ export function AdminPanel() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "forgot" | "forgot-otp" | "forgot-reset">("login");
+  const [resetHint, setResetHint] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetUsername, setResetUsername] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPassword2, setResetPassword2] = useState("");
   const [donors, setDonors] = useState<AdminDonor[]>([]);
   const [posts, setPosts] = useState<AdminBloodPost[]>([]);
   const [requests, setRequests] = useState<ContactRequest[]>([]);
@@ -988,6 +994,98 @@ export function AdminPanel() {
     }
   }
 
+  async function sendAdminResetOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setResetHint("");
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setResetHint(
+        `OTP sent to ${data.emailMasked || "recovery Gmail"}. Check inbox/spam.`,
+      );
+      setAuthMode("forgot-otp");
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyAdminResetOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", code: resetCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setResetHint("Gmail verified. Set a new username and password.");
+      setAuthMode("forgot-reset");
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmAdminReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (resetPassword !== resetPassword2) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm",
+          code: resetCode,
+          newUsername: resetUsername,
+          newPassword: resetPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t.errorGeneric);
+        return;
+      }
+      setAuthMode("login");
+      setResetCode("");
+      setResetPassword("");
+      setResetPassword2("");
+      setUsername(data.username || resetUsername);
+      setPassword("");
+      setResetHint("");
+      await loadData();
+      await loadSettings();
+      await loadStorage();
+    } catch {
+      setError(t.errorGeneric);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
     setAuthed(false);
@@ -1097,6 +1195,155 @@ export function AdminPanel() {
   }
 
   if (!authed) {
+    if (authMode === "forgot") {
+      return (
+        <form
+          onSubmit={sendAdminResetOtp}
+          className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+        >
+          <h2 className="text-lg font-semibold">Forgot admin username / password</h2>
+          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+            We will send a Gmail OTP to the BloodLink recovery inbox
+            (<span className="font-medium">bdbloodlink@gmail.com</span>). Use that
+            code to set a new username and password.
+          </p>
+          {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+          {resetHint ? (
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+          ) : null}
+          <button type="submit" className="btn-primary w-full" disabled={loading}>
+            {loading ? t.loading : "Send Gmail OTP"}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost w-full"
+            onClick={() => {
+              setAuthMode("login");
+              setError("");
+              setResetHint("");
+            }}
+          >
+            Back to login
+          </button>
+        </form>
+      );
+    }
+
+    if (authMode === "forgot-otp") {
+      return (
+        <form
+          onSubmit={verifyAdminResetOtp}
+          className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+        >
+          <h2 className="text-lg font-semibold">Enter Gmail OTP</h2>
+          {resetHint ? (
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+          ) : null}
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">OTP code</span>
+            <input
+              className="field"
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+            />
+          </label>
+          {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+          <button type="submit" className="btn-primary w-full" disabled={loading}>
+            {loading ? t.loading : "Verify OTP"}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost w-full"
+            disabled={loading}
+            onClick={() => {
+              void (async () => {
+                setLoading(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/admin/reset-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "send" }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    setError(data.error || t.errorGeneric);
+                    return;
+                  }
+                  setResetHint(
+                    `OTP resent to ${data.emailMasked || "recovery Gmail"}. Check inbox/spam.`,
+                  );
+                } catch {
+                  setError(t.errorGeneric);
+                } finally {
+                  setLoading(false);
+                }
+              })();
+            }}
+          >
+            Resend OTP
+          </button>
+          <button
+            type="button"
+            className="btn-ghost w-full"
+            onClick={() => {
+              setAuthMode("forgot");
+              setError("");
+            }}
+          >
+            Back
+          </button>
+        </form>
+      );
+    }
+
+    if (authMode === "forgot-reset") {
+      return (
+        <form
+          onSubmit={confirmAdminReset}
+          className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+        >
+          <h2 className="text-lg font-semibold">Set new admin credentials</h2>
+          {resetHint ? (
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+          ) : null}
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">New username</span>
+            <input
+              className="field"
+              value={resetUsername}
+              onChange={(e) => setResetUsername(e.target.value)}
+              required
+              minLength={3}
+            />
+          </label>
+          <PasswordField
+            id="admin-reset-password"
+            label="New password"
+            value={resetPassword}
+            onChange={setResetPassword}
+            required
+            autoComplete="new-password"
+          />
+          <PasswordField
+            id="admin-reset-password2"
+            label="Confirm password"
+            value={resetPassword2}
+            onChange={setResetPassword2}
+            required
+            autoComplete="new-password"
+          />
+          {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
+          <button type="submit" className="btn-primary w-full" disabled={loading}>
+            {loading ? t.loading : "Save and sign in"}
+          </button>
+        </form>
+      );
+    }
+
     return (
       <form
         onSubmit={login}
@@ -1122,6 +1369,17 @@ export function AdminPanel() {
         {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
         <button type="submit" className="btn-primary w-full" disabled={loading}>
           {loading ? t.loading : t.adminLogin}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost w-full"
+          onClick={() => {
+            setAuthMode("forgot");
+            setError("");
+            setResetHint("");
+          }}
+        >
+          Forgot username / password?
         </button>
       </form>
     );

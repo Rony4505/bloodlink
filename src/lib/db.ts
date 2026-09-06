@@ -224,6 +224,8 @@ async function defaultAdmin(): Promise<AdminSettings> {
     phoneVerified: false,
     pendingEmailCodeHash: null,
     pendingPhoneCodeHash: null,
+    pendingResetCodeHash: null,
+    pendingResetExpiresAt: null,
     privacyBn: DEFAULT_PRIVACY_BN,
     privacyEn: DEFAULT_PRIVACY_EN,
     platformOptions: defaultPlatformOptions(),
@@ -453,6 +455,8 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         vapidPublicKey: String(parsed.admin.vapidPublicKey || ""),
         vapidPrivateKey: String(parsed.admin.vapidPrivateKey || ""),
         pushSystemVersion: Number(parsed.admin.pushSystemVersion || 0) || 0,
+        pendingResetCodeHash: parsed.admin.pendingResetCodeHash ?? null,
+        pendingResetExpiresAt: parsed.admin.pendingResetExpiresAt ?? null,
       }
     : await defaultAdmin();
   return { admin, needsMigrate };
