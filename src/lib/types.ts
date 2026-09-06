@@ -318,6 +318,11 @@ export type AdminSettings = {
   /** Web Push VAPID key pair (generated once and persisted). */
   vapidPublicKey: string;
   vapidPrivateKey: string;
+  /**
+   * Push subsystem rebuild marker. When bumped, stale pushSubscriptions are
+   * cleared once so every device must Allow again with a fresh subscription.
+   */
+  pushSystemVersion: number;
 };
 
 export type DatabaseShape = {

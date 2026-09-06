@@ -59,7 +59,7 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   async function onAllowPush() {
     setPushBusy(true);
     try {
-      const result = await enableWebPush({ recordIntent: true });
+      const result = await enableWebPush({ recordIntent: true, forceRefresh: true, allowPermissionOnly: true });
       if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
         setPushDone("on");

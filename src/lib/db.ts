@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { isDonorAvailable } from "./availability";
 import { DEFAULT_PRIVACY_BN, DEFAULT_PRIVACY_EN } from "./defaults";
 import { ADMIN_NOTIFY_USER_ID } from "./admin-notify-user";
+import { PUSH_SYSTEM_VERSION } from "./push-system";
 import {
   bloodRequestTexts,
   contactChangeResultTexts,
@@ -232,6 +233,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     siteAppearance: defaultSiteAppearance(),
     vapidPublicKey: "",
     vapidPrivateKey: "",
+    pushSystemVersion: 0,
   };
 }
 
@@ -450,6 +452,7 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         siteAppearance: normalizeSiteAppearance(parsed.admin.siteAppearance),
         vapidPublicKey: String(parsed.admin.vapidPublicKey || ""),
         vapidPrivateKey: String(parsed.admin.vapidPrivateKey || ""),
+        pushSystemVersion: Number(parsed.admin.pushSystemVersion || 0) || 0,
       }
     : await defaultAdmin();
   return { admin, needsMigrate };
@@ -493,6 +496,17 @@ async function createEmptyDb(): Promise<DatabaseShape> {
 
 function applySchemaMigrations(db: DatabaseShape): boolean {
   let changed = false;
+  // Push rebuild: wipe stale browser subscriptions once. Keep VAPID keys.
+  // Users/admin/volunteers must tap Allow again so deliveries work.
+  if (!db.admin.pushSystemVersion || db.admin.pushSystemVersion < PUSH_SYSTEM_VERSION) {
+    const before = (db.pushSubscriptions || []).length;
+    db.pushSubscriptions = [];
+    db.admin.pushSystemVersion = PUSH_SYSTEM_VERSION;
+    changed = true;
+    console.info(
+      `[bloodlink] Push system rebuild v${PUSH_SYSTEM_VERSION}: cleared ${before} old subscription(s). Devices must Allow again.`,
+    );
+  }
   db.volunteers = (db.volunteers || []).map((v, i) => {
     const normalized = normalizeVolunteer(v);
     if (!normalized) return v;
@@ -1751,12 +1765,25 @@ export async function ensureVapidKeys(): Promise<{
     return { publicKey, privateKey };
   }
 
+  // Never mint new VAPID keys when any deliverable subscription still exists —
+  // that would silently break every phone until everyone re-subscribes.
+  const db = await ensureDb();
+  const hasDeliverable = (db.pushSubscriptions || []).some(
+    (s) => s.endpoint && !String(s.endpoint).startsWith("local-permission://"),
+  );
+  if (hasDeliverable) {
+    throw new Error(
+      "[bloodlink] VAPID keys missing but push subscriptions exist — set VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY in env",
+    );
+  }
+
   const webpush = await import("web-push");
   const generated = webpush.generateVAPIDKeys();
   await updateAdminSettings({
     vapidPublicKey: generated.publicKey,
     vapidPrivateKey: generated.privateKey,
   });
+  console.info("[bloodlink] Generated and persisted new VAPID key pair");
   return generated;
 }
 
@@ -1768,6 +1795,16 @@ export async function listPushSubscriptions(
   if (!userIds?.length) return [...list];
   const set = new Set(userIds);
   return list.filter((s) => set.has(s.userId));
+}
+
+/** Unique userIds (donors + admin + volunteers) that have a deliverable Web Push row. */
+export async function listAllDeliverablePushUserIds(): Promise<string[]> {
+  const db = await ensureDb();
+  const ids = new Set<string>();
+  for (const s of db.pushSubscriptions || []) {
+    if (s.userId && isDeliverablePushSubscription(s)) ids.add(s.userId);
+  }
+  return [...ids];
 }
 
 /** Unique donors with a real deliverable Web Push subscription. */
