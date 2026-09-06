@@ -34,11 +34,30 @@ export function isLikelyIos() {
   );
 }
 
-function isStandalonePwa() {
+export function isStandalonePwa() {
   if (typeof window === "undefined") return false;
   const nav = navigator as Navigator & { standalone?: boolean };
   return (
     window.matchMedia("(display-mode: standalone)").matches || Boolean(nav.standalone)
+  );
+}
+
+/** iPhone/iPad browser tab (Safari or Chrome) — not the Home Screen app. */
+export function isIosBrowserTab() {
+  return isLikelyIos() && !isStandalonePwa();
+}
+
+/**
+ * True when this environment can create a real Web Push subscription.
+ * iOS only supports that from a Home Screen / standalone PWA — not Chrome/Safari tabs.
+ */
+export function canUseFullWebPush() {
+  if (typeof window === "undefined") return false;
+  if (isIosBrowserTab()) return false;
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
   );
 }
 
@@ -49,6 +68,24 @@ export function isWebPushSupported() {
     "PushManager" in window &&
     "Notification" in window
   );
+}
+
+export type WebPushFailureKind =
+  | "ios_home_screen_required"
+  | "denied"
+  | "unsupported"
+  | "error";
+
+/** Map enableWebPush() results to a specific UI failure kind. */
+export function classifyWebPushFailure(
+  result: EnableWebPushResult,
+): WebPushFailureKind {
+  if (result === "denied") return "denied";
+  if (result === "unsupported") {
+    return isIosBrowserTab() ? "ios_home_screen_required" : "unsupported";
+  }
+  if (isIosBrowserTab()) return "ios_home_screen_required";
+  return "error";
 }
 
 export function canAskNotificationPermission() {
@@ -216,12 +253,8 @@ export async function enableWebPush(
   const forceRefresh = options.forceRefresh !== false; // default true after rebuild
   const allowPermissionOnly = options.allowPermissionOnly === true;
   const recordIntent = options.recordIntent === true;
-  const iosBrowserTab = isLikelyIos() && !isStandalonePwa();
-  const canFullPush =
-    "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window &&
-    !iosBrowserTab;
+  const iosBrowserTab = isIosBrowserTab();
+  const canFullPush = canUseFullWebPush();
 
   try {
     let perm: NotificationPermission = "default";

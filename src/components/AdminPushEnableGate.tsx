@@ -4,8 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
   canAskNotificationPermission,
+  canUseFullWebPush,
+  classifyWebPushFailure,
   enableWebPush,
+  isIosBrowserTab,
   isWebPushSupported,
+  type EnableWebPushResult,
 } from "@/lib/web-push-client";
 import { migratePushPromptStorage } from "@/lib/push-prompt-state";
 
@@ -30,8 +34,8 @@ async function fetchAdminPushStatus(): Promise<boolean> {
 
 /**
  * Always-visible admin push card.
- * Re-syncs the deliverable admin subscription whenever the panel loads.
- * Session skip must never block silent repair — that was breaking admin push.
+ * On iPhone Chrome/Safari tabs, show Home Screen instructions instead of a
+ * misleading "use Chrome" error (iOS Chrome cannot deliver background push).
  */
 export function AdminPushEnableGate() {
   const { t } = useLocale();
@@ -41,12 +45,41 @@ export function AdminPushEnableGate() {
   const [error, setError] = useState("");
   const [testBusy, setTestBusy] = useState(false);
   const [testMsg, setTestMsg] = useState("");
+  const [iosTab, setIosTab] = useState(false);
+
+  const failureMessage = useCallback(
+    (result: EnableWebPushResult) => {
+      const kind = classifyWebPushFailure(result);
+      if (kind === "ios_home_screen_required") return t.pushIosPwaRequired;
+      if (kind === "denied") return t.pushDenied;
+      if (kind === "unsupported") return t.pushUnsupported;
+      return t.pushEnableError;
+    },
+    [t],
+  );
 
   const syncAdminPush = useCallback(
     async (opts?: { interactive?: boolean }) => {
       const interactive = opts?.interactive === true;
-      if (!canAskNotificationPermission() || !isWebPushSupported()) {
-        if (interactive) setError(t.pushEnableError);
+
+      if (!canAskNotificationPermission()) {
+        if (interactive) setError(t.pushUnsupported);
+        return false;
+      }
+
+      // iPhone browser tab cannot create a deliverable push subscription.
+      if (isIosBrowserTab() || !canUseFullWebPush()) {
+        if (interactive) {
+          setError(
+            isIosBrowserTab() ? t.pushIosPwaRequired : t.pushUnsupported,
+          );
+        }
+        setSubscribed(false);
+        return false;
+      }
+
+      if (!isWebPushSupported()) {
+        if (interactive) setError(t.pushUnsupported);
         return false;
       }
 
@@ -68,7 +101,7 @@ export function AdminPushEnableGate() {
           setError("");
           return true;
         }
-        if (interactive) setError(t.pushEnableError);
+        if (interactive) setError(failureMessage(result));
         setSubscribed(false);
         return false;
       }
@@ -76,7 +109,7 @@ export function AdminPushEnableGate() {
       setSubscribed(false);
       return false;
     },
-    [t.pushEnableError],
+    [failureMessage, t.pushDenied, t.pushIosPwaRequired, t.pushUnsupported],
   );
 
   useEffect(() => {
@@ -92,6 +125,7 @@ export function AdminPushEnableGate() {
         /* ignore */
       }
 
+      setIosTab(isIosBrowserTab());
       await syncAdminPush({ interactive: false });
       if (!cancelled) setReady(true);
     })();
@@ -101,6 +135,12 @@ export function AdminPushEnableGate() {
   }, [syncAdminPush]);
 
   if (!ready) return null;
+
+  const bodyText = subscribed
+    ? t.adminPushActive
+    : iosTab
+      ? t.adminPushIosBody
+      : t.adminPushBody;
 
   return (
     <div
@@ -112,8 +152,13 @@ export function AdminPushEnableGate() {
     >
       <p className="text-sm font-semibold text-[var(--blood-deep)]">{t.adminPushTitle}</p>
       <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-        {subscribed ? t.adminPushActive : t.adminPushBody}
+        {bodyText}
       </p>
+      {iosTab && !subscribed ? (
+        <p className="mt-2 text-xs font-medium text-[var(--blood-deep)]">
+          {t.pushIosHint}
+        </p>
+      ) : null}
       {error ? (
         <p className="mt-2 text-xs font-medium text-[var(--blood)]">{error}</p>
       ) : null}
@@ -134,7 +179,13 @@ export function AdminPushEnableGate() {
               void (async () => {
                 try {
                   const ok = await syncAdminPush({ interactive: true });
-                  if (!ok) setError(t.pushEnableError);
+                  if (!ok && !error) {
+                    setError(
+                      isIosBrowserTab()
+                        ? t.pushIosPwaRequired
+                        : t.pushEnableError,
+                    );
+                  }
                 } finally {
                   setBusy(false);
                 }
@@ -155,10 +206,18 @@ export function AdminPushEnableGate() {
             setError("");
             void (async () => {
               try {
+                if (isIosBrowserTab() && !(await fetchAdminPushStatus())) {
+                  setTestMsg(t.pushIosPwaRequired);
+                  return;
+                }
                 if (!(await fetchAdminPushStatus())) {
                   const repaired = await syncAdminPush({ interactive: true });
                   if (!repaired) {
-                    setTestMsg(t.pushEnableError);
+                    setTestMsg(
+                      isIosBrowserTab()
+                        ? t.pushIosPwaRequired
+                        : t.pushEnableError,
+                    );
                     return;
                   }
                 }
