@@ -1,24 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
   clearPushPromptAccepted,
   markPushPromptAccepted,
-  shouldSkipPushPrompt,
   migratePushPromptStorage,
+  shouldSkipPushPrompt,
 } from "@/lib/push-prompt-state";
+import {
+  canUseWebPushHere,
+  chromeIntentUrl,
+  isInAppBrowser,
+} from "@/lib/browser-env";
+import { enableWebPush } from "@/lib/web-push-client";
 
-type GateStatus = "loading" | "ask" | "on" | "denied" | "error";
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = window.atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i += 1) output[i] = raw.charCodeAt(i);
-  return output;
-}
+type GateStatus = "loading" | "ask" | "on" | "denied" | "unsupported" | "error";
 
 type Props = {
   token: string;
@@ -38,11 +35,25 @@ export function VolunteerPushEnableGate({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<GateStatus>("loading");
   const [inlineOn, setInlineOn] = useState(false);
+  const [copyDone, setCopyDone] = useState(false);
+
+  const workUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/work/${encodeURIComponent(token)}`;
+  }, [token]);
+
+  const inApp = useMemo(() => isInAppBrowser(), []);
+  const pushSupported = useMemo(() => canUseWebPushHere(), []);
 
   const checkStatus = useCallback(async () => {
     migratePushPromptStorage();
-    if (!notificationsEnabled || !publicKey) {
+    if (!notificationsEnabled) {
       setStatus("error");
+      return;
+    }
+    if (!pushSupported || !publicKey) {
+      setStatus("unsupported");
+      setOpen(false);
       return;
     }
 
@@ -62,43 +73,27 @@ export function VolunteerPushEnableGate({
         }
       }
 
-      // Browser already granted but server not subscribed yet — finish subscribe
-      // so admin can see this volunteer as Allow.
+      // Browser already granted — finish subscribe so admin sees Allow.
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         setStatus("loading");
-        try {
-          const reg = await navigator.serviceWorker.register("/sw.js");
-          await navigator.serviceWorker.ready;
-          let sub = await reg.pushManager.getSubscription();
-          if (!sub) {
-            sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(publicKey),
-            });
-          }
-          const save = await fetch(
-            `/api/public/volunteer/${encodeURIComponent(token)}/push`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(sub.toJSON()),
-            },
-          );
-          if (save.ok) {
-            markPushPromptAccepted();
-            setStatus("on");
-            setInlineOn(true);
-            setOpen(false);
-            onSubscribed?.();
-            return;
-          }
-        } catch {
-          /* fall through to ask */
+        const result = await enableWebPush({
+          statusUrl: `/api/public/volunteer/${encodeURIComponent(token)}/push`,
+          saveUrl: `/api/public/volunteer/${encodeURIComponent(token)}/push`,
+          forceRefresh: true,
+          allowPermissionOnly: false,
+          recordIntent: true,
+        });
+        if (result === "granted") {
+          markPushPromptAccepted();
+          setStatus("on");
+          setInlineOn(true);
+          setOpen(false);
+          onSubscribed?.();
+          return;
         }
       }
 
       if (shouldSkipPushPrompt()) {
-        // Local accept without server row — ask again so Allow can sync.
         clearPushPromptAccepted();
       }
 
@@ -108,51 +103,43 @@ export function VolunteerPushEnableGate({
       setStatus("ask");
       setOpen(true);
     }
-  }, [notificationsEnabled, publicKey, token, onSubscribed]);
+  }, [notificationsEnabled, publicKey, pushSupported, token, onSubscribed]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
       void checkStatus();
-    }, 400);
+    }, 350);
     return () => window.clearTimeout(id);
   }, [checkStatus]);
 
   async function onAllow() {
-    if (!publicKey) return;
+    if (!publicKey || !pushSupported) {
+      setStatus("unsupported");
+      return;
+    }
     setBusy(true);
     setStatus("loading");
     try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
+      const result = await enableWebPush({
+        statusUrl: `/api/public/volunteer/${encodeURIComponent(token)}/push`,
+        saveUrl: `/api/public/volunteer/${encodeURIComponent(token)}/push`,
+        forceRefresh: true,
+        allowPermissionOnly: false,
+        recordIntent: true,
+      });
+      if (result === "granted") {
+        markPushPromptAccepted();
+        setStatus("on");
+        setInlineOn(true);
+        onSubscribed?.();
+        window.setTimeout(() => setOpen(false), 1000);
+        return;
+      }
+      if (result === "denied") {
         setStatus("denied");
         return;
       }
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
-        });
-      }
-      const res = await fetch(
-        `/api/public/volunteer/${encodeURIComponent(token)}/push`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sub.toJSON()),
-        },
-      );
-      if (!res.ok) {
-        setStatus("error");
-        return;
-      }
-      markPushPromptAccepted();
-      setStatus("on");
-      setInlineOn(true);
-      onSubscribed?.();
-      window.setTimeout(() => setOpen(false), 1200);
+      setStatus("error");
     } catch {
       setStatus("error");
     } finally {
@@ -160,16 +147,39 @@ export function VolunteerPushEnableGate({
     }
   }
 
+  async function copyWorkUrl() {
+    try {
+      await navigator.clipboard.writeText(workUrl);
+      setCopyDone(true);
+      window.setTimeout(() => setCopyDone(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function openInChrome() {
+    const intent = chromeIntentUrl(workUrl);
+    if (intent) {
+      window.location.href = intent;
+      return;
+    }
+    window.open(workUrl, "_blank", "noopener,noreferrer");
+  }
+
   const bodyText =
     status === "on" || inlineOn
       ? t.volunteerPushActiveNow
       : status === "denied"
         ? t.volunteerPushDenied
-        : status === "error"
-          ? t.volunteerPushUnavailable
-          : t.volunteerNotificationsHint;
+        : status === "unsupported"
+          ? inApp
+            ? t.volunteerPushInAppBrowser
+            : t.volunteerPushUnavailable
+          : status === "error"
+            ? t.volunteerPushRetryHint
+            : t.volunteerNotificationsHint;
 
-  if (!notificationsEnabled || !publicKey) return null;
+  if (!notificationsEnabled) return null;
 
   return (
     <>
@@ -178,27 +188,58 @@ export function VolunteerPushEnableGate({
           {t.volunteerNotificationsTitle}
         </h2>
         <p
-          className={`mt-2 text-sm ${
+          className={`mt-2 text-sm leading-relaxed ${
             inlineOn || status === "on"
               ? "font-semibold text-[var(--sage)]"
-              : "text-[color-mix(in_oklab,var(--ink)_58%,white)]"
+              : "text-[color-mix(in_oklab,var(--ink)_62%,white)]"
           }`}
         >
           {bodyText}
         </p>
-        {!inlineOn && status !== "on" && status !== "denied" ? (
+
+        {status === "unsupported" ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+              {t.volunteerPushOpenChromeHint}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-primary" onClick={openInChrome}>
+                {t.volunteerPushOpenChrome}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => void copyWorkUrl()}>
+                {copyDone ? t.volunteerUrlCopied : t.volunteerPushCopyLink}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {!inlineOn &&
+        status !== "on" &&
+        status !== "denied" &&
+        status !== "unsupported" ? (
           <button
             type="button"
             className="btn-primary mt-3"
+            disabled={busy || status === "loading"}
+            onClick={() => void onAllow()}
+          >
+            {busy || status === "loading" ? t.loading : t.volunteerEnablePush}
+          </button>
+        ) : null}
+
+        {status === "error" ? (
+          <button
+            type="button"
+            className="btn-ghost mt-2"
             disabled={busy}
             onClick={() => void onAllow()}
           >
-            {busy ? t.loading : t.volunteerEnablePush}
+            {t.retry}
           </button>
         ) : null}
       </section>
 
-      {open && status !== "on" && !inlineOn ? (
+      {open && status !== "on" && status !== "unsupported" && !inlineOn ? (
         <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
           <div
             role="dialog"
@@ -231,7 +272,11 @@ export function VolunteerPushEnableGate({
                 </button>
               </div>
             ) : status === "denied" ? (
-              <button type="button" className="btn-ghost mt-5 w-full" onClick={() => setOpen(false)}>
+              <button
+                type="button"
+                className="btn-ghost mt-5 w-full"
+                onClick={() => setOpen(false)}
+              >
                 {t.close}
               </button>
             ) : null}
