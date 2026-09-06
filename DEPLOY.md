@@ -41,7 +41,7 @@ cron URL requires `Authorization: Bearer …`.
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD`
 - `DATA_DIR=/app/data`
 
-Owner panel: `https://bloodlinkbd.org/bloodlinkbd.admin.rony4505`
+Owner panel: `https://bloodlinkbd.org/admin`
 
 ## Smart craft corner
 

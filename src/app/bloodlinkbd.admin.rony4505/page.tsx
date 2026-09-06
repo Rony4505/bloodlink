@@ -1,7 +1,7 @@
-import { OwnerConsoleClient } from "./OwnerConsoleClient";
+import { redirect } from "next/navigation";
+import { BLOODLINK_OWNER_PATH } from "@/lib/bloodlink-admin-path";
 
-export const dynamic = "force-dynamic";
-
-export default function OwnerConsolePage() {
-  return <OwnerConsoleClient />;
+/** Legacy hidden path — keep bookmarks working by sending to /admin. */
+export default function LegacyOwnerConsolePage() {
+  redirect(BLOODLINK_OWNER_PATH);
 }

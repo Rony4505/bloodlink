@@ -14,7 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         BLOODLINK_OWNER_PATH,
         "/owner-hq-7f3m",
         "/bl-manage-rony",
-        "/admin",
         "/api/",
         "/dashboard",
         "/notifications",
