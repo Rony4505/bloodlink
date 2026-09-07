@@ -10,17 +10,17 @@ import {
 import { issueOtp, verifyOtp } from "@/lib/fashion/otp";
 import {
   findCustomerByEmail,
-  findCustomerByPhone,
   updateCustomerPassword,
 } from "@/lib/fashion/store";
 import { fashionDataDir } from "@/lib/fashion/paths";
+import { deliverEmailOtp } from "@/lib/otp-delivery";
 
 type PendingReg = {
   name: string;
   email: string;
   phone: string;
   password: string;
-  channel: "email" | "phone";
+  channel: "email";
   expiresAt: number;
 };
 
@@ -41,6 +41,10 @@ async function writePending(data: Record<string, PendingReg>) {
   await writeFile(pendingPath(), JSON.stringify(data, null, 2), "utf8");
 }
 
+function maskEmail(email: string) {
+  return email.replace(/(.{2}).+(@.+)/, "$1***$2");
+}
+
 export async function GET() {
   const customer = await getCurrentCustomer();
   if (!customer) return NextResponse.json({ customer: null });
@@ -54,9 +58,11 @@ export async function POST(request: Request) {
     if (body.action === "register-send-otp") {
       const email = String(body.email ?? "").trim().toLowerCase();
       const phone = String(body.phone ?? "").trim();
-      const channel = body.channel === "phone" ? "phone" : "email";
       if (!body.name || !email || !phone || !body.password) {
         return NextResponse.json({ error: "সব ঘর পূরণ করুন" }, { status: 400 });
+      }
+      if (!email.includes("@")) {
+        return NextResponse.json({ error: "সঠিক Gmail / ইমেইল দিন" }, { status: 400 });
       }
       if (String(body.password).length < 6) {
         return NextResponse.json({ error: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষর" }, { status: 400 });
@@ -68,30 +74,39 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const target = channel === "phone" ? phone : email;
       const { code } = await issueOtp({
         purpose: "register",
-        channel,
-        target,
+        channel: "email",
+        target: email,
       });
+      const delivery = await deliverEmailOtp(email, code, {
+        allowInline: false,
+        productName: "Noorzaa",
+      });
+      if (!delivery.delivered || delivery.mode === "inline") {
+        return NextResponse.json(
+          {
+            error:
+              delivery.detail ||
+              "Gmail OTP পাঠানো যায়নি। RESEND_API_KEY / OTP_FROM_EMAIL চেক করুন।",
+          },
+          { status: 503 },
+        );
+      }
       const pending = await readPending();
       pending[email] = {
         name: body.name,
         email,
         phone,
         password: body.password,
-        channel,
+        channel: "email",
         expiresAt: Date.now() + 15 * 60 * 1000,
       };
       await writePending(pending);
       return NextResponse.json({
         ok: true,
-        channel,
-        targetHint:
-          channel === "email"
-            ? email.replace(/(.{2}).+(@.+)/, "$1***$2")
-            : `***${phone.slice(-4)}`,
-        debugOtp: code,
+        channel: "email",
+        targetHint: maskEmail(email),
       });
     }
 
@@ -107,10 +122,9 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const target = pending.channel === "phone" ? pending.phone : pending.email;
       const ok = await verifyOtp({
         purpose: "register",
-        target,
+        target: pending.email,
         code: body.code ?? "",
       });
       if (!ok) {
@@ -122,7 +136,7 @@ export async function POST(request: Request) {
         phone: pending.phone,
         password: pending.password,
         verified: true,
-        verifiedChannel: pending.channel,
+        verifiedChannel: "email",
       });
       delete pendingAll[email];
       await writePending(pendingAll);
@@ -130,13 +144,10 @@ export async function POST(request: Request) {
     }
 
     if (body.action === "register") {
-      const customer = await registerCustomer({
-        name: body.name,
-        email: body.email,
-        phone: body.phone,
-        password: body.password,
-      });
-      return NextResponse.json({ customer: sanitizeCustomer(customer) });
+      return NextResponse.json(
+        { error: "OTP ছাড়া রেজিস্ট্রেশন বন্ধ — Gmail OTP ব্যবহার করুন" },
+        { status: 400 },
+      );
     }
 
     if (body.action === "login") {
@@ -146,31 +157,40 @@ export async function POST(request: Request) {
 
     if (body.action === "forgot-send-otp") {
       const email = String(body.email ?? "").trim().toLowerCase();
-      const phone = String(body.phone ?? "").trim();
-      const channel = body.channel === "phone" ? "phone" : "email";
-      const customer =
-        channel === "phone" ? await findCustomerByPhone(phone) : await findCustomerByEmail(email);
+      if (!email || !email.includes("@")) {
+        return NextResponse.json({ error: "সঠিক Gmail / ইমেইল দিন" }, { status: 400 });
+      }
+      const customer = await findCustomerByEmail(email);
       if (!customer) {
         return NextResponse.json(
-          { error: "এই ইমেইল/ফোন দিয়ে কোনো অ্যাকাউন্ট নেই" },
+          { error: "এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট নেই" },
           { status: 404 },
         );
       }
-      const target = channel === "phone" ? customer.phone : customer.email;
       const { code } = await issueOtp({
         purpose: "customer-reset",
-        channel,
-        target,
+        channel: "email",
+        target: customer.email,
       });
+      const delivery = await deliverEmailOtp(customer.email, code, {
+        allowInline: false,
+        productName: "Noorzaa",
+      });
+      if (!delivery.delivered || delivery.mode === "inline") {
+        return NextResponse.json(
+          {
+            error:
+              delivery.detail ||
+              "Gmail OTP পাঠানো যায়নি। RESEND_API_KEY / OTP_FROM_EMAIL চেক করুন।",
+          },
+          { status: 503 },
+        );
+      }
       return NextResponse.json({
         ok: true,
-        channel,
+        channel: "email",
         email: customer.email,
-        targetHint:
-          channel === "email"
-            ? customer.email.replace(/(.{2}).+(@.+)/, "$1***$2")
-            : `***${customer.phone.slice(-4)}`,
-        debugOtp: code,
+        targetHint: maskEmail(customer.email),
       });
     }
 
@@ -180,11 +200,9 @@ export async function POST(request: Request) {
       if (!customer) {
         return NextResponse.json({ error: "অ্যাকাউন্ট পাওয়া যায়নি" }, { status: 404 });
       }
-      const channel = body.channel === "phone" ? "phone" : "email";
-      const target = channel === "phone" ? customer.phone : customer.email;
       const ok = await verifyOtp({
         purpose: "customer-reset",
-        target,
+        target: customer.email,
         code: body.code ?? "",
       });
       if (!ok) {

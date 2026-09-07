@@ -55,7 +55,7 @@ export async function issueOtp(input: {
   };
   await writeAll(all);
   console.info(
-    `[otp] ${input.purpose} → ${input.channel}:${input.target} code=${code}`,
+    `[otp] ${input.purpose} → ${input.channel}:${input.target} issued (expires ${new Date(expiresAt).toISOString()})`,
   );
   return { code, expiresAt };
 }

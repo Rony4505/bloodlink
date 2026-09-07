@@ -17,6 +17,8 @@ export type OtpDeliveryResult = {
 export type OtpDeliveryOptions = {
   /** When false, never fall back to inline codes (registration). Default true for other flows. */
   allowInline?: boolean;
+  /** Product name in the email subject/body (default BloodLink BD). */
+  productName?: string;
 };
 
 function allowInlineOtp(): boolean {
@@ -146,8 +148,9 @@ export async function deliverEmailOtp(
   code: string,
   options?: OtpDeliveryOptions,
 ): Promise<OtpDeliveryResult> {
-  const subject = "BloodLink BD verification code";
-  const text = `Your BloodLink BD verification code is ${code}. It expires in 15 minutes. Do not share this code.`;
+  const brand = (options?.productName || "BloodLink BD").trim() || "BloodLink BD";
+  const subject = `${brand} verification code`;
+  const text = `Your ${brand} verification code is ${code}. It expires in 15 minutes. Do not share this code.`;
   const resend = await sendViaResend(to, subject, text);
   if (resend.ok) {
     return { delivered: true, mode: "email" };

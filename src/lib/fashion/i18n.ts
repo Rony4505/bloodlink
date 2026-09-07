@@ -24,6 +24,7 @@ export const fashionI18n = {
       login: "লগইন",
       logout: "লগআউট",
       search: "খুঁজুন",
+      notifications: "নোটিফিকেশন",
     },
     actions: {
       shopCollections: "কালেকশন দেখুন",
@@ -328,6 +329,7 @@ export const fashionI18n = {
       login: "Login",
       logout: "Logout",
       search: "Search",
+      notifications: "Notifications",
     },
     actions: {
       shopCollections: "Shop Collections",
