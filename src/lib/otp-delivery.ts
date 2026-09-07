@@ -37,18 +37,60 @@ function toSmsBdNumber(phone: string): string {
   return digits;
 }
 
+/**
+ * Build a Resend-safe `from` value.
+ * Railway Variables often break `Name <email@x>` (angle brackets get truncated),
+ * so prefer plain email in env and optional OTP_FROM_NAME / productName.
+ */
+export function resolveResendFromAddress(displayName?: string): string {
+  const raw = (process.env.OTP_FROM_EMAIL || "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "");
+  const nameEnv = (process.env.OTP_FROM_NAME || displayName || "")
+    .trim()
+    .replace(/[<>]/g, "")
+    .trim();
+
+  const angle = raw.match(/^(.*?)<\s*([^<>\s]+@[^<>\s]+)\s*>\s*$/);
+  if (angle) {
+    const email = angle[2].trim();
+    const name = (nameEnv || angle[1].trim().replace(/[<>]/g, "")).trim();
+    return name ? `${name} <${email}>` : email;
+  }
+
+  if (/^[^\s<>]+@[^\s<>]+$/.test(raw)) {
+    return nameEnv ? `${nameEnv} <${raw}>` : raw;
+  }
+
+  const embedded = raw.match(/([^\s<>"']+@[^\s<>"']+)/);
+  if (embedded) {
+    const email = embedded[1];
+    const name =
+      nameEnv ||
+      raw
+        .replace(email, "")
+        .replace(/[<>]/g, "")
+        .trim() ||
+      "App";
+    return `${name} <${email}>`;
+  }
+
+  // Last resort: Resend onboarding sender (works for account-owner testing).
+  const fallback = nameEnv || "App";
+  return `${fallback} <onboarding@resend.dev>`;
+}
+
 async function sendViaResend(
   to: string,
   subject: string,
   text: string,
+  displayName?: string,
 ): Promise<{ ok: boolean; detail?: string }> {
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) {
     return { ok: false, detail: "RESEND_API_KEY is missing on this server" };
   }
-  const from =
-    process.env.OTP_FROM_EMAIL?.trim() ||
-    "BloodLink BD <onboarding@resend.dev>";
+  const from = resolveResendFromAddress(displayName);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -151,7 +193,7 @@ export async function deliverEmailOtp(
   const brand = (options?.productName || "BloodLink BD").trim() || "BloodLink BD";
   const subject = `${brand} verification code`;
   const text = `Your ${brand} verification code is ${code}. It expires in 15 minutes. Do not share this code.`;
-  const resend = await sendViaResend(to, subject, text);
+  const resend = await sendViaResend(to, subject, text, brand);
   if (resend.ok) {
     return { delivered: true, mode: "email" };
   }
