@@ -28,6 +28,11 @@ export default function AccountPage() {
       setCustomer(auth.customer);
       setOrders(orderData.orders ?? []);
       setNotifications(notifData.notifications ?? []);
+      if (typeof window !== "undefined" && window.location.hash === "#notifications") {
+        window.setTimeout(() => {
+          document.getElementById("notifications")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+      }
     });
   }, [router]);
 
@@ -63,7 +68,7 @@ export default function AccountPage() {
           <FashionButton variant="secondary" onClick={logout}>{copy.nav.logout}</FashionButton>
         </div>
 
-        <div className="mt-10">
+        <div className="mt-10" id="notifications">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">{copy.account.notificationsTitle}</h2>
           {notifications.length === 0 ? (
             <p className="mt-4 text-[#b8c9de]">{copy.account.noNotifications}</p>

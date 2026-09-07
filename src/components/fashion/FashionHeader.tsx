@@ -8,6 +8,7 @@ import { useCart } from "@/lib/fashion/cart-context";
 import { cn } from "@/lib/fashion/cn";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { copy } from "@/lib/fashion/copy";
+import { LanguageSwitcher } from "@/components/fashion/LanguageSwitcher";
 
 function NavIconButton({
   href,
@@ -67,26 +68,25 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/fashion/auth")
-      .then((r) => r.json())
-      .then((data) => {
-        if (alive) setLoggedIn(Boolean(data.customer));
-      })
-      .catch(() => {
-        if (alive) setLoggedIn(false);
-      });
-
-    fetch("/api/fashion/notifications")
-      .then((r) => r.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/fashion/auth").then((r) => r.json()),
+      fetch("/api/fashion/notifications").then((r) => r.json()),
+    ])
+      .then(([auth, notifData]) => {
         if (!alive) return;
-        const count = (data.notifications ?? []).filter(
-          (n: { readBy?: string[] }) => !n.readBy?.length,
+        const customer = auth.customer as { id?: string } | null;
+        setLoggedIn(Boolean(customer));
+        const cid = customer?.id;
+        const count = (notifData.notifications ?? []).filter(
+          (n: { readBy?: string[] }) =>
+            cid ? !(n.readBy ?? []).includes(cid) : !(n.readBy ?? []).length,
         ).length;
         setUnread(count);
       })
       .catch(() => {
-        if (alive) setUnread(0);
+        if (!alive) return;
+        setLoggedIn(false);
+        setUnread(0);
       });
 
     return () => {
@@ -170,8 +170,9 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
     ? "text-[#5c3d5e]/90 hover:bg-white/40 hover:text-[#4a3348]"
     : "text-[#7a5c50] hover:bg-[#faf0ea] hover:text-[#5c3d5e]";
 
-  const myProductActive =
-    pathname.startsWith("/account") || pathname.startsWith("/track");
+  const myProductActive = pathname.startsWith("/track");
+  const notificationsHref = loggedIn ? "/account#notifications" : "/account/login";
+  const accountHref = loggedIn ? "/account" : "/account/login";
 
   const dropdown =
     myMenuOpen && menuPos
@@ -220,6 +221,8 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
         </Link>
 
         <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
+          <LanguageSwitcher compact className="order-last w-full justify-center sm:order-none sm:w-auto md:mr-1" />
+
           {searchOpen ? (
             <form onSubmit={handleSearchSubmit} className="w-full min-w-[200px] flex-1 md:max-w-xs">
               <input
@@ -269,16 +272,22 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
               )}
             >
               <PackageIcon />
-              {loggedIn && unread > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c9859a] px-1 text-[10px] font-bold text-white">
-                  {unread}
-                </span>
-              ) : null}
             </button>
           </div>
 
           <NavIconButton
-            href={loggedIn ? "/account" : "/account/login"}
+            href={notificationsHref}
+            label={fc.nav.notifications}
+            active={false}
+            activeClass={activeClass}
+            idleClass={idleClass}
+            badge={loggedIn ? unread : undefined}
+          >
+            <BellIcon />
+          </NavIconButton>
+
+          <NavIconButton
+            href={accountHref}
             label={loggedIn ? fc.nav.account : fc.nav.login}
             active={pathname.startsWith("/account")}
             activeClass={activeClass}
@@ -360,6 +369,25 @@ function UserIcon() {
       <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
       <path
         d="M5 20a7 7 0 0 1 14 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6 9a6 6 0 1 1 12 0c0 3.5 1.2 5 2 6H4c.8-1 2-2.5 2-6Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 19a2 2 0 0 0 4 0"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"

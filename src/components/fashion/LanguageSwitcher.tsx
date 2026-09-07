@@ -47,12 +47,12 @@ export function LanguageSwitcher({
   );
 }
 
-/** Fixed top-right language control for storefront + admin */
+/** Fixed language control for admin panels (storefront uses header switcher). */
 export function TopLanguageBar() {
   return (
     <div className="pointer-events-none fixed right-3 top-3 z-[100] sm:right-5 sm:top-4">
       <div className="pointer-events-auto">
-        <LanguageSwitcher />
+        <LanguageSwitcher compact />
       </div>
     </div>
   );
