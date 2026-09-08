@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
  * Digital Asset Links for Android Trusted Web Activity (Play Store).
  *
  * Env:
- * - TWA_PACKAGE_NAME (default org.bloodlinkbd.app)
+ * - TWA_PACKAGE_NAME (default org.bloodlinkbd.android)
  * - TWA_SHA256_CERT_FINGERPRINTS — colon-hex SHA-256 from Play App Signing
  *   (comma / whitespace separated if multiple)
  *
@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
  */
 export function GET() {
   const packageName =
-    process.env.TWA_PACKAGE_NAME?.trim() || "org.bloodlinkbd.app";
+    process.env.TWA_PACKAGE_NAME?.trim() || "org.bloodlinkbd.android";
 
   const raw =
     process.env.TWA_SHA256_CERT_FINGERPRINTS ||

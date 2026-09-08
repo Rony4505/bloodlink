@@ -13,8 +13,10 @@
 | Digital Asset Links API | `/.well-known/assetlinks.json` |
 | Bubblewrap TWA config | `twa/twa-manifest.json` |
 
-Package name: **`org.bloodlinkbd.app`**  
+Package name: **`org.bloodlinkbd.android`**  
 Website: **`https://bloodlinkbd.org`**
+
+> Note: Older docs used `org.bloodlinkbd.app`. That package is reserved on Play; new listings use `org.bloodlinkbd.android`.
 
 ---
 
@@ -25,7 +27,7 @@ Website: **`https://bloodlinkbd.org`**
 Play App Signing এর SHA-256 fingerprint বসান (colon সহ):
 
 ```bash
-TWA_PACKAGE_NAME=org.bloodlinkbd.app
+TWA_PACKAGE_NAME=org.bloodlinkbd.android
 TWA_SHA256_CERT_FINGERPRINTS=AB:CD:EF:...
 ```
 
@@ -42,7 +44,7 @@ Verify:
 1. https://www.pwabuilder.com খুলুন  
 2. URL দিন: `https://bloodlinkbd.org`  
 3. **Package for stores** → Android  
-4. Package ID: `org.bloodlinkbd.app`  
+4. Package ID: `org.bloodlinkbd.android`  
 5. AAB ডাউনলোড করুন  
 6. [Google Play Console](https://play.google.com/console) → Create app → Production/Testing → Upload AAB  
 
