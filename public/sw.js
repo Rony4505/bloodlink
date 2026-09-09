@@ -1,5 +1,5 @@
 /* BloodLink BD — PWA + Web Push service worker (Play Store / TWA ready). */
-const CACHE = "bloodlink-shell-v1";
+const CACHE = "bloodlink-shell-v2";
 const PRECACHE = ["/", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -55,7 +55,7 @@ self.addEventListener("push", (event) => {
   let data = {
     title: "BloodLink BD",
     body: "নতুন নোটিফিকেশন — অ্যাপে দেখুন",
-    url: "/notifications",
+    url: "/admin",
     tag: "bloodlink",
   };
   try {
@@ -66,23 +66,51 @@ self.addEventListener("push", (event) => {
     /* keep defaults */
   }
 
+  const title = data.title || "BloodLink BD";
+  const options = {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || `bloodlink-${Date.now()}`,
+    data: { url: data.url || "/admin" },
+    requireInteraction: true,
+    renotify: true,
+    silent: false,
+    vibrate: [160, 80, 160, 80, 160],
+    timestamp: Date.now(),
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title || "BloodLink BD", {
-      body: data.body || "",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: data.tag || "bloodlink",
-      data: { url: data.url || "/notifications" },
-      requireInteraction: true,
-      vibrate: [120, 60, 120],
-    }),
+    (async () => {
+      try {
+        await self.registration.showNotification(title, options);
+      } catch (err) {
+        console.error("[bloodlink-sw] showNotification failed", err);
+      }
+      try {
+        const clients = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true,
+        });
+        for (const client of clients) {
+          client.postMessage({
+            type: "bloodlink-push",
+            title,
+            body: options.body,
+            url: options.data.url,
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    })(),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url =
-    (event.notification.data && event.notification.data.url) || "/notifications";
+    (event.notification.data && event.notification.data.url) || "/admin";
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
