@@ -126,6 +126,15 @@ export function AdminPushEnableGate() {
       }
 
       setIosTab(isIosBrowserTab());
+      // Force latest SW so push display handler is current.
+      try {
+        const reg = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+        });
+        await reg.update().catch(() => undefined);
+      } catch {
+        /* ignore */
+      }
       await syncAdminPush({ interactive: false });
       if (!cancelled) setReady(true);
     })();
@@ -244,6 +253,28 @@ export function AdminPushEnableGate() {
                   return;
                 }
                 setSubscribed(true);
+                // Local fallback so the admin sees a tray notification even if
+                // background delivery is delayed/suppressed by the OS.
+                try {
+                  const reg =
+                    (await navigator.serviceWorker.getRegistration("/sw.js")) ||
+                    (await navigator.serviceWorker.register("/sw.js", {
+                      scope: "/",
+                    }));
+                  await reg.update().catch(() => undefined);
+                  await navigator.serviceWorker.ready;
+                  await reg.showNotification("BloodLink Admin", {
+                    body: "টেস্ট push সফল — অ্যাডমিন নোটিফিকেশন কাজ করছে।",
+                    icon: "/icons/icon-192.png",
+                    badge: "/icons/icon-192.png",
+                    tag: `admin-local-test-${Date.now()}`,
+                    requireInteraction: true,
+                    silent: false,
+                    data: { url: "/admin" },
+                  });
+                } catch {
+                  /* remote push may still arrive */
+                }
                 setTestMsg(
                   t.adminPushTestSent.replace("{sent}", String(data.sent ?? 0)),
                 );

@@ -973,18 +973,32 @@ export async function listPendingSuccessStories(): Promise<PendingSuccessStory[]
 export async function createPendingSuccessStory(
   input: Omit<PendingSuccessStory, "id" | "createdAt">,
 ): Promise<PendingSuccessStory> {
-  return withWrite(async (db) => {
-    const story = normalizePendingSuccessStory({
+  const story = await withWrite(async (db) => {
+    const next = normalizePendingSuccessStory({
       ...input,
       id: randomUUID(),
       createdAt: new Date().toISOString(),
     });
-    if (!story) throw new Error("Invalid success story");
+    if (!next) throw new Error("Invalid success story");
     db.pendingSuccessStories = db.pendingSuccessStories || [];
-    db.pendingSuccessStories.push(story);
+    db.pendingSuccessStories.push(next);
     await persist(db);
-    return story;
+    return next;
   });
+
+  void notifyAdminAlert({
+    titleEn: "Success story pending approval",
+    titleBn: "Success story অনুমোদনের অপেক্ষায়",
+    bodyEn: `${story.name} submitted a story. Review it in Admin.`,
+    bodyBn: `${story.name} একটি success story পাঠিয়েছেন। Admin থেকে Approve করুন।`,
+    type: "system",
+    href: BLOODLINK_OWNER_PATH,
+    tag: `story-${story.id}`,
+  }).catch((err) => {
+    console.error("[bloodlink] admin story notify failed:", err);
+  });
+
+  return story;
 }
 
 export async function approvePendingSuccessStory(
@@ -1147,12 +1161,48 @@ export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<voi
     ? `${BLOODLINK_OWNER_PATH}?tab=volunteers`
     : BLOODLINK_OWNER_PATH;
 
+  await notifyAdminAlert({
+    titleEn: texts.titleEn || texts.title,
+    titleBn: texts.titleBn || texts.title,
+    bodyEn: texts.bodyEn || texts.body,
+    bodyBn: texts.bodyBn || texts.body,
+    type: "new_donor",
+    href,
+    tag: `new-donor-${donor.id}`,
+  });
+}
+
+/** In-app + Web Push alert for the BloodLink owner admin. */
+export async function notifyAdminAlert(input: {
+  titleEn: string;
+  titleBn: string;
+  bodyEn: string;
+  bodyBn: string;
+  type?:
+    | "blood_request"
+    | "daily_update"
+    | "system"
+    | "contact_change"
+    | "gold_blessing"
+    | "new_donor";
+  href?: string;
+  tag?: string;
+}): Promise<{ pushSent: number; pushFailed: number }> {
+  const texts = withBilingual({
+    titleEn: input.titleEn,
+    titleBn: input.titleBn,
+    bodyEn: input.bodyEn,
+    bodyBn: input.bodyBn,
+  });
+  const href = input.href || BLOODLINK_OWNER_PATH;
+  const type = input.type || "system";
+
   await withWrite(async (db) => {
     db.notifications.push({
       id: randomUUID(),
       userId: ADMIN_NOTIFY_USER_ID,
       ...texts,
-      type: "new_donor",
+      type,
       href,
       read: false,
       createdAt: new Date().toISOString(),
@@ -1166,13 +1216,15 @@ export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<voi
       title: texts.titleBn || texts.title,
       body: texts.bodyBn || texts.body,
       url: href,
-      tag: `new-donor-${donor.id}`,
+      tag: input.tag || `admin-${type}-${Date.now()}`,
     });
     console.info(
-      `[bloodlink] admin new-donor push pendingManual=${pendingManual} sent=${result.sent} failed=${result.failed} donor=${donor.id}`,
+      `[bloodlink] admin alert type=${type} sent=${result.sent} failed=${result.failed}`,
     );
+    return { pushSent: result.sent, pushFailed: result.failed };
   } catch (err) {
-    console.error("[bloodlink] admin new-donor push failed:", err);
+    console.error("[bloodlink] admin alert push failed:", err);
+    return { pushSent: 0, pushFailed: 1 };
   }
 }
 
@@ -1334,17 +1386,31 @@ export async function deleteDonor(id: string): Promise<boolean> {
 export async function createContactRequest(
   input: Omit<ContactRequest, "id" | "createdAt">,
 ): Promise<ContactRequest> {
-  return withWrite(async (db) => {
-    const request = normalizeContactRequest({
+  const request = await withWrite(async (db) => {
+    const next = normalizeContactRequest({
       ...input,
       id: randomUUID(),
       createdAt: new Date().toISOString(),
     });
-    if (!request) throw new Error("INVALID_CONTACT_REQUEST");
-    db.contactRequests.push(request);
+    if (!next) throw new Error("INVALID_CONTACT_REQUEST");
+    db.contactRequests.push(next);
     await persist(db);
-    return request;
+    return next;
   });
+
+  void notifyAdminAlert({
+    titleEn: "New contact / phone reveal",
+    titleBn: "নতুন যোগাযোগ / ফোন দেখা",
+    bodyEn: `${request.seekerName} viewed ${request.targetName || "a contact"} (${request.kind}). Check Contact log.`,
+    bodyBn: `${request.seekerName} → ${request.targetName || "contact"} (${request.kind})। Contact log দেখুন।`,
+    type: "system",
+    href: `${BLOODLINK_OWNER_PATH}?tab=contacts`,
+    tag: `contact-${request.id}`,
+  }).catch((err) => {
+    console.error("[bloodlink] admin contact notify failed:", err);
+  });
+
+  return request;
 }
 
 /** Avoid duplicate post-phone reveal logs for the same viewer+post within a day. */
@@ -1503,8 +1569,22 @@ export async function createPost(
       db.admin.notificationSettings,
     );
     const notifyUserIds: string[] = [];
+    const createdAt = new Date().toISOString();
+
+    // Owner admin always gets blood-need alerts.
+    db.notifications.push({
+      id: randomUUID(),
+      userId: ADMIN_NOTIFY_USER_ID,
+      ...texts,
+      type: "blood_request",
+      href: `/requests/${next.id}`,
+      postId: next.id,
+      read: false,
+      createdAt,
+    });
+    notifyUserIds.push(ADMIN_NOTIFY_USER_ID);
+
     if (notifySettings.bloodRequestBroadcast.enabled) {
-      const createdAt = new Date().toISOString();
       for (const donor of db.donors) {
         db.notifications.push({
           id: randomUUID(),
@@ -1518,18 +1598,6 @@ export async function createPost(
         });
         notifyUserIds.push(donor.id);
       }
-      // Owner admin also gets the blood-need push (same device can keep admin + donor rows).
-      db.notifications.push({
-        id: randomUUID(),
-        userId: ADMIN_NOTIFY_USER_ID,
-        ...texts,
-        type: "blood_request",
-        href: `/requests/${next.id}`,
-        postId: next.id,
-        read: false,
-        createdAt,
-      });
-      notifyUserIds.push(ADMIN_NOTIFY_USER_ID);
     }
 
     await persist(db);
@@ -2058,7 +2126,7 @@ export async function createContactChangeRequest(input: {
   requestedPhone: string | null;
   note: string;
 }): Promise<ContactChangeRequest> {
-  return withWrite(async (db) => {
+  const request = await withWrite(async (db) => {
     const existing = db.contactChangeRequests.find(
       (r) => r.donorId === input.donorId && r.status === "pending",
     );
@@ -2073,7 +2141,7 @@ export async function createContactChangeRequest(input: {
       );
       if (taken) throw new Error("EMAIL_TAKEN");
     }
-    const request: ContactChangeRequest = {
+    const next: ContactChangeRequest = {
       id: randomUUID(),
       donorId: input.donorId,
       currentEmail: input.currentEmail,
@@ -2085,10 +2153,24 @@ export async function createContactChangeRequest(input: {
       createdAt: new Date().toISOString(),
       resolvedAt: null,
     };
-    db.contactChangeRequests.push(request);
+    db.contactChangeRequests.push(next);
     await persist(db);
-    return request;
+    return next;
   });
+
+  void notifyAdminAlert({
+    titleEn: "Donor contact change pending",
+    titleBn: "Donor যোগাযোগ পরিবর্তন pending",
+    bodyEn: "A donor requested email/phone change. Review Contact changes.",
+    bodyBn: "একজন donor ইমেইল/ফোন পরিবর্তনের অনুরোধ করেছেন। Contact changes দেখুন।",
+    type: "contact_change",
+    href: `${BLOODLINK_OWNER_PATH}?tab=contacts`,
+    tag: `contact-change-${request.id}`,
+  }).catch((err) => {
+    console.error("[bloodlink] admin contact-change notify failed:", err);
+  });
+
+  return request;
 }
 
 export async function resolveContactChangeRequest(
