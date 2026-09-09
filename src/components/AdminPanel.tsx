@@ -129,6 +129,7 @@ export function AdminPanel() {
   const [tab, setTab] = useState<
     "donors" | "posts" | "contacts" | "volunteers" | "healthcare" | "analytics" | "settings"
   >("donors");
+  const [pendingVolunteerDonors, setPendingVolunteerDonors] = useState(0);
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
@@ -203,6 +204,7 @@ export function AdminPanel() {
       body: string;
       titleBn?: string;
       bodyBn?: string;
+      href?: string;
       read: boolean;
       createdAt: string;
     }>
@@ -325,6 +327,7 @@ export function AdminPanel() {
       setChangeRequests(changeData.requests || []);
     }
     await loadAdminAlerts();
+    await loadPendingVolunteerDonorCount();
   }
 
   async function loadAdminAlerts() {
@@ -337,6 +340,17 @@ export function AdminPanel() {
       };
       setAdminAlerts(Array.isArray(data.items) ? data.items : []);
       setAdminAlertsUnread(Number(data.unread) || 0);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function loadPendingVolunteerDonorCount() {
+    try {
+      const res = await fetch("/api/admin/volunteer-donors", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { pending?: unknown[] };
+      setPendingVolunteerDonors(Array.isArray(data.pending) ? data.pending.length : 0);
     } catch {
       /* ignore */
     }
@@ -948,6 +962,23 @@ export function AdminPanel() {
   }
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const wanted = params.get("tab");
+    if (
+      wanted === "donors" ||
+      wanted === "posts" ||
+      wanted === "contacts" ||
+      wanted === "volunteers" ||
+      wanted === "healthcare" ||
+      wanted === "analytics" ||
+      wanted === "settings"
+    ) {
+      setTab(wanted);
+    }
+  }, []);
+
+  useEffect(() => {
     fetch("/api/admin/me")
       .then(async (res) => {
         if (!res.ok) {
@@ -957,6 +988,7 @@ export function AdminPanel() {
         await loadData();
         await loadSettings();
         await loadStorage();
+        await loadPendingVolunteerDonorCount();
       })
       .catch(() => setAuthed(false))
       .finally(() => setChecking(false));
@@ -966,7 +998,8 @@ export function AdminPanel() {
     if (!authed) return;
     const id = window.setInterval(() => {
       void loadAdminAlerts();
-    }, 60_000);
+      void loadPendingVolunteerDonorCount();
+    }, 20_000);
     return () => window.clearInterval(id);
   }, [authed]);
 
@@ -1447,8 +1480,23 @@ export function AdminPanel() {
                   .slice(0, 5)
                   .map((n) => (
                     <li key={n.id} className="text-[color-mix(in_oklab,var(--ink)_72%,white)]">
-                      <strong>{n.titleBn || n.title}</strong>
-                      <span className="block text-xs">{n.bodyBn || n.body}</span>
+                      <button
+                        type="button"
+                        className="w-full text-left"
+                        onClick={() => {
+                          if (
+                            String(n.href || "").includes("tab=volunteers") ||
+                            String(n.titleBn || n.title || "")
+                              .toLowerCase()
+                              .includes("volunteer")
+                          ) {
+                            setTab("volunteers");
+                          }
+                        }}
+                      >
+                        <strong>{n.titleBn || n.title}</strong>
+                        <span className="block text-xs">{n.bodyBn || n.body}</span>
+                      </button>
                     </li>
                   ))}
               </ul>
@@ -1489,6 +1537,11 @@ export function AdminPanel() {
             onClick={() => setTab("volunteers")}
           >
             {t.adminVolunteers}
+            {pendingVolunteerDonors > 0 ? (
+              <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--blood)] px-1.5 text-[10px] font-bold text-white">
+                {pendingVolunteerDonors}
+              </span>
+            ) : null}
           </button>
           <button
             type="button"
