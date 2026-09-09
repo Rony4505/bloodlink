@@ -1141,29 +1141,39 @@ export async function createDonor(
 
 export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<void> {
   const texts = withBilingual(newDonorAdminTexts(donor));
+  const pendingManual =
+    donor.volunteerSource === "manual" && donor.volunteerApproved === false;
+  const href = pendingManual
+    ? `${BLOODLINK_OWNER_PATH}?tab=volunteers`
+    : BLOODLINK_OWNER_PATH;
+
   await withWrite(async (db) => {
     db.notifications.push({
       id: randomUUID(),
       userId: ADMIN_NOTIFY_USER_ID,
       ...texts,
       type: "new_donor",
-      href: BLOODLINK_OWNER_PATH,
+      href,
       read: false,
       createdAt: new Date().toISOString(),
     });
     await persist(db);
   });
 
-  void import("./web-push-send")
-    .then((m) =>
-      m.sendWebPushToUsers([ADMIN_NOTIFY_USER_ID], {
-        title: texts.titleBn || texts.title,
-        body: texts.bodyBn || texts.body,
-        url: BLOODLINK_OWNER_PATH,
-        tag: `new-donor-${donor.id}`,
-      }),
-    )
-    .catch(() => undefined);
+  try {
+    const { sendWebPushToUsers } = await import("./web-push-send");
+    const result = await sendWebPushToUsers([ADMIN_NOTIFY_USER_ID], {
+      title: texts.titleBn || texts.title,
+      body: texts.bodyBn || texts.body,
+      url: href,
+      tag: `new-donor-${donor.id}`,
+    });
+    console.info(
+      `[bloodlink] admin new-donor push pendingManual=${pendingManual} sent=${result.sent} failed=${result.failed} donor=${donor.id}`,
+    );
+  } catch (err) {
+    console.error("[bloodlink] admin new-donor push failed:", err);
+  }
 }
 
 export async function listAdminNotifications() {

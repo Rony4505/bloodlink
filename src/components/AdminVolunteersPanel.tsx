@@ -228,6 +228,10 @@ export function AdminVolunteersPanel() {
   useEffect(() => {
     void load();
     void loadPendingDonors();
+    const id = window.setInterval(() => {
+      void loadPendingDonors();
+    }, 20_000);
+    return () => window.clearInterval(id);
   }, []);
 
   function typeLabel(type: string) {
