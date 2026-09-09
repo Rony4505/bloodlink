@@ -42,6 +42,26 @@ export function middleware(request: NextRequest) {
     if (pathMatchesPrefix(pathname, FASHION_PATH_PREFIXES)) {
       return notFound(request, isApi);
     }
+
+    // Public healthcare / স্বাস্থ্য সেবা temporarily offline (Play Store policy).
+    // Admin APIs under /api/admin/healthcare remain available.
+    if (
+      pathname === "/healthcare" ||
+      pathname.startsWith("/healthcare/") ||
+      pathname === "/api/healthcare" ||
+      pathname.startsWith("/api/healthcare/") ||
+      pathname === "/api/public/healthcare" ||
+      pathname.startsWith("/api/public/healthcare/")
+    ) {
+      if (isApi) {
+        return NextResponse.json(
+          { error: "Healthcare services are currently unavailable." },
+          { status: 404 },
+        );
+      }
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
     if (!isApi) {
       trackVisit(request, pathname);
     }

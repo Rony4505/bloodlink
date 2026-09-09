@@ -81,7 +81,7 @@ export const dictionaries = {
     adminHealthcareTotal: "Total facilities",
     adminHealthcarePage: "Page",
     adminHealthcareEmpty: "No facilities match your filters.",
-    adminHealthcareAdminOnly: "Public search is live at /healthcare — this panel is for admin monitoring.",
+    adminHealthcareAdminOnly: "Public healthcare search is currently offline. This panel remains for admin monitoring only.",
     adminAnalytics: "Visitors",
     adminAnalyticsHint:
       "Approximate visitor counts and districts from IP — anonymous guests are not named; logged-in donors show as logged-in views only.",
@@ -963,7 +963,7 @@ export const dictionaries = {
     adminHealthcareTotal: "মোট প্রতিষ্ঠান",
     adminHealthcarePage: "পৃষ্ঠা",
     adminHealthcareEmpty: "আপনার ফিল্টারে কোনো প্রতিষ্ঠান নেই।",
-    adminHealthcareAdminOnly: "পাবলিক সার্চ লাইভ — /healthcare — এ প্যানেলটি অ্যাডমিন মনিটরিংয়ের জন্য।",
+    adminHealthcareAdminOnly: "পাবলিক স্বাস্থ্য সেবা এখন বন্ধ। এই প্যানেল শুধু অ্যাডমিন মনিটরিংয়ের জন্য।",
     adminAnalytics: "ভিজিটর",
     adminAnalyticsHint:
       "IP থেকে আনুমানিক ভিজিট ও জেলা — অজ্ঞাত অতিথির নাম দেখা যায় না; লগইন করা donor শুধু 'logged-in' হিসেবে গণনা হয়।",
