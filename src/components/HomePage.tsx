@@ -63,10 +63,6 @@ const HomeImpact = dynamic(
   () => import("@/components/HomeImpact").then((m) => m.HomeImpact),
   { ssr: false },
 );
-const HomeDonors = dynamic(
-  () => import("@/components/HomeDonors").then((m) => m.HomeDonors),
-  { ssr: false },
-);
 const HomeBloodGroupStats = dynamic(
   () =>
     import("@/components/HomeBloodGroupStats").then(
