@@ -1278,14 +1278,14 @@ export function AdminPanel() {
           className="admin-login-card mx-auto max-w-md space-y-4 p-7 sm:p-8"
         >
           <h2 className="text-lg font-semibold">Forgot admin username / password</h2>
-          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
             We will send a Gmail OTP to the BloodLink recovery inbox
             (<span className="font-medium">bdbloodlink@gmail.com</span>). Use that
             code to set a new username and password.
           </p>
           {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
           {resetHint ? (
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_86%,white)]">{resetHint}</p>
           ) : null}
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? t.loading : "Send Gmail OTP"}
@@ -1313,7 +1313,7 @@ export function AdminPanel() {
         >
           <h2 className="text-lg font-semibold">Enter Gmail OTP</h2>
           {resetHint ? (
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_86%,white)]">{resetHint}</p>
           ) : null}
           <label className="block text-sm">
             <span className="mb-1 block font-medium">OTP code</span>
@@ -1384,7 +1384,7 @@ export function AdminPanel() {
         >
           <h2 className="text-lg font-semibold">Set new admin credentials</h2>
           {resetHint ? (
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">{resetHint}</p>
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_86%,white)]">{resetHint}</p>
           ) : null}
           <label className="block text-sm">
             <span className="mb-1 block font-medium">New username</span>
@@ -1477,7 +1477,7 @@ export function AdminPanel() {
                   .filter((n) => !n.read)
                   .slice(0, 5)
                   .map((n) => (
-                    <li key={n.id} className="text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+                    <li key={n.id} className="text-[color-mix(in_oklab,var(--ink)_84%,white)]">
                       <button
                         type="button"
                         className="w-full text-left"
@@ -1581,7 +1581,7 @@ export function AdminPanel() {
               <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
                 {t.adminContactLog}
               </h2>
-              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                 {t.adminContactLogHint}
               </p>
             </div>
@@ -1591,7 +1591,7 @@ export function AdminPanel() {
           </div>
 
           {!requests.length ? (
-            <p className="px-5 py-8 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            <p className="px-5 py-8 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.noContactLogs}
             </p>
           ) : (
@@ -1633,7 +1633,7 @@ export function AdminPanel() {
                           {t.postContactUser}: {r.seekerName} · {r.seekerPhone}
                         </p>
                         {r.seekerAccountEmail ? (
-                          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                             {t.seekerAccount}: {r.seekerAccountEmail}
                           </p>
                         ) : null}
@@ -1667,7 +1667,7 @@ export function AdminPanel() {
                           {t.seekerContacted}: {r.seekerName} · {r.seekerPhone}
                         </p>
                         {r.seekerAccountName || r.seekerAccountEmail ? (
-                          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                             {t.seekerAccount}: {r.seekerAccountName || "—"}
                             {r.seekerAccountEmail
                               ? ` · ${r.seekerAccountEmail}`
@@ -1702,7 +1702,7 @@ export function AdminPanel() {
               <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
                 {t.adminBloodPosts}
               </h2>
-              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+              <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                 {t.adminBloodPostsHint}
               </p>
             </div>
@@ -1712,7 +1712,7 @@ export function AdminPanel() {
           </div>
 
           {!posts.length ? (
-            <p className="px-5 py-8 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            <p className="px-5 py-8 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.noPosts}
             </p>
           ) : (
@@ -1747,7 +1747,7 @@ export function AdminPanel() {
                         {p.relation ? ` · ${p.relation}` : ""}
                       </p>
                       {p.message ? (
-                        <p className="text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                        <p className="text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                           {p.message}
                         </p>
                       ) : null}
@@ -1863,7 +1863,7 @@ export function AdminPanel() {
               {t.adminContactChanges}
             </h2>
             {!changeRequests.length ? (
-              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                 {t.noChangeRequests}
               </p>
             ) : (
@@ -1918,7 +1918,7 @@ export function AdminPanel() {
                 <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
                   {t.adminContactLog}
                 </h2>
-                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.adminContactLogHint}
                 </p>
               </div>
@@ -1936,7 +1936,7 @@ export function AdminPanel() {
 
       {tab === "settings" ? (
         <div className="space-y-6 rounded-[1.25rem] border border-[var(--line)] bg-[linear-gradient(165deg,#fffdfb,#f7f1ea)] p-5 shadow-[0_14px_34px_rgba(0,0,0,0.16)] sm:p-6">
-          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">{t.settingsMenuHint}</p>
+          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">{t.settingsMenuHint}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {([
               ["storage", t.storageSetup],
@@ -1974,7 +1974,7 @@ export function AdminPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
               {t.storageSetup}
             </h2>
-            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_84%,white)]">
               {t.storageSetupBody}
             </p>
             <p
@@ -1989,7 +1989,7 @@ export function AdminPanel() {
               backend: {storageBackend}
               {storageHost ? ` · host: ${storageHost}` : ""}
             </p>
-            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.storageVolumeTip}
             </p>
             <form onSubmit={saveStorage} className="space-y-3">
@@ -2005,7 +2005,7 @@ export function AdminPanel() {
                   onChange={(e) => setDatabaseUrl(e.target.value)}
                   required
                 />
-                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.storageUrlHint}
                 </span>
               </label>
@@ -2032,10 +2032,10 @@ export function AdminPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
               {t.backupTitle}
             </h2>
-            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_84%,white)]">
               {t.backupBody}
             </p>
-            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            <p className="text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.backupRotatingHint}
             </p>
             <button
@@ -2054,7 +2054,7 @@ export function AdminPanel() {
                   accept="application/json,.json"
                   onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
                 />
-                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.backupRestoreHint}
                 </span>
               </label>
@@ -2082,7 +2082,7 @@ export function AdminPanel() {
                 <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
                   {t.notificationSettings}
                 </h2>
-                <p className="mt-1 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                <p className="mt-1 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                   {t.notificationSettingsBody}
                 </p>
               </div>
@@ -2091,14 +2091,14 @@ export function AdminPanel() {
                 <p className="text-sm font-semibold text-[var(--blood-deep)]">
                   {t.pushAllowStats}
                 </p>
-                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_72%,white)]">
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_84%,white)]">
                   {t.pushAllowStatsBody
                     .replace("{allowed}", String(pushAllow.allowedUsers))
                     .replace("{donors}", String(pushAllow.donorCount))
                     .replace("{subs}", String(pushAllow.deliverableSubscriptions))
                     .replace("{partial}", String(pushAllow.permissionOnlyUsers))}
                 </p>
-                <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.pushAllowListHint}
                 </p>
                 {pushAllow.donors.filter((d) => d.pushStatus !== "none").length ? (
@@ -2114,14 +2114,14 @@ export function AdminPanel() {
                       : ""}
                   </p>
                 ) : (
-                  <p className="mt-2 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <p className="mt-2 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     {t.pushAllowNobodyYet}
                   </p>
                 )}
                 {pushAllow.donors.length ? (
                   <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-[var(--line)] bg-white/90">
                     <table className="w-full min-w-[28rem] text-left text-xs">
-                      <thead className="sticky top-0 bg-[color-mix(in_oklab,var(--sand)_40%,white)] text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      <thead className="sticky top-0 bg-[color-mix(in_oklab,var(--sand)_40%,white)] text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         <tr>
                           <th className="px-3 py-2 font-semibold">{t.name}</th>
                           <th className="px-3 py-2 font-semibold">{t.phone}</th>
@@ -2138,11 +2138,11 @@ export function AdminPanel() {
                           >
                             <td className="px-3 py-2">
                               <p className="font-semibold text-[var(--ink)]">{d.name}</p>
-                              <p className="mt-0.5 text-[10px] text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                              <p className="mt-0.5 text-[10px] text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                                 {d.email}
                               </p>
                             </td>
-                            <td className="px-3 py-2 font-mono text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                            <td className="px-3 py-2 font-mono text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                               {d.phone}
                             </td>
                             <td className="px-3 py-2 font-semibold text-[var(--blood-deep)]">
@@ -2166,12 +2166,12 @@ export function AdminPanel() {
                                 </span>
                               )}
                               {d.allowedAt ? (
-                                <p className="mt-1 text-[10px] text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                                <p className="mt-1 text-[10px] text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                                   {new Date(d.allowedAt).toLocaleString()}
                                 </p>
                               ) : null}
                             </td>
-                            <td className="px-3 py-2 text-[10px] text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                            <td className="px-3 py-2 text-[10px] text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                               {d.lastLoginAt
                                 ? new Date(d.lastLoginAt).toLocaleString()
                                 : "—"}
@@ -2235,7 +2235,7 @@ export function AdminPanel() {
                               </span>
                             ) : null}
                           </div>
-                          <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+                          <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                             {hint}
                           </p>
                         </div>
@@ -2324,7 +2324,7 @@ export function AdminPanel() {
                 <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
                   {t.notifBroadcastTitle}
                 </h3>
-                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                   {t.notifBroadcastBody}
                 </p>
                 <form onSubmit={sendBroadcast} className="mt-3 space-y-3">
@@ -2409,7 +2409,7 @@ export function AdminPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.futureFeatures}
             </h2>
-            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+            <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_82%,white)]">
               {t.futureFeaturesBody}
             </p>
             <form onSubmit={savePlatformOptions} className="mt-2 space-y-5">
@@ -2442,7 +2442,7 @@ export function AdminPanel() {
                         : t.featureDisabled}
                     </label>
                   </div>
-                  <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                  <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     {hint}
                   </p>
                   <label className="mt-3 block text-sm">
@@ -2460,7 +2460,7 @@ export function AdminPanel() {
                   </label>
                 </div>
               ))}
-                            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                 Current password জানা থাকলে এখানেই username/password বদলান।
                 না জানলে logout করে login-এর <strong>Forgot username / password?</strong> ব্যবহার করুন — OTP যাবে{" "}
                 <span className="font-medium">bdbloodlink@gmail.com</span> এ।
@@ -2484,7 +2484,7 @@ export function AdminPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.siteAppearance}
             </h2>
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
               {t.siteAppearanceHint}
             </p>
             <form onSubmit={saveSiteAppearance} className="grid gap-3 md:grid-cols-2">
@@ -2633,7 +2633,7 @@ export function AdminPanel() {
               />
               <label className="block text-sm md:col-span-2">
                 <span className="mb-1 block font-medium">{t.founderPhotoUpload}</span>
-                <span className="mb-2 block text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                <span className="mb-2 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.uploadImageHint}
                 </span>
                 <input
@@ -2694,7 +2694,7 @@ export function AdminPanel() {
               <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
                 {t.adminPendingStories}
               </h3>
-              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                 {t.adminPendingStoriesHint}
               </p>
               {pendingStories.length === 0 ? (
@@ -2746,7 +2746,7 @@ export function AdminPanel() {
               <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
                 {t.adminPublishedStories}
               </h3>
-              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                 {t.adminPublishedStoriesHint}
               </p>
               {(siteAppearance.successStories || []).length === 0 ? (
@@ -2801,7 +2801,7 @@ export function AdminPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.orgBanners}
             </h2>
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
               {t.orgBannersHint}
             </p>
             <label className="block max-w-xs text-sm">
@@ -2822,7 +2822,7 @@ export function AdminPanel() {
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+              <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                 {t.orgBannerSlideIntervalHint}
               </span>
             </label>
@@ -2831,10 +2831,10 @@ export function AdminPanel() {
               role="note"
             >
               <p className="font-semibold text-[var(--ink)]">{t.orgBannerSizeTitle}</p>
-              <ul className="mt-2 space-y-1 text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+              <ul className="mt-2 space-y-1 text-[color-mix(in_oklab,var(--ink)_86%,white)]">
                 <li>
                   <span className="font-medium">{t.orgBannerSizeDimensions}</span>
-                  <span className="ml-2 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <span className="ml-2 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     ({AD_BANNER_WIDTH}×{AD_BANNER_HEIGHT} px · {AD_BANNER_ASPECT})
                   </span>
                 </li>
@@ -2869,7 +2869,7 @@ export function AdminPanel() {
                 {bannerUploading ? (
                   <span className="mt-1 block text-xs">{t.bannerUploading}</span>
                 ) : (
-                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     {t.orgBannerSizeDimensions} · {t.orgBannerSizeRatio}
                   </span>
                 )}
@@ -2910,7 +2910,7 @@ export function AdminPanel() {
                   <option value="healthcare">{t.bannerPageHealthcare}</option>
                   <option value="all">{t.bannerPageAll}</option>
                 </select>
-                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.orgBannerSizeDisplay}
                 </span>
               </label>
@@ -2934,7 +2934,7 @@ export function AdminPanel() {
                 >
                   <div>
                     <span className="font-medium">{b.title}</span>
-                    <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    <p className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                       {(b.pages || []).join(", ")} · 820×150 · dual placement
                     </p>
                   </div>
@@ -3024,7 +3024,7 @@ export function AdminPanel() {
               <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
                 Security
               </h2>
-              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                 Username বা password বদলাতে নিচে Send OTP চাপুন। Gmail বদলাতে present password
                 দিয়ে Save Gmail চাপুন — নতুন Gmail-এ OTP এসে confirm করতে হবে।
               </p>
@@ -3049,7 +3049,7 @@ export function AdminPanel() {
                     onChange={(e) => setVerifyEmail(e.target.value)}
                     autoComplete="email"
                   />
-                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     Status: {emailVerified ? t.verified : t.notVerified}
                   </span>
                 </label>
@@ -3096,7 +3096,7 @@ export function AdminPanel() {
                   }
                   className="space-y-3 border-t border-[var(--line)] pt-4"
                 >
-                  <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+                  <p className="text-sm text-[color-mix(in_oklab,var(--ink)_86%,white)]">
                     {resetHint ||
                       (securityOtpMode === "gmail"
                         ? "Enter OTP sent to the new Gmail."

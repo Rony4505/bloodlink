@@ -165,11 +165,11 @@ function AdminHealthcareFacilitiesPanel() {
 
       {error ? <p className="text-sm text-[var(--blood)]">{error}</p> : null}
       {loading ? (
-        <p className="text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">{t.loading}</p>
+        <p className="text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">{t.loading}</p>
       ) : null}
 
       {!loading && data && data.items.length === 0 ? (
-        <p className="text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+        <p className="text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
           {t.adminHealthcareEmpty}
         </p>
       ) : null}
@@ -178,7 +178,7 @@ function AdminHealthcareFacilitiesPanel() {
         <>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="min-w-full text-left text-sm">
-              <thead className="bg-[var(--cream)] text-xs uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+              <thead className="bg-[var(--cream)] text-xs uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                 <tr>
                   <th className="px-3 py-2">{t.adminHealthcareName}</th>
                   <th className="px-3 py-2">{t.adminHealthcareType}</th>
@@ -193,11 +193,11 @@ function AdminHealthcareFacilitiesPanel() {
                     <td className="px-3 py-3">
                       <div className="font-medium text-[var(--ink)]">{f.name}</div>
                       {f.nameBn ? (
-                        <div className="mt-0.5 text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                        <div className="mt-0.5 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                           {f.nameBn}
                         </div>
                       ) : null}
-                      <div className="mt-1 text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_45%,white)]">
+                      <div className="mt-1 text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         {f.isPrivate ? t.adminHealthcarePrivate : t.adminHealthcareGov} · {f.code}
                       </div>
                     </td>
@@ -215,7 +215,7 @@ function AdminHealthcareFacilitiesPanel() {
                     <td className="max-w-xs px-3 py-3 text-xs">{f.address || "—"}</td>
                     <td className="px-3 py-3 text-xs">
                       <div>{f.district}</div>
-                      <div className="text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      <div className="text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         {f.division}
                       </div>
                     </td>
@@ -226,7 +226,7 @@ function AdminHealthcareFacilitiesPanel() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {data.total.toLocaleString()} {t.adminHealthcareTotal.toLowerCase()} ·{" "}
               {t.adminHealthcarePage} {data.page}/{data.totalPages}
             </p>
@@ -265,10 +265,10 @@ export function AdminHealthcarePanel() {
         <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
           {t.adminHealthcare}
         </h2>
-        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
           {t.adminHealthcareHint}
         </p>
-        <p className="mt-2 text-xs text-[color-mix(in_oklab,var(--ink)_45%,white)]">
+        <p className="mt-2 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
           {t.adminHealthcareAdminOnly}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">

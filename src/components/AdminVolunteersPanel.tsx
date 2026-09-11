@@ -450,7 +450,7 @@ export function AdminVolunteersPanel() {
             <p className="text-sm font-semibold text-[var(--blood-deep)]">
               {t.volunteerPersonalUrlsTitle}
             </p>
-            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
               {t.volunteerPersonalUrlsHint}
             </p>
           </div>
@@ -475,7 +475,7 @@ export function AdminVolunteersPanel() {
               >
                 <div>
                   <p className="font-medium">{d.name} · {d.bloodGroup}</p>
-                  <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <p className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     {d.area}, {d.district}
                     {d.phone ? ` · ${d.phone}` : ""} · {d.volunteerName}
                   </p>
@@ -503,7 +503,7 @@ export function AdminVolunteersPanel() {
       ) : null}
 
       {/* Simple stats */}
-      <p className="text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+      <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
         <span className="font-semibold text-[var(--ink)]">{stats.total}</span>{" "}
         {t.volunteerTotal.toLowerCase()}
         <span className="mx-2 opacity-40">·</span>
@@ -529,7 +529,7 @@ export function AdminVolunteersPanel() {
             className={`flex-1 rounded-full px-3 py-2.5 text-sm font-semibold transition ${
               tab === item.id
                 ? "bg-[var(--blood-deep)] text-white shadow-sm"
-                : "text-[color-mix(in_oklab,var(--ink)_70%,white)] hover:bg-white/70"
+                : "text-[color-mix(in_oklab,var(--ink)_82%,white)] hover:bg-white/70"
             }`}
           >
             {item.label}
@@ -550,7 +550,7 @@ export function AdminVolunteersPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
               {t.volunteerAdd}
             </h2>
-            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
               {t.volunteerAddSimpleHint}
             </p>
           </div>
@@ -682,7 +682,7 @@ export function AdminVolunteersPanel() {
             </div>
           ) : null}
 
-          <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+          <p className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
             {t.volunteerCredHint}
           </p>
 
@@ -702,13 +702,13 @@ export function AdminVolunteersPanel() {
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
               {t.volunteerLogWork}
             </h2>
-            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+            <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
               {t.volunteerAssignHint}
             </p>
           </div>
 
           {!volunteers.length ? (
-            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            <p className="text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.volunteerEmpty}
             </p>
           ) : (
@@ -848,7 +848,7 @@ export function AdminVolunteersPanel() {
           <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
             {t.volunteerList}
           </h2>
-          <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+          <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
             {t.volunteerListClickHint}
           </p>
 
@@ -864,7 +864,7 @@ export function AdminVolunteersPanel() {
           ) : null}
 
           {!volunteers.length ? (
-            <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+            <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.volunteerEmpty}
             </p>
           ) : (
@@ -891,16 +891,16 @@ export function AdminVolunteersPanel() {
                           {v.name}
                         </button>
                         {!v.enabled ? (
-                          <span className="rounded-full bg-[color-mix(in_oklab,var(--ink)_8%,white)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                          <span className="rounded-full bg-[color-mix(in_oklab,var(--ink)_8%,white)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                             {t.volunteerInactive}
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-0.5 text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                      <p className="mt-0.5 text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                         {v.role}
                         {v.username ? ` · @${v.username}` : ""}
                       </p>
-                      <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         {t.volunteerWorkSummary
                           .replace("{total}", String(v.activityCount))
                           .replace("{done}", String(v.doneCount))
@@ -1008,7 +1008,7 @@ export function AdminVolunteersPanel() {
                       </button>
                       <ul className="space-y-2">
                       {!v.activities.length ? (
-                        <li className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                        <li className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                           {t.volunteerNoWork}
                         </li>
                       ) : (

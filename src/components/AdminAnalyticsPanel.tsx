@@ -55,7 +55,7 @@ export function AdminAnalyticsPanel() {
           <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
             {t.adminAnalytics}
           </h2>
-          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+          <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
             {t.adminAnalyticsHint}
           </p>
         </div>
@@ -87,7 +87,7 @@ export function AdminAnalyticsPanel() {
           <>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl bg-[var(--cream)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.adminAnalyticsPageViews}
                 </p>
                 <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)]">
@@ -95,7 +95,7 @@ export function AdminAnalyticsPanel() {
                 </p>
               </div>
               <div className="rounded-2xl bg-[var(--cream)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.adminAnalyticsUnique}
                 </p>
                 <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)]">
@@ -103,7 +103,7 @@ export function AdminAnalyticsPanel() {
                 </p>
               </div>
               <div className="rounded-2xl bg-[var(--cream)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.adminAnalyticsLoggedIn}
                 </p>
                 <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)]">
@@ -111,7 +111,7 @@ export function AdminAnalyticsPanel() {
                 </p>
               </div>
               <div className="rounded-2xl bg-[var(--cream)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.adminAnalyticsDistricts}
                 </p>
                 <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)]">
@@ -120,7 +120,7 @@ export function AdminAnalyticsPanel() {
               </div>
             </div>
 
-            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+            <p className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.adminAnalyticsPrivacyNote}
             </p>
 
@@ -132,13 +132,13 @@ export function AdminAnalyticsPanel() {
                   </h3>
                 </div>
                 {!data.byDistrict.length ? (
-                  <p className="px-4 py-6 text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <p className="px-4 py-6 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     {t.adminAnalyticsEmpty}
                   </p>
                 ) : (
                   <div className="max-h-80 overflow-auto">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         <tr>
                           <th className="px-4 py-2 text-left">{t.adminHealthcareDistrict}</th>
                           <th className="px-4 py-2 text-right">{t.adminAnalyticsPageViews}</th>
@@ -166,13 +166,13 @@ export function AdminAnalyticsPanel() {
                   </h3>
                 </div>
                 {!data.topPages.length ? (
-                  <p className="px-4 py-6 text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                  <p className="px-4 py-6 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                     {t.adminAnalyticsEmpty}
                   </p>
                 ) : (
                   <div className="max-h-80 overflow-auto">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         <tr>
                           <th className="px-4 py-2 text-left">{t.adminAnalyticsPage}</th>
                           <th className="px-4 py-2 text-right">{t.adminAnalyticsPageViews}</th>
@@ -201,13 +201,13 @@ export function AdminAnalyticsPanel() {
                 </h3>
               </div>
               {!data.recent.length ? (
-                <p className="px-4 py-6 text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                <p className="px-4 py-6 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.adminAnalyticsEmpty}
                 </p>
               ) : (
                 <div className="max-h-96 overflow-auto">
                   <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                    <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                       <tr>
                         <th className="px-4 py-2 text-left">{t.adminAnalyticsWhen}</th>
                         <th className="px-4 py-2 text-left">{t.adminAnalyticsPage}</th>
@@ -237,7 +237,7 @@ export function AdminAnalyticsPanel() {
             </div>
           </>
         ) : loading ? (
-          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_55%,white)]">{t.loading}</p>
+          <p className="text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">{t.loading}</p>
         ) : null}
       </div>
     </section>

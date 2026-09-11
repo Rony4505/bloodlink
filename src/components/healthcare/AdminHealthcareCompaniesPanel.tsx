@@ -214,7 +214,7 @@ export function AdminHealthcareCompaniesPanel() {
         <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
           {t.healthcareCompanyAddTitle}
         </h3>
-        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_58%,white)]">
+        <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
           {t.healthcareCompanyAddHint}
         </p>
         <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={(e) => void createCompany(e)}>
@@ -267,7 +267,7 @@ export function AdminHealthcareCompaniesPanel() {
               value={draft.facilityQuery}
               onChange={(e) => setDraft((d) => ({ ...d, facilityQuery: e.target.value }))}
             />
-            <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+            <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
               {t.healthcareLinkAutoFill}
             </p>
             {facilityHits.length > 0 ? (
@@ -280,7 +280,7 @@ export function AdminHealthcareCompaniesPanel() {
                       onClick={() => addFacility(f)}
                     >
                       <span className="font-medium">{f.name}</span>
-                      <span className="mt-0.5 block text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                      <span className="mt-0.5 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                         {[f.district, f.upazila].filter(Boolean).join(" · ")} · {f.dghsId}
                       </span>
                     </button>
@@ -355,9 +355,9 @@ export function AdminHealthcareCompaniesPanel() {
                   ) : null}
                 </p>
                 {c.nameBn ? (
-                  <p className="text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">{c.nameBn}</p>
+                  <p className="text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">{c.nameBn}</p>
                 ) : null}
-                <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_55%,white)]">
+                <p className="mt-1 text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {c.district}
                   {c.upazila ? ` · ${c.upazila}` : ""} · {c.doctorCount} {t.healthcareDoctors.toLowerCase()} ·{" "}
                   {c.pendingAppointments} {t.healthcarePending}
@@ -399,7 +399,7 @@ export function AdminHealthcareCompaniesPanel() {
             </div>
             {expandedId === c.id ? (
               <div className="space-y-4 p-4">
-                <div className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_35%,white)] px-3 py-2 text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                <div className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_35%,white)] px-3 py-2 text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
                   {t.healthcareQrBannerAdminHint}
                 </div>
                 <HealthcareVerbalUrlCard token={c.linkToken} compact />
@@ -440,7 +440,7 @@ export function AdminHealthcareCompaniesPanel() {
                 </div>
                 {c.facilities.length > 0 ? (
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                       {t.healthcareLinkedFacilities}
                     </p>
                     <ul className="mt-2 space-y-1 text-sm">
