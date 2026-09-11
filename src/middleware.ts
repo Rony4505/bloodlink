@@ -35,7 +35,11 @@ function trackVisit(request: NextRequest, pathname: string) {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const mode = getAppMode();
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
+  const mode = getAppMode(host);
   const isApi = pathname.startsWith("/api/");
 
   // Browsers always request /favicon.ico — map to mode-correct generated icon
@@ -82,7 +86,9 @@ export function middleware(request: NextRequest) {
     if (!isApi) {
       trackVisit(request, pathname);
     }
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("Vary", "Host");
+    return res;
   }
 
   // Fashion / Noorzaa — never expose BloodLink brand icon files.
@@ -114,7 +120,13 @@ export function middleware(request: NextRequest) {
     return notFound(request, isApi);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("Vary", "Host");
+  // Avoid stale HTML shell being reused across brands/domains.
+  if (!isApi && (pathname === "/" || !pathname.includes("."))) {
+    res.headers.set("Cache-Control", "private, no-cache, must-revalidate");
+  }
+  return res;
 }
 
 export const config = {

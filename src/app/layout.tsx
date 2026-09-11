@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
+import { FashionSwCleanup } from "@/components/FashionSwCleanup";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
-import { isFashionMode } from "@/lib/app-mode";
+import { resolveAppMode } from "@/lib/app-mode";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
@@ -25,8 +26,9 @@ const body = Noto_Sans_Bengali({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const siteUrl = getSiteUrl();
-  const fashion = isFashionMode();
+  const mode = await resolveAppMode();
+  const fashion = mode === "fashion";
+  const siteUrl = getSiteUrl(mode);
 
   if (fashion) {
     return {
@@ -148,8 +150,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
-  const fashion = isFashionMode();
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const fashion = (await resolveAppMode()) === "fashion";
 
   return (
     <html lang="bn" className={`${display.variable} ${body.variable} h-full`}>
@@ -167,7 +169,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LocaleProvider>
           <CartProvider>
             <SiteAppearanceProvider>
-              {!fashion ? <PwaRegister /> : null}
+              {fashion ? <FashionSwCleanup /> : <PwaRegister />}
               {children}
             </SiteAppearanceProvider>
           </CartProvider>

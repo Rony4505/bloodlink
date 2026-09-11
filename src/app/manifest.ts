@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { isFashionMode } from "@/lib/app-mode";
+import { resolveAppMode } from "@/lib/app-mode";
 
-export default function manifest(): MetadataRoute.Manifest {
-  if (isFashionMode()) {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  if ((await resolveAppMode()) === "fashion") {
     return {
       name: "Noorzaa",
       short_name: "Noorzaa",

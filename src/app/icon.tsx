@@ -1,13 +1,13 @@
 import { ImageResponse } from "next/og";
-import { getAppMode } from "@/lib/app-mode";
+import { resolveAppMode } from "@/lib/app-mode";
 
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
 
-/** Favicon — BloodLink "B" or Noorzaa "N" by APP_MODE. */
-export default function Icon() {
-  const fashion = getAppMode() === "fashion";
+/** Favicon — BloodLink "B" or Noorzaa "N" by Host / APP_MODE. */
+export default async function Icon() {
+  const fashion = (await resolveAppMode()) === "fashion";
 
   if (fashion) {
     return new ImageResponse(
