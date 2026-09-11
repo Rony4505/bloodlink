@@ -38,6 +38,23 @@ export function middleware(request: NextRequest) {
   const mode = getAppMode();
   const isApi = pathname.startsWith("/api/");
 
+  // Browsers always request /favicon.ico — map to mode-correct generated icon
+  // so fashion (Noorzaa) never serves BloodLink's maroon "B".
+  if (
+    pathname === "/favicon.ico" ||
+    pathname === "/apple-touch-icon.png" ||
+    pathname === "/apple-touch-icon-precomposed.png"
+  ) {
+    const dest = pathname === "/favicon.ico" ? "/icon" : "/apple-icon";
+    if (mode === "fashion") {
+      return NextResponse.rewrite(new URL(dest, request.url));
+    }
+    if (pathname === "/favicon.ico") {
+      return NextResponse.rewrite(new URL("/bloodlink/favicon.ico", request.url));
+    }
+    return NextResponse.next();
+  }
+
   if (mode === "bloodlink") {
     if (pathMatchesPrefix(pathname, FASHION_PATH_PREFIXES)) {
       return notFound(request, isApi);
@@ -68,6 +85,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Fashion / Noorzaa — never expose BloodLink brand icon files.
+  if (
+    pathname === "/icon-48.png" ||
+    pathname === "/icon-192.png" ||
+    pathname === "/icon-512.png" ||
+    pathname === "/bloodlink-logo.png" ||
+    pathname.startsWith("/icons/")
+  ) {
+    return NextResponse.rewrite(new URL("/icon", request.url));
+  }
+
   // Smart craft corner (fashion) mode — own site at root
   if (pathname === "/shop" || pathname === "/shop/") {
     return NextResponse.redirect(new URL("/", request.url));
@@ -90,8 +118,16 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Skip real static assets only — admin paths still go through middleware.
+  // Include favicon/icon static names so fashion can rewrite away from BloodLink assets.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|txt|xml|json|map)$).*)",
+    "/favicon.ico",
+    "/apple-touch-icon.png",
+    "/apple-touch-icon-precomposed.png",
+    "/icon-48.png",
+    "/icon-192.png",
+    "/icon-512.png",
+    "/bloodlink-logo.png",
+    "/icons/:path*",
+    "/((?!_next/static|_next/image|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|txt|xml|json|map)$).*)",
   ],
 };
