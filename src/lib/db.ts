@@ -2161,8 +2161,8 @@ export async function createContactChangeRequest(input: {
   void notifyAdminAlert({
     titleEn: "Donor contact change pending",
     titleBn: "Donor যোগাযোগ পরিবর্তন pending",
-    bodyEn: "A donor requested email/phone change. Review Contact changes.",
-    bodyBn: "একজন donor ইমেইল/ফোন পরিবর্তনের অনুরোধ করেছেন। Contact changes দেখুন।",
+    bodyEn: `${request.currentEmail || "Donor"} requested email/phone change${request.requestedPhone ? ` → ${request.requestedPhone}` : ""}${request.requestedEmail ? ` / ${request.requestedEmail}` : ""}. Review Contact changes.`,
+    bodyBn: `Donor যোগাযোগ পরিবর্তন চেয়েছে${request.requestedPhone ? ` → ${request.requestedPhone}` : ""}${request.requestedEmail ? ` / ${request.requestedEmail}` : ""}। Contact changes দেখুন।`,
     type: "contact_change",
     href: `${BLOODLINK_OWNER_PATH}?tab=contacts`,
     tag: `contact-change-${request.id}`,

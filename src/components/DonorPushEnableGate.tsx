@@ -145,11 +145,6 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     };
   }, [requireLogin]);
 
-  function onSkip() {
-    // This session only — next login will ask again until Allow.
-    setOpen(false);
-  }
-
   async function onAllow() {
     setBusy(true);
     setFailHint("");
@@ -168,7 +163,7 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       if (result === "denied") {
         setFailHint(t.pushDenied);
         snoozePushPrompt(1);
-        setOpen(false);
+        // Keep open so they see why; they can retry after fixing browser settings.
         return;
       }
       setFailHint(t.pushEnableError);
@@ -183,12 +178,18 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="push-ask-title"
         className="animate-[rise_0.35s_ease-out] w-full max-w-md rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] p-6 shadow-2xl sm:p-7"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <h2
           id="push-ask-title"
@@ -199,6 +200,9 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
           {t.registerPushBody}
         </p>
+        <p className="mt-2 text-xs font-medium text-[var(--blood)]">
+          {t.registerPushRequired}
+        </p>
         {failHint ? (
           <p className="mt-2 text-sm font-medium text-[var(--blood)]">{failHint}</p>
         ) : null}
@@ -206,22 +210,14 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         {done ? (
           <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
         ) : (
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-5">
             <button
               type="button"
               disabled={busy}
               onClick={() => void onAllow()}
-              className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
             >
               {busy ? t.loading : t.registerPushAllow}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onSkip}
-              className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
-            >
-              {t.registerPushSkip}
             </button>
           </div>
         )}

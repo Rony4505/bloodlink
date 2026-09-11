@@ -45,10 +45,11 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
   const [pushBusy, setPushBusy] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
-  const [pushDone, setPushDone] = useState<"idle" | "on" | "skipped" | "denied">(
+  const [pushDone, setPushDone] = useState<"idle" | "on" | "denied" | "error">(
     "idle",
   );
   const showPushPrompt = pushSupported && pushDone === "idle";
+  const canContinue = pushDone === "on" || pushDone === "denied";
 
   useEffect(() => {
     invalidateDonorStats();
@@ -59,32 +60,41 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   async function onAllowPush() {
     setPushBusy(true);
     try {
-      const result = await enableWebPush({ recordIntent: true, forceRefresh: true, allowPermissionOnly: true });
+      const result = await enableWebPush({
+        recordIntent: true,
+        forceRefresh: true,
+        allowPermissionOnly: true,
+      });
       if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
         setPushDone("on");
       } else if (result === "denied") {
-        // Browser blocked — short pause; login later will ask again if possible
         snoozePushPrompt(1);
         setPushDone("denied");
       } else {
-        // Subscribe failed — keep asking on next login (no long snooze)
-        setPushDone("skipped");
+        setPushDone("error");
       }
     } catch {
-      setPushDone("skipped");
+      setPushDone("error");
     } finally {
       setPushBusy(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center">
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
+      onMouseDown={(e) => {
+        // Outside click must not dismiss — only Allow / Continue after Allow.
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="register-success-title"
         className="animate-[rise_0.35s_ease-out] max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] p-6 shadow-2xl sm:p-8"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_18%,white)] text-3xl text-[var(--sage)] ring-8 ring-[color-mix(in_oklab,var(--sage)_10%,transparent)]">
@@ -162,32 +172,24 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
         </div>
 
         {showPushPrompt ? (
-          <div className="mt-5 rounded-2xl border border-[color-mix(in_oklab,var(--blood)_22%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 text-left">
+          <div className="mt-5 rounded-2xl border-2 border-[var(--blood)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 text-left shadow-sm">
             <p className="text-sm font-semibold text-[var(--blood-deep)]">
               {t.registerPushTitle}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
               {t.registerPushBody}
             </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <p className="mt-2 text-xs font-medium text-[var(--blood)]">
+              {t.registerPushRequired}
+            </p>
+            <div className="mt-3">
               <button
                 type="button"
                 disabled={pushBusy}
                 onClick={() => void onAllowPush()}
-                className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
               >
                 {pushBusy ? t.loading : t.registerPushAllow}
-              </button>
-              <button
-                type="button"
-                disabled={pushBusy}
-                onClick={() => {
-                  // No long snooze — DonorPushEnableGate will ask again on next login
-                  setPushDone("skipped");
-                }}
-                className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--mist)] disabled:opacity-60"
-              >
-                {t.registerPushSkip}
               </button>
             </div>
           </div>
@@ -203,16 +205,31 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
             {t.pushDenied}
           </p>
         ) : null}
+        {pushDone === "error" ? (
+          <div className="mt-4 space-y-2 text-center">
+            <p className="text-sm font-medium text-[var(--blood)]">
+              {t.pushEnableError}
+            </p>
+            <button
+              type="button"
+              disabled={pushBusy}
+              onClick={() => {
+                setPushDone("idle");
+              }}
+              className="text-sm font-semibold text-[var(--blood-deep)] underline"
+            >
+              {t.registerPushAllow}
+            </button>
+          </div>
+        ) : null}
 
         <button
           type="button"
-          onClick={() => {
-            // Skip / leave without Allow → ask again on every next login
-            onContinue();
-          }}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#265a42]"
+          disabled={!canContinue}
+          onClick={() => onContinue()}
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#265a42] disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {t.registerSuccessCta}
+          {canContinue ? t.registerSuccessCta : t.registerPushAllowFirst}
         </button>
       </div>
     </div>

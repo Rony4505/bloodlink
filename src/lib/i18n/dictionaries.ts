@@ -398,6 +398,8 @@ export const dictionaries = {
     registerPushAllow: "Allow",
     registerPushSkip: "Not now",
     registerPushOn: "Notifications enabled.",
+    registerPushRequired: "Tap Allow to get blood alerts. Outside taps will not close this.",
+    registerPushAllowFirst: "Allow notifications to continue",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     donationInfoOptionalHint:
@@ -1281,6 +1283,8 @@ export const dictionaries = {
     registerPushAllow: "অনুমতি দিন",
     registerPushSkip: "এখন না",
     registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
+    registerPushRequired: "অ্যালার্ট পেতে Allow চাপুন। বাইরে ক্লিক করলে পপআপ বন্ধ হবে না।",
+    registerPushAllowFirst: "এগোনোর আগে নোটিফিকেশন Allow করুন",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     donationInfoOptionalHint:

@@ -10,8 +10,10 @@ import {
   findDonorByPhone,
   listDonorsByVolunteer,
   listVolunteerActivities,
+  notifyAdminAlert,
   updateDonor,
 } from "@/lib/db";
+import { BLOODLINK_OWNER_PATH } from "@/lib/bloodlink-admin-path";
 import { normalizePhone } from "@/lib/privacy";
 import {
   phonePlaceholderEmail,
@@ -204,6 +206,24 @@ export async function PATCH(request: Request) {
         ? { email: phonePlaceholderEmail(patch.phone) }
         : {}),
     });
+
+    if (updated && (patch.name || patch.phone)) {
+      const bits = [
+        patch.name ? `name → ${updated.name}` : null,
+        patch.phone ? `phone → ${updated.phone}` : null,
+      ].filter(Boolean);
+      void notifyAdminAlert({
+        titleEn: "Volunteer updated donor contact",
+        titleBn: "Volunteer donor তথ্য পরিবর্তন করেছে",
+        bodyEn: `${volunteer.name} updated ${existing.name}: ${bits.join(", ")}.`,
+        bodyBn: `${volunteer.name} → ${existing.name}: ${bits.join(", ")}।`,
+        type: "contact_change",
+        href: `${BLOODLINK_OWNER_PATH}?tab=volunteers`,
+        tag: `volunteer-donor-edit-${updated.id}-${Date.now()}`,
+      }).catch((err) => {
+        console.error("[bloodlink] admin volunteer-edit notify failed:", err);
+      });
+    }
 
     return NextResponse.json({
       ok: true,
