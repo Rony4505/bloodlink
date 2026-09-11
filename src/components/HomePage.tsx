@@ -181,8 +181,6 @@ export function HomePage() {
 
       <HomeImpact />
 
-      <HomeDonors />
-
       <HomeBloodGroupStats />
 
       <section className="border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] px-5 py-16 md:px-8 md:py-20">
