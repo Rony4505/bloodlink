@@ -469,8 +469,8 @@ export const dictionaries = {
     warningsSubtitle:
       "Please read these points carefully before contacting any donor or using BloodLink BD.",
     admin: "Admin",
-    adminTitle: "Admin panel",
-    adminSubtitle: "Manage donors, posts, privacy, and account security.",
+    adminTitle: "Owner desk",
+    adminSubtitle: "Donors, blood posts, volunteers, and security — one private command surface.",
     adminUsername: "Username",
     adminPassword: "Password",
     adminLogin: "Enter admin",
@@ -1354,8 +1354,8 @@ export const dictionaries = {
     warningsSubtitle:
       "কোনো রক্তদাতার সাথে যোগাযোগ বা BloodLink BD ব্যবহারের আগে এই পয়েন্টগুলো ভালোভাবে পড়ুন।",
     admin: "অ্যাডমিন",
-    adminTitle: "অ্যাডমিন প্যানেল",
-    adminSubtitle: "ডোনার, পোস্ট, প্রাইভেসি ও অ্যাকাউন্ট সিকিউরিটি ম্যানেজ করুন।",
+    adminTitle: "মালিক ডেস্ক",
+    adminSubtitle: "ডোনার, রক্তের পোস্ট, ভলান্টিয়ার ও সিকিউরিটি — এক প্রাইভেট কমান্ড সারফেস।",
     adminUsername: "ইউজারনেম",
     adminPassword: "পাসওয়ার্ড",
     adminLogin: "অ্যাডমিনে প্রবেশ",

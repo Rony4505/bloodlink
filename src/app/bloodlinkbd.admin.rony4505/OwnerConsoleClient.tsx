@@ -1,19 +1,12 @@
 "use client";
 
 import { AdminPanel } from "@/components/AdminPanel";
-import { PageShell } from "@/components/PageShell";
-import { useLocale } from "@/lib/i18n/locale-context";
+import { AdminShell } from "@/components/AdminShell";
 
 export function OwnerConsoleClient() {
-  const { t } = useLocale();
   return (
-    <PageShell
-      title={t.adminTitle}
-      subtitle={t.adminSubtitle}
-      compactHeader
-      showStoryForm={false}
-    >
+    <AdminShell>
       <AdminPanel />
-    </PageShell>
+    </AdminShell>
   );
 }

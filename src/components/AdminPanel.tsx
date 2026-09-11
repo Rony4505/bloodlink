@@ -1251,23 +1251,21 @@ export function AdminPanel() {
 
   if (checking) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 px-5 py-4">
-          <div className="flex flex-wrap gap-2">
-            <span className="btn-primary pointer-events-none opacity-80">
+      <div className="admin-desk-body">
+        <div className="admin-nav">
+          <div className="admin-nav__tabs">
+            <span className="admin-tab admin-tab-active pointer-events-none opacity-90">
               {t.adminDonors}
             </span>
-            <span className="btn-ghost pointer-events-none opacity-55">
+            <span className="admin-tab pointer-events-none opacity-50">
               {t.adminVolunteers}
             </span>
-            <span className="btn-ghost pointer-events-none opacity-55">
+            <span className="admin-tab pointer-events-none opacity-50">
               {t.adminSettings}
             </span>
           </div>
         </div>
-        <p className="rounded-2xl bg-white/80 p-6 text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-          {t.loading}
-        </p>
+        <p className="admin-loading-card">{t.loading}</p>
       </div>
     );
   }
@@ -1277,7 +1275,7 @@ export function AdminPanel() {
       return (
         <form
           onSubmit={sendAdminResetOtp}
-          className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+          className="admin-login-card mx-auto max-w-md space-y-4 p-7 sm:p-8"
         >
           <h2 className="text-lg font-semibold">Forgot admin username / password</h2>
           <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
@@ -1311,7 +1309,7 @@ export function AdminPanel() {
       return (
         <form
           onSubmit={verifyAdminResetOtp}
-          className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+          className="admin-login-card mx-auto max-w-md space-y-4 p-7 sm:p-8"
         >
           <h2 className="text-lg font-semibold">Enter Gmail OTP</h2>
           {resetHint ? (
@@ -1382,7 +1380,7 @@ export function AdminPanel() {
       return (
         <form
           onSubmit={confirmAdminReset}
-          className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+          className="admin-login-card mx-auto max-w-md space-y-4 p-7 sm:p-8"
         >
           <h2 className="text-lg font-semibold">Set new admin credentials</h2>
           {resetHint ? (
@@ -1425,7 +1423,7 @@ export function AdminPanel() {
     return (
       <form
         onSubmit={login}
-        className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/80 p-6"
+        className="admin-login-card mx-auto max-w-md space-y-4 p-7 sm:p-8"
       >
         <label className="block text-sm">
           <span className="mb-1 block font-medium">{t.adminUsername}</span>
@@ -1464,11 +1462,11 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="admin-desk-body">
       <AdminPushEnableGate />
 
       {adminAlertsUnread > 0 ? (
-        <div className="rounded-2xl border border-[color-mix(in_oklab,var(--blood)_25%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-5 py-4 shadow-sm">
+        <div className="overflow-hidden rounded-[1.25rem] border border-[color-mix(in_oklab,var(--blood)_28%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-5 py-4 shadow-[0_14px_34px_rgba(0,0,0,0.16)]">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-[var(--blood-deep)]">
@@ -1508,67 +1506,67 @@ export function AdminPanel() {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 px-5 py-4">
-        <div className="flex flex-wrap gap-2">
+      <nav className="admin-nav" aria-label="Admin sections">
+        <div className="admin-nav__tabs">
           <button
             type="button"
-            className={tab === "donors" ? "btn-primary" : "btn-ghost"}
+            className={tab === "donors" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("donors")}
           >
             {t.adminDonors}
           </button>
           <button
             type="button"
-            className={tab === "posts" ? "btn-primary" : "btn-ghost"}
+            className={tab === "posts" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("posts")}
           >
             {t.adminBloodPosts}
           </button>
           <button
             type="button"
-            className={tab === "contacts" ? "btn-primary" : "btn-ghost"}
+            className={tab === "contacts" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("contacts")}
           >
             {t.adminContactLog}
           </button>
           <button
             type="button"
-            className={tab === "volunteers" ? "btn-primary" : "btn-ghost"}
+            className={tab === "volunteers" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("volunteers")}
           >
             {t.adminVolunteers}
             {pendingVolunteerDonors > 0 ? (
-              <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--blood)] px-1.5 text-[10px] font-bold text-white">
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-[10px] font-bold text-white">
                 {pendingVolunteerDonors}
               </span>
             ) : null}
           </button>
           <button
             type="button"
-            className={tab === "healthcare" ? "btn-primary" : "btn-ghost"}
+            className={tab === "healthcare" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("healthcare")}
           >
             {t.adminHealthcare}
           </button>
           <button
             type="button"
-            className={tab === "analytics" ? "btn-primary" : "btn-ghost"}
+            className={tab === "analytics" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("analytics")}
           >
             {t.adminAnalytics}
           </button>
           <button
             type="button"
-            className={tab === "settings" ? "btn-primary" : "btn-ghost"}
+            className={tab === "settings" ? "admin-tab admin-tab-active" : "admin-tab"}
             onClick={() => setTab("settings")}
           >
             {t.adminSettings}
           </button>
         </div>
-        <button type="button" className="btn-ghost" onClick={logout}>
+        <button type="button" className="admin-nav__logout" onClick={logout}>
           {t.logout}
         </button>
-      </div>
+      </nav>
 
       {tab === "volunteers" ? <AdminVolunteersPanel /> : null}
 
