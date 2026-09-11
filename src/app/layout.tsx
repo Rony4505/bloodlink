@@ -47,8 +47,12 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
       alternates: { canonical: "/" },
       icons: {
-        icon: [{ url: "/icon", type: "image/png" }],
-        apple: [{ url: "/apple-icon", type: "image/png" }],
+        icon: [
+          { url: "/icon", type: "image/png", sizes: "64x64" },
+          { url: "/apple-icon", type: "image/png", sizes: "180x180" },
+        ],
+        apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+        shortcut: ["/icon"],
       },
       openGraph: {
         type: "website",
@@ -98,15 +102,16 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: { canonical: "/" },
     icons: {
       icon: [
-        { url: "/favicon.ico", sizes: "any" },
+        { url: "/icon", type: "image/png", sizes: "64x64" },
+        { url: "/bloodlink/favicon.ico", sizes: "any" },
         { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
         { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icon", type: "image/png" },
       ],
       apple: [
+        { url: "/apple-icon", type: "image/png", sizes: "180x180" },
         { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-        { url: "/apple-icon", type: "image/png" },
       ],
+      shortcut: ["/icon"],
     },
     openGraph: {
       type: "website",

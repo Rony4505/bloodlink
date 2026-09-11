@@ -5,6 +5,7 @@ export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
 
+/** Apple touch icon — BloodLink "B" or Noorzaa "N" by APP_MODE. */
 export default function AppleIcon() {
   const fashion = getAppMode() === "fashion";
 
@@ -18,25 +19,14 @@ export default function AppleIcon() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(145deg, #2b1d19 0%, #5c3d34 100%)",
+            background: "linear-gradient(145deg, #0a1628 0%, #122d52 55%, #1a3a5c 100%)",
+            color: "#e8eef7",
+            fontSize: 100,
+            fontWeight: 800,
+            letterSpacing: -2,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 130,
-              height: 130,
-              borderRadius: 999,
-              background: "#f4d4c2",
-              color: "#2b1d19",
-            }}
-          >
-            <div style={{ fontSize: 72, fontWeight: 800, lineHeight: 1 }}>S</div>
-            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 2, marginTop: 4 }}>CC</div>
-          </div>
+          N
         </div>
       ),
       { ...size },
