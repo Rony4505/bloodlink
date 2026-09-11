@@ -1935,7 +1935,7 @@ export function AdminPanel() {
       ) : null}
 
       {tab === "settings" ? (
-        <div className="space-y-6">
+        <div className="space-y-6 rounded-[1.25rem] border border-[var(--line)] bg-[linear-gradient(165deg,#fffdfb,#f7f1ea)] p-5 shadow-[0_14px_34px_rgba(0,0,0,0.16)] sm:p-6">
           <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">{t.settingsMenuHint}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {([
@@ -1952,12 +1952,14 @@ export function AdminPanel() {
                 key={id}
                 type="button"
                 onClick={() => setSettingsPanel(id)}
-                className="rounded-2xl border border-[var(--line)] bg-white/90 px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="group rounded-[1.1rem] border border-[rgba(155,27,46,0.12)] bg-white/95 px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[rgba(155,27,46,0.28)] hover:shadow-[0_12px_28px_rgba(155,27,46,0.12)]"
               >
                 <p className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
                   {label}
                 </p>
-                <p className="mt-1 text-xs font-semibold text-[var(--sage)]">{t.openSettings} →</p>
+                <p className="mt-1 text-xs font-semibold text-[var(--sage)] transition group-hover:text-[var(--blood)]">
+                  {t.openSettings} →
+                </p>
               </button>
             ))}
           </div>
