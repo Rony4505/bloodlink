@@ -1444,8 +1444,31 @@ export async function createOrder(
   }
 
   await writeStore(store);
-  void sendOrderConfirmationEmail(record).catch(() => undefined);
-  return record;
+  await applyOrderEmailResult(record.id, "confirmation", await sendOrderConfirmationEmail(record));
+  const refreshed = await getOrderById(record.id);
+  return refreshed ?? record;
+}
+
+async function applyOrderEmailResult(
+  orderId: string,
+  kind: NonNullable<FashionOrder["emailLastKind"]>,
+  result: { ok: boolean; detail?: string },
+): Promise<void> {
+  try {
+    const store = await ensureStore();
+    const order = store.orders.find((o) => o.id === orderId);
+    if (!order) return;
+    order.emailLastKind = kind;
+    order.emailLastSentAt = new Date().toISOString();
+    order.emailLastOk = result.ok;
+    order.emailLastError = result.ok ? undefined : result.detail || "Email send failed";
+    if (!result.ok) {
+      console.error("[noorzaa-order-email]", orderId, kind, result.detail);
+    }
+    await writeStore(store);
+  } catch (err) {
+    console.error("[noorzaa-order-email] persist failed", orderId, err);
+  }
 }
 
 export async function updateOrderStatus(
@@ -1480,8 +1503,34 @@ export async function updateOrderStatus(
   }
 
   await writeStore(store);
-  void sendOrderStatusEmail(order, status, message).catch(() => undefined);
-  return order;
+  await applyOrderEmailResult(
+    order.id,
+    "status",
+    await sendOrderStatusEmail(order, status, message),
+  );
+  return (await getOrderById(orderId)) ?? order;
+}
+
+export async function resendOrderEmail(
+  orderId: string,
+): Promise<{ order: FashionOrder | null; email: { ok: boolean; detail?: string } }> {
+  const store = await ensureStore();
+  const order = store.orders.find((o) => o.id === orderId);
+  if (!order) return { order: null, email: { ok: false, detail: "Order not found" } };
+
+  if (!order.email?.trim() && order.customerId) {
+    const customerEmail = store.customers.find((c) => c.id === order.customerId)?.email?.trim();
+    if (customerEmail) order.email = customerEmail;
+  }
+
+  if (!order.email?.trim()) {
+    return { order, email: { ok: false, detail: "Order has no email" } };
+  }
+
+  await writeStore(store);
+  const email = await sendOrderConfirmationEmail(order);
+  await applyOrderEmailResult(order.id, "resend", email);
+  return { order: (await getOrderById(orderId)) ?? order, email };
 }
 
 export async function getAnalytics(period: "daily" | "monthly"): Promise<AnalyticsSummary> {

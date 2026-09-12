@@ -206,13 +206,17 @@ export async function sendTransactionalEmail(options: {
     return { ok: false, detail: "Invalid recipient email" };
   }
   const brand = (options.productName || "App").trim() || "App";
-  const resend = await sendViaResend(
+  let resend = await sendViaResend(
     to,
     options.subject,
     options.text,
     brand,
     options.html,
   );
+  // Some providers reject HTML payloads — retry plain text only.
+  if (!resend.ok && options.html?.trim()) {
+    resend = await sendViaResend(to, options.subject, options.text, brand);
+  }
   if (resend.ok) return { ok: true };
   if (await sendViaSmtp(to, options.subject, options.text)) {
     return { ok: true };

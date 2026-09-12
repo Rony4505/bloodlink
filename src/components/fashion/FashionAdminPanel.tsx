@@ -624,6 +624,22 @@ export function FashionAdminPanel() {
     await load();
   }
 
+  async function resendOrderInvoiceEmail(orderId: string) {
+    const res = await fetch(`/api/fashion/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resendEmail: true }),
+    });
+    const data = await res.json();
+    if (data.order) setSelectedOrder(data.order as FashionOrder);
+    if (!res.ok || data.email?.ok === false) {
+      showSuccess("ইমেইল ব্যর্থ", data.error || data.email?.detail || "মেইল পাঠানো যায়নি", "rose");
+      return;
+    }
+    showSuccess("ইমেইল পাঠানো হয়েছে", "ইনভয়েস মেইল আবার পাঠানো হয়েছে", "ocean");
+    await load();
+  }
+
   function getRuleForDistrict(district: string) {
     return settings?.deliveryRules.find((r) => r.district === district);
   }
@@ -886,9 +902,26 @@ export function FashionAdminPanel() {
                 <li key={i}>{new Date(h.updatedAt).toLocaleString("bn-BD")} — {h.message}</li>
               ))}
             </ul>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <FashionButton variant="secondary" onClick={() => setInvoiceOrder(selectedOrder)}>Invoice দেখুন</FashionButton>
+              <FashionButton
+                variant="secondary"
+                onClick={() => void resendOrderInvoiceEmail(selectedOrder.id)}
+              >
+                ইমেইল আবার পাঠান
+              </FashionButton>
             </div>
+            {selectedOrder.email ? (
+              <p className="mt-2 text-xs text-[#6f554a]">
+                ইমেইল: {selectedOrder.email}
+                {selectedOrder.emailLastSentAt
+                  ? ` · শেষ পাঠানো: ${selectedOrder.emailLastOk === false ? "ব্যর্থ" : "সফল"} (${new Date(selectedOrder.emailLastSentAt).toLocaleString("bn-BD")})`
+                  : ""}
+                {selectedOrder.emailLastError ? ` · ${selectedOrder.emailLastError}` : ""}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-red-700">এই অর্ডারে ইমেইল নেই — মেইল পাঠানো যাবে না</p>
+            )}
 
             {pendingStatus?.orderId === selectedOrder.id ? (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[2rem] bg-[#1a2840]/50 p-4 backdrop-blur-[3px]">
