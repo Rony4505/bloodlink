@@ -98,7 +98,7 @@ export const copy = {
   form: {
     name: "পূর্ণ নাম",
     phone: "ফোন নম্বর",
-    email: "ইমেইল (ঐচ্ছিক)",
+    email: "ইমেইল",
     address: "ডেলিভারি ঠিকানা",
     district: "জেলা",
     note: "নোট (ঐচ্ছিক)",

@@ -185,6 +185,34 @@ async function sendViaSmsBd(to: string, message: string): Promise<OtpDeliveryRes
   }
 }
 
+export type TransactionalEmailResult = {
+  ok: boolean;
+  detail?: string;
+};
+
+/** Generic transactional email (orders, tracking, etc.) via Resend or SMTP webhook. */
+export async function sendTransactionalEmail(options: {
+  to: string;
+  subject: string;
+  text: string;
+  productName?: string;
+}): Promise<TransactionalEmailResult> {
+  const to = options.to.trim();
+  if (!to || !to.includes("@")) {
+    return { ok: false, detail: "Invalid recipient email" };
+  }
+  const brand = (options.productName || "App").trim() || "App";
+  const resend = await sendViaResend(to, options.subject, options.text, brand);
+  if (resend.ok) return { ok: true };
+  if (await sendViaSmtp(to, options.subject, options.text)) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    detail: resend.detail || "Transactional email delivery failed",
+  };
+}
+
 export async function deliverEmailOtp(
   to: string,
   code: string,

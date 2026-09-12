@@ -30,6 +30,10 @@ import {
   normalizeProductColors,
 } from "./product-colors";
 import {
+  sendOrderConfirmationEmail,
+  sendOrderStatusEmail,
+} from "./order-emails";
+import {
   hasDatabaseUrl,
   loadFashionStoreCountsFromPostgres,
   loadFashionStoreFromPostgres,
@@ -1392,8 +1396,14 @@ export async function createOrder(
 ): Promise<FashionOrder> {
   const store = await ensureStore();
   const now = new Date().toISOString();
+  const customerEmail =
+    order.email?.trim() ||
+    (order.customerId
+      ? store.customers.find((c) => c.id === order.customerId)?.email?.trim()
+      : undefined);
   const record: FashionOrder = {
     ...order,
+    email: customerEmail || undefined,
     id: `SC${Date.now().toString().slice(-8)}`,
     trackingNumber: generateTrackingNumber(),
     status: "pending",
@@ -1434,6 +1444,7 @@ export async function createOrder(
   }
 
   await writeStore(store);
+  void sendOrderConfirmationEmail(record).catch(() => undefined);
   return record;
 }
 
@@ -1445,6 +1456,11 @@ export async function updateOrderStatus(
   const store = await ensureStore();
   const order = store.orders.find((o) => o.id === orderId);
   if (!order) return null;
+
+  if (!order.email?.trim() && order.customerId) {
+    const customerEmail = store.customers.find((c) => c.id === order.customerId)?.email?.trim();
+    if (customerEmail) order.email = customerEmail;
+  }
 
   const now = new Date().toISOString();
   order.status = status;
@@ -1464,6 +1480,7 @@ export async function updateOrderStatus(
   }
 
   await writeStore(store);
+  void sendOrderStatusEmail(order, status, message).catch(() => undefined);
   return order;
 }
 
