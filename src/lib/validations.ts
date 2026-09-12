@@ -295,6 +295,14 @@ export const platformOptionsSchema = z.object({
   futureServices: platformFeatureSchema,
 });
 
+export const referralSettingsSchema = z.object({
+  enabled: z.boolean(),
+  rewardAmountBdt: z.number().min(0).max(10_000),
+  rewardOn: z.literal("registration"),
+  cashOutEnabled: z.boolean(),
+  adminNotes: z.string().trim().max(500).optional().default(""),
+});
+
 const notificationChannelSchema = z.object({
   enabled: z.boolean(),
   locked: z.boolean().optional().default(false),

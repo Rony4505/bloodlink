@@ -37,6 +37,10 @@ import {
   normalizeNotificationSettings,
 } from "./notification-settings";
 import {
+  defaultReferralSettings,
+  normalizeReferralSettings,
+} from "./referral-settings";
+import {
   hasDatabaseUrl,
   listDbEnvKeys,
   loadDbFromPostgres,
@@ -232,6 +236,7 @@ async function defaultAdmin(): Promise<AdminSettings> {
     privacyEn: DEFAULT_PRIVACY_EN,
     platformOptions: defaultPlatformOptions(),
     notificationSettings: defaultNotificationSettings(),
+    referralSettings: defaultReferralSettings(),
     banners: [],
     bannerSlideIntervalSec: DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
     siteAppearance: defaultSiteAppearance(),
@@ -448,6 +453,9 @@ async function resolveAdmin(parsed: Partial<DatabaseShape>): Promise<{
         platformOptions: normalizePlatformOptions(parsed.admin.platformOptions),
         notificationSettings: normalizeNotificationSettings(
           parsed.admin.notificationSettings,
+        ),
+        referralSettings: normalizeReferralSettings(
+          parsed.admin.referralSettings,
         ),
         banners: normalizeBanners(parsed.admin.banners),
         bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(
@@ -2241,6 +2249,9 @@ export async function updateAdminSettings(
     }
     if (patch.platformOptions) {
       next.platformOptions = normalizePlatformOptions(patch.platformOptions);
+    }
+    if (patch.referralSettings) {
+      next.referralSettings = normalizeReferralSettings(patch.referralSettings);
     }
     db.admin = next;
     await persist(db);

@@ -24,9 +24,11 @@ import type {
   BannerSize,
   NotificationSettings,
   OrgBanner,
+  ReferralSettings,
   SiteAppearance,
 } from "@/lib/types";
 import { defaultNotificationSettings } from "@/lib/notification-settings";
+import { defaultReferralSettings } from "@/lib/referral-settings";
 
 type AdminDonor = {
   id: string;
@@ -133,7 +135,16 @@ export function AdminPanel() {
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
-    null | "storage" | "backup" | "features" | "notifications" | "appearance" | "ads" | "privacy" | "security"
+    | null
+    | "storage"
+    | "backup"
+    | "features"
+    | "notifications"
+    | "referral"
+    | "appearance"
+    | "ads"
+    | "privacy"
+    | "security"
   >(null);
   const [savePopup, setSavePopup] = useState(false);
 
@@ -170,6 +181,9 @@ export function AdminPanel() {
   });
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     () => defaultNotificationSettings(),
+  );
+  const [referralSettings, setReferralSettings] = useState<ReferralSettings>(
+    () => defaultReferralSettings(),
   );
   const [pushAllow, setPushAllow] = useState<{
     donorCount: number;
@@ -404,6 +418,13 @@ export function AdminPanel() {
           enabled: Boolean(data.platformOptions.futureServices?.enabled),
           notes: data.platformOptions.futureServices?.notes || "",
         },
+      });
+    }
+    if (data.referralSettings) {
+      setReferralSettings({
+        ...defaultReferralSettings(),
+        ...data.referralSettings,
+        rewardOn: "registration",
       });
     }
     if (data.notificationSettings) {
@@ -746,6 +767,39 @@ export function AdminPanel() {
       }),
     });
     if (res.ok) flashSaved(t.saved); else setSettingsMsg(t.errorGeneric);
+  }
+
+  async function saveReferralSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "referral-settings",
+        referralSettings: {
+          ...referralSettings,
+          rewardAmountBdt: Math.max(
+            0,
+            Math.min(10_000, Math.round(Number(referralSettings.rewardAmountBdt) || 0)),
+          ),
+          rewardOn: "registration",
+        },
+      }),
+    });
+    if (!res.ok) {
+      setSettingsMsg(t.errorGeneric);
+      return;
+    }
+    const data = await res.json();
+    if (data.referralSettings) {
+      setReferralSettings({
+        ...defaultReferralSettings(),
+        ...data.referralSettings,
+        rewardOn: "registration",
+      });
+    }
+    flashSaved(t.saved);
   }
 
   async function saveNotificationSettings(e: React.FormEvent) {
@@ -1942,6 +1996,7 @@ export function AdminPanel() {
               ["storage", t.storageSetup],
               ["backup", t.backupTitle],
               ["notifications", t.notificationSettings],
+              ["referral", t.referralSettings],
               ["features", t.futureFeatures],
               ["appearance", t.siteAppearance],
               ["ads", t.orgBanners],
@@ -2396,6 +2451,132 @@ export function AdminPanel() {
                   </button>
                 </form>
               </div>
+            </div>
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "referral"}
+            title={t.referralSettings}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-4">
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--blood-deep)]">
+                {t.referralSettings}
+              </h2>
+              <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_82%,white)]">
+                {t.referralSettingsBody}
+              </p>
+
+              <form onSubmit={saveReferralSettings} className="space-y-4">
+                <div className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold">{t.referralEnabled}</p>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={referralSettings.enabled}
+                        onChange={(e) =>
+                          setReferralSettings((prev) => ({
+                            ...prev,
+                            enabled: e.target.checked,
+                          }))
+                        }
+                      />
+                      {referralSettings.enabled
+                        ? t.featureEnabled
+                        : t.featureDisabled}
+                    </label>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+                    {t.referralEnabledHint}
+                  </p>
+                </div>
+
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">
+                    {t.referralRewardAmount}
+                  </span>
+                  <input
+                    className="field"
+                    type="number"
+                    min={0}
+                    max={10000}
+                    step={1}
+                    value={referralSettings.rewardAmountBdt}
+                    onChange={(e) =>
+                      setReferralSettings((prev) => ({
+                        ...prev,
+                        rewardAmountBdt: Number(e.target.value || 0),
+                      }))
+                    }
+                  />
+                  <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+                    {t.referralRewardAmountHint}
+                  </span>
+                </label>
+
+                <div className="rounded-xl border border-[var(--line)] bg-white/80 px-4 py-3 text-sm">
+                  <p className="font-semibold text-[var(--blood-deep)]">
+                    {t.referralRewardOn}
+                  </p>
+                  <p className="mt-1 text-[color-mix(in_oklab,var(--ink)_80%,white)]">
+                    {t.referralRewardOnRegistration}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_20%,white)] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold">{t.referralCashOut}</p>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={referralSettings.cashOutEnabled}
+                        onChange={(e) =>
+                          setReferralSettings((prev) => ({
+                            ...prev,
+                            cashOutEnabled: e.target.checked,
+                          }))
+                        }
+                      />
+                      {referralSettings.cashOutEnabled
+                        ? t.featureEnabled
+                        : t.featureDisabled}
+                    </label>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+                    {t.referralCashOutHint}
+                  </p>
+                </div>
+
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">{t.featureNotes}</span>
+                  <textarea
+                    className="field min-h-20"
+                    value={referralSettings.adminNotes}
+                    onChange={(e) =>
+                      setReferralSettings((prev) => ({
+                        ...prev,
+                        adminNotes: e.target.value,
+                      }))
+                    }
+                    placeholder={t.referralAdminNotesPlaceholder}
+                  />
+                </label>
+
+                <div className="rounded-xl border border-dashed border-[rgba(155,27,46,0.25)] bg-white/70 px-4 py-5">
+                  <p className="font-semibold text-[var(--blood-deep)]">
+                    {t.referralHistoryTitle}
+                  </p>
+                  <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+                    {t.referralHistoryEmpty}
+                  </p>
+                </div>
+
+                <button type="submit" className="btn-primary">
+                  {t.saveChanges}
+                </button>
+              </form>
             </div>
           </AdminSettingsPanel>
 

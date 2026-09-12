@@ -298,6 +298,18 @@ export type SiteAppearance = {
   successStories: SuccessStory[];
 };
 
+/** Admin-controlled referral rewards (user share flow comes later). */
+export type ReferralSettings = {
+  enabled: boolean;
+  /** BDT credited to referrer per successful registration. */
+  rewardAmountBdt: number;
+  /** When reward is granted — Phase 1 uses successful OTP registration only. */
+  rewardOn: "registration";
+  /** Allow donors to request cash-out from wallet (Phase 3). */
+  cashOutEnabled: boolean;
+  adminNotes: string;
+};
+
 export type AdminSettings = {
   username: string;
   passwordHash: string;
@@ -316,6 +328,7 @@ export type AdminSettings = {
   privacyEn: string;
   platformOptions: PlatformOptions;
   notificationSettings: NotificationSettings;
+  referralSettings: ReferralSettings;
   banners: OrgBanner[];
   /** Seconds between auto-slides on public advertisement banners (default 3). */
   bannerSlideIntervalSec: number;

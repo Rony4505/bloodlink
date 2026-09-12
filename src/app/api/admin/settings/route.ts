@@ -16,6 +16,7 @@ import {
 import { getAdminRecoveryEmail, maskEmail } from "@/lib/admin-recovery";
 import { deliverEmailOtp } from "@/lib/otp-delivery";
 import { normalizeNotificationSettings } from "@/lib/notification-settings";
+import { normalizeReferralSettings } from "@/lib/referral-settings";
 import {
   normalizeBanner,
   normalizeBannerSlideIntervalSec,
@@ -25,6 +26,7 @@ import {
   notificationBroadcastSchema,
   notificationSettingsSchema,
   platformOptionsSchema,
+  referralSettingsSchema,
 } from "@/lib/validations";
 import type { OrgBanner } from "@/lib/types";
 
@@ -47,6 +49,7 @@ export async function GET() {
     privacyEn: admin.privacyEn,
     platformOptions: admin.platformOptions,
     notificationSettings: normalizeNotificationSettings(admin.notificationSettings),
+    referralSettings: normalizeReferralSettings(admin.referralSettings),
     pushAllow,
     banners: admin.banners || [],
     bannerSlideIntervalSec: normalizeBannerSlideIntervalSec(admin.bannerSlideIntervalSec),
@@ -268,6 +271,16 @@ export async function PATCH(request: Request) {
     }
     await updateAdminSettings({ platformOptions: parsed.data });
     return NextResponse.json({ ok: true, platformOptions: parsed.data });
+  }
+
+  if (action === "referral-settings") {
+    const parsed = referralSettingsSchema.safeParse(body.referralSettings);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid referral settings" }, { status: 400 });
+    }
+    const referralSettings = normalizeReferralSettings(parsed.data);
+    await updateAdminSettings({ referralSettings });
+    return NextResponse.json({ ok: true, referralSettings });
   }
 
   if (action === "notifications") {

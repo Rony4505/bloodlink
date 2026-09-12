@@ -580,6 +580,24 @@ export const dictionaries = {
     backupRotatingHint:
       "The server also keeps automatic copies on the Volume (/app/data/backups) every few hours.",
     futureFeatures: "Future platform options",
+    referralSettings: "Referral rewards",
+    referralSettingsBody:
+      "Turn referral rewards on when you are ready. Donors will share a link later; for now this admin page stores the rules.",
+    referralEnabled: "Referral system",
+    referralEnabledHint:
+      "When enabled, a successful registration via a referral link can credit the referrer (user share UI comes next).",
+    referralRewardAmount: "Reward per successful referral (BDT)",
+    referralRewardAmountHint:
+      "Amount added to the referrer’s balance for each successful registration.",
+    referralRewardOn: "When is the reward given?",
+    referralRewardOnRegistration: "After successful Gmail OTP registration (Phase 1).",
+    referralCashOut: "Cash-out requests",
+    referralCashOutHint:
+      "Later: donors can request payout. Keep off until wallet + payout flow is built.",
+    referralAdminNotesPlaceholder: "Internal notes for your team…",
+    referralHistoryTitle: "Referral activity",
+    referralHistoryEmpty:
+      "No referral events yet. History will appear here after the public referral link is live.",
     futureFeaturesBody:
       "Turn these on when you are ready. They stay in Settings until you launch each service.",
     hospitalAccess: "Hospital access (limited)",
@@ -1466,6 +1484,24 @@ export const dictionaries = {
     backupRotatingHint:
       "সার্ভার Volume-এ (/app/data/backups) প্রতি কয়েক ঘণ্টায় automatic backup-ও রাখে।",
     futureFeatures: "ভবিষ্যৎ প্ল্যাটফর্ম অপশন",
+    referralSettings: "রেফারেল রিওয়ার্ড",
+    referralSettingsBody:
+      "প্রস্তুত হলে রেফারেল রিওয়ার্ড চালু করুন। ডোনাররা পরে লিঙ্ক শেয়ার করবে; আপাতত এই অ্যাডমিন পেজে নিয়ম সেভ হয়।",
+    referralEnabled: "রেফারেল সিস্টেম",
+    referralEnabledHint:
+      "চালু থাকলে রেফার লিঙ্ক দিয়ে সফল রেজিস্ট্রেশনে রেফারার ক্রেডিট পেতে পারে (ইউজার শেয়ার UI পরের ধাপ)।",
+    referralRewardAmount: "প্রতি সফল রেফারে রিওয়ার্ড (টাকা)",
+    referralRewardAmountHint:
+      "প্রতি সফল রেজিস্ট্রেশনে রেফারারের ব্যালেন্সে যোগ হবে এমন পরিমাণ।",
+    referralRewardOn: "কখন রিওয়ার্ড দেওয়া হবে?",
+    referralRewardOnRegistration: "সফল Gmail OTP রেজিস্ট্রেশনের পর (Phase 1)।",
+    referralCashOut: "ক্যাশ-আউট রিকোয়েস্ট",
+    referralCashOutHint:
+      "পরে: ডোনার পেআউট চাইতে পারবে। ওয়ালেট + পেআউট তৈরি না হওয়া পর্যন্ত বন্ধ রাখুন।",
+    referralAdminNotesPlaceholder: "টিমের জন্য অভ্যন্তরীণ নোট…",
+    referralHistoryTitle: "রেফারেল অ্যাক্টিভিটি",
+    referralHistoryEmpty:
+      "এখনো কোনো রেফারেল ইভেন্ট নেই। পাবলিক রেফার লিঙ্ক চালু হলে এখানে হিস্ট্রি দেখাবে।",
     futureFeaturesBody:
       "প্রস্তুত হলে চালু করুন। প্রতিটি সার্ভিস লঞ্চের আগে Settings-এ সংরক্ষিত থাকবে।",
     hospitalAccess: "হাসপাতাল অ্যাক্সেস (সীমিত)",
