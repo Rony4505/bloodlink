@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ProductGrid } from "@/components/fashion/ProductGrid";
 import { VisibleSelect } from "@/components/fashion/VisibleSelect";
 import { getEffectivePrice } from "@/lib/fashion/pricing";
@@ -17,6 +18,15 @@ function sortProducts(products: Product[], sort: PriceSort): Product[] {
   return [...products].sort((a, b) => {
     const diff = getEffectivePrice(a) - getEffectivePrice(b);
     return sort === "price-asc" ? diff : -diff;
+  });
+}
+
+function uniqueById(products: Product[]): Product[] {
+  const seen = new Set<string>();
+  return products.filter((p) => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
   });
 }
 
@@ -80,6 +90,7 @@ function ProductSection({
   sort,
   onSortChange,
   locale,
+  sectionId,
 }: {
   title: string;
   subtitle?: string;
@@ -87,6 +98,7 @@ function ProductSection({
   sort: PriceSort;
   onSortChange: (value: PriceSort) => void;
   locale: "bn" | "en";
+  sectionId?: string;
 }) {
   const sorted = useMemo(() => sortProducts(products, sort), [products, sort]);
   const [page, setPage] = useState(1);
@@ -94,8 +106,10 @@ function ProductSection({
   const safePage = Math.min(page, totalPages);
   const pageItems = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+  if (!products.length) return null;
+
   return (
-    <section className="border-b border-black/5 bg-white text-[#4a3348]">
+    <section id={sectionId} className="border-b border-black/5 bg-white text-[#4a3348]">
       <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -138,11 +152,29 @@ export function HomeProductBrowse({
   showOffers?: boolean;
 }) {
   const { fc, locale } = useFashionCopy();
+  const searchParams = useSearchParams();
   const [categorySlug, setCategorySlug] = useState("");
   const [categorySort, setCategorySort] = useState<PriceSort>("default");
-  const [newSort, setNewSort] = useState<PriceSort>("default");
-  const [offerSort, setOfferSort] = useState<PriceSort>("default");
+  const [highlightSort, setHighlightSort] = useState<PriceSort>("default");
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("category")?.trim() || "";
+    if (fromUrl) {
+      setCategorySlug(fromUrl);
+      setPage(1);
+      window.setTimeout(() => {
+        document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  }, [searchParams]);
+
+  const highlightProducts = useMemo(() => {
+    const bucket: Product[] = [];
+    if (showOffers) bucket.push(...offerProducts);
+    if (showNewProducts) bucket.push(...newProducts);
+    return uniqueById(bucket);
+  }, [offerProducts, newProducts, showOffers, showNewProducts]);
 
   const categoryProducts = useMemo(() => {
     const filtered = categorySlug
@@ -158,37 +190,32 @@ export function HomeProductBrowse({
 
   return (
     <>
-      {showOffers ? (
+      {/* New + discount/offers together */}
+      {highlightProducts.length > 0 ? (
         <ProductSection
-          title={fc.home.offers}
-          subtitle={fc.home.offersSub}
-          products={offerProducts}
-          sort={offerSort}
-          onSortChange={setOfferSort}
+          title={locale === "bn" ? "নতুন ও অফার" : "New & offers"}
+          subtitle={
+            locale === "bn"
+              ? "নতুন প্রোডাক্ট, ডিসকাউন্ট ও চলমান অফার একসাথে"
+              : "New arrivals, discounts, and live offers in one place"
+          }
+          products={highlightProducts}
+          sort={highlightSort}
+          onSortChange={setHighlightSort}
           locale={locale}
+          sectionId="offers"
         />
       ) : null}
 
-      {showNewProducts ? (
-        <ProductSection
-          title={fc.home.newProducts}
-          subtitle={fc.home.newProductsSub}
-          products={newProducts}
-          sort={newSort}
-          onSortChange={setNewSort}
-          locale={locale}
-        />
-      ) : null}
-
-      <section className="border-b border-black/5 bg-[#f3f1ef] text-[#4a3348]">
+      <section id="products" className="border-b border-black/5 bg-[#f3f1ef] text-[#4a3348]">
         <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-20">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className={localeEyebrowClass(locale)}>
-                {fc.home.categoryTitle}
-              </p>
+              <p className={localeEyebrowClass(locale)}>{fc.home.categoryTitle}</p>
               <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold md:text-4xl">
-                {selectedCategory ? selectedCategory.titleBn : fc.home.allProducts}
+                {selectedCategory
+                  ? selectedCategory.titleBn || selectedCategory.title
+                  : fc.home.allProducts}
               </h2>
               <p className="mt-2 text-sm text-[#6e5449]">{fc.home.categoryHint}</p>
             </div>
@@ -230,7 +257,7 @@ export function HomeProductBrowse({
                     : "border-2 border-[#8f624e]/50 bg-[#f3ebe4] text-[#1c1412] hover:bg-[#ebe0d6]"
                 }`}
               >
-                {cat.titleBn}
+                {cat.titleBn || cat.title}
               </button>
             ))}
           </div>
@@ -243,7 +270,7 @@ export function HomeProductBrowse({
             totalPages={totalPages}
             onChange={(n) => {
               setPage(n);
-              window.scrollTo({ top: 400, behavior: "smooth" });
+              document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
           />
         </div>

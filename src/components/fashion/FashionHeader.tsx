@@ -204,27 +204,59 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
   return (
     <header
       className={cn(
-        "relative z-30 rounded-[2rem] border px-5 py-4 backdrop-blur md:px-7",
+        "relative z-30 overflow-hidden rounded-[2rem] border px-5 py-4 backdrop-blur md:px-7",
         isDark
           ? "border-[#e8d4e8]/60 bg-white/75 text-[#4a3348] shadow-[0_18px_60px_rgba(122,85,128,0.08)]"
           : "border-[#e8d4c4]/50 bg-white/92 text-[#4a3348] shadow-[0_18px_60px_rgba(122,85,128,0.06)]",
       )}
     >
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <Link href="/" className="group min-w-0 shrink-0">
-          <p className="truncate font-[family-name:var(--font-display)] text-xl font-bold tracking-[0.16em] uppercase md:text-2xl">
-            {brand}
-          </p>
-          <p className={cn("mt-1 truncate text-sm", isDark ? "text-[#6e5870]" : "text-[#7a5c50]")}>
-            {tagline}
-          </p>
-        </Link>
+      {/* Feminine watermark — signals Noorzaa is for women */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2rem]">
+        <svg
+          className="absolute -right-2 top-1/2 h-[135%] w-auto -translate-y-1/2 opacity-[0.08]"
+          viewBox="0 0 220 280"
+          fill="none"
+        >
+          <path
+            d="M110 28c-28 8-48 34-48 66 0 22 10 40 26 52-18 10-30 30-30 54 0 38 34 68 76 68s76-30 76-68c0-24-12-44-30-54 16-12 26-30 26-52 0-32-20-58-48-66-8 22-28 36-48 36s-40-14-48-36Z"
+            fill="#8f4e6a"
+          />
+          <path
+            d="M110 42c18 0 34-10 42-26 6 20 22 34 42 38-16 10-28 28-28 48 0 20 10 36 26 46-14 8-24 24-24 42 0 28-26 50-58 50s-58-22-58-50c0-18-10-34-24-42 16-10 26-26 26-46 0-20-12-38-28-48 20-4 36-18 42-38 8 16 24 26 42 26Z"
+            fill="#c9859a"
+            opacity="0.55"
+          />
+          <circle cx="48" cy="210" r="10" fill="#b76e79" opacity="0.5" />
+          <circle cx="172" cy="210" r="10" fill="#b76e79" opacity="0.5" />
+          <path
+            d="M40 230c20-18 40-18 60 0M120 230c20-18 40-18 60 0"
+            stroke="#8f4e6a"
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.45"
+          />
+        </svg>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_15%_0%,rgba(201,133,154,0.14),transparent_55%),radial-gradient(ellipse_at_95%_100%,rgba(143,78,106,0.1),transparent_50%)]" />
+        <p className="absolute bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap font-[family-name:var(--font-display)] text-[9px] font-semibold tracking-[0.32em] text-[#8f4e6a]/40 uppercase md:text-[10px]">
+          for her · নারীর ফ্যাশন
+        </p>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
-          <LanguageSwitcher compact className="order-last w-full justify-center sm:order-none sm:w-auto md:mr-1" />
+      <div className="relative z-10 flex flex-col gap-3">
+        {/* Icons on top (+ home) */}
+        <div className="flex flex-wrap items-center justify-end gap-2 md:gap-2.5">
+          <NavIconButton
+            href="/"
+            label={locale === "bn" ? "হোম" : "Home"}
+            active={pathname === "/"}
+            activeClass={activeClass}
+            idleClass={idleClass}
+          >
+            <HomeIcon />
+          </NavIconButton>
 
           {searchOpen ? (
-            <form onSubmit={handleSearchSubmit} className="w-full min-w-[200px] flex-1 md:max-w-xs">
+            <form onSubmit={handleSearchSubmit} className="w-full min-w-[160px] flex-1 md:max-w-xs">
               <input
                 autoFocus
                 className="field w-full rounded-full py-2 text-sm"
@@ -307,9 +339,35 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
             <CartIcon />
           </NavIconButton>
         </div>
+
+        {/* Brand + language — Noorzaa is NOT a link */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 select-none">
+            <p className="truncate font-[family-name:var(--font-display)] text-2xl font-bold tracking-[0.18em] uppercase text-[#4a3348] md:text-3xl">
+              {brand}
+            </p>
+            <p className={cn("mt-1 truncate text-sm", isDark ? "text-[#6e5870]" : "text-[#7a5c50]")}>
+              {tagline}
+            </p>
+          </div>
+          <LanguageSwitcher compact className="justify-center sm:justify-end" />
+        </div>
       </div>
       {dropdown}
     </header>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
