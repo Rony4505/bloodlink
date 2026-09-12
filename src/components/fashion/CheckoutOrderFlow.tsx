@@ -307,23 +307,19 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
           <p className="text-sm font-semibold text-[#5c4860]">{fc.form.payment} *</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {CHECKOUT_PAYMENT_METHODS.map((method) => (
-              <label
+              <button
                 key={method}
-                className={`cursor-pointer rounded-2xl border px-4 py-3 text-center text-sm font-semibold ${
+                type="button"
+                className={`rounded-2xl border px-4 py-3 text-center text-sm font-semibold transition ${
                   form.paymentMethod === method
                     ? "border-[#8f624e] bg-[#faf0ea] text-[#8f624e]"
-                    : "border-black/8 bg-[#faf4f0] text-[#5b4339]"
+                    : "border-black/8 bg-[#faf4f0] text-[#5b4339] hover:border-[#8f624e]/40"
                 }`}
+                aria-pressed={form.paymentMethod === method}
+                onClick={() => setForm((c) => ({ ...c, paymentMethod: method }))}
               >
-                <input
-                  type="radio"
-                  name="payment"
-                  className="sr-only"
-                  checked={form.paymentMethod === method}
-                  onChange={() => setForm((c) => ({ ...c, paymentMethod: method }))}
-                />
                 {paymentMethodTitle(method, fc)}
-              </label>
+              </button>
             ))}
           </div>
 
