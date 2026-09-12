@@ -1,3 +1,4 @@
+import { normalizeCheckoutPaymentMethod } from "./payment";
 import type { CheckoutForm } from "./types";
 
 const DRAFT_KEY = "scc_checkout_draft_v1";
@@ -8,7 +9,11 @@ export function readCheckoutDraft(): Partial<CheckoutForm> {
     const raw = window.localStorage.getItem(DRAFT_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Partial<CheckoutForm>;
-    return parsed && typeof parsed === "object" ? parsed : {};
+    if (!parsed || typeof parsed !== "object") return {};
+    return {
+      ...parsed,
+      paymentMethod: normalizeCheckoutPaymentMethod(parsed.paymentMethod),
+    };
   } catch {
     return {};
   }

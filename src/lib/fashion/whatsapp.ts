@@ -1,5 +1,6 @@
 import type { CheckoutForm, FashionOrder, FashionOrderItem } from "./types";
 import { formatBdt } from "./format";
+import { paymentMethodLabel } from "./payment";
 
 const WHATSAPP_NUMBER = process.env.FASHION_WHATSAPP || "8801700000000";
 
@@ -13,20 +14,21 @@ export function buildWhatsAppOrderMessage(order: {
   phone: string;
   address: string;
   district: string;
-  paymentMethod: CheckoutForm["paymentMethod"];
+  paymentMethod: FashionOrder["paymentMethod"] | CheckoutForm["paymentMethod"];
   items: FashionOrderItem[];
   total: number;
   note?: string;
 }): string {
-  const paymentLabel =
-    order.paymentMethod === "cod"
-      ? "Cash on Delivery"
-      : order.paymentMethod === "bkash"
-        ? "bKash"
-        : "Nagad";
+  const paymentLabel = paymentMethodLabel(order.paymentMethod, {
+    cod: "Cash on Delivery",
+    bank: "Bank",
+    mobileBanking: "Mobile banking",
+    bkash: "bKash",
+    nagad: "Nagad",
+  });
 
   const lines = [
-    "Assalamu Alaikum, Smart craft corner থেকে নতুন অর্ডার:",
+    "Assalamu Alaikum, Noorzaa থেকে নতুন অর্ডার:",
     "",
     `Order ID: ${order.id}`,
     `Name: ${order.customerName}`,

@@ -590,6 +590,72 @@ export function SettingsEditor({
               onChange={(e) => patch("instagramUrl", e.target.value)}
             />
           </Field>
+          <div className="sm:col-span-2 rounded-2xl border border-[#e8d4e8]/70 bg-[#faf6f8] p-4">
+            <p className="mb-3 text-sm font-semibold text-[#5c4860]">
+              {fc.admin.settingsPaymentAccounts}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={fc.admin.settingsBankName}>
+                <input
+                  className="field"
+                  value={settings.bankName ?? ""}
+                  onChange={(e) => patch("bankName", e.target.value)}
+                />
+              </Field>
+              <Field label={fc.admin.settingsBankAccountName}>
+                <input
+                  className="field"
+                  value={settings.bankAccountName ?? ""}
+                  onChange={(e) => patch("bankAccountName", e.target.value)}
+                />
+              </Field>
+              <Field label={fc.admin.settingsBankAccountNumber}>
+                <input
+                  className="field"
+                  value={settings.bankAccountNumber ?? ""}
+                  onChange={(e) => patch("bankAccountNumber", e.target.value)}
+                />
+              </Field>
+              <Field label={fc.admin.settingsBankBranch}>
+                <input
+                  className="field"
+                  value={settings.bankBranch ?? ""}
+                  onChange={(e) => patch("bankBranch", e.target.value)}
+                />
+              </Field>
+              <Field label={fc.admin.settingsBkashNumber}>
+                <input
+                  className="field"
+                  value={settings.bkashNumber ?? ""}
+                  onChange={(e) => patch("bkashNumber", e.target.value)}
+                />
+              </Field>
+              <Field label={fc.admin.settingsNagadNumber}>
+                <input
+                  className="field"
+                  value={settings.nagadNumber ?? ""}
+                  onChange={(e) => patch("nagadNumber", e.target.value)}
+                />
+              </Field>
+              <Field label={fc.admin.settingsRocketNumber}>
+                <input
+                  className="field"
+                  value={settings.rocketNumber ?? ""}
+                  onChange={(e) => patch("rocketNumber", e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="mt-3">
+              <DualText
+                label={fc.admin.settingsPaymentNote}
+                bn={settings.paymentNote ?? ""}
+                en={settings.paymentNoteEn ?? ""}
+                onBn={(v) => patch("paymentNote", v)}
+                onEn={(v) => patch("paymentNoteEn", v)}
+                multiline
+              />
+            </div>
+          </div>
           <div className="sm:col-span-2">
             <DualText
               label={fc.admin.settingsSupportNote}

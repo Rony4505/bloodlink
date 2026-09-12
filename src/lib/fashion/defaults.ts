@@ -38,6 +38,17 @@ export const defaultSettings: StoreSettings = {
   whatsapp: "8801700000000",
   supportNote: "ঢাকা ডেলিভারি + সারা দেশে কুরিয়ার",
   supportNoteEn: "Dhaka delivery + nationwide courier",
+  bankName: "",
+  bankAccountName: "",
+  bankAccountNumber: "",
+  bankBranch: "",
+  bkashNumber: "",
+  nagadNumber: "",
+  rocketNumber: "",
+  paymentNote:
+    "ব্যাংক বা মোবাইল ব্যাংকিং দিয়ে পেমেন্ট করলে অর্ডার নোট/রেফারেন্সে আপনার নাম ও ফোন নম্বর লিখুন।",
+  paymentNoteEn:
+    "For bank or mobile banking, include your name and phone in the payment reference/note.",
   facebookUrl: "",
   instagramUrl: "",
   footerText:

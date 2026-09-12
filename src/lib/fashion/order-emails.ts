@@ -1,4 +1,5 @@
 import { copy as fashionCopy } from "@/lib/fashion/copy";
+import { paymentMethodLabel } from "@/lib/fashion/payment";
 import { formatBdt } from "@/lib/fashion/format";
 import type { FashionOrder, OrderStatus } from "@/lib/fashion/types";
 import { getSiteUrl } from "@/lib/site";
@@ -15,9 +16,13 @@ function escapeHtml(value: string): string {
 }
 
 function paymentLabel(method: FashionOrder["paymentMethod"]): string {
-  if (method === "bkash") return fashionCopy.form.bkash;
-  if (method === "nagad") return fashionCopy.form.nagad;
-  return fashionCopy.form.cod;
+  return paymentMethodLabel(method, {
+    cod: fashionCopy.form.cod,
+    bank: fashionCopy.form.bank,
+    mobileBanking: fashionCopy.form.mobileBanking,
+    bkash: fashionCopy.form.bkash,
+    nagad: fashionCopy.form.nagad,
+  });
 }
 
 function statusLabel(status: OrderStatus): string {
