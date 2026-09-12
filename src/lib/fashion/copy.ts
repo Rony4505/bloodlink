@@ -105,8 +105,18 @@ export const copy = {
     password: "পাসওয়ার্ড",
     payment: "পেমেন্ট পদ্ধতি",
     cod: "ক্যাশ অন ডেলিভারি",
+    bank: "ব্যাংক",
+    mobileBanking: "মোবাইল ব্যাংকিং",
     bkash: "bKash",
     nagad: "Nagad",
+    rocket: "Rocket",
+    bankName: "ব্যাংকের নাম",
+    bankAccountName: "অ্যাকাউন্টের নাম",
+    bankAccountNumber: "অ্যাকাউন্ট নম্বর",
+    bankBranch: "ব্রাঞ্চ",
+    payToAccounts: "পেমেন্ট করুন এই অ্যাকাউন্টে",
+    noAccountsConfigured:
+      "এখনো কোনো অ্যাকাউন্ট নম্বর যোগ করা হয়নি — অ্যাডমিন সেটিংস থেকে যোগ করুন।",
   },
   orderStatus: {
     pending: "অপেক্ষমাণ",

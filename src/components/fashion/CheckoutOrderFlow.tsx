@@ -11,9 +11,20 @@ import {
 } from "@/lib/fashion/checkout-draft";
 import { useCart } from "@/lib/fashion/cart-context";
 import { fashionLightSurfaceClass } from "@/lib/fashion/locale-text-style";
+import {
+  CHECKOUT_PAYMENT_METHODS,
+  hasBankAccounts,
+  hasMobileBankingAccounts,
+  normalizeCheckoutPaymentMethod,
+} from "@/lib/fashion/payment";
 import { useFashionCopy } from "@/lib/fashion/use-fashion-copy";
 import { bangladeshDistricts } from "@/lib/fashion/districts";
-import type { CheckoutForm, FashionOrder } from "@/lib/fashion/types";
+import type {
+  CheckoutForm,
+  CheckoutPaymentMethod,
+  FashionOrder,
+  StoreSettings,
+} from "@/lib/fashion/types";
 
 const districts = bangladeshDistricts.filter((d) => d !== "*");
 
@@ -27,6 +38,15 @@ const initialForm: CheckoutForm = {
   paymentMethod: "cod",
   couponCode: "",
 };
+
+function paymentMethodTitle(
+  method: CheckoutPaymentMethod,
+  fc: ReturnType<typeof useFashionCopy>["fc"],
+): string {
+  if (method === "bank") return fc.form.bank;
+  if (method === "mobile_banking") return fc.form.mobileBanking;
+  return fc.form.cod;
+}
 
 function IconField({
   icon,
@@ -74,11 +94,16 @@ function IconField({
 export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boolean }) {
   const router = useRouter();
   const { items, subtotal, updateQuantity, removeItem, clearCart } = useCart();
-  const { fc } = useFashionCopy();
-  const [form, setForm] = useState<CheckoutForm>(() => ({
-    ...initialForm,
-    ...readCheckoutDraft(),
-  }));
+  const { fc, locale } = useFashionCopy();
+  const [form, setForm] = useState<CheckoutForm>(() => {
+    const draft = readCheckoutDraft();
+    return {
+      ...initialForm,
+      ...draft,
+      paymentMethod: normalizeCheckoutPaymentMethod(draft.paymentMethod),
+    };
+  });
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [shipping, setShipping] = useState(0);
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -90,6 +115,15 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
   useEffect(() => {
     writeCheckoutDraft(form);
   }, [form]);
+
+  useEffect(() => {
+    fetch("/api/fashion/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.settings) setSettings(data.settings as StoreSettings);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     fetch("/api/fashion/auth")
@@ -156,7 +190,13 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
     const res = await fetch("/api/fashion/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ form, items }),
+      body: JSON.stringify({
+        form: {
+          ...form,
+          paymentMethod: normalizeCheckoutPaymentMethod(form.paymentMethod),
+        },
+        items,
+      }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -184,10 +224,15 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
     );
   }
 
+  const paymentNote =
+    locale === "en"
+      ? settings?.paymentNoteEn?.trim() || settings?.paymentNote?.trim()
+      : settings?.paymentNote?.trim() || settings?.paymentNoteEn?.trim();
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {!compactTitle ? (
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold md:text-5xl">
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold text-white md:text-5xl">
           {fc.checkout.title}
         </h1>
       ) : null}
@@ -256,6 +301,95 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
             ))}
           </select>
         </label>
+
+
+        <div>
+          <p className="text-sm font-semibold text-[#5c4860]">{fc.form.payment} *</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {CHECKOUT_PAYMENT_METHODS.map((method) => (
+              <label
+                key={method}
+                className={`cursor-pointer rounded-2xl border px-4 py-3 text-center text-sm font-semibold ${
+                  form.paymentMethod === method
+                    ? "border-[#8f624e] bg-[#faf0ea] text-[#8f624e]"
+                    : "border-black/8 bg-[#faf4f0] text-[#5b4339]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  className="sr-only"
+                  checked={form.paymentMethod === method}
+                  onChange={() => setForm((c) => ({ ...c, paymentMethod: method }))}
+                />
+                {paymentMethodTitle(method, fc)}
+              </label>
+            ))}
+          </div>
+
+          {form.paymentMethod === "bank" && settings ? (
+            <div className="mt-3 rounded-xl border border-[#e8d4e8]/70 bg-[#faf6f8] px-4 py-3 text-sm text-[#5c4860]">
+              <p className="font-semibold">{fc.form.payToAccounts}</p>
+              {hasBankAccounts(settings) ? (
+                <ul className="mt-2 space-y-1">
+                  {settings.bankName?.trim() ? (
+                    <li>
+                      {fc.form.bankName}: <strong>{settings.bankName.trim()}</strong>
+                    </li>
+                  ) : null}
+                  {settings.bankAccountName?.trim() ? (
+                    <li>
+                      {fc.form.bankAccountName}:{" "}
+                      <strong>{settings.bankAccountName.trim()}</strong>
+                    </li>
+                  ) : null}
+                  {settings.bankAccountNumber?.trim() ? (
+                    <li>
+                      {fc.form.bankAccountNumber}:{" "}
+                      <strong>{settings.bankAccountNumber.trim()}</strong>
+                    </li>
+                  ) : null}
+                  {settings.bankBranch?.trim() ? (
+                    <li>
+                      {fc.form.bankBranch}: <strong>{settings.bankBranch.trim()}</strong>
+                    </li>
+                  ) : null}
+                </ul>
+              ) : (
+                <p className="mt-2 text-[#8b6456]">{fc.form.noAccountsConfigured}</p>
+              )}
+              {paymentNote ? <p className="mt-2 text-[#7a5a6e]">{paymentNote}</p> : null}
+            </div>
+          ) : null}
+
+          {form.paymentMethod === "mobile_banking" && settings ? (
+            <div className="mt-3 rounded-xl border border-[#e8d4e8]/70 bg-[#faf6f8] px-4 py-3 text-sm text-[#5c4860]">
+              <p className="font-semibold">{fc.form.payToAccounts}</p>
+              {hasMobileBankingAccounts(settings) ? (
+                <ul className="mt-2 space-y-1">
+                  {settings.bkashNumber?.trim() ? (
+                    <li>
+                      {fc.form.bkash}: <strong>{settings.bkashNumber.trim()}</strong>
+                    </li>
+                  ) : null}
+                  {settings.nagadNumber?.trim() ? (
+                    <li>
+                      {fc.form.nagad}: <strong>{settings.nagadNumber.trim()}</strong>
+                    </li>
+                  ) : null}
+                  {settings.rocketNumber?.trim() ? (
+                    <li>
+                      {fc.form.rocket}: <strong>{settings.rocketNumber.trim()}</strong>
+                    </li>
+                  ) : null}
+                </ul>
+              ) : (
+                <p className="mt-2 text-[#8b6456]">{fc.form.noAccountsConfigured}</p>
+              )}
+              {paymentNote ? <p className="mt-2 text-[#7a5a6e]">{paymentNote}</p> : null}
+            </div>
+          ) : null}
+        </div>
 
         <div>
           <p className="text-sm font-semibold text-[#5c4860]">{fc.cart.coupon}</p>

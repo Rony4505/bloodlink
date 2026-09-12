@@ -95,6 +95,17 @@ export type StoreSettings = {
   whatsapp?: string;
   supportNote?: string;
   supportNoteEn?: string;
+  /** Bank transfer details shown at checkout when customer picks Bank. */
+  bankName?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  bankBranch?: string;
+  /** Mobile banking numbers shown at checkout (bKash / Nagad / Rocket). */
+  bkashNumber?: string;
+  nagadNumber?: string;
+  rocketNumber?: string;
+  paymentNote?: string;
+  paymentNoteEn?: string;
   facebookUrl?: string;
   instagramUrl?: string;
   footerText?: string;
@@ -205,6 +216,12 @@ export type CartItem = {
   imageUrl?: string;
 };
 
+/** Customer-selectable payment methods at checkout. */
+export type CheckoutPaymentMethod = "cod" | "bank" | "mobile_banking";
+
+/** Includes legacy order values stored before bank/mobile_banking. */
+export type FashionPaymentMethod = CheckoutPaymentMethod | "bkash" | "nagad";
+
 export type CheckoutForm = {
   name: string;
   phone: string;
@@ -212,7 +229,7 @@ export type CheckoutForm = {
   address: string;
   district: string;
   note: string;
-  paymentMethod: "cod" | "bkash" | "nagad";
+  paymentMethod: CheckoutPaymentMethod;
   couponCode?: string;
 };
 
@@ -261,7 +278,7 @@ export type FashionOrder = {
   address: string;
   district: string;
   note?: string;
-  paymentMethod: CheckoutForm["paymentMethod"];
+  paymentMethod: FashionPaymentMethod;
   items: FashionOrderItem[];
   subtotal: number;
   discount: number;

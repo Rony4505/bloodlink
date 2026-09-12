@@ -2,6 +2,7 @@
 
 import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
+import { paymentMethodLabel } from "@/lib/fashion/payment";
 import { buildWhatsAppSupportUrl } from "@/lib/fashion/whatsapp";
 import type { FashionOrder, StoreSettings } from "@/lib/fashion/types";
 
@@ -121,7 +122,14 @@ export function OrderInvoiceView({
         </dl>
 
         <p className="mt-6 text-xs text-[#8b6456]">
-          স্ট্যাটাস: {copy.orderStatus[order.status]} · পেমেন্ট: {order.paymentMethod.toUpperCase()}
+          স্ট্যাটাস: {copy.orderStatus[order.status]} · পেমেন্ট:{" "}
+          {paymentMethodLabel(order.paymentMethod, {
+            cod: copy.form.cod,
+            bank: copy.form.bank,
+            mobileBanking: copy.form.mobileBanking,
+            bkash: copy.form.bkash,
+            nagad: copy.form.nagad,
+          })}
         </p>
       </article>
     </div>

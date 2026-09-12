@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentCustomer, isFashionAdminAuthenticated } from "@/lib/fashion/customer-auth";
 import { calculateDeliveryFee } from "@/lib/fashion/delivery";
+import { normalizeCheckoutPaymentMethod } from "@/lib/fashion/payment";
 import { createOrder, getProductById, getStoreSettings, getVipDiscountPreview, listOrders, listOrdersForCustomer, validateCoupon } from "@/lib/fashion/store";
 import type { CartItem, CheckoutForm } from "@/lib/fashion/types";
 
@@ -30,6 +31,8 @@ export async function POST(request: Request) {
   if (!email.includes("@")) {
     return NextResponse.json({ error: "সঠিক ইমেইল দিন" }, { status: 400 });
   }
+
+  const paymentMethod = normalizeCheckoutPaymentMethod(form.paymentMethod);
 
   for (const item of items) {
     const product = await getProductById(item.productId);
@@ -95,7 +98,7 @@ export async function POST(request: Request) {
     address: form.address,
     district: form.district,
     note: form.note || undefined,
-    paymentMethod: form.paymentMethod,
+    paymentMethod,
     items: orderItems,
     subtotal,
     discount,

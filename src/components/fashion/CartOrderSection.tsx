@@ -254,7 +254,7 @@ export function CartOrderSection({
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{fc.form.payment}</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              {(["cod", "bkash", "nagad"] as const).map((method) => (
+              {(["cod", "bank", "mobile_banking"] as const).map((method) => (
                 <label
                   key={method}
                   className={`cursor-pointer rounded-2xl border px-4 py-3 text-center text-sm font-semibold ${
@@ -270,7 +270,11 @@ export function CartOrderSection({
                     checked={form.paymentMethod === method}
                     onChange={() => setForm((c) => ({ ...c, paymentMethod: method }))}
                   />
-                  {method === "cod" ? fc.form.cod : method === "bkash" ? fc.form.bkash : fc.form.nagad}
+                  {method === "cod"
+                    ? fc.form.cod
+                    : method === "bank"
+                      ? fc.form.bank
+                      : fc.form.mobileBanking}
                 </label>
               ))}
             </div>
