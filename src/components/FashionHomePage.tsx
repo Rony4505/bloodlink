@@ -1,14 +1,10 @@
+import { Suspense } from "react";
 import { FashionFooter } from "@/components/fashion/FashionFooter";
 import { FashionHeader } from "@/components/fashion/FashionHeader";
+import { HomeCategoryShowcase } from "@/components/fashion/HomeCategoryShowcase";
 import { HomeProductBrowse } from "@/components/fashion/HomeProductBrowse";
-import {
-  HomeHeroActions,
-  HomeLowerSections,
-  HomeStatsStrip,
-} from "@/components/fashion/HomeLocalized";
 import { PromoCarousel } from "@/components/fashion/PromoCarousel";
 import { HomeCouponStrip } from "@/components/fashion/HomeCouponStrip";
-import { TopLanguageBar } from "@/components/fashion/LanguageSwitcher";
 import { ChatSupportWidget } from "@/components/fashion/ChatSupportWidget";
 import { DeveloperWatermark } from "@/components/fashion/DeveloperCredit";
 import { AnnouncementBar } from "@/components/fashion/AnnouncementBar";
@@ -66,21 +62,29 @@ export async function FashionHomePage() {
             ) : null}
           </div>
 
-          <HomeHeroActions settings={settings} />
+          {/* Image 1: hero title/CTAs replaced by admin categories */}
+          <HomeCategoryShowcase categories={categories} />
         </div>
       </section>
 
-      <HomeProductBrowse
-        categories={categories}
-        products={products}
-        newProducts={newProducts}
-        offerProducts={offers}
-        showNewProducts={settings.showNewProducts !== false}
-        showOffers={settings.showOffers !== false}
-      />
+      <Suspense
+        fallback={
+          <div className="border-b border-black/5 bg-white px-5 py-16 text-center text-sm text-[#6e5449]">
+            Loading products…
+          </div>
+        }
+      >
+        <HomeProductBrowse
+          categories={categories}
+          products={products}
+          newProducts={newProducts}
+          offerProducts={offers}
+          showNewProducts={settings.showNewProducts !== false}
+          showOffers={settings.showOffers !== false}
+        />
+      </Suspense>
 
-      <HomeStatsStrip settings={settings} />
-      <HomeLowerSections settings={settings} />
+      {/* Image 3–5 text cards removed */}
       <DeveloperWatermark />
       <FashionFooter />
       <OrderBottomNav />

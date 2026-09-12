@@ -1,17 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FashionButton } from "@/components/fashion/FashionButton";
 import { FashionShell } from "@/components/fashion/FashionShell";
 import { copy } from "@/lib/fashion/copy";
 import { formatBdt } from "@/lib/fashion/format";
-import type { FashionOrder, UserNotification } from "@/lib/fashion/types";
+import type { FashionOrder, FashionOrderItem, UserNotification } from "@/lib/fashion/types";
+
+type PurchasedProduct = FashionOrderItem & {
+  orderId: string;
+  trackingNumber: string;
+  purchasedAt: string;
+  orderStatus: FashionOrder["status"];
+};
 
 export default function AccountPage() {
   const router = useRouter();
-  const [customer, setCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+  const [customer, setCustomer] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  } | null>(null);
   const [orders, setOrders] = useState<FashionOrder[]>([]);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
 
@@ -30,11 +42,30 @@ export default function AccountPage() {
       setNotifications(notifData.notifications ?? []);
       if (typeof window !== "undefined" && window.location.hash === "#notifications") {
         window.setTimeout(() => {
-          document.getElementById("notifications")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          document
+            .getElementById("notifications")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
       }
     });
   }, [router]);
+
+  const purchasedProducts = useMemo(() => {
+    const rows: PurchasedProduct[] = [];
+    for (const order of orders) {
+      if (order.status === "cancelled") continue;
+      for (const item of order.items ?? []) {
+        rows.push({
+          ...item,
+          orderId: order.id,
+          trackingNumber: order.trackingNumber,
+          purchasedAt: order.createdAt,
+          orderStatus: order.status,
+        });
+      }
+    }
+    return rows;
+  }, [orders]);
 
   async function logout() {
     await fetch("/api/fashion/auth/logout", { method: "POST" });
@@ -62,14 +93,65 @@ export default function AccountPage() {
       <section className="mx-auto max-w-4xl px-5 py-14 text-[#e8eef7] md:px-8 md:py-20">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold text-white">{copy.account.dashboardTitle}</h1>
-            <p className="mt-2 text-[#b8c9de]">{customer.name} · {customer.email}</p>
+            <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold text-white">
+              {copy.account.dashboardTitle}
+            </h1>
+            <p className="mt-2 text-[#b8c9de]">
+              {customer.name} · {customer.email}
+            </p>
           </div>
-          <FashionButton variant="secondary" onClick={logout}>{copy.nav.logout}</FashionButton>
+          <FashionButton variant="secondary" onClick={logout}>
+            {copy.nav.logout}
+          </FashionButton>
+        </div>
+
+        <div className="mt-10" id="purchased-products">
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">
+            কেনা প্রোডাক্ট
+          </h2>
+          <p className="mt-2 text-sm text-[#b8c9de]">
+            প্রোফাইল থেকে আপনার কেনা সব প্রোডাক্ট এখানে দেখা যাবে।
+          </p>
+          {purchasedProducts.length === 0 ? (
+            <p className="mt-4 text-[#b8c9de]">{copy.account.noOrders}</p>
+          ) : (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {purchasedProducts.map((item, index) => (
+                <article
+                  key={`${item.orderId}-${item.productId}-${item.size}-${item.color}-${index}`}
+                  className="rounded-[1.5rem] border border-black/6 bg-white p-4 text-[#4a3348] shadow-sm"
+                >
+                  <p className="font-[family-name:var(--font-display)] text-lg font-bold">
+                    {item.name}
+                  </p>
+                  <p className="mt-1 text-sm text-[#6f554a]">
+                    {[item.size, item.color].filter(Boolean).join(" · ")} × {item.quantity}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#8f624e]">
+                    {formatBdt(item.price * item.quantity)}
+                  </p>
+                  <p className="mt-2 text-xs text-[#8b6456]">
+                    {copy.orderStatus[item.orderStatus]} ·{" "}
+                    {new Date(item.purchasedAt).toLocaleDateString("bn-BD")}
+                  </p>
+                  {item.trackingNumber ? (
+                    <Link
+                      href={`/track?tracking=${encodeURIComponent(item.trackingNumber)}`}
+                      className="mt-2 inline-block text-xs font-semibold text-[#8f624e]"
+                    >
+                      ট্র্যাক: {item.trackingNumber} →
+                    </Link>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-10" id="notifications">
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">{copy.account.notificationsTitle}</h2>
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">
+            {copy.account.notificationsTitle}
+          </h2>
           {notifications.length === 0 ? (
             <p className="mt-4 text-[#b8c9de]">{copy.account.noNotifications}</p>
           ) : (
@@ -79,12 +161,20 @@ export default function AccountPage() {
                 return (
                   <article
                     key={n.id}
-                    className={`rounded-2xl border p-4 text-[#4a3348] ${unread ? "border-[#d4b896]/50 bg-[#faf0ea]" : "border-black/6 bg-white"}`}
+                    className={`rounded-2xl border p-4 text-[#4a3348] ${
+                      unread
+                        ? "border-[#d4b896]/50 bg-[#faf0ea]"
+                        : "border-black/6 bg-white"
+                    }`}
                   >
-                    <p className="font-semibold text-[#4a3348]">{n.title}</p>
+                    <p className="font-semibold">{n.title}</p>
                     <p className="mt-1 text-sm text-[#6f554a]">{n.body}</p>
                     {unread ? (
-                      <button type="button" className="mt-2 text-xs font-semibold text-[#8f624e]" onClick={() => markRead(n.id)}>
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-semibold text-[#8f624e]"
+                        onClick={() => void markRead(n.id)}
+                      >
                         পড়েছি
                       </button>
                     ) : null}
@@ -96,26 +186,49 @@ export default function AccountPage() {
         </div>
 
         <div className="mt-10">
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">{copy.account.ordersTitle}</h2>
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">
+            {copy.account.ordersTitle}
+          </h2>
           {orders.length === 0 ? (
             <p className="mt-4 text-[#b8c9de]">{copy.account.noOrders}</p>
           ) : (
             <div className="mt-6 space-y-4">
               {orders.map((order) => (
-                <article key={order.id} className="rounded-[1.75rem] border border-black/6 bg-white p-5 shadow-sm">
+                <article
+                  key={order.id}
+                  className="rounded-[1.75rem] border border-black/6 bg-white p-5 text-[#4a3348] shadow-sm"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold">{order.id}</p>
-                      <p className="text-xs text-[#8b6456]">Tracking: {order.trackingNumber ?? "—"}</p>
+                      <p className="text-xs text-[#8b6456]">
+                        Tracking: {order.trackingNumber || "—"}
+                      </p>
                     </div>
                     <p className="text-[#8f624e]">{formatBdt(order.total)}</p>
                   </div>
-                  <p className="mt-2 text-sm text-[#6f554a]">{new Date(order.createdAt).toLocaleString("bn-BD")}</p>
+                  <p className="mt-2 text-sm text-[#6f554a]">
+                    {new Date(order.createdAt).toLocaleString("bn-BD")}
+                  </p>
                   <p className="mt-1 text-sm font-medium text-[#8b6456]">
                     {copy.account.orderStatus}: {copy.orderStatus[order.status]}
                   </p>
+                  <ul className="mt-3 space-y-1 border-t border-black/5 pt-3 text-sm text-[#6f554a]">
+                    {order.items.map((item, i) => (
+                      <li key={`${order.id}-${item.productId}-${i}`}>
+                        {item.name}
+                        {[item.size, item.color].filter(Boolean).length
+                          ? ` (${[item.size, item.color].filter(Boolean).join(", ")})`
+                          : ""}{" "}
+                        × {item.quantity}
+                      </li>
+                    ))}
+                  </ul>
                   {order.trackingNumber ? (
-                    <Link href={`/track?tracking=${encodeURIComponent(order.trackingNumber)}`} className="mt-2 inline-block text-xs font-semibold text-[#8f624e]">
+                    <Link
+                      href={`/track?tracking=${encodeURIComponent(order.trackingNumber)}`}
+                      className="mt-2 inline-block text-xs font-semibold text-[#8f624e]"
+                    >
                       অর্ডার ট্র্যাক করুন →
                     </Link>
                   ) : null}
