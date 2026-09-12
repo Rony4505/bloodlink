@@ -61,10 +61,9 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
     null,
   );
   const [brand, setBrand] = useState(copy.brand);
-  const [tagline, setTagline] = useState(copy.tagline);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const isDark = variant === "dark";
+  void variant;
 
   useEffect(() => {
     let alive = true;
@@ -101,13 +100,6 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
       .then((data) => {
         if (!alive) return;
         if (data.settings?.brandName) setBrand(data.settings.brandName);
-        if (data.settings?.brandTagline) {
-          const tag =
-            locale === "en" && data.settings.brandTaglineEn
-              ? data.settings.brandTaglineEn
-              : data.settings.brandTagline;
-          setTagline(tag);
-        }
       })
       .catch(() => undefined);
     return () => {
@@ -147,7 +139,10 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
 
   useEffect(() => {
     function onDocClick(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
+      if (
+        !menuRef.current?.contains(event.target as Node) &&
+        !triggerRef.current?.contains(event.target as Node)
+      ) {
         setMyMenuOpen(false);
       }
     }
@@ -162,13 +157,11 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
     setSearchOpen(false);
   }
 
-  const activeClass = isDark
-    ? "bg-[linear-gradient(135deg,#f0c9a8,#f8e4d4)] text-[#5c3d5e] ring-2 ring-[#f4d4c2]/70 shadow-[0_4px_18px_rgba(240,201,168,0.45)]"
-    : "bg-[linear-gradient(135deg,#f0c9a8,#f8e4d4)] text-[#5c3d5e] ring-2 ring-[#e8b896]/60 shadow-[0_4px_16px_rgba(232,184,150,0.35)]";
-
-  const idleClass = isDark
-    ? "text-[#5c3d5e]/90 hover:bg-white/40 hover:text-[#4a3348]"
-    : "text-[#7a5c50] hover:bg-[#faf0ea] hover:text-[#5c3d5e]";
+  // Icons sit above the white brand card on dark navy — keep them bright.
+  const toolbarActive =
+    "bg-[linear-gradient(135deg,#f0c9a8,#f8e4d4)] text-[#5c3d5e] ring-2 ring-[#f4d4c2]/80 shadow-[0_4px_18px_rgba(240,201,168,0.45)]";
+  const toolbarIdle =
+    "bg-white/12 text-[#e8eef7] ring-1 ring-white/25 hover:bg-white/22 hover:text-white";
 
   const myProductActive = pathname.startsWith("/track");
   const notificationsHref = loggedIn ? "/account#notifications" : "/account/login";
@@ -202,159 +195,156 @@ export function FashionHeader({ variant = "light" }: { variant?: "light" | "dark
       : null;
 
   return (
-    <header
-      className={cn(
-        "relative z-30 overflow-hidden rounded-[2rem] border px-5 py-4 backdrop-blur md:px-7",
-        isDark
-          ? "border-[#e8d4e8]/60 bg-white/75 text-[#4a3348] shadow-[0_18px_60px_rgba(122,85,128,0.08)]"
-          : "border-[#e8d4c4]/50 bg-white/92 text-[#4a3348] shadow-[0_18px_60px_rgba(122,85,128,0.06)]",
-      )}
-    >
-      {/* Feminine watermark — signals Noorzaa is for women */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2rem]">
-        <svg
-          className="absolute -right-2 top-1/2 h-[135%] w-auto -translate-y-1/2 opacity-[0.08]"
-          viewBox="0 0 220 280"
-          fill="none"
+    <div className="relative z-30 space-y-3">
+      {/* Icons + language toggle ABOVE the white card */}
+      <div className="flex flex-wrap items-center justify-end gap-2 md:gap-2.5">
+        <LanguageSwitcher compact className="mr-0.5" />
+
+        <NavIconButton
+          href="/"
+          label={locale === "bn" ? "হোম" : "Home"}
+          active={pathname === "/"}
+          activeClass={toolbarActive}
+          idleClass={toolbarIdle}
         >
-          <path
-            d="M110 28c-28 8-48 34-48 66 0 22 10 40 26 52-18 10-30 30-30 54 0 38 34 68 76 68s76-30 76-68c0-24-12-44-30-54 16-12 26-30 26-52 0-32-20-58-48-66-8 22-28 36-48 36s-40-14-48-36Z"
-            fill="#8f4e6a"
-          />
-          <path
-            d="M110 42c18 0 34-10 42-26 6 20 22 34 42 38-16 10-28 28-28 48 0 20 10 36 26 46-14 8-24 24-24 42 0 28-26 50-58 50s-58-22-58-50c0-18-10-34-24-42 16-10 26-26 26-46 0-20-12-38-28-48 20-4 36-18 42-38 8 16 24 26 42 26Z"
-            fill="#c9859a"
-            opacity="0.55"
-          />
-          <circle cx="48" cy="210" r="10" fill="#b76e79" opacity="0.5" />
-          <circle cx="172" cy="210" r="10" fill="#b76e79" opacity="0.5" />
-          <path
-            d="M40 230c20-18 40-18 60 0M120 230c20-18 40-18 60 0"
-            stroke="#8f4e6a"
-            strokeWidth="3"
-            strokeLinecap="round"
-            opacity="0.45"
-          />
-        </svg>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_15%_0%,rgba(201,133,154,0.14),transparent_55%),radial-gradient(ellipse_at_95%_100%,rgba(143,78,106,0.1),transparent_50%)]" />
-        <p className="absolute bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap font-[family-name:var(--font-display)] text-[9px] font-semibold tracking-[0.32em] text-[#8f4e6a]/40 uppercase md:text-[10px]">
-          for her · নারীর ফ্যাশন
-        </p>
-      </div>
+          <HomeIcon />
+        </NavIconButton>
 
-      <div className="relative z-10 flex flex-col gap-3">
-        {/* Icons on top (+ home) */}
-        <div className="flex flex-wrap items-center justify-end gap-2 md:gap-2.5">
-          <NavIconButton
-            href="/"
-            label={locale === "bn" ? "হোম" : "Home"}
-            active={pathname === "/"}
-            activeClass={activeClass}
-            idleClass={idleClass}
+        {searchOpen ? (
+          <form onSubmit={handleSearchSubmit} className="w-full min-w-[160px] flex-1 md:max-w-xs">
+            <input
+              autoFocus
+              className="field w-full rounded-full border-white/20 bg-white/95 py-2 text-sm text-[#4a3348]"
+              placeholder={fc.search.placeholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
+            />
+          </form>
+        ) : (
+          <button
+            type="button"
+            aria-label={fc.nav.search}
+            title={fc.nav.search}
+            onClick={() => setSearchOpen(true)}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full transition duration-200",
+              pathname.startsWith("/search") ? toolbarActive : toolbarIdle,
+            )}
           >
-            <HomeIcon />
-          </NavIconButton>
+            <SearchIcon />
+          </button>
+        )}
 
-          {searchOpen ? (
-            <form onSubmit={handleSearchSubmit} className="w-full min-w-[160px] flex-1 md:max-w-xs">
-              <input
-                autoFocus
-                className="field w-full rounded-full py-2 text-sm"
-                placeholder={fc.search.placeholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
-              />
-            </form>
-          ) : (
-            <button
-              type="button"
-              aria-label={fc.nav.search}
-              title={fc.nav.search}
-              onClick={() => setSearchOpen(true)}
-              className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-full transition duration-200",
-                pathname.startsWith("/search") ? activeClass : idleClass,
-              )}
-            >
-              <SearchIcon />
-            </button>
-          )}
+        <NavIconButton
+          href="/collections"
+          label={fc.nav.collections}
+          active={pathname === "/collections" || pathname.startsWith("/collections/")}
+          activeClass={toolbarActive}
+          idleClass={toolbarIdle}
+        >
+          <GridIcon />
+        </NavIconButton>
 
-          <NavIconButton
-            href="/collections"
-            label={fc.nav.collections}
-            active={pathname === "/collections" || pathname.startsWith("/collections/")}
-            activeClass={activeClass}
-            idleClass={idleClass}
+        <div className="relative">
+          <button
+            ref={triggerRef}
+            type="button"
+            aria-label={fc.nav.myProduct}
+            title={fc.nav.myProduct}
+            onClick={() => setMyMenuOpen((open) => !open)}
+            className={cn(
+              "relative flex h-11 w-11 items-center justify-center rounded-full transition duration-200",
+              myProductActive || myMenuOpen ? toolbarActive : toolbarIdle,
+            )}
           >
-            <GridIcon />
-          </NavIconButton>
-
-          <div className="relative">
-            <button
-              ref={triggerRef}
-              type="button"
-              aria-label={fc.nav.myProduct}
-              title={fc.nav.myProduct}
-              onClick={() => setMyMenuOpen((open) => !open)}
-              className={cn(
-                "relative flex h-11 w-11 items-center justify-center rounded-full transition duration-200",
-                myProductActive || myMenuOpen ? activeClass : idleClass,
-              )}
-            >
-              <PackageIcon />
-            </button>
-          </div>
-
-          <NavIconButton
-            href={notificationsHref}
-            label={fc.nav.notifications}
-            active={false}
-            activeClass={activeClass}
-            idleClass={idleClass}
-            badge={loggedIn ? unread : undefined}
-          >
-            <BellIcon />
-          </NavIconButton>
-
-          <NavIconButton
-            href={accountHref}
-            label={loggedIn ? fc.nav.account : fc.nav.login}
-            active={pathname.startsWith("/account")}
-            activeClass={activeClass}
-            idleClass={idleClass}
-          >
-            <UserIcon />
-          </NavIconButton>
-
-          <NavIconButton
-            href="/cart"
-            label={fc.nav.cart}
-            active={pathname.startsWith("/cart") || pathname.startsWith("/checkout")}
-            activeClass="bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-md hover:opacity-90"
-            idleClass="bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-md hover:opacity-90"
-            badge={itemCount}
-          >
-            <CartIcon />
-          </NavIconButton>
+            <PackageIcon />
+          </button>
         </div>
 
-        {/* Brand + language — Noorzaa is NOT a link */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 select-none">
-            <p className="truncate font-[family-name:var(--font-display)] text-2xl font-bold tracking-[0.18em] uppercase text-[#4a3348] md:text-3xl">
-              {brand}
-            </p>
-            <p className={cn("mt-1 truncate text-sm", isDark ? "text-[#6e5870]" : "text-[#7a5c50]")}>
-              {tagline}
-            </p>
-          </div>
-          <LanguageSwitcher compact className="justify-center sm:justify-end" />
+        <NavIconButton
+          href={notificationsHref}
+          label={fc.nav.notifications}
+          active={false}
+          activeClass={toolbarActive}
+          idleClass={toolbarIdle}
+          badge={loggedIn ? unread : undefined}
+        >
+          <BellIcon />
+        </NavIconButton>
+
+        <NavIconButton
+          href={accountHref}
+          label={loggedIn ? fc.nav.account : fc.nav.login}
+          active={pathname.startsWith("/account")}
+          activeClass={toolbarActive}
+          idleClass={toolbarIdle}
+        >
+          <UserIcon />
+        </NavIconButton>
+
+        <NavIconButton
+          href="/cart"
+          label={fc.nav.cart}
+          active={pathname.startsWith("/cart") || pathname.startsWith("/checkout")}
+          activeClass="bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-md hover:opacity-90"
+          idleClass="bg-[linear-gradient(135deg,#9d6b8a,#c9a0b8)] text-white shadow-md hover:opacity-90"
+          badge={itemCount}
+        >
+          <CartIcon />
+        </NavIconButton>
+      </div>
+
+      {/* White card: ONLY large unique Noorzaa + stronger feminine watermark */}
+      <div className="relative overflow-hidden rounded-[2rem] border border-[#e8d4c4]/55 bg-white px-6 py-9 shadow-[0_18px_60px_rgba(122,85,128,0.1)] md:px-10 md:py-11">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2rem]">
+          <svg
+            className="absolute -right-2 top-1/2 h-[155%] w-auto -translate-y-1/2 opacity-[0.24]"
+            viewBox="0 0 220 280"
+            fill="none"
+          >
+            <path
+              d="M110 28c-28 8-48 34-48 66 0 22 10 40 26 52-18 10-30 30-30 54 0 38 34 68 76 68s76-30 76-68c0-24-12-44-30-54 16-12 26-30 26-52 0-32-20-58-48-66-8 22-28 36-48 36s-40-14-48-36Z"
+              fill="#8f4e6a"
+            />
+            <path
+              d="M110 42c18 0 34-10 42-26 6 20 22 34 42 38-16 10-28 28-28 48 0 20 10 36 26 46-14 8-24 24-24 42 0 28-26 50-58 50s-58-22-58-50c0-18-10-34-24-42 16-10 26-26 26-46 0-20-12-38-28-48 20-4 36-18 42-38 8 16 24 26 42 26Z"
+              fill="#c9859a"
+              opacity="0.75"
+            />
+            <circle cx="48" cy="210" r="12" fill="#b76e79" opacity="0.7" />
+            <circle cx="172" cy="210" r="12" fill="#b76e79" opacity="0.7" />
+            <path
+              d="M36 232c22-20 44-20 66 0M118 232c22-20 44-20 66 0"
+              stroke="#8f4e6a"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              opacity="0.65"
+            />
+            <path
+              d="M110 150c8-18 28-22 38-10-14 4-22 16-22 28 12 0 24 8 28 20-16-2-28 6-34 18-2-14-12-26-28-28 10-8 14-20 18-28Z"
+              fill="#d4a0b0"
+              opacity="0.6"
+            />
+          </svg>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_12%_0%,rgba(201,133,154,0.32),transparent_52%),radial-gradient(ellipse_at_90%_100%,rgba(143,78,106,0.22),transparent_48%)]" />
+          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-[family-name:var(--font-display)] text-[10px] font-semibold tracking-[0.38em] text-[#8f4e6a]/60 uppercase md:text-xs">
+            for her · নারীর ফ্যাশন
+          </p>
+        </div>
+
+        <div className="relative z-10 flex min-h-[5.75rem] items-center justify-center md:min-h-[6.75rem]">
+          <p
+            className="select-none bg-[linear-gradient(115deg,#3d2a3c_0%,#8f4e6a_38%,#5c3d5e_70%,#3d2a3c_100%)] bg-clip-text text-center font-[family-name:var(--font-display)] text-[2.35rem] font-bold tracking-[0.3em] text-transparent uppercase md:text-5xl lg:text-6xl"
+            aria-label={brand}
+          >
+            {brand}
+          </p>
         </div>
       </div>
+
       {dropdown}
-    </header>
+    </div>
   );
 }
 
