@@ -14,8 +14,10 @@ import {
   findDonorByPhone,
   findPendingRegistration,
   findVolunteerByLinkToken,
+  recordReferralAttemptOnRegister,
   updatePendingRegistration,
 } from "@/lib/db";
+import { isInAppBrowser } from "@/lib/referral";
 import { deliverEmailOtp } from "@/lib/otp-delivery";
 import {
   normalizeRegisterInput,
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
     if (action === "resend") {
       return resendCodes(body);
     }
-    return startRegistration(body);
+    return startRegistration(body, request);
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
@@ -61,7 +63,7 @@ async function resolveVolunteerToken(token: unknown) {
   return { volunteerId: volunteer.id };
 }
 
-async function startRegistration(body: unknown) {
+async function startRegistration(body: unknown, request: Request) {
   const coerced = coerceRegisterPayload(body);
   const parsed = registerSchema.safeParse(coerced);
   if (!parsed.success) {
@@ -99,6 +101,14 @@ async function startRegistration(body: unknown) {
 
   const emailCode = makeCode();
   const passwordHash = await hashPassword(data.password);
+  const referralCode = String(
+    (body as { referralCode?: string })?.referralCode || "",
+  )
+    .trim()
+    .toUpperCase()
+    .slice(0, 32);
+  const userAgent = (request.headers.get("user-agent") || "").slice(0, 500);
+  const inApp = isInAppBrowser(userAgent);
 
   const pending = await createPendingRegistration({
     name: data.name,
@@ -120,6 +130,9 @@ async function startRegistration(body: unknown) {
     emailCodeHash: hashCode(emailCode),
     phoneCodeHash: "",
     createdByVolunteerId: volunteerLink.volunteerId,
+    referralCode: referralCode || null,
+    referralUserAgent: userAgent || null,
+    referralInAppBrowser: inApp,
   });
 
   // Never allowInline — OTP must only go to Gmail, never in the API body.
@@ -219,6 +232,15 @@ async function confirmRegistration(body: unknown) {
 
   await deletePendingRegistration(pending.id);
   await createSession(donor.id);
+
+  void recordReferralAttemptOnRegister({
+    referrerCode: pending.referralCode,
+    newDonor: donor,
+    userAgent: pending.referralUserAgent,
+    inAppBrowser: Boolean(pending.referralInAppBrowser),
+  }).catch((err) => {
+    console.error("[bloodlink] referral attempt failed:", err);
+  });
 
   return NextResponse.json({
     ok: true,

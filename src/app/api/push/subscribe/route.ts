@@ -5,6 +5,7 @@ import {
   upsertPushSubscription,
   donorHasDeliverablePushSubscription,
   donorHasPermissionOnlyPush,
+  finalizeReferralAfterPush,
 } from "@/lib/db";
 import {
   LOCAL_PUSH_PERMISSION_PREFIX,
@@ -61,6 +62,9 @@ export async function POST(request: Request) {
         p256dh: "permission",
         auth: "permission",
       });
+      void finalizeReferralAfterPush(donor.id).catch((err) => {
+        console.error("[bloodlink] finalize referral after push failed:", err);
+      });
       return NextResponse.json({ ok: true, permissionOnly: true });
     }
 
@@ -81,6 +85,9 @@ export async function POST(request: Request) {
       donor.id,
       `${LOCAL_PUSH_PERMISSION_PREFIX}${donor.id}`,
     );
+    void finalizeReferralAfterPush(donor.id).catch((err) => {
+      console.error("[bloodlink] finalize referral after push failed:", err);
+    });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });

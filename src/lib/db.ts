@@ -41,6 +41,11 @@ import {
   normalizeReferralSettings,
 } from "./referral-settings";
 import {
+  generateReferralCode,
+  isCampaignActive,
+  isInAppBrowser,
+} from "./referral";
+import {
   hasDatabaseUrl,
   listDbEnvKeys,
   loadDbFromPostgres,
@@ -73,6 +78,10 @@ import type {
   PostUrgency,
   PushSubscriptionRecord,
   Rating,
+  ReferralEvent,
+  ReferralMissReason,
+  ReferralSettings,
+  ReferralWithdrawRequest,
   VerifyChannel,
   Volunteer,
   VolunteerActivity,
@@ -166,9 +175,24 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+function allocateReferralCode(taken: Set<string>): string {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const code = generateReferralCode();
+    const key = code.toUpperCase();
+    if (!taken.has(key)) {
+      taken.add(key);
+      return code;
+    }
+  }
+  const fallback = `BL${randomBytes(4).toString("hex").toUpperCase()}`;
+  taken.add(fallback.toUpperCase());
+  return fallback;
+}
+
 function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
   const gender: Gender = raw.gender === "female" ? "female" : "male";
   const lastDonationDate = raw.lastDonationDate ?? null;
+  const referralCode = String(raw.referralCode || "").trim().toUpperCase();
   return {
     id: raw.id,
     name: raw.name ?? "",
@@ -212,6 +236,13 @@ function normalizeDonor(raw: Partial<Donor> & { id: string }): Donor {
           : true,
     available: isDonorAvailable(gender, lastDonationDate),
     lastLoginAt: raw.lastLoginAt ? String(raw.lastLoginAt) : null,
+    referralCode,
+    referralRulesAcceptedAt: raw.referralRulesAcceptedAt
+      ? String(raw.referralRulesAcceptedAt)
+      : null,
+    referralBkash: String(raw.referralBkash || "").trim(),
+    referralNagad: String(raw.referralNagad || "").trim(),
+    referralClosed: Boolean(raw.referralClosed),
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   };
@@ -278,8 +309,82 @@ function normalizePendingRegistration(
     createdByVolunteerId: raw.createdByVolunteerId
       ? String(raw.createdByVolunteerId)
       : null,
+    referralCode: raw.referralCode
+      ? String(raw.referralCode).trim().toUpperCase()
+      : null,
+    referralUserAgent: raw.referralUserAgent
+      ? String(raw.referralUserAgent).slice(0, 500)
+      : null,
+    referralInAppBrowser: Boolean(raw.referralInAppBrowser),
     expiresAt: String(raw.expiresAt || ""),
     createdAt: String(raw.createdAt || new Date().toISOString()),
+  };
+}
+
+const REFERRAL_MISS_REASONS: ReferralMissReason[] = [
+  "in_app_browser",
+  "push_not_enabled",
+  "duplicate_phone",
+  "duplicate_email",
+  "campaign_off",
+  "referrer_capped",
+  "self_referral",
+  "invalid_code",
+  "referrer_closed",
+  "disabled",
+];
+
+function normalizeReferralEvent(
+  raw: Partial<ReferralEvent> | null | undefined,
+): ReferralEvent | null {
+  if (!raw?.id || !raw.referredDonorId) return null;
+  const status =
+    raw.status === "credited" ||
+    raw.status === "missed" ||
+    raw.status === "pending_push"
+      ? raw.status
+      : "missed";
+  const missReason =
+    raw.missReason &&
+    REFERRAL_MISS_REASONS.includes(raw.missReason as ReferralMissReason)
+      ? (raw.missReason as ReferralMissReason)
+      : null;
+  return {
+    id: String(raw.id),
+    referrerId: String(raw.referrerId || ""),
+    referredDonorId: String(raw.referredDonorId),
+    referredName: String(raw.referredName || "").trim(),
+    referredPhone: String(raw.referredPhone || "").trim(),
+    referredEmail: String(raw.referredEmail || "").trim().toLowerCase(),
+    status,
+    missReason,
+    rewardBdt: Math.max(0, Math.round(Number(raw.rewardBdt) || 0)),
+    userAgent: String(raw.userAgent || "").slice(0, 500),
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    creditedAt: raw.creditedAt ? String(raw.creditedAt) : null,
+  };
+}
+
+function normalizeReferralWithdraw(
+  raw: Partial<ReferralWithdrawRequest> | null | undefined,
+): ReferralWithdrawRequest | null {
+  if (!raw?.id || !raw.donorId) return null;
+  const method = raw.method === "nagad" ? "nagad" : "bkash";
+  const status =
+    raw.status === "paid" || raw.status === "rejected" || raw.status === "pending"
+      ? raw.status
+      : "pending";
+  return {
+    id: String(raw.id),
+    donorId: String(raw.donorId),
+    donorName: String(raw.donorName || "").trim(),
+    amountBdt: Math.max(0, Math.round(Number(raw.amountBdt) || 0)),
+    method,
+    accountNumber: String(raw.accountNumber || "").trim(),
+    status,
+    createdAt: String(raw.createdAt || new Date().toISOString()),
+    resolvedAt: raw.resolvedAt ? String(raw.resolvedAt) : null,
+    adminNote: String(raw.adminNote || "").trim().slice(0, 500),
   };
 }
 
@@ -427,6 +532,12 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
     volunteerActivities: (parsed.volunteerActivities ?? [])
       .map((a) => normalizeVolunteerActivity(a))
       .filter(Boolean) as VolunteerActivity[],
+    referralEvents: (parsed.referralEvents ?? [])
+      .map((e) => normalizeReferralEvent(e))
+      .filter(Boolean) as ReferralEvent[],
+    referralWithdrawals: (parsed.referralWithdrawals ?? [])
+      .map((w) => normalizeReferralWithdraw(w))
+      .filter(Boolean) as ReferralWithdrawRequest[],
     admin,
   };
 }
@@ -506,6 +617,8 @@ async function createEmptyDb(): Promise<DatabaseShape> {
     pendingSuccessStories: [],
     volunteers: [],
     volunteerActivities: [],
+    referralEvents: [],
+    referralWithdrawals: [],
     admin: await defaultAdmin(),
   };
 }
@@ -523,6 +636,14 @@ function applySchemaMigrations(db: DatabaseShape): boolean {
       `[bloodlink] Push system rebuild v${PUSH_SYSTEM_VERSION}: cleared ${before} old subscription(s). Devices must Allow again.`,
     );
   }
+  if (!Array.isArray(db.referralEvents)) {
+    db.referralEvents = [];
+    changed = true;
+  }
+  if (!Array.isArray(db.referralWithdrawals)) {
+    db.referralWithdrawals = [];
+    changed = true;
+  }
   db.volunteers = (db.volunteers || []).map((v, i) => {
     const normalized = normalizeVolunteer(v);
     if (!normalized) return v;
@@ -533,14 +654,32 @@ function applySchemaMigrations(db: DatabaseShape): boolean {
     }
     return v;
   });
+  const takenCodes = new Set(
+    db.donors
+      .map((d) => String(d.referralCode || "").trim().toUpperCase())
+      .filter(Boolean),
+  );
   db.donors = db.donors.map((d, i) => {
     const raw = db.donors[i];
-    if (
+    const needsVolunteerFields =
       raw.volunteerSource === undefined ||
-      raw.volunteerApproved === undefined
-    ) {
+      raw.volunteerApproved === undefined;
+    const needsReferralCode = !String(raw.referralCode || "").trim();
+    const needsReferralFields =
+      raw.referralCode === undefined ||
+      raw.referralRulesAcceptedAt === undefined ||
+      raw.referralBkash === undefined ||
+      raw.referralNagad === undefined ||
+      raw.referralClosed === undefined;
+    if (needsVolunteerFields || needsReferralCode || needsReferralFields) {
       changed = true;
-      return normalizeDonor(raw);
+      const next = normalizeDonor({
+        ...raw,
+        referralCode: needsReferralCode
+          ? allocateReferralCode(takenCodes)
+          : raw.referralCode,
+      });
+      return next;
     }
     return d;
   });
@@ -1106,6 +1245,11 @@ export async function createDonor(
     | "volunteerSource"
     | "volunteerApproved"
     | "lastLoginAt"
+    | "referralCode"
+    | "referralRulesAcceptedAt"
+    | "referralBkash"
+    | "referralNagad"
+    | "referralClosed"
   > &
     Partial<
       Pick<
@@ -1121,6 +1265,11 @@ export async function createDonor(
         | "createdByVolunteerId"
         | "volunteerSource"
         | "volunteerApproved"
+        | "referralCode"
+        | "referralRulesAcceptedAt"
+        | "referralBkash"
+        | "referralNagad"
+        | "referralClosed"
       >
     >,
 ): Promise<Donor> {
@@ -1133,6 +1282,16 @@ export async function createDonor(
         : lastDonationDate
           ? 1
           : 0;
+    const taken = new Set(
+      db.donors
+        .map((d) => String(d.referralCode || "").trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const provided = String(input.referralCode || "").trim().toUpperCase();
+    const referralCode =
+      provided && !taken.has(provided)
+        ? (taken.add(provided), provided)
+        : allocateReferralCode(taken);
     const donor = normalizeDonor({
       ...input,
       donationCount,
@@ -1148,6 +1307,11 @@ export async function createDonor(
       volunteerApproved:
         input.volunteerApproved ??
         (input.volunteerSource === "link" ? true : input.createdByVolunteerId ? false : true),
+      referralCode,
+      referralRulesAcceptedAt: input.referralRulesAcceptedAt ?? null,
+      referralBkash: input.referralBkash ?? "",
+      referralNagad: input.referralNagad ?? "",
+      referralClosed: Boolean(input.referralClosed),
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
@@ -1321,6 +1485,11 @@ export async function updateDonor(
       | "volunteerSource"
       | "volunteerApproved"
       | "lastLoginAt"
+      | "referralCode"
+      | "referralRulesAcceptedAt"
+      | "referralBkash"
+      | "referralNagad"
+      | "referralClosed"
     >
   >,
 ): Promise<Donor | null> {
@@ -2644,6 +2813,720 @@ export async function deleteVolunteerActivity(id: string): Promise<boolean> {
     if ((db.volunteerActivities || []).length === before) return false;
     await persist(db);
     return true;
+  });
+}
+
+// —— Referral system ————————————————————————————————————————————————
+
+function countCreditedForReferrer(
+  events: ReferralEvent[],
+  referrerId: string,
+): number {
+  return events.filter(
+    (e) => e.referrerId === referrerId && e.status === "credited",
+  ).length;
+}
+
+function phoneAlreadyCredited(
+  events: ReferralEvent[],
+  phone: string,
+  excludeEventId?: string,
+): boolean {
+  const key = normalizePhone(phone);
+  if (!key) return false;
+  return events.some(
+    (e) =>
+      e.status === "credited" &&
+      e.id !== excludeEventId &&
+      normalizePhone(e.referredPhone) === key,
+  );
+}
+
+function emailAlreadyCredited(
+  events: ReferralEvent[],
+  email: string,
+  excludeEventId?: string,
+): boolean {
+  const key = String(email || "").trim().toLowerCase();
+  if (!key) return false;
+  return events.some(
+    (e) =>
+      e.status === "credited" &&
+      e.id !== excludeEventId &&
+      String(e.referredEmail || "").toLowerCase() === key,
+  );
+}
+
+function donorHasDeliverablePushInDb(db: DatabaseShape, donorId: string): boolean {
+  return (db.pushSubscriptions || []).some(
+    (s) => s.userId === donorId && isDeliverablePushSubscription(s),
+  );
+}
+
+export async function getReferralSettings(): Promise<ReferralSettings> {
+  const admin = await getAdminSettings();
+  return normalizeReferralSettings(admin.referralSettings);
+}
+
+export async function ensureDonorReferralCode(donorId: string): Promise<string | null> {
+  return withWrite(async (db) => {
+    const index = db.donors.findIndex((d) => d.id === donorId);
+    if (index === -1) return null;
+    const current = normalizeDonor(db.donors[index]);
+    if (current.referralCode) return current.referralCode;
+    const taken = new Set(
+      db.donors
+        .map((d) => String(d.referralCode || "").trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const code = allocateReferralCode(taken);
+    db.donors[index] = normalizeDonor({
+      ...current,
+      referralCode: code,
+      updatedAt: new Date().toISOString(),
+    });
+    await persist(db);
+    return code;
+  });
+}
+
+export async function findDonorByReferralCode(
+  code: string,
+): Promise<Donor | null> {
+  const key = String(code || "").trim().toUpperCase();
+  if (!key) return null;
+  const db = await ensureDb();
+  const donor = db.donors.find(
+    (d) => String(d.referralCode || "").trim().toUpperCase() === key,
+  );
+  return donor ? normalizeDonor(donor) : null;
+}
+
+type ReferralAttemptResult = {
+  event: ReferralEvent | null;
+  skipped: boolean;
+};
+
+function buildReferralMiss(
+  base: Omit<ReferralEvent, "status" | "missReason" | "rewardBdt" | "creditedAt">,
+  reason: ReferralMissReason,
+): ReferralEvent {
+  return {
+    ...base,
+    status: "missed",
+    missReason: reason,
+    rewardBdt: 0,
+    creditedAt: null,
+  };
+}
+
+export async function recordReferralAttemptOnRegister(input: {
+  referrerCode: string | null | undefined;
+  newDonor: Donor;
+  userAgent?: string | null;
+  inAppBrowser?: boolean;
+}): Promise<ReferralAttemptResult> {
+  const code = String(input.referrerCode || "").trim().toUpperCase();
+  if (!code) return { event: null, skipped: true };
+
+  const ua = String(input.userAgent || "").slice(0, 500);
+  const inApp =
+    input.inAppBrowser === true ||
+    (input.inAppBrowser === undefined && isInAppBrowser(ua));
+
+  const writeResult = await withWrite(async (db) => {
+    db.referralEvents = db.referralEvents || [];
+    const settings = normalizeReferralSettings(db.admin.referralSettings);
+    const nowIso = new Date().toISOString();
+    const base = {
+      id: randomUUID(),
+      referrerId: "",
+      referredDonorId: input.newDonor.id,
+      referredName: input.newDonor.name,
+      referredPhone: input.newDonor.phone,
+      referredEmail: input.newDonor.email,
+      userAgent: ua,
+      createdAt: nowIso,
+    };
+
+    const pushMiss = async (event: ReferralEvent) => {
+      db.referralEvents.push(event);
+      await persist(db);
+      return {
+        event,
+        notifyFirstCredit: false,
+        notifyMiss: event as ReferralEvent | null,
+      };
+    };
+
+    if (!settings.enabled) {
+      return pushMiss(buildReferralMiss(base, "disabled"));
+    }
+
+    const referrer = db.donors.find(
+      (d) => String(d.referralCode || "").trim().toUpperCase() === code,
+    );
+    if (!referrer) {
+      return pushMiss(buildReferralMiss(base, "invalid_code"));
+    }
+
+    base.referrerId = referrer.id;
+
+    const samePerson =
+      referrer.id === input.newDonor.id ||
+      normalizePhone(referrer.phone) === normalizePhone(input.newDonor.phone) ||
+      String(referrer.email || "").toLowerCase() ===
+        String(input.newDonor.email || "").toLowerCase();
+    if (samePerson) {
+      return pushMiss(buildReferralMiss(base, "self_referral"));
+    }
+
+    if (inApp) {
+      return pushMiss(buildReferralMiss(base, "in_app_browser"));
+    }
+
+    if (!isCampaignActive(settings, Date.now())) {
+      return pushMiss(buildReferralMiss(base, "campaign_off"));
+    }
+
+    const maxRefs = settings.maxSuccessfulRefs;
+    const credited = countCreditedForReferrer(db.referralEvents, referrer.id);
+    if (referrer.referralClosed || credited >= maxRefs) {
+      const reason: ReferralMissReason = referrer.referralClosed
+        ? "referrer_closed"
+        : "referrer_capped";
+      if (!referrer.referralClosed && credited >= maxRefs) {
+        const ri = db.donors.findIndex((d) => d.id === referrer.id);
+        if (ri >= 0) {
+          db.donors[ri] = normalizeDonor({
+            ...db.donors[ri],
+            referralClosed: true,
+            updatedAt: nowIso,
+          });
+        }
+      }
+      return pushMiss(buildReferralMiss(base, reason));
+    }
+
+    if (phoneAlreadyCredited(db.referralEvents, input.newDonor.phone)) {
+      return pushMiss(buildReferralMiss(base, "duplicate_phone"));
+    }
+
+    if (emailAlreadyCredited(db.referralEvents, input.newDonor.email)) {
+      return pushMiss(buildReferralMiss(base, "duplicate_email"));
+    }
+
+    if (!donorHasDeliverablePushInDb(db, input.newDonor.id)) {
+      const event: ReferralEvent = {
+        ...base,
+        status: "pending_push",
+        missReason: "push_not_enabled",
+        rewardBdt: 0,
+        creditedAt: null,
+      };
+      db.referralEvents.push(event);
+      await persist(db);
+      return { event, notifyFirstCredit: false, notifyMiss: null };
+    }
+
+    const event: ReferralEvent = {
+      ...base,
+      status: "credited",
+      missReason: null,
+      rewardBdt: settings.rewardAmountBdt,
+      creditedAt: nowIso,
+    };
+    db.referralEvents.push(event);
+
+    if (credited + 1 >= maxRefs) {
+      const ri = db.donors.findIndex((d) => d.id === referrer.id);
+      if (ri >= 0) {
+        db.donors[ri] = normalizeDonor({
+          ...db.donors[ri],
+          referralClosed: true,
+          updatedAt: nowIso,
+        });
+      }
+    }
+
+    await persist(db);
+    return {
+      event,
+      notifyFirstCredit: credited === 0,
+      notifyMiss: null as ReferralEvent | null,
+    };
+  });
+
+  if (writeResult.notifyFirstCredit && writeResult.event) {
+    const creditedEvent = writeResult.event;
+    void notifyAdminAlert({
+      titleEn: "First successful referral",
+      titleBn: "প্রথম সফল রেফারেল",
+      bodyEn: `A referrer earned their first credited referral (+${creditedEvent.rewardBdt} BDT).`,
+      bodyBn: `একজন রেফারার প্রথম সফল ক্রেডিট পেয়েছেন (+${creditedEvent.rewardBdt} টাকা)।`,
+      type: "system",
+      href: BLOODLINK_OWNER_PATH,
+      tag: `referral-first-${creditedEvent.referrerId}`,
+    }).catch((err) => {
+      console.error("[bloodlink] referral first-credit notify failed:", err);
+    });
+  }
+
+  if (writeResult.notifyMiss) {
+    const miss = writeResult.notifyMiss;
+    void notifyAdminAlert({
+      titleEn: "Referral missed",
+      titleBn: "রেফারেল মিস",
+      bodyEn: `${miss.referredName}: ${miss.missReason || "missed"}`,
+      bodyBn: `${miss.referredName}: ${miss.missReason || "missed"}`,
+      type: "system",
+      href: BLOODLINK_OWNER_PATH,
+      tag: `referral-miss-${miss.id}`,
+    }).catch((err) => {
+      console.error("[bloodlink] referral miss notify failed:", err);
+    });
+  }
+
+  return { event: writeResult.event, skipped: false };
+}
+
+export async function finalizeReferralAfterPush(
+  donorId: string,
+): Promise<ReferralEvent | null> {
+  const writeResult = await withWrite(async (db) => {
+    db.referralEvents = db.referralEvents || [];
+    if (!donorHasDeliverablePushInDb(db, donorId)) {
+      return { event: null as ReferralEvent | null, notifyFirstCredit: false };
+    }
+
+    const pendingIndex = db.referralEvents.findIndex(
+      (e) => e.referredDonorId === donorId && e.status === "pending_push",
+    );
+    if (pendingIndex < 0) {
+      return { event: null as ReferralEvent | null, notifyFirstCredit: false };
+    }
+
+    const pending = db.referralEvents[pendingIndex];
+    const settings = normalizeReferralSettings(db.admin.referralSettings);
+    const nowIso = new Date().toISOString();
+
+    const fail = async (reason: ReferralMissReason) => {
+      const next: ReferralEvent = {
+        ...pending,
+        status: "missed",
+        missReason: reason,
+        rewardBdt: 0,
+        creditedAt: null,
+      };
+      db.referralEvents[pendingIndex] = next;
+      await persist(db);
+      return { event: next, notifyFirstCredit: false };
+    };
+
+    if (!settings.enabled) return fail("disabled");
+    if (!isCampaignActive(settings, Date.now())) return fail("campaign_off");
+
+    const referrerIndex = db.donors.findIndex((d) => d.id === pending.referrerId);
+    if (referrerIndex < 0) return fail("invalid_code");
+
+    const referrer = normalizeDonor(db.donors[referrerIndex]);
+    const credited = countCreditedForReferrer(db.referralEvents, referrer.id);
+    const maxRefs = settings.maxSuccessfulRefs;
+    if (referrer.referralClosed) return fail("referrer_closed");
+    if (credited >= maxRefs) {
+      db.donors[referrerIndex] = normalizeDonor({
+        ...referrer,
+        referralClosed: true,
+        updatedAt: nowIso,
+      });
+      return fail("referrer_capped");
+    }
+
+    if (
+      phoneAlreadyCredited(db.referralEvents, pending.referredPhone, pending.id)
+    ) {
+      return fail("duplicate_phone");
+    }
+    if (
+      emailAlreadyCredited(db.referralEvents, pending.referredEmail, pending.id)
+    ) {
+      return fail("duplicate_email");
+    }
+
+    const next: ReferralEvent = {
+      ...pending,
+      status: "credited",
+      missReason: null,
+      rewardBdt: settings.rewardAmountBdt,
+      creditedAt: nowIso,
+    };
+    db.referralEvents[pendingIndex] = next;
+
+    if (credited + 1 >= maxRefs) {
+      db.donors[referrerIndex] = normalizeDonor({
+        ...referrer,
+        referralClosed: true,
+        updatedAt: nowIso,
+      });
+    }
+    await persist(db);
+    return { event: next, notifyFirstCredit: credited === 0 };
+  });
+
+  if (writeResult.notifyFirstCredit && writeResult.event) {
+    const creditedEvent = writeResult.event;
+    void notifyAdminAlert({
+      titleEn: "First successful referral",
+      titleBn: "প্রথম সফল রেফারেল",
+      bodyEn: `A referrer earned their first credited referral (+${creditedEvent.rewardBdt} BDT) after push Allow.`,
+      bodyBn: `পুশ Allow-এর পর একজন রেফারার প্রথম সফল ক্রেডিট পেয়েছেন (+${creditedEvent.rewardBdt} টাকা)।`,
+      type: "system",
+      href: BLOODLINK_OWNER_PATH,
+      tag: `referral-first-${creditedEvent.referrerId}`,
+    }).catch((err) => {
+      console.error("[bloodlink] referral finalize notify failed:", err);
+    });
+  }
+
+  return writeResult.event;
+}
+
+export async function getDonorReferralDashboard(donorId: string) {
+  const db = await ensureDb();
+  const donorRaw = db.donors.find((d) => d.id === donorId);
+  if (!donorRaw) return null;
+  let donor = normalizeDonor(donorRaw);
+  if (!donor.referralCode) {
+    const code = await ensureDonorReferralCode(donorId);
+    if (code) {
+      const refreshed = await findDonorById(donorId);
+      if (refreshed) donor = refreshed;
+    }
+  }
+  const settings = normalizeReferralSettings(db.admin.referralSettings);
+  const events = (db.referralEvents || [])
+    .filter((e) => e.referrerId === donorId)
+    .map((e) => normalizeReferralEvent(e))
+    .filter(Boolean) as ReferralEvent[];
+  events.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  const creditedEvents = events.filter((e) => e.status === "credited");
+  const successfulCount = creditedEvents.length;
+  const earnedBdt = creditedEvents.reduce((sum, e) => sum + e.rewardBdt, 0);
+  const withdrawals = (db.referralWithdrawals || [])
+    .filter((w) => w.donorId === donorId)
+    .map((w) => normalizeReferralWithdraw(w))
+    .filter(Boolean) as ReferralWithdrawRequest[];
+  withdrawals.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  const reservedBdt = withdrawals
+    .filter((w) => w.status === "pending" || w.status === "paid")
+    .reduce((sum, w) => sum + w.amountBdt, 0);
+  const availableBdt = Math.max(0, earnedBdt - reservedBdt);
+  const canWithdraw =
+    settings.cashOutEnabled &&
+    successfulCount >= settings.minSuccessfulForWithdraw &&
+    availableBdt > 0 &&
+    Boolean(donor.referralRulesAcceptedAt) &&
+    Boolean(donor.referralBkash || donor.referralNagad);
+
+  return {
+    settings: {
+      enabled: settings.enabled,
+      rewardAmountBdt: settings.rewardAmountBdt,
+      maxSuccessfulRefs: settings.maxSuccessfulRefs,
+      minSuccessfulForWithdraw: settings.minSuccessfulForWithdraw,
+      campaignStartAt: settings.campaignStartAt,
+      campaignEndAt: settings.campaignEndAt,
+      rulesBn: settings.rulesBn,
+      rulesEn: settings.rulesEn,
+      cashOutEnabled: settings.cashOutEnabled,
+      campaignActive: isCampaignActive(settings),
+    },
+    referralCode: donor.referralCode,
+    referralClosed: donor.referralClosed,
+    rulesAcceptedAt: donor.referralRulesAcceptedAt,
+    payout: {
+      bkash: donor.referralBkash,
+      nagad: donor.referralNagad,
+    },
+    successfulCount,
+    pendingCount: events.filter((e) => e.status === "pending_push").length,
+    missedCount: events.filter((e) => e.status === "missed").length,
+    earnedBdt,
+    availableBdt,
+    canWithdraw,
+    withdrawSlaHours: 48,
+    events,
+    withdrawals,
+  };
+}
+
+export async function acceptReferralRules(donorId: string): Promise<Donor | null> {
+  return withWrite(async (db) => {
+    const index = db.donors.findIndex((d) => d.id === donorId);
+    if (index === -1) return null;
+    const now = new Date().toISOString();
+    const current = normalizeDonor(db.donors[index]);
+    db.donors[index] = normalizeDonor({
+      ...current,
+      referralRulesAcceptedAt: current.referralRulesAcceptedAt || now,
+      updatedAt: now,
+    });
+    await persist(db);
+    return db.donors[index];
+  });
+}
+
+export async function updateDonorPayoutAccounts(
+  donorId: string,
+  accounts: { bkash?: string; nagad?: string },
+): Promise<Donor | null> {
+  return withWrite(async (db) => {
+    const index = db.donors.findIndex((d) => d.id === donorId);
+    if (index === -1) return null;
+    const current = normalizeDonor(db.donors[index]);
+    const bkash =
+      accounts.bkash !== undefined
+        ? String(accounts.bkash).replace(/\D/g, "").slice(0, 15)
+        : current.referralBkash;
+    const nagad =
+      accounts.nagad !== undefined
+        ? String(accounts.nagad).replace(/\D/g, "").slice(0, 15)
+        : current.referralNagad;
+    db.donors[index] = normalizeDonor({
+      ...current,
+      referralBkash: bkash,
+      referralNagad: nagad,
+      updatedAt: new Date().toISOString(),
+    });
+    await persist(db);
+    return db.donors[index];
+  });
+}
+
+export async function requestReferralWithdraw(
+  donorId: string,
+  method?: "bkash" | "nagad",
+): Promise<
+  | { ok: true; request: ReferralWithdrawRequest }
+  | { ok: false; error: string }
+> {
+  const outcome = await withWrite(async (db) => {
+    db.referralWithdrawals = db.referralWithdrawals || [];
+    db.referralEvents = db.referralEvents || [];
+    const index = db.donors.findIndex((d) => d.id === donorId);
+    if (index === -1) {
+      return { ok: false as const, error: "Donor not found" };
+    }
+    const donor = normalizeDonor(db.donors[index]);
+    const settings = normalizeReferralSettings(db.admin.referralSettings);
+    if (!settings.cashOutEnabled) {
+      return { ok: false as const, error: "Cash-out is disabled" };
+    }
+    if (!donor.referralRulesAcceptedAt) {
+      return { ok: false as const, error: "Accept referral rules first" };
+    }
+    const creditedEvents = db.referralEvents.filter(
+      (e) => e.referrerId === donorId && e.status === "credited",
+    );
+    if (creditedEvents.length < settings.minSuccessfulForWithdraw) {
+      return {
+        ok: false as const,
+        error: `Need at least ${settings.minSuccessfulForWithdraw} successful referrals to withdraw`,
+      };
+    }
+    const earnedBdt = creditedEvents.reduce((sum, e) => sum + e.rewardBdt, 0);
+    const reservedBdt = db.referralWithdrawals
+      .filter(
+        (w) =>
+          w.donorId === donorId &&
+          (w.status === "pending" || w.status === "paid"),
+      )
+      .reduce((sum, w) => sum + w.amountBdt, 0);
+    const availableBdt = Math.max(0, earnedBdt - reservedBdt);
+    if (availableBdt <= 0) {
+      return { ok: false as const, error: "No available balance to withdraw" };
+    }
+    if (
+      db.referralWithdrawals.some(
+        (w) => w.donorId === donorId && w.status === "pending",
+      )
+    ) {
+      return {
+        ok: false as const,
+        error: "You already have a pending withdrawal request",
+      };
+    }
+
+    const preferred =
+      method === "nagad" ? "nagad" : method === "bkash" ? "bkash" : null;
+    let chosen: "bkash" | "nagad" | null = preferred;
+    if (chosen === "bkash" && !donor.referralBkash) chosen = null;
+    if (chosen === "nagad" && !donor.referralNagad) chosen = null;
+    if (!chosen) {
+      if (donor.referralBkash) chosen = "bkash";
+      else if (donor.referralNagad) chosen = "nagad";
+    }
+    if (!chosen) {
+      return {
+        ok: false as const,
+        error: "Save a bKash or Nagad account number first",
+      };
+    }
+    const accountNumber =
+      chosen === "bkash" ? donor.referralBkash : donor.referralNagad;
+
+    const request: ReferralWithdrawRequest = {
+      id: randomUUID(),
+      donorId,
+      donorName: donor.name,
+      amountBdt: availableBdt,
+      method: chosen,
+      accountNumber,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+      adminNote: "",
+    };
+    db.referralWithdrawals.push(request);
+    await persist(db);
+    return { ok: true as const, request };
+  });
+
+  if (!outcome.ok) {
+    return outcome;
+  }
+
+  void notifyAdminAlert({
+    titleEn: "Referral withdrawal request",
+    titleBn: "রেফারেল উইথড্র রিকোয়েস্ট",
+    bodyEn: `${outcome.request.donorName} requested ${outcome.request.amountBdt} BDT via ${outcome.request.method}. Pay within 48h.`,
+    bodyBn: `${outcome.request.donorName} ${outcome.request.amountBdt} টাকা ${outcome.request.method}-এ চেয়েছেন। ৪৮ ঘণ্টার মধ্যে পে করুন।`,
+    type: "system",
+    href: BLOODLINK_OWNER_PATH,
+    tag: `referral-withdraw-${outcome.request.id}`,
+  }).catch((err) => {
+    console.error("[bloodlink] referral withdraw notify failed:", err);
+  });
+
+  return outcome;
+}
+
+export async function listReferralAdminOverview() {
+  const db = await ensureDb();
+  const settings = normalizeReferralSettings(db.admin.referralSettings);
+  const events = ((db.referralEvents || [])
+    .map((e) => normalizeReferralEvent(e))
+    .filter(Boolean) as ReferralEvent[]).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  const withdrawals = ((db.referralWithdrawals || [])
+    .map((w) => normalizeReferralWithdraw(w))
+    .filter(Boolean) as ReferralWithdrawRequest[]).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  const byReferrer = new Map<
+    string,
+    {
+      referrerId: string;
+      donorName: string;
+      referralCode: string;
+      referralClosed: boolean;
+      credited: number;
+      missed: number;
+      pending: number;
+      earnedBdt: number;
+    }
+  >();
+
+  for (const e of events) {
+    if (!e.referrerId) continue;
+    let row = byReferrer.get(e.referrerId);
+    if (!row) {
+      const donor = db.donors.find((d) => d.id === e.referrerId);
+      row = {
+        referrerId: e.referrerId,
+        donorName: donor?.name || "Unknown",
+        referralCode: donor?.referralCode || "",
+        referralClosed: Boolean(donor?.referralClosed),
+        credited: 0,
+        missed: 0,
+        pending: 0,
+        earnedBdt: 0,
+      };
+      byReferrer.set(e.referrerId, row);
+    }
+    if (e.status === "credited") {
+      row.credited += 1;
+      row.earnedBdt += e.rewardBdt;
+    } else if (e.status === "missed") {
+      row.missed += 1;
+    } else if (e.status === "pending_push") {
+      row.pending += 1;
+    }
+  }
+
+  const missCounts: Record<string, number> = {};
+  for (const e of events) {
+    if (e.status === "missed" && e.missReason) {
+      missCounts[e.missReason] = (missCounts[e.missReason] || 0) + 1;
+    }
+  }
+
+  const creditedTotal = events.filter((e) => e.status === "credited").length;
+  const rewardPaidOut = withdrawals
+    .filter((w) => w.status === "paid")
+    .reduce((s, w) => s + w.amountBdt, 0);
+  const rewardPending = withdrawals
+    .filter((w) => w.status === "pending")
+    .reduce((s, w) => s + w.amountBdt, 0);
+
+  return {
+    settings,
+    campaignActive: isCampaignActive(settings),
+    totals: {
+      events: events.length,
+      credited: creditedTotal,
+      missed: events.filter((e) => e.status === "missed").length,
+      pendingPush: events.filter((e) => e.status === "pending_push").length,
+      earnedBdt: events
+        .filter((e) => e.status === "credited")
+        .reduce((s, e) => s + e.rewardBdt, 0),
+      withdrawPendingBdt: rewardPending,
+      withdrawPaidBdt: rewardPaidOut,
+      referrers: byReferrer.size,
+    },
+    missCounts,
+    referrers: [...byReferrer.values()].sort((a, b) => b.credited - a.credited),
+    events,
+    withdrawals,
+  };
+}
+
+export async function adminResolveWithdraw(
+  id: string,
+  status: "paid" | "rejected",
+  note?: string,
+): Promise<ReferralWithdrawRequest | null> {
+  return withWrite(async (db) => {
+    db.referralWithdrawals = db.referralWithdrawals || [];
+    const index = db.referralWithdrawals.findIndex((w) => w.id === id);
+    if (index === -1) return null;
+    const current = normalizeReferralWithdraw(db.referralWithdrawals[index]);
+    if (!current || current.status !== "pending") return null;
+    const next: ReferralWithdrawRequest = {
+      ...current,
+      status,
+      adminNote: String(note || "").trim().slice(0, 500),
+      resolvedAt: new Date().toISOString(),
+    };
+    db.referralWithdrawals[index] = next;
+    await persist(db);
+    return next;
   });
 }
 

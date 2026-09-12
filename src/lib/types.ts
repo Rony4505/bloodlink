@@ -37,6 +37,16 @@ export type Donor = {
   volunteerApproved: boolean;
   /** Last successful donor login (ISO). */
   lastLoginAt: string | null;
+  /** Unique share code for referral links. */
+  referralCode: string;
+  /** When the donor accepted referral campaign rules. */
+  referralRulesAcceptedAt: string | null;
+  /** bKash payout number for referral cash-out. */
+  referralBkash: string;
+  /** Nagad payout number for referral cash-out. */
+  referralNagad: string;
+  /** True after max successful credited referrals. */
+  referralClosed: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -62,6 +72,12 @@ export type PendingRegistration = {
   phoneConfirmed: boolean;
   /** Volunteer donor-link registration attribution. */
   createdByVolunteerId: string | null;
+  /** Referral code used at registration start (if any). */
+  referralCode?: string | null;
+  /** User-Agent captured at registration start. */
+  referralUserAgent?: string | null;
+  /** True when registration started inside an in-app browser WebView. */
+  referralInAppBrowser?: boolean;
   expiresAt: string;
   createdAt: string;
 };
@@ -298,14 +314,65 @@ export type SiteAppearance = {
   successStories: SuccessStory[];
 };
 
-/** Admin-controlled referral rewards (user share flow comes later). */
+export type ReferralMissReason =
+  | "in_app_browser"
+  | "push_not_enabled"
+  | "duplicate_phone"
+  | "duplicate_email"
+  | "campaign_off"
+  | "referrer_capped"
+  | "self_referral"
+  | "invalid_code"
+  | "referrer_closed"
+  | "disabled";
+
+export type ReferralEvent = {
+  id: string;
+  referrerId: string;
+  referredDonorId: string;
+  referredName: string;
+  referredPhone: string;
+  referredEmail: string;
+  status: "credited" | "missed" | "pending_push";
+  missReason: ReferralMissReason | null;
+  rewardBdt: number;
+  userAgent: string;
+  createdAt: string;
+  creditedAt: string | null;
+};
+
+export type ReferralWithdrawRequest = {
+  id: string;
+  donorId: string;
+  donorName: string;
+  amountBdt: number;
+  method: "bkash" | "nagad";
+  accountNumber: string;
+  status: "pending" | "paid" | "rejected";
+  /** Request time — admin should pay within 48h. */
+  createdAt: string;
+  resolvedAt: string | null;
+  adminNote: string;
+};
+
+/** Admin-controlled referral rewards. */
 export type ReferralSettings = {
   enabled: boolean;
-  /** BDT credited to referrer per successful registration. */
+  /** BDT credited to referrer per successful referral. */
   rewardAmountBdt: number;
-  /** When reward is granted — Phase 1 uses successful OTP registration only. */
+  /** Max successful credited referrals per referrer (default 30). */
+  maxSuccessfulRefs: number;
+  /** Min successful credits before cash-out is allowed (default 15). */
+  minSuccessfulForWithdraw: number;
+  /** Campaign window start (ISO). Empty = no start bound. */
+  campaignStartAt: string;
+  /** Campaign window end (ISO). Empty = no end bound. */
+  campaignEndAt: string;
+  rulesBn: string;
+  rulesEn: string;
+  /** When reward is granted — successful registration + push when required. */
   rewardOn: "registration";
-  /** Allow donors to request cash-out from wallet (Phase 3). */
+  /** Allow donors to request cash-out (bKash/Nagad). */
   cashOutEnabled: boolean;
   adminNotes: string;
 };
@@ -355,6 +422,8 @@ export type DatabaseShape = {
   pendingSuccessStories: PendingSuccessStory[];
   volunteers: Volunteer[];
   volunteerActivities: VolunteerActivity[];
+  referralEvents: ReferralEvent[];
+  referralWithdrawals: ReferralWithdrawRequest[];
   admin: AdminSettings;
 };
 

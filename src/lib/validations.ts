@@ -298,7 +298,19 @@ export const platformOptionsSchema = z.object({
 export const referralSettingsSchema = z.object({
   enabled: z.boolean(),
   rewardAmountBdt: z.number().min(0).max(10_000),
-  rewardOn: z.literal("registration"),
+  maxSuccessfulRefs: z.number().int().min(1).max(500).optional().default(30),
+  minSuccessfulForWithdraw: z
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .optional()
+    .default(15),
+  campaignStartAt: z.string().trim().max(64).optional().default(""),
+  campaignEndAt: z.string().trim().max(64).optional().default(""),
+  rulesBn: z.string().trim().max(8000).optional().default(""),
+  rulesEn: z.string().trim().max(8000).optional().default(""),
+  rewardOn: z.literal("registration").optional().default("registration"),
   cashOutEnabled: z.boolean(),
   adminNotes: z.string().trim().max(500).optional().default(""),
 });
