@@ -1,0 +1,22 @@
+{
+  "id": "kajmama",
+  "name": "KajMama BD",
+  "nameBn": "KajMama BD",
+  "description": "বাংলাদেশের কাজের মানুষ হায়ার করার স্ট্যান্ডঅলোন প্রিমিয়াম মার্কেটপ্লেস। অন্য কোনো অ্যাপের সাথে যুক্ত নয়।",
+  "urlPath": "/kajmama",
+  "docs": "KAJMAMA.md",
+  "codePrefix": "src/lib/kajmama",
+  "componentsPrefix": "src/components/kajmama",
+  "apiPrefix": "src/app/api/kajmama",
+  "page": "src/app/kajmama/page.tsx",
+  "storage": "data/kajmama-store.json",
+  "language": "bn",
+  "currency": "BDT",
+  "standalone": true,
+  "isolatedFrom": ["bloodlink", "smartcraftcorner", "mudi-pos", "pitchlive"],
+  "defaults": {
+    "demoHirer": "01722222222 / 123456",
+    "demoWorker": "01711111111 / 123456",
+    "ownerPin": "1122"
+  }
+}
