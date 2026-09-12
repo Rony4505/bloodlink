@@ -85,6 +85,7 @@ async function sendViaResend(
   subject: string,
   text: string,
   displayName?: string,
+  html?: string,
 ): Promise<{ ok: boolean; detail?: string }> {
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) {
@@ -92,13 +93,15 @@ async function sendViaResend(
   }
   const from = resolveResendFromAddress(displayName);
   try {
+    const payload: Record<string, unknown> = { from, to: [to], subject, text };
+    if (html?.trim()) payload.html = html;
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to: [to], subject, text }),
+      body: JSON.stringify(payload),
     });
     const raw = await res.text();
     let message = "";
@@ -183,6 +186,41 @@ async function sendViaSmsBd(to: string, message: string): Promise<OtpDeliveryRes
       detail: "sms.bd request failed",
     };
   }
+}
+
+export type TransactionalEmailResult = {
+  ok: boolean;
+  detail?: string;
+};
+
+/** Generic transactional email (orders, tracking, etc.) via Resend or SMTP webhook. */
+export async function sendTransactionalEmail(options: {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  productName?: string;
+}): Promise<TransactionalEmailResult> {
+  const to = options.to.trim();
+  if (!to || !to.includes("@")) {
+    return { ok: false, detail: "Invalid recipient email" };
+  }
+  const brand = (options.productName || "App").trim() || "App";
+  const resend = await sendViaResend(
+    to,
+    options.subject,
+    options.text,
+    brand,
+    options.html,
+  );
+  if (resend.ok) return { ok: true };
+  if (await sendViaSmtp(to, options.subject, options.text)) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    detail: resend.detail || "Transactional email delivery failed",
+  };
 }
 
 export async function deliverEmailOtp(

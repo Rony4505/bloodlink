@@ -210,7 +210,7 @@ export function CartOrderSection({
         <div className="mt-5 space-y-4">
           <Field label={fc.form.name} value={form.name} onChange={(v) => setForm((c) => ({ ...c, name: v }))} required />
           <Field label={fc.form.phone} value={form.phone} onChange={(v) => setForm((c) => ({ ...c, phone: v }))} required />
-          <Field label={fc.form.email} value={form.email} onChange={(v) => setForm((c) => ({ ...c, email: v }))} type="email" />
+          <Field label={fc.form.email} value={form.email} onChange={(v) => setForm((c) => ({ ...c, email: v }))} type="email" required />
           <Field label={fc.form.address} value={form.address} onChange={(v) => setForm((c) => ({ ...c, address: v }))} required multiline />
           <div>
             <label className="text-sm font-medium uppercase tracking-[0.2em] text-[#9b7766]">{fc.form.district}</label>

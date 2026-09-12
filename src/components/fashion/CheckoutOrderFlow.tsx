@@ -222,6 +222,14 @@ export function CheckoutOrderFlow({ compactTitle = false }: { compactTitle?: boo
           required
         />
         <IconField
+          icon="✉️"
+          label={`${fc.form.email} *`}
+          value={form.email}
+          onChange={(v) => setForm((c) => ({ ...c, email: v }))}
+          type="email"
+          required
+        />
+        <IconField
           icon="📍"
           label={`${fc.form.address} *`}
           value={form.address}

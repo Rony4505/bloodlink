@@ -131,7 +131,7 @@ export const fashionI18n = {
     form: {
       name: "পূর্ণ নাম",
       phone: "ফোন নম্বর",
-      email: "ইমেইল (ঐচ্ছিক)",
+      email: "ইমেইল",
       address: "ডেলিভারি ঠিকানা",
       district: "জেলা",
       note: "নোট (ঐচ্ছিক)",
@@ -436,7 +436,7 @@ export const fashionI18n = {
     form: {
       name: "Full name",
       phone: "Phone number",
-      email: "Email (optional)",
+      email: "Email",
       address: "Delivery address",
       district: "District",
       note: "Note (optional)",

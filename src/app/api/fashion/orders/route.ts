@@ -22,8 +22,13 @@ export async function POST(request: Request) {
   const form = body.form as CheckoutForm;
   const items = body.items as CartItem[];
 
-  if (!form?.name || !form.phone || !form.address || !form.district?.trim() || !items?.length) {
+  if (!form?.name || !form.phone || !form.email?.trim() || !form.address || !form.district?.trim() || !items?.length) {
     return NextResponse.json({ error: "Invalid order" }, { status: 400 });
+  }
+
+  const email = form.email.trim();
+  if (!email.includes("@")) {
+    return NextResponse.json({ error: "সঠিক ইমেইল দিন" }, { status: 400 });
   }
 
   for (const item of items) {
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
     customerId: customer?.id,
     customerName: form.name,
     phone: form.phone,
-    email: form.email || undefined,
+    email: form.email.trim() || customer?.email || undefined,
     address: form.address,
     district: form.district,
     note: form.note || undefined,
