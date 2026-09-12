@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminPopup, AdminSettingsPanel } from "@/components/AdminPopup";
 import { AdminAnalyticsPanel } from "@/components/AdminAnalyticsPanel";
 import { AdminHealthcarePanel } from "@/components/AdminHealthcarePanel";
@@ -101,6 +101,67 @@ type ContactChangeRequest = {
   createdAt: string;
 };
 
+type ReferralAdminOverview = {
+  campaignActive: boolean;
+  totals: {
+    events: number;
+    credited: number;
+    missed: number;
+    pendingPush: number;
+    earnedBdt: number;
+    withdrawPendingBdt: number;
+    withdrawPaidBdt: number;
+    referrers: number;
+  };
+  missCounts: Record<string, number>;
+  referrers: Array<{
+    referrerId: string;
+    donorName: string;
+    referralCode: string;
+    referralClosed: boolean;
+    credited: number;
+    missed: number;
+    pending: number;
+    earnedBdt: number;
+  }>;
+  events: Array<{
+    id: string;
+    referredName: string;
+    referredPhone: string;
+    status: string;
+    missReason: string | null;
+    rewardBdt: number;
+    createdAt: string;
+  }>;
+  withdrawals: Array<{
+    id: string;
+    donorId: string;
+    donorName: string;
+    amountBdt: number;
+    method: "bkash" | "nagad";
+    accountNumber: string;
+    status: "pending" | "paid" | "rejected";
+    createdAt: string;
+  }>;
+};
+
+function isoToDatetimeLocal(iso: string): string {
+  const s = String(iso || "").trim();
+  if (!s) return "";
+  const d = new Date(s);
+  if (!Number.isFinite(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function datetimeLocalToIso(local: string): string {
+  const s = String(local || "").trim();
+  if (!s) return "";
+  const t = Date.parse(s);
+  if (!Number.isFinite(t)) return "";
+  return new Date(t).toISOString();
+}
+
 export function AdminPanel() {
   const { t, locale } = useLocale();
   const { reload: reloadAppearance } = useSiteAppearance();
@@ -184,6 +245,12 @@ export function AdminPanel() {
   );
   const [referralSettings, setReferralSettings] = useState<ReferralSettings>(
     () => defaultReferralSettings(),
+  );
+  const [referralOverview, setReferralOverview] =
+    useState<ReferralAdminOverview | null>(null);
+  const [referralOverviewLoading, setReferralOverviewLoading] = useState(false);
+  const [referralResolveBusy, setReferralResolveBusy] = useState<string | null>(
+    null,
   );
   const [pushAllow, setPushAllow] = useState<{
     donorCount: number;
@@ -769,22 +836,76 @@ export function AdminPanel() {
     if (res.ok) flashSaved(t.saved); else setSettingsMsg(t.errorGeneric);
   }
 
+  const loadReferralOverview = useCallback(async () => {
+    setReferralOverviewLoading(true);
+    try {
+      const res = await fetch("/api/admin/referrals", { cache: "no-store" });
+      if (!res.ok) {
+        setReferralOverview(null);
+        return;
+      }
+      const data = await res.json();
+      setReferralOverview({
+        campaignActive: Boolean(data.campaignActive),
+        totals: {
+          events: Number(data.totals?.events || 0),
+          credited: Number(data.totals?.credited || 0),
+          missed: Number(data.totals?.missed || 0),
+          pendingPush: Number(data.totals?.pendingPush || 0),
+          earnedBdt: Number(data.totals?.earnedBdt || 0),
+          withdrawPendingBdt: Number(data.totals?.withdrawPendingBdt || 0),
+          withdrawPaidBdt: Number(data.totals?.withdrawPaidBdt || 0),
+          referrers: Number(data.totals?.referrers || 0),
+        },
+        missCounts:
+          data.missCounts && typeof data.missCounts === "object"
+            ? data.missCounts
+            : {},
+        referrers: Array.isArray(data.referrers) ? data.referrers : [],
+        events: Array.isArray(data.events) ? data.events : [],
+        withdrawals: Array.isArray(data.withdrawals) ? data.withdrawals : [],
+      });
+    } catch {
+      setReferralOverview(null);
+    } finally {
+      setReferralOverviewLoading(false);
+    }
+  }, []);
+
   async function saveReferralSettings(e: React.FormEvent) {
     e.preventDefault();
     setSettingsMsg("");
+    const payload: ReferralSettings = {
+      ...referralSettings,
+      rewardAmountBdt: Math.max(
+        0,
+        Math.min(10_000, Math.round(Number(referralSettings.rewardAmountBdt) || 0)),
+      ),
+      maxSuccessfulRefs: Math.max(
+        1,
+        Math.min(500, Math.round(Number(referralSettings.maxSuccessfulRefs) || 30)),
+      ),
+      minSuccessfulForWithdraw: Math.max(
+        1,
+        Math.min(
+          500,
+          Math.round(Number(referralSettings.minSuccessfulForWithdraw) || 15),
+        ),
+      ),
+      campaignStartAt: referralSettings.campaignStartAt || "",
+      campaignEndAt: referralSettings.campaignEndAt || "",
+      rulesBn: String(referralSettings.rulesBn || "").slice(0, 8000),
+      rulesEn: String(referralSettings.rulesEn || "").slice(0, 8000),
+      cashOutEnabled: Boolean(referralSettings.cashOutEnabled),
+      adminNotes: String(referralSettings.adminNotes || "").trim().slice(0, 500),
+      rewardOn: "registration",
+    };
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "referral-settings",
-        referralSettings: {
-          ...referralSettings,
-          rewardAmountBdt: Math.max(
-            0,
-            Math.min(10_000, Math.round(Number(referralSettings.rewardAmountBdt) || 0)),
-          ),
-          rewardOn: "registration",
-        },
+        referralSettings: payload,
       }),
     });
     if (!res.ok) {
@@ -800,6 +921,56 @@ export function AdminPanel() {
       });
     }
     flashSaved(t.saved);
+    void loadReferralOverview();
+  }
+
+  async function resolveReferralWithdraw(
+    id: string,
+    status: "paid" | "rejected",
+  ) {
+    setReferralResolveBusy(id);
+    setSettingsMsg("");
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "resolve-withdraw",
+          id,
+          status,
+        }),
+      });
+      if (!res.ok) {
+        setSettingsMsg(t.errorGeneric);
+        return;
+      }
+      const data = await res.json();
+      setReferralOverview({
+        campaignActive: Boolean(data.campaignActive),
+        totals: {
+          events: Number(data.totals?.events || 0),
+          credited: Number(data.totals?.credited || 0),
+          missed: Number(data.totals?.missed || 0),
+          pendingPush: Number(data.totals?.pendingPush || 0),
+          earnedBdt: Number(data.totals?.earnedBdt || 0),
+          withdrawPendingBdt: Number(data.totals?.withdrawPendingBdt || 0),
+          withdrawPaidBdt: Number(data.totals?.withdrawPaidBdt || 0),
+          referrers: Number(data.totals?.referrers || 0),
+        },
+        missCounts:
+          data.missCounts && typeof data.missCounts === "object"
+            ? data.missCounts
+            : {},
+        referrers: Array.isArray(data.referrers) ? data.referrers : [],
+        events: Array.isArray(data.events) ? data.events : [],
+        withdrawals: Array.isArray(data.withdrawals) ? data.withdrawals : [],
+      });
+      flashSaved(t.saved);
+    } catch {
+      setSettingsMsg(t.errorGeneric);
+    } finally {
+      setReferralResolveBusy(null);
+    }
   }
 
   async function saveNotificationSettings(e: React.FormEvent) {
@@ -1031,6 +1202,12 @@ export function AdminPanel() {
       setTab(wanted);
     }
   }, []);
+
+  useEffect(() => {
+    if (settingsPanel === "referral") {
+      void loadReferralOverview();
+    }
+  }, [settingsPanel, loadReferralOverview]);
 
   useEffect(() => {
     fetch("/api/admin/me")
@@ -2516,6 +2693,110 @@ export function AdminPanel() {
                   </span>
                 </label>
 
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">
+                      {t.referralMaxSuccessful}
+                    </span>
+                    <input
+                      className="field"
+                      type="number"
+                      min={1}
+                      max={500}
+                      step={1}
+                      value={referralSettings.maxSuccessfulRefs}
+                      onChange={(e) =>
+                        setReferralSettings((prev) => ({
+                          ...prev,
+                          maxSuccessfulRefs: Number(e.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">
+                      {t.referralMinForWithdraw}
+                    </span>
+                    <input
+                      className="field"
+                      type="number"
+                      min={1}
+                      max={500}
+                      step={1}
+                      value={referralSettings.minSuccessfulForWithdraw}
+                      onChange={(e) =>
+                        setReferralSettings((prev) => ({
+                          ...prev,
+                          minSuccessfulForWithdraw: Number(e.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">
+                      {t.referralCampaignStart}
+                    </span>
+                    <input
+                      className="field"
+                      type="datetime-local"
+                      value={isoToDatetimeLocal(referralSettings.campaignStartAt)}
+                      onChange={(e) =>
+                        setReferralSettings((prev) => ({
+                          ...prev,
+                          campaignStartAt: datetimeLocalToIso(e.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">
+                      {t.referralCampaignEnd}
+                    </span>
+                    <input
+                      className="field"
+                      type="datetime-local"
+                      value={isoToDatetimeLocal(referralSettings.campaignEndAt)}
+                      onChange={(e) =>
+                        setReferralSettings((prev) => ({
+                          ...prev,
+                          campaignEndAt: datetimeLocalToIso(e.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">{t.referralRulesBn}</span>
+                  <textarea
+                    className="field min-h-32 font-mono text-xs"
+                    value={referralSettings.rulesBn}
+                    onChange={(e) =>
+                      setReferralSettings((prev) => ({
+                        ...prev,
+                        rulesBn: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">{t.referralRulesEn}</span>
+                  <textarea
+                    className="field min-h-32 font-mono text-xs"
+                    value={referralSettings.rulesEn}
+                    onChange={(e) =>
+                      setReferralSettings((prev) => ({
+                        ...prev,
+                        rulesEn: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
                 <div className="rounded-xl border border-[var(--line)] bg-white/80 px-4 py-3 text-sm">
                   <p className="font-semibold text-[var(--blood-deep)]">
                     {t.referralRewardOn}
@@ -2564,19 +2845,238 @@ export function AdminPanel() {
                   />
                 </label>
 
-                <div className="rounded-xl border border-dashed border-[rgba(155,27,46,0.25)] bg-white/70 px-4 py-5">
-                  <p className="font-semibold text-[var(--blood-deep)]">
-                    {t.referralHistoryTitle}
-                  </p>
-                  <p className="mt-2 text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">
-                    {t.referralHistoryEmpty}
-                  </p>
-                </div>
-
                 <button type="submit" className="btn-primary">
                   {t.saveChanges}
                 </button>
               </form>
+
+              <div className="space-y-4 border-t border-[var(--line)] pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-[var(--blood-deep)]">
+                    {t.referralHistoryTitle}
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-ghost text-sm"
+                    disabled={referralOverviewLoading}
+                    onClick={() => void loadReferralOverview()}
+                  >
+                    {referralOverviewLoading ? t.loading : locale === "bn" ? "রিফ্রেশ" : "Refresh"}
+                  </button>
+                </div>
+
+                {referralOverviewLoading && !referralOverview ? (
+                  <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                    {t.loading}
+                  </p>
+                ) : !referralOverview ? (
+                  <p className="text-sm text-[color-mix(in_oklab,var(--ink)_75%,white)]">
+                    {t.referralHistoryEmpty}
+                  </p>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-[var(--line)] bg-[color-mix(in_oklab,var(--sand)_16%,white)] p-4">
+                      <p className="mb-2 text-sm font-semibold">
+                        {t.referralOverviewTotals}
+                        {referralOverview.campaignActive
+                          ? ` · ${t.enabled}`
+                          : ` · ${t.disabled}`}
+                      </p>
+                      <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                        <p>
+                          Credited: <strong>{referralOverview.totals.credited}</strong>
+                        </p>
+                        <p>
+                          Earned: <strong>৳{referralOverview.totals.earnedBdt}</strong>
+                        </p>
+                        <p>
+                          Pending withdraw:{" "}
+                          <strong>৳{referralOverview.totals.withdrawPendingBdt}</strong>
+                        </p>
+                        <p>
+                          Paid: <strong>৳{referralOverview.totals.withdrawPaidBdt}</strong>
+                        </p>
+                        <p>
+                          Missed: <strong>{referralOverview.totals.missed}</strong>
+                        </p>
+                        <p>
+                          Pending push:{" "}
+                          <strong>{referralOverview.totals.pendingPush}</strong>
+                        </p>
+                        <p>
+                          Referrers: <strong>{referralOverview.totals.referrers}</strong>
+                        </p>
+                        <p>
+                          Events: <strong>{referralOverview.totals.events}</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--line)] p-4">
+                      <p className="mb-2 text-sm font-semibold">
+                        {t.referralMissBreakdown}
+                      </p>
+                      {!Object.keys(referralOverview.missCounts).length ? (
+                        <p className="text-sm text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                          —
+                        </p>
+                      ) : (
+                        <ul className="space-y-1 text-sm">
+                          {Object.entries(referralOverview.missCounts).map(
+                            ([reason, count]) => (
+                              <li key={reason}>
+                                {reason}: <strong>{count}</strong>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+                      <p className="border-b border-[var(--line)] px-3 py-2 text-sm font-semibold">
+                        {t.referralReferrersTable}
+                      </p>
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-[color-mix(in_oklab,var(--sand)_20%,white)]">
+                          <tr>
+                            <th className="px-3 py-2">Name</th>
+                            <th className="px-3 py-2">Code</th>
+                            <th className="px-3 py-2">Credited</th>
+                            <th className="px-3 py-2">Missed</th>
+                            <th className="px-3 py-2">Earned</th>
+                            <th className="px-3 py-2">Closed</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {!referralOverview.referrers.length ? (
+                            <tr>
+                              <td
+                                className="px-3 py-3 text-[color-mix(in_oklab,var(--ink)_65%,white)]"
+                                colSpan={6}
+                              >
+                                {t.referralHistoryEmpty}
+                              </td>
+                            </tr>
+                          ) : (
+                            referralOverview.referrers.map((row) => (
+                              <tr
+                                key={row.referrerId}
+                                className="border-t border-[var(--line)]"
+                              >
+                                <td className="px-3 py-2 font-medium">
+                                  {row.donorName}
+                                </td>
+                                <td className="px-3 py-2 font-mono">
+                                  {row.referralCode}
+                                </td>
+                                <td className="px-3 py-2">{row.credited}</td>
+                                <td className="px-3 py-2">{row.missed}</td>
+                                <td className="px-3 py-2">৳{row.earnedBdt}</td>
+                                <td className="px-3 py-2">
+                                  {row.referralClosed ? "yes" : "no"}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--line)] p-4">
+                      <p className="mb-2 text-sm font-semibold">
+                        {t.referralRecentEvents}
+                      </p>
+                      <ul className="max-h-64 space-y-2 overflow-auto text-sm">
+                        {!referralOverview.events.length ? (
+                          <li className="text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                            {t.referralHistoryEmpty}
+                          </li>
+                        ) : (
+                          referralOverview.events.slice(0, 40).map((ev) => (
+                            <li
+                              key={ev.id}
+                              className="rounded-lg border border-[var(--line)] px-3 py-2"
+                            >
+                              <p className="font-medium">
+                                {ev.referredName} · {ev.referredPhone}
+                              </p>
+                              <p className="text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                                {ev.status}
+                                {ev.missReason ? ` · ${ev.missReason}` : ""}
+                                {ev.status === "credited"
+                                  ? ` · ৳${ev.rewardBdt}`
+                                  : ""}
+                                {" · "}
+                                {new Date(ev.createdAt).toLocaleString()}
+                              </p>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--line)] p-4">
+                      <p className="mb-2 text-sm font-semibold">
+                        {t.referralPendingWithdrawals}
+                      </p>
+                      <ul className="space-y-2 text-sm">
+                        {!referralOverview.withdrawals.filter(
+                          (w) => w.status === "pending",
+                        ).length ? (
+                          <li className="text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                            —
+                          </li>
+                        ) : (
+                          referralOverview.withdrawals
+                            .filter((w) => w.status === "pending")
+                            .map((w) => (
+                              <li
+                                key={w.id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] px-3 py-2"
+                              >
+                                <div>
+                                  <p className="font-medium">
+                                    {w.donorName} · ৳{w.amountBdt}
+                                  </p>
+                                  <p className="text-xs text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                                    {w.method} · {w.accountNumber} ·{" "}
+                                    {new Date(w.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    className="btn-primary text-xs"
+                                    disabled={referralResolveBusy === w.id}
+                                    onClick={() =>
+                                      void resolveReferralWithdraw(w.id, "paid")
+                                    }
+                                  >
+                                    {t.referralMarkPaid}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-ghost text-xs"
+                                    disabled={referralResolveBusy === w.id}
+                                    onClick={() =>
+                                      void resolveReferralWithdraw(
+                                        w.id,
+                                        "rejected",
+                                      )
+                                    }
+                                  >
+                                    {t.referralMarkRejected}
+                                  </button>
+                                </div>
+                              </li>
+                            ))
+                        )}
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </AdminSettingsPanel>
 

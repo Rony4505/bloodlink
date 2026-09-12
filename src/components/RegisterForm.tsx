@@ -27,6 +27,20 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
   const [successDonor, setSuccessDonor] = useState<RegisteredDonorSummary | null>(
     null,
   );
+  const [referralCode] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const fromQuery = new URLSearchParams(window.location.search).get("ref");
+      if (fromQuery?.trim()) {
+        const code = fromQuery.trim().toUpperCase();
+        window.localStorage.setItem("bloodlink_ref", code);
+        return code;
+      }
+      return String(window.localStorage.getItem("bloodlink_ref") || "").trim();
+    } catch {
+      return "";
+    }
+  });
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -76,6 +90,7 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
         payload.donationCount = Number(form.donationCount);
       }
       if (linkToken) payload.volunteerToken = linkToken;
+      if (referralCode) payload.referralCode = referralCode;
 
       const res = await fetch("/api/auth/register", {
         method: "POST",

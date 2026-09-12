@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DailyReminder } from "@/components/DailyReminder";
 import { DonationBadge } from "@/components/DonationBadge";
 import { DonorPushEnableGate } from "@/components/DonorPushEnableGate";
+import { DonorReferralPanel } from "@/components/DonorReferralPanel";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -342,6 +343,8 @@ export function DashboardClient() {
             ) : null}
           </div>
         </div>
+
+        <DonorReferralPanel />
 
         <form
           onSubmit={save}
