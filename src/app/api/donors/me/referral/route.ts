@@ -58,6 +58,12 @@ export async function PATCH(request: Request) {
     }
 
     if (parsed.data.action === "save-payout") {
+      if (donor.referralBkash || donor.referralNagad) {
+        return NextResponse.json(
+          { error: "Payout account is locked" },
+          { status: 400 },
+        );
+      }
       const updated = await updateDonorPayoutAccounts(donor.id, {
         bkash: parsed.data.bkash,
         nagad: parsed.data.nagad,

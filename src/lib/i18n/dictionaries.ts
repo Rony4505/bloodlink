@@ -602,8 +602,18 @@ export const dictionaries = {
     referralPanelHint:
       "Share your personal link. Earn rewards when new donors register and allow push — not from in-app browsers.",
     referralCampaignOff: "Referral rewards are not active right now.",
+    referralPurposeTitle: "Why BloodLink BD exists",
+    referralPurposeBody1:
+      "BloodLink BD connects blood donors and patients across Bangladesh so urgent blood needs can be met faster.",
+    referralPurposeBody2:
+      "Our goal is a trusted donor community with clear contact, safety, and notification so lives can be saved in time.",
+    referralPurposeBody3:
+      "Referral rewards thank you for inviting real donors who register properly and allow push alerts.",
+    referralPurposeNext: "Next — read referral rules",
+    referralPurposeBack: "Back",
     referralRulesTitle: "Referral rules",
     referralAcceptRules: "I accept the rules",
+    referralPayoutLocked: "Payout account saved and locked. Contact admin only if a change is required.",
     referralSuccessful: "Successful",
     referralRemaining: "Remaining",
     referralEarned: "Earned",
@@ -1548,8 +1558,18 @@ export const dictionaries = {
     referralPanelHint:
       "আপনার ব্যক্তিগত লিংক শেয়ার করুন। নতুন ডোনার রেজিস্টার করে পুশ Allow করলে রিওয়ার্ড পাবেন — ইন-অ্যাপ ব্রাউজার থেকে নয়।",
     referralCampaignOff: "রেফারেল রিওয়ার্ড এখন চালু নেই।",
+    referralPurposeTitle: "BloodLink BD-এর উদ্দেশ্য",
+    referralPurposeBody1:
+      "BloodLink BD বাংলাদেশজুড়ে রক্তদাতা ও রোগীকে সংযুক্ত করে, যাতে জরুরি রক্তের প্রয়োজন দ্রুত মেটানো যায়।",
+    referralPurposeBody2:
+      "আমাদের লক্ষ্য একটি বিশ্বস্ত ডোনার কমিউনিটি — স্পষ্ট যোগাযোগ, নিরাপত্তা ও নোটিফিকেশন — যাতে সময়মতো জীবন বাঁচানো যায়।",
+    referralPurposeBody3:
+      "রেফারেল রিওয়ার্ড তাদের ধন্যবাদ জানায় যারা সঠিকভাবে রেজিস্টার করে পুশ Allow করা আসল ডোনার আমন্ত্রণ করেন।",
+    referralPurposeNext: "পরবর্তী — রেফারেল নিয়ম পড়ুন",
+    referralPurposeBack: "পেছনে",
     referralRulesTitle: "রেফারেল নিয়মাবলী",
     referralAcceptRules: "নিয়ম মেনে নিলাম",
+    referralPayoutLocked: "পেআউট অ্যাকাউন্ট সেভ হয়ে লক হয়েছে। পরিবর্তন লাগলে শুধু অ্যাডমিনকে জানান।",
     referralSuccessful: "সফল",
     referralRemaining: "বাকি",
     referralEarned: "অর্জিত",

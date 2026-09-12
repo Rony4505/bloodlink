@@ -47,6 +47,8 @@ type Dashboard = {
   withdrawals: Withdrawal[];
 };
 
+type IntroStep = "purpose" | "rules";
+
 export function DonorReferralPanel() {
   const { t, locale } = useLocale();
   const [data, setData] = useState<Dashboard | null>(null);
@@ -54,9 +56,11 @@ export function DonorReferralPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [copied, setCopied] = useState(false);
   const [bkash, setBkash] = useState("");
   const [nagad, setNagad] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState<"bkash" | "nagad">("bkash");
+  const [introStep, setIntroStep] = useState<IntroStep>("purpose");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +77,7 @@ export function DonorReferralPanel() {
       setBkash(json.payout?.bkash || "");
       setNagad(json.payout?.nagad || "");
       if (json.payout?.nagad && !json.payout?.bkash) setWithdrawMethod("nagad");
+      if (!json.rulesAcceptedAt) setIntroStep("purpose");
     } catch {
       setError(t.errorGeneric);
     } finally {
@@ -93,6 +98,10 @@ export function DonorReferralPanel() {
     locale === "bn"
       ? data?.settings.rulesBn || ""
       : data?.settings.rulesEn || data?.settings.rulesBn || "";
+
+  const payoutLocked = Boolean(
+    data?.payout?.bkash?.trim() || data?.payout?.nagad?.trim(),
+  );
 
   async function patch(body: Record<string, unknown>) {
     setBusy(true);
@@ -118,6 +127,19 @@ export function DonorReferralPanel() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function copyLink() {
+    const value = referralLink || data?.referralCode || "";
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      /* ignore */
+    }
+    setCopied(true);
+    setMessage(t.referralLinkCopied);
+    window.setTimeout(() => setCopied(false), 2500);
   }
 
   if (loading) {
@@ -162,18 +184,51 @@ export function DonorReferralPanel() {
 
       {!data.rulesAcceptedAt ? (
         <div className="space-y-3 rounded-2xl border border-[rgba(155,27,46,0.18)] bg-[color-mix(in_oklab,var(--sand)_22%,white)] p-4">
-          <p className="font-semibold text-[var(--blood-deep)]">{t.referralRulesTitle}</p>
-          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-xl bg-white/90 p-3 text-xs leading-relaxed text-[var(--ink)]">
-            {rulesText}
-          </pre>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={busy}
-            onClick={() => void patch({ action: "accept-rules" })}
-          >
-            {t.referralAcceptRules}
-          </button>
+          {introStep === "purpose" ? (
+            <>
+              <p className="font-semibold text-[var(--blood-deep)]">
+                {t.referralPurposeTitle}
+              </p>
+              <div className="space-y-2 rounded-xl bg-white/90 p-3 text-sm leading-relaxed text-[var(--ink)]">
+                <p>{t.referralPurposeBody1}</p>
+                <p>{t.referralPurposeBody2}</p>
+                <p>{t.referralPurposeBody3}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setIntroStep("rules")}
+              >
+                {t.referralPurposeNext}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-[var(--blood-deep)]">
+                {t.referralRulesTitle}
+              </p>
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-xl bg-white/90 p-3 text-xs leading-relaxed text-[var(--ink)]">
+                {rulesText}
+              </pre>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setIntroStep("purpose")}
+                >
+                  {t.referralPurposeBack}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy}
+                  onClick={() => void patch({ action: "accept-rules" })}
+                >
+                  {t.referralAcceptRules}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -197,21 +252,16 @@ export function DonorReferralPanel() {
             <p className="mt-2 break-all font-mono text-sm font-semibold text-[var(--ink)]">
               {referralLink || data.referralCode}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => {
-                  void navigator.clipboard.writeText(referralLink || data.referralCode);
-                  setMessage(t.referralLinkCopied);
-                }}
-              >
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button type="button" className="btn-ghost" onClick={() => void copyLink()}>
                 {t.referralCopyLink}
               </button>
+              {copied ? (
+                <span className="text-sm font-semibold text-[var(--sage)]">
+                  {t.referralLinkCopied}
+                </span>
+              ) : null}
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.referralBrowserOnlyHint}
-            </p>
           </div>
 
           <details className="rounded-2xl border border-[var(--line)] bg-white/90 p-4">
@@ -227,12 +277,13 @@ export function DonorReferralPanel() {
             className="space-y-3 rounded-2xl border border-[var(--line)] p-4"
             onSubmit={(e) => {
               e.preventDefault();
+              if (payoutLocked) return;
               void patch({ action: "save-payout", bkash, nagad });
             }}
           >
             <p className="font-semibold text-[var(--blood-deep)]">{t.referralPayoutTitle}</p>
             <p className="text-xs text-[color-mix(in_oklab,var(--ink)_70%,white)]">
-              {t.referralPayoutHint}
+              {payoutLocked ? t.referralPayoutLocked : t.referralPayoutHint}
             </p>
             <label className="block text-sm">
               <span className="mb-1 block font-medium">bKash</span>
@@ -241,6 +292,8 @@ export function DonorReferralPanel() {
                 value={bkash}
                 onChange={(e) => setBkash(e.target.value)}
                 placeholder="01XXXXXXXXX"
+                disabled={payoutLocked}
+                readOnly={payoutLocked}
               />
             </label>
             <label className="block text-sm">
@@ -250,11 +303,15 @@ export function DonorReferralPanel() {
                 value={nagad}
                 onChange={(e) => setNagad(e.target.value)}
                 placeholder="01XXXXXXXXX"
+                disabled={payoutLocked}
+                readOnly={payoutLocked}
               />
             </label>
-            <button type="submit" className="btn-primary" disabled={busy}>
-              {busy ? t.loading : t.saveChanges}
-            </button>
+            {!payoutLocked ? (
+              <button type="submit" className="btn-primary" disabled={busy}>
+                {busy ? t.loading : t.saveChanges}
+              </button>
+            ) : null}
           </form>
 
           <div className="rounded-2xl border border-[var(--line)] p-4">

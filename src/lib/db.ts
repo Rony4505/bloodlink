@@ -3288,6 +3288,10 @@ export async function updateDonorPayoutAccounts(
     const index = db.donors.findIndex((d) => d.id === donorId);
     if (index === -1) return null;
     const current = normalizeDonor(db.donors[index]);
+    // Once a payout number is saved, lock it — no further edits via API.
+    if (current.referralBkash || current.referralNagad) {
+      return current;
+    }
     const bkash =
       accounts.bkash !== undefined
         ? String(accounts.bkash).replace(/\D/g, "").slice(0, 15)
@@ -3296,6 +3300,9 @@ export async function updateDonorPayoutAccounts(
       accounts.nagad !== undefined
         ? String(accounts.nagad).replace(/\D/g, "").slice(0, 15)
         : current.referralNagad;
+    if (!bkash && !nagad) {
+      return current;
+    }
     db.donors[index] = normalizeDonor({
       ...current,
       referralBkash: bkash,

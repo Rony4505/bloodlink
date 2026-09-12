@@ -344,8 +344,6 @@ export function DashboardClient() {
           </div>
         </div>
 
-        <DonorReferralPanel />
-
         <form
           onSubmit={save}
           className="space-y-3 rounded-[28px] border border-[var(--line)] bg-white/85 p-5 shadow-sm"
@@ -395,6 +393,8 @@ export function DashboardClient() {
             {saving ? t.loading : t.saveChanges}
           </button>
         </form>
+
+        <DonorReferralPanel />
       </div>
     </>
   );
