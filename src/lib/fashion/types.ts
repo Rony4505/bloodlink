@@ -272,6 +272,11 @@ export type FashionOrder = {
   status: OrderStatus;
   statusHistory: OrderStatusUpdate[];
   createdAt: string;
+  /** Last transactional email attempt (confirmation / status / resend). */
+  emailLastSentAt?: string;
+  emailLastOk?: boolean;
+  emailLastError?: string;
+  emailLastKind?: "confirmation" | "status" | "resend";
 };
 
 export type UserNotification = {
