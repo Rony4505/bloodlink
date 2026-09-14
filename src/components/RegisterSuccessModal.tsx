@@ -45,10 +45,11 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
   const [pushBusy, setPushBusy] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
+  const [pushDeniedHint, setPushDeniedHint] = useState(false);
   const [pushDone, setPushDone] = useState<"idle" | "on" | "denied" | "error">(
     "idle",
   );
-  const showPushPrompt = pushSupported && pushDone === "idle";
+  const showPushPrompt = pushSupported && (pushDone === "idle" || pushDone === "denied");
   const canContinue = pushDone === "on" || pushDone === "denied";
 
   useEffect(() => {
@@ -67,11 +68,14 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
       });
       if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
+        setPushDeniedHint(false);
         setPushDone("on");
       } else if (result === "denied") {
         snoozePushPrompt(1);
+        setPushDeniedHint(true);
         setPushDone("denied");
       } else {
+        setPushDeniedHint(false);
         setPushDone("error");
       }
     } catch {
@@ -182,6 +186,17 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
             <p className="mt-2 text-xs font-medium text-[var(--blood)]">
               {t.registerPushRequired}
             </p>
+            {pushDeniedHint ? (
+              <div className="mt-3 space-y-1 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-2 text-xs font-medium text-[var(--blood)]">
+                <p className="font-semibold">{t.pushDeniedBlockedTitle}</p>
+                <ol className="list-decimal space-y-0.5 pl-4">
+                  <li>{t.pushDeniedStep1}</li>
+                  <li>{t.pushDeniedStep2}</li>
+                  <li>{t.pushDeniedStep3}</li>
+                  <li>{t.pushDeniedStep4}</li>
+                </ol>
+              </div>
+            ) : null}
             <div className="mt-3">
               <button
                 type="button"
@@ -189,7 +204,11 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
                 onClick={() => void onAllowPush()}
                 className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
               >
-                {pushBusy ? t.loading : t.registerPushAllow}
+                {pushBusy
+                  ? t.loading
+                  : pushDeniedHint
+                    ? t.registerPushRetry
+                    : t.registerPushAllow}
               </button>
             </div>
           </div>
@@ -198,11 +217,6 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
         {pushDone === "on" ? (
           <p className="mt-4 text-center text-sm font-medium text-[var(--sage)]">
             {t.registerPushOn}
-          </p>
-        ) : null}
-        {pushDone === "denied" ? (
-          <p className="mt-4 text-center text-sm font-medium text-[var(--blood)]">
-            {t.pushDenied}
           </p>
         ) : null}
         {pushDone === "error" ? (

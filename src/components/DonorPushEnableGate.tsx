@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
   clearPushPromptSnooze,
@@ -18,6 +19,20 @@ type PushStatus = {
   subscribed: boolean;
   permissionOnly: boolean;
 };
+
+const SKIP_PATH_PREFIXES = [
+  "/login",
+  "/register",
+  "/join/",
+  "/volunteer/login",
+];
+
+function shouldSkipPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return SKIP_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p),
+  );
+}
 
 async function fetchPushStatus(): Promise<PushStatus> {
   try {
@@ -38,20 +53,58 @@ async function fetchPushStatus(): Promise<PushStatus> {
   }
 }
 
+function browserPermission(): NotificationPermission | "unsupported" {
+  if (typeof window === "undefined" || typeof Notification === "undefined") {
+    return "unsupported";
+  }
+  return Notification.permission;
+}
+
 /**
  * Blocks until the donor allows notifications (or iOS permission-only is saved).
- * Never silently skips — even if the browser previously denied.
- * Locked-phone delivery needs a real Allow + data connection (Android Chrome / iOS Home Screen).
+ * Never silently skips. If the browser already blocked notifications, the Allow
+ * button shows loading + clear unblock steps (Chrome cannot reopen the system
+ * dialog after Deny — user must Allow in site settings, then we retry).
  */
 export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const { t } = useLocale();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [failHint, setFailHint] = useState("");
   const [hardDenied, setHardDenied] = useState(false);
 
+  async function finishSuccess() {
+    markPushPromptAccepted();
+    setDone(true);
+    setHardDenied(false);
+    setFailHint("");
+    window.setTimeout(() => setOpen(false), 700);
+  }
+
+  async function tryEnable(): Promise<boolean> {
+    const result = await enableWebPush({
+      recordIntent: true,
+      forceRefresh: true,
+      allowPermissionOnly: isLikelyIos(),
+    });
+    if (result === "granted" || result === "permission_only") {
+      await finishSuccess();
+      return true;
+    }
+    if (result === "denied" || browserPermission() === "denied") {
+      setHardDenied(true);
+      setFailHint(t.pushDeniedHint);
+      return false;
+    }
+    setFailHint(t.pushEnableError);
+    return false;
+  }
+
   useEffect(() => {
+    if (shouldSkipPath(pathname)) return;
+
     let cancelled = false;
 
     async function boot() {
@@ -59,7 +112,6 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       if (cancelled) return;
 
       migratePushPromptStorage();
-      // Never stay snoozed — keep asking until Allow succeeds.
       clearPushPromptSnooze();
 
       if (requireLogin) {
@@ -74,36 +126,24 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       const status = await fetchPushStatus();
       if (cancelled) return;
 
-      // Real deliverable Web Push — stop asking.
       if (status.subscribed) {
         markPushPromptAccepted();
         return;
       }
 
-      // iPhone browser tab: permission-only is the best OS allows without Home Screen.
       if (status.permissionOnly && isLikelyIos()) {
         markPushPromptAccepted();
         return;
       }
 
-      // Browser already granted — sync subscription silently, then stop if OK.
-      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        const synced = await enableWebPush({
-          recordIntent: true,
-          forceRefresh: true,
-          allowPermissionOnly: isLikelyIos(),
-        });
-        if (cancelled) return;
-        if (synced === "granted" || (synced === "permission_only" && isLikelyIos())) {
-          markPushPromptAccepted();
-          return;
-        }
+      if (browserPermission() === "granted") {
+        const ok = await tryEnable();
+        if (cancelled || ok) return;
       }
 
       if (cancelled) return;
 
-      // Hard deny: still SHOW the popup with unblock instructions (never silent skip).
-      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+      if (browserPermission() === "denied") {
         setHardDenied(true);
         setFailHint(t.pushDeniedHint);
       }
@@ -115,36 +155,55 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [requireLogin, t.pushDeniedHint]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once per path/login
+  }, [requireLogin, pathname]);
+
+  // While open: if user unblocks notifications in Chrome settings and comes back, auto-subscribe.
+  useEffect(() => {
+    if (!open || done) return;
+    let cancelled = false;
+
+    async function tick() {
+      if (cancelled) return;
+      const perm = browserPermission();
+      if (perm === "granted") {
+        setBusy(true);
+        try {
+          await tryEnable();
+        } finally {
+          if (!cancelled) setBusy(false);
+        }
+      } else if (perm === "denied") {
+        setHardDenied(true);
+      }
+    }
+
+    const id = window.setInterval(() => void tick(), 1500);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, done]);
 
   async function onAllow() {
     setBusy(true);
     setFailHint("");
     try {
-      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+      // Always attempt — shows loading so the tap never feels dead.
+      // If already denied, enableWebPush returns denied immediately; we then
+      // show unblock steps. After the user Allows in site settings, the poll
+      // above (or another tap) completes subscription.
+      const ok = await tryEnable();
+      if (!ok && browserPermission() === "denied") {
         setHardDenied(true);
-        setFailHint(t.pushDeniedHint);
-        return;
+        setFailHint(t.pushDeniedSteps);
       }
-
-      const result = await enableWebPush({
-        recordIntent: true,
-        forceRefresh: true,
-        allowPermissionOnly: isLikelyIos(),
-      });
-      if (result === "granted" || result === "permission_only") {
-        markPushPromptAccepted();
-        setDone(true);
-        setHardDenied(false);
-        window.setTimeout(() => setOpen(false), 700);
-        return;
-      }
-      if (result === "denied") {
-        setHardDenied(true);
-        setFailHint(t.pushDeniedHint);
-        return;
-      }
-      setFailHint(t.pushEnableError);
     } catch {
       setFailHint(t.pushEnableError);
     } finally {
@@ -152,7 +211,7 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     }
   }
 
-  if (!open) return null;
+  if (!open || shouldSkipPath(pathname)) return null;
 
   return (
     <div
@@ -180,9 +239,21 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         <p className="mt-2 text-xs font-medium text-[var(--blood)]">
           {t.registerPushRequired}
         </p>
-        {hardDenied || failHint ? (
+
+        {hardDenied ? (
+          <div className="mt-3 space-y-2 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-3 text-sm text-[var(--blood)]">
+            <p className="font-semibold">{t.pushDeniedBlockedTitle}</p>
+            <ol className="list-decimal space-y-1 pl-4 text-xs leading-relaxed font-medium">
+              <li>{t.pushDeniedStep1}</li>
+              <li>{t.pushDeniedStep2}</li>
+              <li>{t.pushDeniedStep3}</li>
+              <li>{t.pushDeniedStep4}</li>
+            </ol>
+            <p className="text-xs font-medium opacity-90">{failHint || t.pushDeniedHint}</p>
+          </div>
+        ) : failHint ? (
           <p className="mt-3 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-2 text-sm font-medium text-[var(--blood)]">
-            {failHint || t.pushDeniedHint}
+            {failHint}
           </p>
         ) : null}
 
@@ -196,7 +267,11 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
               onClick={() => void onAllow()}
               className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
             >
-              {busy ? t.loading : t.registerPushAllow}
+              {busy
+                ? t.loading
+                : hardDenied
+                  ? t.registerPushRetry
+                  : t.registerPushAllow}
             </button>
           </div>
         )}
