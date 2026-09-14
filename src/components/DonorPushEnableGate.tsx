@@ -5,11 +5,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import {
   clearPushPromptSnooze,
   markPushPromptAccepted,
-  markPushPromptShownThisSession,
   migratePushPromptStorage,
-  shouldSkipPushPrompt,
-  snoozePushPrompt,
-  wasPushPromptShownThisSession,
 } from "@/lib/push-prompt-state";
 import { enableWebPush, isLikelyIos } from "@/lib/web-push-client";
 import { loadLoggedIn } from "@/lib/session-me-client";
@@ -43,11 +39,9 @@ async function fetchPushStatus(): Promise<PushStatus> {
 }
 
 /**
- * Notification Allow popup for logged-in donors.
- * Asks until the user allows notifications; once allowed, never shows again on this browser.
- * - Real push (Android/desktop) → stop asking
- * - iPhone browser permission-only → stop asking (OS limit)
- * - Not now → hide this session only; next login asks again
+ * Blocks until the donor allows notifications (or iOS permission-only is saved).
+ * Never silently skips — even if the browser previously denied.
+ * Locked-phone delivery needs a real Allow + data connection (Android Chrome / iOS Home Screen).
  */
 export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const { t } = useLocale();
@@ -55,25 +49,23 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [failHint, setFailHint] = useState("");
+  const [hardDenied, setHardDenied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function boot() {
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 150));
       if (cancelled) return;
 
-      // Push rebuild: clear stale local "accepted" flags so everyone Allows again.
       migratePushPromptStorage();
+      // Never stay snoozed — keep asking until Allow succeeds.
       clearPushPromptSnooze();
-
-      // Once per browser session (each new login = new session → ask again).
-      if (wasPushPromptShownThisSession()) return;
 
       if (requireLogin) {
         let ok = await loadLoggedIn({ force: true });
         if (!ok) {
-          await new Promise((r) => setTimeout(r, 350));
+          await new Promise((r) => setTimeout(r, 400));
           ok = await loadLoggedIn({ force: true });
         }
         if (!ok || cancelled) return;
@@ -82,40 +74,19 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       const status = await fetchPushStatus();
       if (cancelled) return;
 
-      // Real deliverable push — done forever on this device.
+      // Real deliverable Web Push — stop asking.
       if (status.subscribed) {
         markPushPromptAccepted();
         return;
       }
 
-      // iPhone browser-only is the best we can do (already saved on server).
+      // iPhone browser tab: permission-only is the best OS allows without Home Screen.
       if (status.permissionOnly && isLikelyIos()) {
         markPushPromptAccepted();
         return;
       }
 
-      // Non-iPhone with stale permission-only: try silent upgrade first.
-      if (status.permissionOnly && !isLikelyIos()) {
-        const upgraded = await enableWebPush({
-          recordIntent: true,
-          forceRefresh: true,
-          allowPermissionOnly: false,
-        });
-        if (cancelled) return;
-        if (upgraded === "granted") {
-          markPushPromptAccepted();
-          return;
-        }
-      }
-
-      if (cancelled) return;
-      // Browser hard-blocked notifications — short pause only.
-      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
-        snoozePushPrompt(1);
-        return;
-      }
-
-      // Browser already granted, but server has no row yet — sync so admin sees Allow.
+      // Browser already granted — sync subscription silently, then stop if OK.
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         const synced = await enableWebPush({
           recordIntent: true,
@@ -123,19 +94,20 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
           allowPermissionOnly: isLikelyIos(),
         });
         if (cancelled) return;
-        if (synced === "granted" || synced === "permission_only") {
+        if (synced === "granted" || (synced === "permission_only" && isLikelyIos())) {
           markPushPromptAccepted();
           return;
         }
-        // Fall through and show popup so they can retry Allow.
       }
 
-      // Local "accepted" alone is not enough — only skip after server sync above.
-      if (shouldSkipPushPrompt() && (status.subscribed || status.permissionOnly)) {
-        return;
+      if (cancelled) return;
+
+      // Hard deny: still SHOW the popup with unblock instructions (never silent skip).
+      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+        setHardDenied(true);
+        setFailHint(t.pushDeniedHint);
       }
 
-      markPushPromptShownThisSession();
       setOpen(true);
     }
 
@@ -143,12 +115,18 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [requireLogin]);
+  }, [requireLogin, t.pushDeniedHint]);
 
   async function onAllow() {
     setBusy(true);
     setFailHint("");
     try {
+      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+        setHardDenied(true);
+        setFailHint(t.pushDeniedHint);
+        return;
+      }
+
       const result = await enableWebPush({
         recordIntent: true,
         forceRefresh: true,
@@ -157,17 +135,16 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
         setDone(true);
-        window.setTimeout(() => setOpen(false), 800);
+        setHardDenied(false);
+        window.setTimeout(() => setOpen(false), 700);
         return;
       }
       if (result === "denied") {
-        setFailHint(t.pushDenied);
-        snoozePushPrompt(1);
-        // Keep open so they see why; they can retry after fixing browser settings.
+        setHardDenied(true);
+        setFailHint(t.pushDeniedHint);
         return;
       }
       setFailHint(t.pushEnableError);
-      // Stay open so they can tap Allow again this session.
     } catch {
       setFailHint(t.pushEnableError);
     } finally {
@@ -203,8 +180,10 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         <p className="mt-2 text-xs font-medium text-[var(--blood)]">
           {t.registerPushRequired}
         </p>
-        {failHint ? (
-          <p className="mt-2 text-sm font-medium text-[var(--blood)]">{failHint}</p>
+        {hardDenied || failHint ? (
+          <p className="mt-3 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-2 text-sm font-medium text-[var(--blood)]">
+            {failHint || t.pushDeniedHint}
+          </p>
         ) : null}
 
         {done ? (

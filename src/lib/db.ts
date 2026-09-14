@@ -1787,16 +1787,17 @@ export async function createPost(
   });
 
   if (notifyUserIds.length) {
-    void import("./web-push-send")
-      .then((m) =>
-        m.sendWebPushToUsers(notifyUserIds, {
-          title: pushTitle,
-          body: pushBody,
-          url: `/requests/${post.id}`,
-          tag: `blood-${post.id}`,
-        }),
-      )
-      .catch(() => undefined);
+    try {
+      const { sendWebPushToUsers } = await import("./web-push-send");
+      await sendWebPushToUsers(notifyUserIds, {
+        title: pushTitle,
+        body: pushBody,
+        url: `/requests/${post.id}`,
+        tag: `blood-${post.id}`,
+      });
+    } catch (err) {
+      console.error("[bloodlink-push] blood request broadcast failed", err);
+    }
   }
 
   return post;
