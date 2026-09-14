@@ -394,11 +394,12 @@ export const dictionaries = {
     registerSuccessCta: "Go to my dashboard",
     registerPushTitle: "Allow notifications?",
     registerPushBody:
-      "Get blood need alerts and reminders on this phone.",
+      "Get blood-need alerts on this phone — even when the screen is locked, as long as mobile data/Wi‑Fi is on. Tap Allow once.",
     registerPushAllow: "Allow",
     registerPushSkip: "Not now",
     registerPushOn: "Notifications enabled.",
-    registerPushRequired: "Tap Allow to get blood alerts. Outside taps will not close this.",
+    registerPushRequired:
+      "Tap Allow to get blood alerts (locked phone + data on still works). Outside taps will not close this.",
     registerPushAllowFirst: "Allow notifications to continue",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
@@ -1349,11 +1350,12 @@ export const dictionaries = {
     registerSuccessCta: "ড্যাশবোর্ডে যান",
     registerPushTitle: "নোটিফিকেশন অনুমতি দেবেন?",
     registerPushBody:
-      "এই ফোনে রক্তের প্রয়োজন ও রিমাইন্ডারের অ্যালার্ট পাবেন।",
+      "এই ফোনে রক্তের প্রয়োজনের অ্যালার্ট পাবেন — ফোন লক থাকলেও, ডেটা/Wi‑Fi চালু থাকলে পাবেন। একবার Allow চাপুন।",
     registerPushAllow: "অনুমতি দিন",
     registerPushSkip: "এখন না",
     registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
-    registerPushRequired: "অ্যালার্ট পেতে Allow চাপুন। বাইরে ক্লিক করলে পপআপ বন্ধ হবে না।",
+    registerPushRequired:
+      "অ্যালার্ট পেতে Allow চাপুন (লক ফোন + ডেটা চালুতেও কাজ করে)। বাইরে ক্লিক করলে পপআপ বন্ধ হবে না।",
     registerPushAllowFirst: "এগোনোর আগে নোটিফিকেশন Allow করুন",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",

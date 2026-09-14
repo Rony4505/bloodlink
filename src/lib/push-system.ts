@@ -3,7 +3,7 @@
  * Bumping this clears stale pushSubscriptions once on the server and
  * forces every browser to re-Allow so deliveries work again.
  */
-export const PUSH_SYSTEM_VERSION = 4;
+export const PUSH_SYSTEM_VERSION = 5;
 
 /** localStorage / sessionStorage keys used by older prompt builds */
 export const LEGACY_PUSH_STORAGE_KEYS = [

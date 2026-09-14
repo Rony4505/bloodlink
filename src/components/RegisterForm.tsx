@@ -139,6 +139,7 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
         setError(data.error || t.errorGeneric);
         return;
       }
+      markDonorSessionActive();
       setSuccessDonor(data.donor as RegisteredDonorSummary);
     } catch {
       setError(t.errorGeneric);
