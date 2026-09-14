@@ -401,6 +401,7 @@ export const dictionaries = {
     registerPushRequired:
       "Tap Allow to get blood alerts (locked phone + data on still works). Outside taps will not close this.",
     registerPushAllowFirst: "Allow notifications to continue",
+    registerPushRetry: "I turned Allow on — try again",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     donationInfoOptionalHint:
@@ -924,7 +925,14 @@ export const dictionaries = {
       "Once each BD month, send a warm crimson blessing to the current top Gold/Platinum donor.",
     pushDenied: "Notifications are blocked in browser settings.",
     pushDeniedHint:
-      "Open browser site settings → Notifications → Allow for bloodlinkbd.org, then tap Allow again.",
+      "Open browser site settings → Notifications → Allow for bloodlinkbd.org, then tap Try again.",
+    pushDeniedBlockedTitle: "Chrome blocked notifications for this site",
+    pushDeniedStep1: "Chrome menu (⋮) → Settings → Site settings → Notifications",
+    pushDeniedStep2: "Find bloodlinkbd.org and set it to Allow",
+    pushDeniedStep3: "Come back to this page",
+    pushDeniedStep4: "Tap the red button again",
+    pushDeniedSteps:
+      "Chrome blocked the prompt. Allow bloodlinkbd.org in Site settings → Notifications, return here, then tap Try again.",
     pushUnsupported:
       "This browser cannot save phone alerts. On Android use Chrome; on iPhone open BloodLink from the Home Screen app.",
     pushIosHint:
@@ -1357,6 +1365,7 @@ export const dictionaries = {
     registerPushRequired:
       "অ্যালার্ট পেতে Allow চাপুন (লক ফোন + ডেটা চালুতেও কাজ করে)। বাইরে ক্লিক করলে পপআপ বন্ধ হবে না।",
     registerPushAllowFirst: "এগোনোর আগে নোটিফিকেশন Allow করুন",
+    registerPushRetry: "আমি Allow করেছি — আবার চেষ্টা করুন",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     donationInfoOptionalHint:
@@ -1882,7 +1891,14 @@ export const dictionaries = {
       "প্রতি BD মাসে বর্তমান টপ গোল্ড/প্লাটিনাম ডোনারকে আবেগঘন রক্তিম শুভেচ্ছা পাঠাবে।",
     pushDenied: "ব্রাউজার সেটিংসে নোটিফিকেশন ব্লক করা আছে।",
     pushDeniedHint:
-      "ব্রাউজার সাইট সেটিংস → Notifications → bloodlinkbd.org Allow করুন, তারপর আবার Allow চাপুন।",
+      "ব্রাউজার সাইট সেটিংস → Notifications → bloodlinkbd.org Allow করুন, তারপর আবার চেষ্টা চাপুন।",
+    pushDeniedBlockedTitle: "Chrome এই সাইটের নোটিফিকেশন ব্লক করেছে",
+    pushDeniedStep1: "Chrome মেনু (⋮) → Settings → Site settings → Notifications",
+    pushDeniedStep2: "bloodlinkbd.org খুঁজে Allow করুন",
+    pushDeniedStep3: "এই পেজে ফিরে আসুন",
+    pushDeniedStep4: "লাল বাটন আবার চাপুন",
+    pushDeniedSteps:
+      "Chrome প্রম্পট ব্লক করেছে। Site settings → Notifications-এ bloodlinkbd.org Allow করুন, ফিরে এসে আবার চেষ্টা চাপুন।",
     pushUnsupported:
       "এই ব্রাউজারে ফোন অ্যালার্ট সেভ হয় না। Android-এ Chrome ব্যবহার করুন; iPhone-এ Home Screen অ্যাপ থেকে BloodLink খুলুন।",
     pushIosHint:
