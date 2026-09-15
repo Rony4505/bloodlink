@@ -1,6 +1,7 @@
 "use client";
 
 export {
+  SoftSitePushAsk,
   DonorPushEnableGate,
   NotificationsPushAskModal,
-} from "@/components/DonorPushEnableGate";
+} from "@/components/SoftSitePushAsk";

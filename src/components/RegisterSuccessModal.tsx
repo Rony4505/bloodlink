@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
-import {
-  markPushPromptAccepted,
-  snoozePushPrompt,
-} from "@/lib/push-prompt-state";
-import { enableWebPush } from "@/lib/web-push-client";
 
 export type RegisteredDonorSummary = {
   name: string;
@@ -43,58 +38,15 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
-  const [pushBusy, setPushBusy] = useState(false);
-  const [pushSupported, setPushSupported] = useState(false);
-  const [pushDone, setPushDone] = useState<"idle" | "on" | "denied" | "error">(
-    "idle",
-  );
-  const showPushPrompt = pushSupported && (pushDone === "idle" || pushDone === "denied");
-  const canContinue = pushDone === "on" || pushDone === "denied";
 
   useEffect(() => {
     invalidateDonorStats();
-    // Show Allow on every browser (iPhone Safari/Chrome included).
-    setPushSupported(true);
   }, []);
-
-  async function onAllowPush() {
-    setPushBusy(true);
-    try {
-      // Chrome cannot re-prompt after Deny — reload picks up Site settings Allow.
-      if (
-        typeof Notification !== "undefined" &&
-        Notification.permission === "denied"
-      ) {
-        window.location.reload();
-        return;
-      }
-      const result = await enableWebPush({
-        recordIntent: true,
-        forceRefresh: true,
-        allowPermissionOnly: true,
-      });
-      if (result === "granted" || result === "permission_only") {
-        markPushPromptAccepted();
-        setPushDone("on");
-      } else if (result === "denied") {
-        snoozePushPrompt(1);
-        window.location.reload();
-        return;
-      } else {
-        setPushDone("error");
-      }
-    } catch {
-      setPushDone("error");
-    } finally {
-      setPushBusy(false);
-    }
-  }
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
       onMouseDown={(e) => {
-        // Outside click must not dismiss — only Allow / Continue after Allow.
         if (e.target === e.currentTarget) e.preventDefault();
       }}
     >
@@ -180,54 +132,12 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
           </div>
         </div>
 
-        {showPushPrompt ? (
-          <div className="mt-5 rounded-2xl border-2 border-[var(--blood)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 text-center shadow-sm">
-            <p className="text-base font-semibold text-[var(--blood-deep)]">
-              {t.registerPushTitle}
-            </p>
-            <div className="mt-3">
-              <button
-                type="button"
-                disabled={pushBusy}
-                onClick={() => void onAllowPush()}
-                className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
-              >
-                {pushBusy ? t.loading : t.registerPushAllow}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {pushDone === "on" ? (
-          <p className="mt-4 text-center text-sm font-medium text-[var(--sage)]">
-            {t.registerPushOn}
-          </p>
-        ) : null}
-        {pushDone === "error" ? (
-          <div className="mt-4 space-y-2 text-center">
-            <p className="text-sm font-medium text-[var(--blood)]">
-              {t.pushEnableError}
-            </p>
-            <button
-              type="button"
-              disabled={pushBusy}
-              onClick={() => {
-                setPushDone("idle");
-              }}
-              className="text-sm font-semibold text-[var(--blood-deep)] underline"
-            >
-              {t.registerPushAllow}
-            </button>
-          </div>
-        ) : null}
-
         <button
           type="button"
-          disabled={!canContinue}
           onClick={() => onContinue()}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#265a42] disabled:cursor-not-allowed disabled:opacity-45"
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#265a42]"
         >
-          {canContinue ? t.registerSuccessCta : t.registerPushAllowFirst}
+          {t.registerSuccessCta}
         </button>
       </div>
     </div>
