@@ -393,15 +393,13 @@ export const dictionaries = {
     registerSuccessSummary: "Your donor profile",
     registerSuccessCta: "Go to my dashboard",
     registerPushTitle: "Allow notifications?",
-    registerPushBody:
-      "Get blood-need alerts on this phone — even when the screen is locked, as long as mobile data/Wi‑Fi is on. Tap Allow once.",
+    registerPushBody: "Allow notifications?",
     registerPushAllow: "Allow",
     registerPushSkip: "Not now",
     registerPushOn: "Notifications enabled.",
-    registerPushRequired:
-      "Tap Allow to get blood alerts (locked phone + data on still works). Outside taps will not close this.",
+    registerPushRequired: "Allow notifications?",
     registerPushAllowFirst: "Allow notifications to continue",
-    registerPushRetry: "I turned Allow on — try again",
+    registerPushRetry: "Allow",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     donationInfoOptionalHint:
@@ -1356,16 +1354,14 @@ export const dictionaries = {
       "আপনার ডোনার প্রোফাইল তৈরি হয়েছে। নিচে বিবরণ দেখে ড্যাশবোর্ডে যান।",
     registerSuccessSummary: "আপনার ডোনার প্রোফাইল",
     registerSuccessCta: "ড্যাশবোর্ডে যান",
-    registerPushTitle: "নোটিফিকেশন অনুমতি দেবেন?",
-    registerPushBody:
-      "এই ফোনে রক্তের প্রয়োজনের অ্যালার্ট পাবেন — ফোন লক থাকলেও, ডেটা/Wi‑Fi চালু থাকলে পাবেন। একবার Allow চাপুন।",
-    registerPushAllow: "অনুমতি দিন",
+    registerPushTitle: "নোটিফিকেশন অনুমতি চান?",
+    registerPushBody: "নোটিফিকেশন অনুমতি চান?",
+    registerPushAllow: "Allow করে দিন",
     registerPushSkip: "এখন না",
     registerPushOn: "নোটিফিকেশন চালু হয়েছে।",
-    registerPushRequired:
-      "অ্যালার্ট পেতে Allow চাপুন (লক ফোন + ডেটা চালুতেও কাজ করে)। বাইরে ক্লিক করলে পপআপ বন্ধ হবে না।",
-    registerPushAllowFirst: "এগোনোর আগে নোটিফিকেশন Allow করুন",
-    registerPushRetry: "আমি Allow করেছি — আবার চেষ্টা করুন",
+    registerPushRequired: "নোটিফিকেশন অনুমতি চান?",
+    registerPushAllowFirst: "এগোনোর আগে Allow করে দিন",
+    registerPushRetry: "Allow করে দিন",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     donationInfoOptionalHint:

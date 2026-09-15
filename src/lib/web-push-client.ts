@@ -281,6 +281,19 @@ export async function enableWebPush(
       ) {
         return "granted";
       }
+      // forceRefresh unsubscribe can fail on some Android Chrome builds —
+      // retry once keeping any existing subscription.
+      if (forceRefresh) {
+        if (
+          await subscribeFullWebPush({
+            statusUrl,
+            saveUrl,
+            forceRefresh: false,
+          })
+        ) {
+          return "granted";
+        }
+      }
       return "error";
     }
 

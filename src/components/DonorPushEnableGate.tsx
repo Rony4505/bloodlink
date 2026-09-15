@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
@@ -26,6 +26,9 @@ const SKIP_PATH_PREFIXES = [
   "/join/",
   "/volunteer/login",
 ];
+
+const DENIED_RELOAD_KEY = "bloodlink_push_denied_reload";
+const SW_RELOAD_KEY = "bloodlink_push_sw_reload";
 
 function shouldSkipPath(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -60,11 +63,20 @@ function browserPermission(): NotificationPermission | "unsupported" {
   return Notification.permission;
 }
 
+async function resetServiceWorkers() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
- * Blocks until the donor allows notifications (or iOS permission-only is saved).
- * Never silently skips. If the browser already blocked notifications, the Allow
- * button shows loading + clear unblock steps (Chrome cannot reopen the system
- * dialog after Deny — user must Allow in site settings, then we retry).
+ * Tiny Allow gate — title + one button only.
+ * If Chrome already blocked notifications, a tap reloads so site-settings
+ * Allow is picked up; then we subscribe and close.
  */
 export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const { t } = useLocale();
@@ -72,34 +84,40 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const [failHint, setFailHint] = useState("");
-  const [hardDenied, setHardDenied] = useState(false);
+  const enablingRef = useRef(false);
 
   async function finishSuccess() {
+    try {
+      sessionStorage.removeItem(DENIED_RELOAD_KEY);
+      sessionStorage.removeItem(SW_RELOAD_KEY);
+    } catch {
+      /* ignore */
+    }
     markPushPromptAccepted();
     setDone(true);
-    setHardDenied(false);
-    setFailHint("");
-    window.setTimeout(() => setOpen(false), 700);
+    window.setTimeout(() => setOpen(false), 500);
   }
 
-  async function tryEnable(): Promise<boolean> {
-    const result = await enableWebPush({
-      recordIntent: true,
-      forceRefresh: true,
-      allowPermissionOnly: isLikelyIos(),
-    });
-    if (result === "granted" || result === "permission_only") {
-      await finishSuccess();
-      return true;
+  async function tryEnable(): Promise<"ok" | "denied" | "error"> {
+    if (enablingRef.current) return "error";
+    enablingRef.current = true;
+    try {
+      const result = await enableWebPush({
+        recordIntent: true,
+        forceRefresh: true,
+        allowPermissionOnly: isLikelyIos(),
+      });
+      if (result === "granted" || result === "permission_only") {
+        await finishSuccess();
+        return "ok";
+      }
+      if (result === "denied" || browserPermission() === "denied") {
+        return "denied";
+      }
+      return "error";
+    } finally {
+      enablingRef.current = false;
     }
-    if (result === "denied" || browserPermission() === "denied") {
-      setHardDenied(true);
-      setFailHint(t.pushDeniedHint);
-      return false;
-    }
-    setFailHint(t.pushEnableError);
-    return false;
   }
 
   useEffect(() => {
@@ -137,17 +155,11 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
       }
 
       if (browserPermission() === "granted") {
-        const ok = await tryEnable();
-        if (cancelled || ok) return;
+        const outcome = await tryEnable();
+        if (cancelled || outcome === "ok") return;
       }
 
       if (cancelled) return;
-
-      if (browserPermission() === "denied") {
-        setHardDenied(true);
-        setFailHint(t.pushDeniedHint);
-      }
-
       setOpen(true);
     }
 
@@ -158,54 +170,80 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once per path/login
   }, [requireLogin, pathname]);
 
-  // While open: if user unblocks notifications in Chrome settings and comes back, auto-subscribe.
+  // When user returns from Chrome settings with Allow, subscribe automatically.
   useEffect(() => {
     if (!open || done) return;
     let cancelled = false;
 
     async function tick() {
-      if (cancelled) return;
-      const perm = browserPermission();
-      if (perm === "granted") {
-        setBusy(true);
-        try {
-          await tryEnable();
-        } finally {
-          if (!cancelled) setBusy(false);
-        }
-      } else if (perm === "denied") {
-        setHardDenied(true);
+      if (cancelled || enablingRef.current) return;
+      if (browserPermission() !== "granted") return;
+      setBusy(true);
+      try {
+        await tryEnable();
+      } finally {
+        if (!cancelled) setBusy(false);
       }
     }
 
-    const id = window.setInterval(() => void tick(), 1500);
+    const id = window.setInterval(() => void tick(), 1200);
     const onVis = () => {
       if (document.visibilityState === "visible") void tick();
     };
+    const onPageShow = () => void tick();
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       cancelled = true;
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pageshow", onPageShow);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, done]);
 
   async function onAllow() {
+    if (busy || done) return;
     setBusy(true);
-    setFailHint("");
     try {
-      // Always attempt — shows loading so the tap never feels dead.
-      // If already denied, enableWebPush returns denied immediately; we then
-      // show unblock steps. After the user Allows in site settings, the poll
-      // above (or another tap) completes subscription.
-      const ok = await tryEnable();
-      if (!ok && browserPermission() === "denied") {
-        setHardDenied(true);
-        setFailHint(t.pushDeniedSteps);
+      const perm = browserPermission();
+
+      // Chrome cannot re-open the system prompt after Deny. A full reload is
+      // the reliable way to pick up Site settings → Notifications → Allow.
+      if (perm === "denied") {
+        try {
+          sessionStorage.setItem(DENIED_RELOAD_KEY, "1");
+        } catch {
+          /* ignore */
+        }
+        window.location.reload();
+        return;
+      }
+
+      const outcome = await tryEnable();
+      if (outcome === "ok") return;
+
+      // Permission is granted but subscribe failed — reset SW and reload once.
+      if (browserPermission() === "granted") {
+        let alreadyReloaded = false;
+        try {
+          alreadyReloaded = sessionStorage.getItem(SW_RELOAD_KEY) === "1";
+        } catch {
+          /* ignore */
+        }
+        if (!alreadyReloaded) {
+          try {
+            sessionStorage.setItem(SW_RELOAD_KEY, "1");
+          } catch {
+            /* ignore */
+          }
+          await resetServiceWorkers();
+          window.location.reload();
+          return;
+        }
       }
     } catch {
-      setFailHint(t.pushEnableError);
+      /* keep modal open for another tap */
     } finally {
       setBusy(false);
     }
@@ -224,54 +262,29 @@ export function DonorPushEnableGate({ requireLogin = true }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="push-ask-title"
-        className="animate-[rise_0.35s_ease-out] w-full max-w-md rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] p-6 shadow-2xl sm:p-7"
+        className="animate-[rise_0.35s_ease-out] w-full max-w-sm rounded-[28px] border border-[var(--line)] bg-[linear-gradient(165deg,#fff8f4_0%,var(--mist)_45%,#f3ebe4_100%)] p-6 shadow-2xl sm:p-7"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <h2
           id="push-ask-title"
-          className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[var(--blood-deep)]"
+          className="text-center font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[var(--blood-deep)]"
         >
           {t.registerPushTitle}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-[color-mix(in_oklab,var(--ink)_72%,white)]">
-          {t.registerPushBody}
-        </p>
-        <p className="mt-2 text-xs font-medium text-[var(--blood)]">
-          {t.registerPushRequired}
-        </p>
-
-        {hardDenied ? (
-          <div className="mt-3 space-y-2 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-3 text-sm text-[var(--blood)]">
-            <p className="font-semibold">{t.pushDeniedBlockedTitle}</p>
-            <ol className="list-decimal space-y-1 pl-4 text-xs leading-relaxed font-medium">
-              <li>{t.pushDeniedStep1}</li>
-              <li>{t.pushDeniedStep2}</li>
-              <li>{t.pushDeniedStep3}</li>
-              <li>{t.pushDeniedStep4}</li>
-            </ol>
-            <p className="text-xs font-medium opacity-90">{failHint || t.pushDeniedHint}</p>
-          </div>
-        ) : failHint ? (
-          <p className="mt-3 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-2 text-sm font-medium text-[var(--blood)]">
-            {failHint}
-          </p>
-        ) : null}
 
         {done ? (
-          <p className="mt-4 text-sm font-medium text-[var(--sage)]">{t.registerPushOn}</p>
+          <p className="mt-4 text-center text-sm font-medium text-[var(--sage)]">
+            {t.registerPushOn}
+          </p>
         ) : (
-          <div className="mt-5">
+          <div className="mt-6">
             <button
               type="button"
               disabled={busy}
               onClick={() => void onAllow()}
               className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
             >
-              {busy
-                ? t.loading
-                : hardDenied
-                  ? t.registerPushRetry
-                  : t.registerPushAllow}
+              {busy ? t.loading : t.registerPushAllow}
             </button>
           </div>
         )}
