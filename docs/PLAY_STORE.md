@@ -45,8 +45,10 @@ Verify:
 2. URL দিন: `https://bloodlinkbd.org`  
 3. **Package for stores** → Android  
 4. Package ID: `org.bloodlinkbd.android`  
-5. AAB ডাউনলোড করুন  
-6. [Google Play Console](https://play.google.com/console) → Create app → Production/Testing → Upload AAB  
+5. **App version** / version name: `1.0.1` (বা পরের নম্বর)  
+6. **Version code**: আগের আপলোডের চেয়ে **বড়** সংখ্যা দিন (এখন `2`; পরেরবার `3`, `4`…) — একই version code দুবার আপলোড হয় না  
+7. AAB ডাউনলোড করুন  
+8. [Google Play Console](https://play.google.com/console) → Testing → Upload AAB  
 
 ### ৩) Alternate — Bubblewrap (CLI)
 
