@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { FashionSwCleanup } from "@/components/FashionSwCleanup";
 import { PwaRegister } from "@/components/PwaRegister";
+import { SoftSitePushAsk } from "@/components/SoftSitePushAsk";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
 import { CartProvider } from "@/lib/fashion/cart-context";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
@@ -170,6 +171,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <CartProvider>
             <SiteAppearanceProvider>
               {fashion ? <FashionSwCleanup /> : <PwaRegister />}
+              {!fashion ? <SoftSitePushAsk /> : null}
               {children}
             </SiteAppearanceProvider>
           </CartProvider>
