@@ -45,7 +45,6 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   const { t } = useLocale();
   const [pushBusy, setPushBusy] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
-  const [pushDeniedHint, setPushDeniedHint] = useState(false);
   const [pushDone, setPushDone] = useState<"idle" | "on" | "denied" | "error">(
     "idle",
   );
@@ -61,6 +60,14 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
   async function onAllowPush() {
     setPushBusy(true);
     try {
+      // Chrome cannot re-prompt after Deny — reload picks up Site settings Allow.
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "denied"
+      ) {
+        window.location.reload();
+        return;
+      }
       const result = await enableWebPush({
         recordIntent: true,
         forceRefresh: true,
@@ -68,14 +75,12 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
       });
       if (result === "granted" || result === "permission_only") {
         markPushPromptAccepted();
-        setPushDeniedHint(false);
         setPushDone("on");
       } else if (result === "denied") {
         snoozePushPrompt(1);
-        setPushDeniedHint(true);
-        setPushDone("denied");
+        window.location.reload();
+        return;
       } else {
-        setPushDeniedHint(false);
         setPushDone("error");
       }
     } catch {
@@ -176,27 +181,10 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
         </div>
 
         {showPushPrompt ? (
-          <div className="mt-5 rounded-2xl border-2 border-[var(--blood)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 text-left shadow-sm">
-            <p className="text-sm font-semibold text-[var(--blood-deep)]">
+          <div className="mt-5 rounded-2xl border-2 border-[var(--blood)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-4 py-4 text-center shadow-sm">
+            <p className="text-base font-semibold text-[var(--blood-deep)]">
               {t.registerPushTitle}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_65%,white)]">
-              {t.registerPushBody}
-            </p>
-            <p className="mt-2 text-xs font-medium text-[var(--blood)]">
-              {t.registerPushRequired}
-            </p>
-            {pushDeniedHint ? (
-              <div className="mt-3 space-y-1 rounded-xl bg-[color-mix(in_oklab,var(--blood)_10%,white)] px-3 py-2 text-xs font-medium text-[var(--blood)]">
-                <p className="font-semibold">{t.pushDeniedBlockedTitle}</p>
-                <ol className="list-decimal space-y-0.5 pl-4">
-                  <li>{t.pushDeniedStep1}</li>
-                  <li>{t.pushDeniedStep2}</li>
-                  <li>{t.pushDeniedStep3}</li>
-                  <li>{t.pushDeniedStep4}</li>
-                </ol>
-              </div>
-            ) : null}
             <div className="mt-3">
               <button
                 type="button"
@@ -204,11 +192,7 @@ export function RegisterSuccessModal({ donor, onContinue }: Props) {
                 onClick={() => void onAllowPush()}
                 className="inline-flex w-full items-center justify-center rounded-full bg-[var(--blood)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--blood-deep)] disabled:opacity-60"
               >
-                {pushBusy
-                  ? t.loading
-                  : pushDeniedHint
-                    ? t.registerPushRetry
-                    : t.registerPushAllow}
+                {pushBusy ? t.loading : t.registerPushAllow}
               </button>
             </div>
           </div>
