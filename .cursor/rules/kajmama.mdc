@@ -1,0 +1,35 @@
+---
+description: Kajmama (কাজমামা) — standalone Bangladesh worker marketplace. Isolated from BloodLink, Smart craft, Mudi POS, PitchLive.
+globs:
+  - src/lib/kajmama/**
+  - src/components/kajmama/**
+  - src/app/kajmama/**
+  - src/app/api/kajmama/**
+  - KAJMAMA.md
+  - kajmama.project.json
+---
+
+# Kajmama (কাজমামা)
+
+Standalone worker-hiring marketplace for Bangladesh.
+
+## Must read first
+- `KAJMAMA.md`
+- `kajmama.project.json`
+
+## Entry
+- URL: `/kajmama`
+- Demo hirer: `01722222222` / `123456`
+- Demo worker: `01711111111` / `123456`
+- Admin: `/kajmama/admin` PIN `1122`
+
+## Layout
+- Logic: `src/lib/kajmama/`
+- UI: `src/components/kajmama/`
+- API: `src/app/api/kajmama/`
+- Storage: `data/kajmama-store.json`
+- Cookies: `kajmama_session`, `kajmama_admin`
+
+Do **not** import from BloodLink, fashion/Smart craft, mudidokan, or cricket.
+Do **not** add Kajmama links to those apps unless the user asks.
+Keep all Kajmama work in the paths above.

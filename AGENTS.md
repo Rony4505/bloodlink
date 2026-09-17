@@ -41,3 +41,20 @@ Standalone **cricket live score + video** rental app for clubs/tournaments.
 When the user asks for **PitchLive**, **cricket score**, or **লাইভ স্কোর**, read `CRICKET_LIVE.md` first and work only in the cricket paths unless they ask to integrate elsewhere.
 
 Run: `npm run dev` → open `http://localhost:3000/cricket`
+
+---
+
+# Kajmama (কাজমামা)
+
+Standalone **Bangladesh worker-hiring marketplace**. Completely isolated from BloodLink, Smart craft corner, Mudi POS, and PitchLive.
+
+| Resource | Path |
+|----------|------|
+| **Docs** | `KAJMAMA.md` |
+| **Manifest** | `kajmama.project.json` |
+| **URL** | `/kajmama` |
+| **Code** | `src/lib/kajmama/`, `src/components/kajmama/` |
+
+When the user asks for **Kajmama**, **কাজমামা**, or **kajmama**, read `KAJMAMA.md` first and work only in the kajmama paths unless they ask to integrate elsewhere.
+
+Run: `npm run dev` → open `http://localhost:3000/kajmama`
