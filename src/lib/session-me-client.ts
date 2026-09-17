@@ -1,3 +1,5 @@
+import { resetPushPromptAfterAuth } from "@/lib/push-prompt-state";
+
 type SessionListener = (loggedIn: boolean) => void;
 
 let mePromise: Promise<boolean> | null = null;
@@ -33,6 +35,8 @@ export function markDonorSessionActive() {
   } catch {
     /* ignore */
   }
+  // New session → the notification Allow ask may show again on /dashboard.
+  resetPushPromptAfterAuth();
   notify(true);
 }
 

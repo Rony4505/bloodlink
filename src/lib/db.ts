@@ -1653,7 +1653,7 @@ export async function getRatingStats(
 export async function createRating(
   input: Omit<Rating, "id" | "createdAt">,
 ): Promise<Rating> {
-  return withWrite(async (db) => {
+  const { rating, donorName } = await withWrite(async (db) => {
     const rating: Rating = {
       ...input,
       id: randomUUID(),
@@ -1661,7 +1661,68 @@ export async function createRating(
     };
     db.ratings.push(rating);
     await persist(db);
-    return rating;
+    const donor = db.donors.find((d) => d.id === input.donorId);
+    return { rating, donorName: donor?.name || "Donor" };
+  });
+
+  const stars = "★".repeat(Math.max(0, Math.min(5, rating.stars)));
+  void notifyAdminAlert({
+    titleEn: "New donor rating",
+    titleBn: "নতুন ডোনার রেটিং",
+    bodyEn: `${rating.seekerName} rated ${donorName} ${rating.stars}/5 ${stars}${rating.comment ? ` — "${rating.comment.slice(0, 120)}"` : ""}.`,
+    bodyBn: `${rating.seekerName} ${donorName}-কে ${rating.stars}/5 ${stars} দিয়েছেন${rating.comment ? ` — "${rating.comment.slice(0, 120)}"` : ""}।`,
+    type: "system",
+    href: `${BLOODLINK_OWNER_PATH}?tab=donors`,
+    tag: `rating-${rating.id}`,
+  }).catch((err) => {
+    console.error("[bloodlink] admin rating notify failed:", err);
+  });
+
+  return rating;
+}
+
+/** Donor changed last donation date / donation count from their dashboard. */
+export async function notifyAdminDonorDonationUpdate(input: {
+  donor: Pick<Donor, "id" | "name" | "bloodGroup" | "district">;
+  previousDate: string | null;
+  nextDate: string | null;
+  previousCount: number;
+  nextCount: number;
+}): Promise<void> {
+  const bits: string[] = [];
+  const bitsBn: string[] = [];
+  if (input.previousDate !== input.nextDate) {
+    bits.push(`last donation ${input.previousDate || "—"} → ${input.nextDate || "—"}`);
+    bitsBn.push(`শেষ রক্তদান ${input.previousDate || "—"} → ${input.nextDate || "—"}`);
+  }
+  if (input.previousCount !== input.nextCount) {
+    bits.push(`donations ${input.previousCount} → ${input.nextCount}`);
+    bitsBn.push(`মোট রক্তদান ${input.previousCount} → ${input.nextCount}`);
+  }
+  if (!bits.length) return;
+  await notifyAdminAlert({
+    titleEn: "Donor updated donation info",
+    titleBn: "ডোনার রক্তদানের তথ্য আপডেট করেছে",
+    bodyEn: `${input.donor.name} (${input.donor.bloodGroup}, ${input.donor.district}): ${bits.join(", ")}.`,
+    bodyBn: `${input.donor.name} (${input.donor.bloodGroup}, ${input.donor.district}): ${bitsBn.join(", ")}।`,
+    type: "system",
+    href: `${BLOODLINK_OWNER_PATH}?tab=donors`,
+    tag: `donor-update-${input.donor.id}-${Date.now()}`,
+  });
+}
+
+/** Donor's device just got its first deliverable Web Push subscription. */
+export async function notifyAdminDonorPushEnabled(
+  donor: Pick<Donor, "id" | "name" | "bloodGroup" | "district">,
+): Promise<void> {
+  await notifyAdminAlert({
+    titleEn: "Donor turned on notifications",
+    titleBn: "ডোনার নোটিফিকেশন চালু করেছে",
+    bodyEn: `${donor.name} (${donor.bloodGroup}, ${donor.district}) allowed phone alerts.`,
+    bodyBn: `${donor.name} (${donor.bloodGroup}, ${donor.district}) ফোন অ্যালার্ট Allow করেছে।`,
+    type: "system",
+    href: `${BLOODLINK_OWNER_PATH}?tab=notifications`,
+    tag: `donor-push-on-${donor.id}`,
   });
 }
 
@@ -2888,20 +2949,49 @@ export async function updateVolunteerActivity(
     >
   >,
 ): Promise<VolunteerActivity | null> {
-  return withWrite(async (db) => {
+  const outcome = await withWrite(async (db) => {
     db.volunteerActivities = db.volunteerActivities || [];
     const index = db.volunteerActivities.findIndex((a) => a.id === id);
     if (index === -1) return null;
+    const before = db.volunteerActivities[index];
     const merged = normalizeVolunteerActivity({
-      ...db.volunteerActivities[index],
+      ...before,
       ...patch,
       updatedAt: new Date().toISOString(),
     });
     if (!merged) return null;
     db.volunteerActivities[index] = merged;
     await persist(db);
-    return merged;
+    const volunteer = (db.volunteers || []).find((v) => v.id === merged.volunteerId);
+    return {
+      merged,
+      statusChanged: before.status !== merged.status,
+      noteChanged: (before.volunteerNote || "") !== (merged.volunteerNote || ""),
+      volunteerName: volunteer?.name || "Volunteer",
+    };
   });
+  if (!outcome) return null;
+
+  if (outcome.statusChanged || outcome.noteChanged) {
+    const a = outcome.merged;
+    const statusEn =
+      a.status === "done" ? "Done" : a.status === "in_progress" ? "In progress" : "Planned";
+    const statusBn =
+      a.status === "done" ? "সম্পন্ন" : a.status === "in_progress" ? "চলছে" : "পরিকল্পিত";
+    void notifyAdminAlert({
+      titleEn: outcome.statusChanged ? "Volunteer task updated" : "Volunteer added task note",
+      titleBn: outcome.statusChanged ? "Volunteer কাজ আপডেট করেছে" : "Volunteer কাজে নোট দিয়েছে",
+      bodyEn: `${outcome.volunteerName}: "${a.title}" → ${statusEn}${a.volunteerNote ? ` — ${a.volunteerNote.slice(0, 140)}` : ""}.`,
+      bodyBn: `${outcome.volunteerName}: "${a.title}" → ${statusBn}${a.volunteerNote ? ` — ${a.volunteerNote.slice(0, 140)}` : ""}।`,
+      type: "system",
+      href: `${BLOODLINK_OWNER_PATH}?tab=volunteers`,
+      tag: `volunteer-task-${a.id}-${Date.now()}`,
+    }).catch((err) => {
+      console.error("[bloodlink] admin volunteer-task notify failed:", err);
+    });
+  }
+
+  return outcome.merged;
 }
 
 export async function deleteVolunteerActivity(id: string): Promise<boolean> {

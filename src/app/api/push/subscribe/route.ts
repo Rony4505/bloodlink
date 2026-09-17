@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentDonor } from "@/lib/auth";
 import {
+  findDonorById,
   removePushSubscriptionForUser,
   removeGuestPushSubscriptionsByEndpoint,
   upsertPushSubscription,
   donorHasDeliverablePushSubscription,
   donorHasPermissionOnlyPush,
   finalizeReferralAfterPush,
+  notifyAdminDonorPushEnabled,
 } from "@/lib/db";
 import { getGuestPushUserId, getOrCreateGuestPushUserId } from "@/lib/guest-push";
 import { LOCAL_PUSH_PERMISSION_PREFIX } from "@/lib/push-subscription";
@@ -97,6 +99,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
     }
 
+    const hadDeliverable = donorId
+      ? await donorHasDeliverablePushSubscription(donorId)
+      : true;
+
     await upsertPushSubscription({ userId, endpoint, p256dh, auth });
     await removePushSubscriptionForUser(
       userId,
@@ -109,6 +115,13 @@ export async function POST(request: Request) {
       void finalizeReferralAfterPush(donorId).catch((err) => {
         console.error("[bloodlink] finalize referral after push failed:", err);
       });
+      if (!hadDeliverable) {
+        void findDonorById(donorId)
+          .then((donor) => (donor ? notifyAdminDonorPushEnabled(donor) : undefined))
+          .catch((err) => {
+            console.error("[bloodlink] admin donor-push-on notify failed:", err);
+          });
+      }
     }
     return NextResponse.json({ ok: true, guest: !donorId });
   } catch {
