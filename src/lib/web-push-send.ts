@@ -59,6 +59,12 @@ async function sendToSubscriptions(
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           body,
+          {
+            // High urgency wakes a dozing / locked phone immediately;
+            // 24h TTL keeps the alert queued while the device is offline.
+            urgency: "high",
+            TTL: 24 * 60 * 60,
+          },
         );
         sent += 1;
       } catch (err: unknown) {

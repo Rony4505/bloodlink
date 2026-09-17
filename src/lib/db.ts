@@ -92,8 +92,20 @@ import { normalizePhone } from "./privacy";
 import {
   donorPushStatusFromSubscriptions,
   isDeliverablePushSubscription,
+  isGuestPushUserId,
   isPermissionOnlyPushSubscription,
 } from "./push-subscription";
+
+/** Deliverable guest (not logged in) push user ids — push only, no in-app rows. */
+function guestPushUserIdsInDb(db: DatabaseShape): string[] {
+  const ids = new Set<string>();
+  for (const s of db.pushSubscriptions || []) {
+    if (s.userId && isGuestPushUserId(s.userId) && isDeliverablePushSubscription(s)) {
+      ids.add(s.userId);
+    }
+  }
+  return [...ids];
+}
 
 function defaultPlatformOptions(): PlatformOptions {
   return {
@@ -1775,6 +1787,8 @@ export async function createPost(
         });
         notifyUserIds.push(donor.id);
       }
+      // Visitors who allowed push without an account get the alert too.
+      notifyUserIds.push(...guestPushUserIdsInDb(db));
     }
 
     await persist(db);
@@ -2124,6 +2138,8 @@ export async function countPushAllowStats(): Promise<{
   donorCount: number;
   allowedUsers: number;
   permissionOnlyUsers: number;
+  /** Browsers that allowed push without logging in. */
+  guestUsers: number;
   subscriptions: number;
   deliverableSubscriptions: number;
   donors: Array<{
@@ -2188,6 +2204,7 @@ export async function countPushAllowStats(): Promise<{
     donorCount: db.donors.length,
     allowedUsers: donors.filter((d) => d.pushStatus === "deliverable").length,
     permissionOnlyUsers: donors.filter((d) => d.pushStatus === "permission_only").length,
+    guestUsers: guestPushUserIdsInDb(db).length,
     subscriptions: list.length,
     deliverableSubscriptions: list.filter(isDeliverablePushSubscription).length,
     donors,
@@ -2256,6 +2273,19 @@ export async function removePushSubscriptionByEndpoint(
   });
 }
 
+/** Drop guest rows for an endpoint once a donor owns that device. */
+export async function removeGuestPushSubscriptionsByEndpoint(
+  endpoint: string,
+): Promise<void> {
+  return withWrite(async (db) => {
+    const before = (db.pushSubscriptions || []).length;
+    db.pushSubscriptions = (db.pushSubscriptions || []).filter(
+      (s) => !(s.endpoint === endpoint && isGuestPushUserId(s.userId)),
+    );
+    if (db.pushSubscriptions.length !== before) await persist(db);
+  });
+}
+
 export async function removePushSubscriptionForUser(
   userId: string,
   endpoint?: string,
@@ -2306,11 +2336,12 @@ export async function broadcastSystemAnnouncement(input: {
       userIds.push(donor.id);
       created += 1;
     }
+    userIds.push(...guestPushUserIdsInDb(db));
     if (created) await persist(db);
     return { created, userIds, texts, href };
   });
 
-  if (created && texts) {
+  if (texts && userIds.length) {
     void import("./web-push-send")
       .then((m) =>
         m.sendWebPushToUsers(userIds, {
@@ -2403,7 +2434,7 @@ export async function resolveContactChangeRequest(
   id: string,
   decision: "approved" | "rejected",
 ): Promise<ContactChangeRequest | null> {
-  return withWrite(async (db) => {
+  const outcome = await withWrite(async (db) => {
     const request = db.contactChangeRequests.find((r) => r.id === id);
     if (!request || request.status !== "pending") return null;
 
@@ -2433,7 +2464,8 @@ export async function resolveContactChangeRequest(
     const notifySettings = normalizeNotificationSettings(
       db.admin.notificationSettings,
     );
-    if (notifySettings.contactChangeAlerts.enabled) {
+    const alert = notifySettings.contactChangeAlerts.enabled;
+    if (alert) {
       db.notifications.push({
         id: randomUUID(),
         userId: request.donorId,
@@ -2446,8 +2478,27 @@ export async function resolveContactChangeRequest(
     }
 
     await persist(db);
-    return request;
+    return { request, texts, alert };
   });
+
+  if (!outcome) return null;
+
+  if (outcome.alert) {
+    void import("./web-push-send")
+      .then((m) =>
+        m.sendWebPushToUsers([outcome.request.donorId], {
+          title: outcome.texts.titleBn || outcome.texts.title,
+          body: outcome.texts.bodyBn || outcome.texts.body,
+          url: "/dashboard",
+          tag: `contact-change-result-${outcome.request.id}`,
+        }),
+      )
+      .catch((err) => {
+        console.error("[bloodlink-push] contact change result push failed", err);
+      });
+  }
+
+  return outcome.request;
 }
 
 export async function getAdminSettings(): Promise<AdminSettings> {

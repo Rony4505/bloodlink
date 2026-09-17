@@ -12,9 +12,9 @@ import {
   snoozePushPrompt,
   wasPushPromptShownThisSession,
 } from "@/lib/push-prompt-state";
-import { loadLoggedIn } from "@/lib/session-me-client";
 import {
   enableWebPush,
+  hasSilentlyReusablePush,
   isIosBrowserTab,
   isStandalonePwa,
 } from "@/lib/web-push-client";
@@ -55,7 +55,10 @@ function clearFalseLocalAcceptOnce() {
 
 /**
  * Soft site-wide push ask: small Allow / Deny popup.
+ * Works for every visitor — logged in or not (guests get a cookie identity).
  * Allow only sticks after a real deliverable Web Push subscription is saved.
+ * When the browser already granted permission (e.g. after login / logout on
+ * the same device) the subscription is re-saved silently without a popup.
  * iPhone must Allow from the Home Screen app (not a Safari/Chrome tab).
  */
 export function SoftSitePushAsk() {
@@ -80,19 +83,32 @@ export function SoftSitePushAsk() {
       migratePushPromptStorage();
       clearFalseLocalAcceptOnce();
 
-      const loggedIn = await loadLoggedIn({ force: true });
+      // Server knows this browser (donor session or guest cookie) → done.
+      const subscribed = await serverPushSubscribed();
       if (cancelled) return;
+      if (subscribed) {
+        markPushPromptAccepted();
+        return;
+      }
 
-      if (loggedIn) {
-        const subscribed = await serverPushSubscribed();
+      // Permission already granted on this device (allowed earlier as guest,
+      // or before logout) → link the existing subscription to the current
+      // identity silently. No popup needed.
+      if (await hasSilentlyReusablePush()) {
         if (cancelled) return;
-        if (subscribed) {
+        const relinked = await enableWebPush({
+          forceRefresh: false,
+          allowPermissionOnly: false,
+        });
+        if (cancelled) return;
+        if (relinked === "granted") {
           markPushPromptAccepted();
           return;
         }
-        // Local Accept without server row → ask again.
-        clearPushPromptAccepted();
       }
+
+      // Local Accept without server row → ask again.
+      clearPushPromptAccepted();
 
       if (!shouldShowSoftPushAsk()) return;
       if (wasPushPromptShownThisSession()) return;
@@ -114,13 +130,6 @@ export function SoftSitePushAsk() {
       // iPhone Safari/Chrome tabs cannot keep background daily alerts.
       if (isIosBrowserTab()) {
         setHint(t.pushIosHint);
-        setBusy(false);
-        return;
-      }
-
-      const loggedIn = await loadLoggedIn({ force: true });
-      if (!loggedIn) {
-        setHint(t.softPushLoginFirst);
         setBusy(false);
         return;
       }

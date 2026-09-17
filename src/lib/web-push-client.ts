@@ -92,6 +92,27 @@ export function canAskNotificationPermission() {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
+/**
+ * True when this browser already granted permission and holds a live
+ * PushManager subscription — we can re-save it silently (no prompt).
+ */
+export async function hasSilentlyReusablePush(): Promise<boolean> {
+  if (!isWebPushSupported()) return false;
+  if (Notification.permission !== "granted") return false;
+  try {
+    const reg = await withTimeout(
+      navigator.serviceWorker.getRegistration("/sw.js"),
+      6_000,
+      "sw-lookup",
+    );
+    if (!reg) return false;
+    const sub = await withTimeout(reg.pushManager.getSubscription(), 6_000, "sub-lookup");
+    return Boolean(sub);
+  } catch {
+    return false;
+  }
+}
+
 export type EnableWebPushResult =
   | "granted"
   | "permission_only"
