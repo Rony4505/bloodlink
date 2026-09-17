@@ -1,5 +1,4 @@
-# BloodLink deploy config — use root Dockerfile (not Dockerfile.fashion).
-# Smart craft Railway service should override dockerfilePath to Dockerfile.fashion in service settings.
+# BloodLink deploy config — root Dockerfile.
 
 [build]
 builder = "DOCKERFILE"

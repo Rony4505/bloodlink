@@ -17,9 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATA_DIR=/app/data
-# Runtime defaults; Railway service variables override these at deploy time.
-ENV APP_MODE=bloodlink
-ENV NEXT_PUBLIC_APP_MODE=bloodlink
+# Runtime default; Railway service variables override this at deploy time.
 ENV NEXT_PUBLIC_SITE_URL=https://bloodlinkbd.org
 
 RUN apk add --no-cache su-exec \

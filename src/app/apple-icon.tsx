@@ -1,38 +1,11 @@
 import { ImageResponse } from "next/og";
-import { resolveAppMode } from "@/lib/app-mode";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
 
-/** Apple touch icon — BloodLink "B" or Noorzaa "N" by Host / APP_MODE. */
-export default async function AppleIcon() {
-  const fashion = (await resolveAppMode()) === "fashion";
-
-  if (fashion) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "linear-gradient(145deg, #0a1628 0%, #122d52 55%, #1a3a5c 100%)",
-            color: "#e8eef7",
-            fontSize: 100,
-            fontWeight: 800,
-            letterSpacing: -2,
-          }}
-        >
-          N
-        </div>
-      ),
-      { ...size },
-    );
-  }
-
+/** Apple touch icon — BloodLink "B". */
+export default function AppleIcon() {
   return new ImageResponse(
     (
       <div
