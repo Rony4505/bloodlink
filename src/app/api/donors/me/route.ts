@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentDonor, toSafeDonor } from "@/lib/auth";
-import { updateDonor } from "@/lib/db";
+import { notifyAdminDonorDonationUpdate, updateDonor } from "@/lib/db";
 import { updateDonorSchema } from "@/lib/validations";
 
 export async function PATCH(request: Request) {
@@ -47,6 +47,16 @@ export async function PATCH(request: Request) {
     if (!updated) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+
+    void notifyAdminDonorDonationUpdate({
+      donor: updated,
+      previousDate: current.lastDonationDate,
+      nextDate: updated.lastDonationDate,
+      previousCount: current.donationCount || 0,
+      nextCount: updated.donationCount || 0,
+    }).catch((err) => {
+      console.error("[bloodlink] admin donor-update notify failed:", err);
+    });
 
     return NextResponse.json({ ok: true, donor: await toSafeDonor(updated) });
   } catch {

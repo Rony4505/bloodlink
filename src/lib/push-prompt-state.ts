@@ -79,6 +79,21 @@ export function markPushPromptShownThisSession(): void {
 }
 
 /**
+ * After login / registration the donor is in a fresh context — forget an
+ * earlier Deny or "already asked this tab" so the Allow ask can show once
+ * more (it still stays hidden when a deliverable subscription exists).
+ */
+export function resetPushPromptAfterAuth(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(SESSION_ASKED_KEY);
+    localStorage.removeItem(SNOOZE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
  * Soft site ask: show unless Allow already succeeded, or Deny is still within
  * the 3-day snooze window.
  */
