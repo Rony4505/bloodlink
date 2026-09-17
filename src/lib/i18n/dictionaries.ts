@@ -403,7 +403,6 @@ export const dictionaries = {
     softPushAsk: "You need bloodlinkbd notification?",
     softPushAllow: "Allow",
     softPushDeny: "Deny",
-    softPushLoginFirst: "Log in first, then tap Allow.",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     donationInfoOptionalHint:
@@ -946,6 +945,8 @@ export const dictionaries = {
     pushAllowStats: "Who turned notifications on",
     pushAllowStatsBody:
       "{allowed} of {donors} donors get phone alerts ({subs} devices). {partial} allowed in browser only.",
+    pushAllowGuestsBody:
+      "{guests} visitors without an account also allowed alerts — they get blood requests and announcements.",
     pushAllowListHint:
       "List below shows every donor and whether notifications are on. Delivering = phone can receive push.",
     pushAllowStatus: "Notifications",
@@ -1369,7 +1370,6 @@ export const dictionaries = {
     softPushAsk: "bloodlinkbd notification লাগবে?",
     softPushAllow: "Allow",
     softPushDeny: "Deny",
-    softPushLoginFirst: "আগে লগইন করুন, তারপর Allow চাপুন।",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     donationInfoOptionalHint:
@@ -1914,6 +1914,8 @@ export const dictionaries = {
     pushAllowStats: "কারা নোটিফিকেশন চালু করেছে",
     pushAllowStatsBody:
       "{donors}জন ডোনারের মধ্যে {allowed}জন ফোন অ্যালার্ট পায় ({subs} ডিভাইস)। {partial}জন শুধু ব্রাউজারে Allow করেছে।",
+    pushAllowGuestsBody:
+      "অ্যাকাউন্ট ছাড়া {guests}জন ভিজিটরও Allow করেছে — তারা রক্তের অনুরোধ ও ঘোষণা পায়।",
     pushAllowListHint:
       "নিচের তালিকায় প্রতিটি ডোনার ও নোটিফিকেশন অন/অফ দেখা যায়। On = ফোনে পুশ যেতে পারে।",
     pushAllowStatus: "নোটিফিকেশন",

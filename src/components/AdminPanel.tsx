@@ -256,6 +256,7 @@ export function AdminPanel() {
     donorCount: number;
     allowedUsers: number;
     permissionOnlyUsers: number;
+    guestUsers: number;
     subscriptions: number;
     deliverableSubscriptions: number;
     donors: Array<{
@@ -274,6 +275,7 @@ export function AdminPanel() {
     donorCount: 0,
     allowedUsers: 0,
     permissionOnlyUsers: 0,
+    guestUsers: 0,
     subscriptions: 0,
     deliverableSubscriptions: 0,
     donors: [],
@@ -527,6 +529,7 @@ export function AdminPanel() {
         donorCount: Number(data.pushAllow.donorCount) || 0,
         allowedUsers: Number(data.pushAllow.allowedUsers) || 0,
         permissionOnlyUsers: Number(data.pushAllow.permissionOnlyUsers) || 0,
+        guestUsers: Number(data.pushAllow.guestUsers) || 0,
         subscriptions: Number(data.pushAllow.subscriptions) || 0,
         deliverableSubscriptions: Number(data.pushAllow.deliverableSubscriptions) || 0,
         donors: Array.isArray(data.pushAllow.donors)
@@ -2329,6 +2332,12 @@ export function AdminPanel() {
                     .replace("{donors}", String(pushAllow.donorCount))
                     .replace("{subs}", String(pushAllow.deliverableSubscriptions))
                     .replace("{partial}", String(pushAllow.permissionOnlyUsers))}
+                </p>
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_84%,white)]">
+                  {t.pushAllowGuestsBody.replace(
+                    "{guests}",
+                    String(pushAllow.guestUsers),
+                  )}
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-[color-mix(in_oklab,var(--ink)_78%,white)]">
                   {t.pushAllowListHint}

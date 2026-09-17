@@ -1,5 +1,5 @@
 /* BloodLink BD — PWA + Web Push service worker (Play Store / TWA ready). */
-const CACHE = "bloodlink-shell-v2";
+const CACHE = "bloodlink-shell-v3";
 const PRECACHE = ["/", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -55,7 +55,7 @@ self.addEventListener("push", (event) => {
   let data = {
     title: "BloodLink BD",
     body: "নতুন নোটিফিকেশন — অ্যাপে দেখুন",
-    url: "/admin",
+    url: "/",
     tag: "bloodlink",
   };
   try {
@@ -72,7 +72,7 @@ self.addEventListener("push", (event) => {
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
     tag: data.tag || `bloodlink-${Date.now()}`,
-    data: { url: data.url || "/admin" },
+    data: { url: data.url || "/" },
     requireInteraction: true,
     renotify: true,
     silent: false,
@@ -110,7 +110,7 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url =
-    (event.notification.data && event.notification.data.url) || "/admin";
+    (event.notification.data && event.notification.data.url) || "/";
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })

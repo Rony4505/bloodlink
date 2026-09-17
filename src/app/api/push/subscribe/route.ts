@@ -2,40 +2,60 @@ import { NextResponse } from "next/server";
 import { getCurrentDonor } from "@/lib/auth";
 import {
   removePushSubscriptionForUser,
+  removeGuestPushSubscriptionsByEndpoint,
   upsertPushSubscription,
   donorHasDeliverablePushSubscription,
   donorHasPermissionOnlyPush,
   finalizeReferralAfterPush,
 } from "@/lib/db";
-import {
-  LOCAL_PUSH_PERMISSION_PREFIX,
-} from "@/lib/push-subscription";
+import { getGuestPushUserId, getOrCreateGuestPushUserId } from "@/lib/guest-push";
+import { LOCAL_PUSH_PERMISSION_PREFIX } from "@/lib/push-subscription";
 import { getPublicVapidKey } from "@/lib/web-push-send";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/**
+ * Push identity for this browser: the logged-in donor, otherwise a cookie
+ * based guest id. Allow therefore works for every visitor, logged in or not.
+ */
+async function resolvePushUser(create: boolean): Promise<{
+  userId: string | null;
+  donorId: string | null;
+}> {
   const donor = await getCurrentDonor();
-  if (!donor) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (donor) return { userId: donor.id, donorId: donor.id };
+  const guest = create
+    ? await getOrCreateGuestPushUserId()
+    : await getGuestPushUserId();
+  return { userId: guest, donorId: null };
+}
+
+export async function GET() {
+  const { userId, donorId } = await resolvePushUser(false);
+  const subscribed = userId
+    ? await donorHasDeliverablePushSubscription(userId)
+    : false;
+  const permissionOnly = userId ? await donorHasPermissionOnlyPush(userId) : false;
   // Always return subscription status even if VAPID key generation fails,
   // so the client can still show the allow prompt.
-  const subscribed = await donorHasDeliverablePushSubscription(donor.id);
-  const permissionOnly = await donorHasPermissionOnlyPush(donor.id);
   let publicKey: string | null = null;
   try {
     publicKey = await getPublicVapidKey();
   } catch {
     /* optional for status check */
   }
-  return NextResponse.json({ publicKey, subscribed, permissionOnly });
+  return NextResponse.json({
+    publicKey,
+    subscribed,
+    permissionOnly,
+    guest: !donorId,
+  });
 }
 
 export async function POST(request: Request) {
-  const donor = await getCurrentDonor();
-  if (!donor) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { userId, donorId } = await resolvePushUser(true);
+  if (!userId) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 
   try {
@@ -57,15 +77,17 @@ export async function POST(request: Request) {
         );
       }
       await upsertPushSubscription({
-        userId: donor.id,
-        endpoint: `local-permission://${donor.id}`,
+        userId,
+        endpoint: `${LOCAL_PUSH_PERMISSION_PREFIX}${userId}`,
         p256dh: "permission",
         auth: "permission",
       });
-      void finalizeReferralAfterPush(donor.id).catch((err) => {
-        console.error("[bloodlink] finalize referral after push failed:", err);
-      });
-      return NextResponse.json({ ok: true, permissionOnly: true });
+      if (donorId) {
+        void finalizeReferralAfterPush(donorId).catch((err) => {
+          console.error("[bloodlink] finalize referral after push failed:", err);
+        });
+      }
+      return NextResponse.json({ ok: true, permissionOnly: true, guest: !donorId });
     }
 
     const endpoint = String(body.endpoint || "").trim();
@@ -75,34 +97,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
     }
 
-    await upsertPushSubscription({
-      userId: donor.id,
-      endpoint,
-      p256dh,
-      auth,
-    });
+    await upsertPushSubscription({ userId, endpoint, p256dh, auth });
     await removePushSubscriptionForUser(
-      donor.id,
-      `${LOCAL_PUSH_PERMISSION_PREFIX}${donor.id}`,
+      userId,
+      `${LOCAL_PUSH_PERMISSION_PREFIX}${userId}`,
     );
-    void finalizeReferralAfterPush(donor.id).catch((err) => {
-      console.error("[bloodlink] finalize referral after push failed:", err);
-    });
-    return NextResponse.json({ ok: true });
+
+    if (donorId) {
+      // Same device allowed earlier as a guest → now owned by the donor.
+      await removeGuestPushSubscriptionsByEndpoint(endpoint);
+      void finalizeReferralAfterPush(donorId).catch((err) => {
+        console.error("[bloodlink] finalize referral after push failed:", err);
+      });
+    }
+    return NextResponse.json({ ok: true, guest: !donorId });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
-  const donor = await getCurrentDonor();
-  if (!donor) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { userId } = await resolvePushUser(false);
+  if (!userId) return NextResponse.json({ ok: true });
   try {
     const body = await request.json().catch(() => ({}));
     const endpoint = String(body.endpoint || "").trim() || undefined;
-    await removePushSubscriptionForUser(donor.id, endpoint);
+    await removePushSubscriptionForUser(userId, endpoint);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
