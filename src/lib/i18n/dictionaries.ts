@@ -403,6 +403,7 @@ export const dictionaries = {
     softPushAsk: "You need bloodlinkbd notification?",
     softPushAllow: "Allow",
     softPushDeny: "Deny",
+    softPushLoginFirst: "Log in first, then tap Allow.",
     personalInfo: "Personal info",
     donationInfo: "Donation info",
     donationInfoOptionalHint:
@@ -1368,6 +1369,7 @@ export const dictionaries = {
     softPushAsk: "bloodlinkbd notification লাগবে?",
     softPushAllow: "Allow",
     softPushDeny: "Deny",
+    softPushLoginFirst: "আগে লগইন করুন, তারপর Allow চাপুন।",
     personalInfo: "ব্যক্তিগত তথ্য",
     donationInfo: "রক্তদানের তথ্য",
     donationInfoOptionalHint:

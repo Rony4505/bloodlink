@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
+  clearPushPromptAccepted,
   markPushPromptAccepted,
   markPushPromptShownThisSession,
   migratePushPromptStorage,
@@ -11,13 +12,17 @@ import {
   snoozePushPrompt,
   wasPushPromptShownThisSession,
 } from "@/lib/push-prompt-state";
-import { enableWebPush, isLikelyIos } from "@/lib/web-push-client";
+import { loadLoggedIn } from "@/lib/session-me-client";
+import {
+  enableWebPush,
+  isIosBrowserTab,
+  isStandalonePwa,
+} from "@/lib/web-push-client";
 
-const SKIP_PATH_PREFIXES = [
-  "/admin",
-  "/volunteer/login",
-  "/work/",
-];
+const SKIP_PATH_PREFIXES = ["/admin", "/volunteer/login", "/work/"];
+
+/** One-time: drop local "accepted" that was saved without a deliverable subscription. */
+const FALSE_ACCEPT_FIX_KEY = "bloodlink_soft_push_deliverable_fix_v1";
 
 function shouldSkipPath(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -26,17 +31,39 @@ function shouldSkipPath(pathname: string | null): boolean {
   );
 }
 
+async function serverPushSubscribed(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/push/subscribe", { cache: "no-store" });
+    if (res.status === 401 || !res.ok) return false;
+    const data = (await res.json()) as { subscribed?: boolean };
+    return Boolean(data.subscribed);
+  } catch {
+    return false;
+  }
+}
+
+function clearFalseLocalAcceptOnce() {
+  try {
+    if (localStorage.getItem(FALSE_ACCEPT_FIX_KEY) === "1") return;
+    localStorage.removeItem("bloodlink_push_accepted_v6");
+    sessionStorage.removeItem("bloodlink_push_asked_session_v6");
+    localStorage.setItem(FALSE_ACCEPT_FIX_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Soft site-wide push ask: small Allow / Deny popup.
- * - Allow → subscribe (when possible) and never ask again on this browser
- * - Deny → hide for 3 days, then ask again
- * Never blocks the site and never reload-loops.
+ * Allow only sticks after a real deliverable Web Push subscription is saved.
+ * iPhone must Allow from the Home Screen app (not a Safari/Chrome tab).
  */
 export function SoftSitePushAsk() {
   const { t } = useLocale();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [hint, setHint] = useState("");
 
   useEffect(() => {
     if (shouldSkipPath(pathname)) {
@@ -45,51 +72,87 @@ export function SoftSitePushAsk() {
     }
 
     let cancelled = false;
-    const timer = window.setTimeout(() => {
+
+    async function boot() {
+      await new Promise((r) => setTimeout(r, 900));
       if (cancelled) return;
+
       migratePushPromptStorage();
+      clearFalseLocalAcceptOnce();
+
+      const loggedIn = await loadLoggedIn({ force: true });
+      if (cancelled) return;
+
+      if (loggedIn) {
+        const subscribed = await serverPushSubscribed();
+        if (cancelled) return;
+        if (subscribed) {
+          markPushPromptAccepted();
+          return;
+        }
+        // Local Accept without server row → ask again.
+        clearPushPromptAccepted();
+      }
+
       if (!shouldShowSoftPushAsk()) return;
-      // One soft ask per browser session — Deny still snoozes 3 days across sessions.
       if (wasPushPromptShownThisSession()) return;
       markPushPromptShownThisSession();
       setOpen(true);
-    }, 900);
+    }
 
+    void boot();
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
   }, [pathname]);
 
   async function onAllow() {
     if (busy) return;
     setBusy(true);
+    setHint("");
     try {
+      // iPhone Safari/Chrome tabs cannot keep background daily alerts.
+      if (isIosBrowserTab()) {
+        setHint(t.pushIosHint);
+        setBusy(false);
+        return;
+      }
+
+      const loggedIn = await loadLoggedIn({ force: true });
+      if (!loggedIn) {
+        setHint(t.softPushLoginFirst);
+        setBusy(false);
+        return;
+      }
+
       const result = await enableWebPush({
         recordIntent: true,
         forceRefresh: true,
-        allowPermissionOnly: isLikelyIos(),
+        // Never save permission-only for this soft ask — daily alerts need
+        // a deliverable subscription (Android Chrome / iOS Home Screen PWA).
+        allowPermissionOnly: false,
       });
-      const browserGranted =
-        typeof Notification !== "undefined" &&
-        Notification.permission === "granted";
 
-      if (
-        result === "granted" ||
-        result === "permission_only" ||
-        browserGranted
-      ) {
+      if (result === "granted") {
         markPushPromptAccepted();
         setOpen(false);
         return;
       }
 
-      // Browser Deny / failure → treat like soft Deny (ask again in 3 days).
-      snoozePushPrompt(3);
-      setOpen(false);
+      if (result === "denied") {
+        snoozePushPrompt(3);
+        setOpen(false);
+        return;
+      }
+
+      // Keep popup open so they can retry (e.g. after opening Home Screen app).
+      setHint(
+        isStandalonePwa() || !isIosBrowserTab()
+          ? t.pushEnableError
+          : t.pushIosHint,
+      );
     } catch {
-      snoozePushPrompt(3);
-      setOpen(false);
+      setHint(t.pushEnableError);
     } finally {
       setBusy(false);
     }
@@ -120,6 +183,11 @@ export function SoftSitePushAsk() {
         >
           {t.softPushAsk}
         </p>
+        {hint ? (
+          <p className="mt-2 text-center text-xs font-medium leading-relaxed text-[var(--blood)]">
+            {hint}
+          </p>
+        ) : null}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             type="button"

@@ -1931,21 +1931,69 @@ export async function createDailyRemindersIfNeeded(
       userIds.push(donor.id);
       created += 1;
     }
-    if (created) await persist(db);
+
+    if (created) {
+      // One admin in-app notice per BD day when daily reminders go out.
+      const adminAlreadyTold = db.notifications.some(
+        (n) =>
+          n.userId === ADMIN_NOTIFY_USER_ID &&
+          n.type === "system" &&
+          bangladeshDateKey(new Date(n.createdAt)) === todayKey &&
+          (n.titleEn === "Daily reminders sent" ||
+            n.title === "Daily reminders sent" ||
+            n.titleBn === "দৈনিক রিমাইন্ডার পাঠানো হয়েছে"),
+      );
+      if (!adminAlreadyTold) {
+        const adminTexts = withBilingual({
+          titleEn: "Daily reminders sent",
+          titleBn: "দৈনিক রিমাইন্ডার পাঠানো হয়েছে",
+          bodyEn: `Donation-date update reminders were sent to ${created} donor(s) today (${todayKey}).`,
+          bodyBn: `আজ (${todayKey}) ${created} জন ডোনারকে রক্তদানের তারিখ আপডেট রিমাইন্ডার পাঠানো হয়েছে।`,
+        });
+        db.notifications.push({
+          id: randomUUID(),
+          userId: ADMIN_NOTIFY_USER_ID,
+          ...adminTexts,
+          type: "system",
+          href: BLOODLINK_OWNER_PATH,
+          read: false,
+          createdAt,
+        });
+      }
+      await persist(db);
+    }
     return { created, userIds, texts };
   });
 
   if (created && texts) {
-    void import("./web-push-send")
-      .then((m) =>
-        m.sendWebPushToUsers(userIds, {
-          title: texts.titleBn || texts.title,
-          body: texts.bodyBn || texts.body,
-          url: "/dashboard",
-          tag: `daily-${todayKey}`,
-        }),
-      )
-      .catch(() => undefined);
+    let pushSent = 0;
+    let pushFailed = 0;
+    try {
+      const { sendWebPushToUsers } = await import("./web-push-send");
+      const push = await sendWebPushToUsers(userIds, {
+        title: texts.titleBn || texts.title,
+        body: texts.bodyBn || texts.body,
+        url: "/dashboard",
+        tag: `daily-${todayKey}`,
+      });
+      pushSent = push.sent;
+      pushFailed = push.failed;
+    } catch (err) {
+      console.error("[bloodlink-push] daily reminder broadcast failed", err);
+    }
+
+    // Phone push to owner admin so they know today's daily send completed.
+    try {
+      const { sendWebPushToUsers } = await import("./web-push-send");
+      await sendWebPushToUsers([ADMIN_NOTIFY_USER_ID], {
+        title: "দৈনিক রিমাইন্ডার পাঠানো হয়েছে",
+        body: `আজ (${todayKey}) ${created} জন ডোনারকে পাঠানো হয়েছে। ফোন push: ${pushSent}টি ডেলিভার, ব্যর্থ: ${pushFailed}।`,
+        url: BLOODLINK_OWNER_PATH,
+        tag: `admin-daily-${todayKey}`,
+      });
+    } catch (err) {
+      console.error("[bloodlink] admin daily-reminder push failed", err);
+    }
   }
 
   return created;
