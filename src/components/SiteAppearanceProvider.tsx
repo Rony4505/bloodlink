@@ -7,7 +7,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { clientAppMode } from "@/lib/app-mode";
 import { defaultSiteAppearance } from "@/lib/site-cms";
 import type { SiteAppearance } from "@/lib/types";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -28,16 +27,6 @@ const SiteAppearanceContext = createContext<SiteAppearanceContextValue | null>(
   null,
 );
 
-function isFashionClientNow() {
-  if (typeof window !== "undefined") {
-    return clientAppMode() === "fashion";
-  }
-  const raw = (process.env.NEXT_PUBLIC_APP_MODE || "").toLowerCase();
-  return (
-    raw === "fashion" || raw === "smartcraft" || raw === "smart-craft-corner"
-  );
-}
-
 export function SiteAppearanceProvider({
   children,
 }: {
@@ -47,14 +36,8 @@ export function SiteAppearanceProvider({
   const [appearance, setAppearance] = useState<SiteAppearance>(
     defaultSiteAppearance(),
   );
-  const [fashion, setFashion] = useState(isFashionClientNow);
-
-  useEffect(() => {
-    setFashion(clientAppMode() === "fashion");
-  }, []);
 
   function reload() {
-    if (clientAppMode() === "fashion") return;
     fetch("/api/site-content")
       .then((r) => r.json())
       .then((data) => {
@@ -64,7 +47,6 @@ export function SiteAppearanceProvider({
   }
 
   useEffect(() => {
-    if (clientAppMode() === "fashion") return;
     reload();
   }, []);
 
@@ -72,30 +54,21 @@ export function SiteAppearanceProvider({
     const bn = locale === "bn";
     return {
       appearance,
-      brand: fashion ? "Noorzaa" : appearance.brand || t.brand,
-      tagline: fashion
-        ? bn
-          ? "বাংলাদেশি নারীদের জন্য লাক্সারি ফ্যাশন"
-          : "Luxury fashion for Bangladeshi women"
-        : (bn ? appearance.taglineBn : appearance.taglineEn) || t.tagline,
-      heroSupport: fashion
-        ? ""
-        : (bn ? appearance.heroSupportBn : appearance.heroSupportEn) ||
-          t.heroSupport,
-      aboutTitle: fashion
-        ? ""
-        : (bn ? appearance.aboutTitleBn : appearance.aboutTitleEn) ||
-          t.aboutTitle,
-      aboutBody: fashion
-        ? ""
-        : (bn ? appearance.aboutBodyBn : appearance.aboutBodyEn) || t.aboutBody,
-      logoUrl: fashion
-        ? "/icon"
-        : appearance.logoUrl || "/bloodlink-logo.png",
-      heroBackgroundUrl: fashion ? "" : appearance.heroBackgroundUrl,
+      brand: appearance.brand || t.brand,
+      tagline: (bn ? appearance.taglineBn : appearance.taglineEn) || t.tagline,
+      heroSupport:
+        (bn ? appearance.heroSupportBn : appearance.heroSupportEn) ||
+        t.heroSupport,
+      aboutTitle:
+        (bn ? appearance.aboutTitleBn : appearance.aboutTitleEn) ||
+        t.aboutTitle,
+      aboutBody:
+        (bn ? appearance.aboutBodyBn : appearance.aboutBodyEn) || t.aboutBody,
+      logoUrl: appearance.logoUrl || "/bloodlink-logo.png",
+      heroBackgroundUrl: appearance.heroBackgroundUrl,
       reload,
     };
-  }, [appearance, fashion, locale, t]);
+  }, [appearance, locale, t]);
 
   return (
     <SiteAppearanceContext.Provider value={value}>

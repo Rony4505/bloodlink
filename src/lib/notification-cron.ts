@@ -1,5 +1,3 @@
-import { isBloodlinkMode } from "@/lib/app-mode";
-
 const TICK_MS = 5 * 60 * 1000; // every 5 minutes
 let started = false;
 
@@ -10,7 +8,6 @@ let started = false;
  */
 export function startBloodlinkNotificationScheduler() {
   if (started) return;
-  if (!isBloodlinkMode()) return;
   if (typeof setInterval !== "function") return;
   started = true;
 

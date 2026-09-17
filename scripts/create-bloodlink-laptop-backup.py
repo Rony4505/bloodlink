@@ -17,11 +17,7 @@ DOC_FILES = [
     "README.md",
     "DEPLOY.md",
     "GOOGLE_AND_DOMAIN.md",
-    "SMARTCRAFT_DEPLOY.md",
-    "MUDI_POS.md",
-    "CRICKET_LIVE.md",
     "railway.toml",
-    "railway.smartcraft.toml",
     ".github/workflows/bloodlink-daily-cron.yml",
 ]
 

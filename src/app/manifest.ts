@@ -1,32 +1,6 @@
 import type { MetadataRoute } from "next";
-import { resolveAppMode } from "@/lib/app-mode";
 
-export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  if ((await resolveAppMode()) === "fashion") {
-    return {
-      name: "Noorzaa",
-      short_name: "Noorzaa",
-      description: "Premium women's fashion for Bangladesh.",
-      start_url: "/",
-      scope: "/",
-      display: "standalone",
-      orientation: "portrait-primary",
-      background_color: "#0a1628",
-      theme_color: "#0a1628",
-      lang: "bn",
-      dir: "ltr",
-      categories: ["shopping", "lifestyle"],
-      icons: [
-        {
-          src: "/icon",
-          sizes: "64x64",
-          type: "image/png",
-          purpose: "any",
-        },
-      ],
-    };
-  }
-
+export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
     name: "BloodLink BD",
