@@ -8,6 +8,7 @@ import { DonationBadge } from "@/components/DonationBadge";
 import { DonorReferralPanel } from "@/components/DonorReferralPanel";
 import { invalidateDonorStats } from "@/lib/donor-stats-client";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { isValidBdPhone, normalizePhone } from "@/lib/privacy";
 
 type Donor = {
   id: string;
@@ -67,6 +68,29 @@ export function DashboardClient() {
   const [newPhone, setNewPhone] = useState("");
   const [changeNote, setChangeNote] = useState("");
   const [changeLoading, setChangeLoading] = useState(false);
+  const [changeError, setChangeError] = useState("");
+  const [changeSent, setChangeSent] = useState(false);
+
+  function changeErrorText(code: string | undefined, fallback: string | undefined) {
+    switch (code) {
+      case "EMPTY":
+        return t.changeErrorEmpty;
+      case "INVALID_EMAIL":
+        return t.changeErrorEmail;
+      case "INVALID_PHONE":
+        return t.changeErrorPhone;
+      case "SAME":
+        return t.changeErrorSame;
+      case "PENDING_EXISTS":
+        return t.changeErrorPending;
+      case "EMAIL_TAKEN":
+        return t.changeErrorEmailTaken;
+      case "PHONE_TAKEN":
+        return t.changeErrorPhoneTaken;
+      default:
+        return fallback || t.errorGeneric;
+    }
+  }
 
   async function loadContactChange() {
     const res = await fetch("/api/donors/me/contact-change");
@@ -131,31 +155,51 @@ export function DashboardClient() {
 
   async function submitChangeRequest(e: React.FormEvent) {
     e.preventDefault();
+    if (changeLoading) return;
+    const email = newEmail.trim();
+    const phone = normalizePhone(newPhone);
+    setChangeError("");
+    if (!email && !phone) {
+      setChangeError(t.changeErrorEmpty);
+      return;
+    }
+    if (phone && !isValidBdPhone(phone)) {
+      setChangeError(t.changeErrorPhone);
+      return;
+    }
     setChangeLoading(true);
-    setError("");
-    setMessage("");
     try {
       const res = await fetch("/api/donors/me/contact-change", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestedEmail: newEmail || null,
-          requestedPhone: newPhone || null,
+          requestedEmail: email || null,
+          requestedPhone: phone || null,
           note: changeNote,
         }),
       });
-      const data = await res.json();
+      const data = (await res.json().catch(() => ({}))) as {
+        code?: string;
+        error?: string;
+        request?: PendingChange;
+        ownerEmail?: string;
+        ownerPhone?: string;
+      };
       if (!res.ok) {
-        setError(data.error || t.errorGeneric);
+        if (res.status === 401) {
+          router.replace("/login");
+          return;
+        }
+        setChangeError(changeErrorText(data.code, data.error));
         return;
       }
-      setPending(data.request);
+      setPending(data.request ?? null);
       setOwnerEmail(data.ownerEmail || ownerEmail);
       setOwnerPhone(data.ownerPhone || ownerPhone);
       setShowChangeForm(false);
-      setMessage(t.pendingChangeRequest);
+      setChangeSent(true);
     } catch {
-      setError(t.errorGeneric);
+      setChangeError(t.errorGeneric);
     } finally {
       setChangeLoading(false);
     }
@@ -264,9 +308,16 @@ export function DashboardClient() {
                 {t.contactLockedHint}
               </p>
               {pending ? (
-                <div className="mt-2 space-y-2">
+                <div className="mt-2 space-y-2" role="status">
+                  {changeSent ? (
+                    <p className="rounded-xl bg-[color-mix(in_oklab,var(--sage)_18%,white)] px-3 py-2 text-sm font-semibold text-[var(--sage)]">
+                      {t.changeRequestSent}
+                    </p>
+                  ) : null}
                   <p className="rounded-xl bg-[color-mix(in_oklab,#c9852d_16%,white)] px-3 py-2 text-sm font-medium">
                     {t.pendingChangeRequest}
+                    {pending.requestedPhone ? ` (${pending.requestedPhone})` : ""}
+                    {pending.requestedEmail ? ` (${pending.requestedEmail})` : ""}
                   </p>
                   {ownerEmail ? (
                     <a href={ownerMailHref()} className="btn-ghost inline-flex">
@@ -278,7 +329,10 @@ export function DashboardClient() {
                 <button
                   type="button"
                   className="btn-ghost mt-3"
-                  onClick={() => setShowChangeForm((v) => !v)}
+                  onClick={() => {
+                    setChangeError("");
+                    setShowChangeForm((v) => !v);
+                  }}
                 >
                   {t.requestContactChange}
                 </button>
@@ -303,6 +357,9 @@ export function DashboardClient() {
                   <span className="mb-1 block font-medium">{t.newPhone}</span>
                   <input
                     className="field"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
                     placeholder="01XXXXXXXXX"
@@ -316,11 +373,20 @@ export function DashboardClient() {
                     onChange={(e) => setChangeNote(e.target.value)}
                   />
                 </label>
+                {changeError ? (
+                  <p
+                    role="alert"
+                    className="rounded-xl bg-[color-mix(in_oklab,var(--blood)_12%,white)] px-3 py-2 text-sm font-medium text-[var(--blood-deep)]"
+                  >
+                    {changeError}
+                  </p>
+                ) : null}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="submit"
                     className="btn-primary flex-1"
                     disabled={changeLoading}
+                    aria-busy={changeLoading}
                   >
                     {changeLoading ? t.loading : t.submitChangeRequest}
                   </button>
