@@ -193,6 +193,14 @@ export function AdminPanel() {
     "donors" | "posts" | "contacts" | "volunteers" | "healthcare" | "analytics" | "settings"
   >("donors");
   const [pendingVolunteerDonors, setPendingVolunteerDonors] = useState(0);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [changeNotice, setChangeNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const pendingChangeCount = changeRequests.filter((r) => r.status === "pending").length;
+  const sortedChangeRequests = [...changeRequests].sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (a.status !== "pending" && b.status === "pending") return 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
   const [settingsPanel, setSettingsPanel] = useState<
@@ -449,17 +457,36 @@ export function AdminPanel() {
   }
 
   async function decideChange(id: string, decision: "approved" | "rejected") {
-    const res = await fetch("/api/admin/contact-changes", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, decision }),
-    });
-    if (res.ok) {
-      await loadData();
-      return;
+    setDecidingId(id);
+    setChangeNotice(null);
+    try {
+      const res = await fetch("/api/admin/contact-changes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, decision }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setChangeNotice({
+          ok: true,
+          text: decision === "approved" ? t.contactChangeApprovedNotice : t.contactChangeRejectedNotice,
+        });
+        await loadData();
+        return;
+      }
+      setChangeNotice({ ok: false, text: data.error || t.errorGeneric });
+    } catch {
+      setChangeNotice({ ok: false, text: t.errorGeneric });
+    } finally {
+      setDecidingId(null);
     }
-    const data = await res.json().catch(() => ({}));
-    window.alert(data.error || t.errorGeneric);
+  }
+
+  function focusContactChanges() {
+    setTab("donors");
+    window.setTimeout(() => {
+      document.getElementById("contact-changes")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
   }
 
   async function loadSettings() {
@@ -1204,6 +1231,12 @@ export function AdminPanel() {
     ) {
       setTab(wanted);
     }
+    if (params.get("focus") === "contact-changes") {
+      setTab("donors");
+      window.setTimeout(() => {
+        document.getElementById("contact-changes")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 900);
+    }
   }, []);
 
   useEffect(() => {
@@ -1716,6 +1749,10 @@ export function AdminPanel() {
                         type="button"
                         className="w-full text-left"
                         onClick={() => {
+                          if (String(n.href || "").includes("contact-changes")) {
+                            focusContactChanges();
+                            return;
+                          }
                           if (
                             String(n.href || "").includes("tab=volunteers") ||
                             String(n.titleBn || n.title || "")
@@ -1748,6 +1785,11 @@ export function AdminPanel() {
             onClick={() => setTab("donors")}
           >
             {t.adminDonors}
+            {pendingChangeCount ? (
+              <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--blood)] px-1.5 text-[10px] font-bold text-white">
+                {pendingChangeCount}
+              </span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -2044,6 +2086,85 @@ export function AdminPanel() {
             </button>
           </div>
 
+          <section
+            id="contact-changes"
+            className={`rounded-2xl p-5 ${
+              pendingChangeCount
+                ? "border-2 border-[color-mix(in_oklab,var(--blood)_45%,white)] bg-[color-mix(in_oklab,var(--blood)_6%,white)]"
+                : "bg-white/80"
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+                {t.adminContactChanges}
+                {pendingChangeCount ? (
+                  <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
+                    {pendingChangeCount}
+                  </span>
+                ) : null}
+              </h2>
+              {changeNotice ? (
+                <p
+                  className={`text-sm font-semibold ${
+                    changeNotice.ok ? "text-[#2f6b4f]" : "text-[var(--blood)]"
+                  }`}
+                >
+                  {changeNotice.text}
+                </p>
+              ) : null}
+            </div>
+            {!changeRequests.length ? (
+              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+                {t.noChangeRequests}
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {sortedChangeRequests.map((r) => (
+                  <li
+                    key={r.id}
+                    className="border-b border-[var(--line)] pb-3 text-sm"
+                  >
+                    <p className="font-semibold">
+                      {r.donorName} · {r.status}
+                    </p>
+                    <p className="mt-1">
+                      {t.email}: {r.currentEmail}
+                      {r.requestedEmail ? ` → ${r.requestedEmail}` : ""}
+                    </p>
+                    <p className="mt-1">
+                      {t.phone}: {r.currentPhone}
+                      {r.requestedPhone ? ` → ${r.requestedPhone}` : ""}
+                    </p>
+                    {r.note ? <p className="mt-1">{r.note}</p> : null}
+                    <p className="mt-1 text-xs opacity-70">
+                      {new Date(r.createdAt).toLocaleString()}
+                    </p>
+                    {r.status === "pending" ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          disabled={decidingId === r.id}
+                          onClick={() => void decideChange(r.id, "approved")}
+                        >
+                          {decidingId === r.id ? t.loading : t.accept}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost text-[var(--blood)]"
+                          disabled={decidingId === r.id}
+                          onClick={() => void decideChange(r.id, "rejected")}
+                        >
+                          {t.reject}
+                        </button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="rounded-2xl bg-white/80 p-5 print:shadow-none">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.adminDonors}
@@ -2092,59 +2213,6 @@ export function AdminPanel() {
             </ul>
           </section>
 
-          <section className="rounded-2xl bg-white/80 p-5">
-            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-              {t.adminContactChanges}
-            </h2>
-            {!changeRequests.length ? (
-              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
-                {t.noChangeRequests}
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {changeRequests.map((r) => (
-                  <li
-                    key={r.id}
-                    className="border-b border-[var(--line)] pb-3 text-sm"
-                  >
-                    <p className="font-semibold">
-                      {r.donorName} · {r.status}
-                    </p>
-                    <p className="mt-1">
-                      {t.email}: {r.currentEmail}
-                      {r.requestedEmail ? ` → ${r.requestedEmail}` : ""}
-                    </p>
-                    <p className="mt-1">
-                      {t.phone}: {r.currentPhone}
-                      {r.requestedPhone ? ` → ${r.requestedPhone}` : ""}
-                    </p>
-                    {r.note ? <p className="mt-1">{r.note}</p> : null}
-                    <p className="mt-1 text-xs opacity-70">
-                      {new Date(r.createdAt).toLocaleString()}
-                    </p>
-                    {r.status === "pending" ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          onClick={() => decideChange(r.id, "approved")}
-                        >
-                          {t.accept}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-ghost text-[var(--blood)]"
-                          onClick={() => decideChange(r.id, "rejected")}
-                        >
-                          {t.reject}
-                        </button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
 
           <section className="rounded-2xl bg-white/80 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
