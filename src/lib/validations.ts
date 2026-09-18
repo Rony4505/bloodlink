@@ -101,6 +101,14 @@ export const registerSchema = z.object({
   donationCount: z.number().int().min(0).max(500).optional(),
 });
 
+/**
+ * Google / Apple sign-up: email comes from the verified provider token and
+ * no password is chosen (donor can set one later via Gmail OTP reset).
+ */
+export const registerSocialSchema = registerSchema.omit({ email: true, password: true }).extend({
+  socialToken: z.string().min(20).max(4000),
+});
+
 /** Human-readable first validation error for API clients. */
 export function formatRegisterValidationError(
   error: z.ZodError,

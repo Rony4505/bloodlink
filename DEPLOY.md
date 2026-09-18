@@ -35,6 +35,19 @@ cron URL requires `Authorization: Bearer …`.
 
 Owner panel: `https://bloodlinkbd.org/admin`
 
+### Google / Apple sign-in (optional)
+
+The `/login` screen shows a Google and/or Apple button only when these are set:
+
+| Variable | Where to get it |
+|----------|-----------------|
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application). Authorized redirect URI: `https://bloodlinkbd.org/api/auth/social/google/callback` |
+| `APPLE_CLIENT_ID` | Apple Developer → Identifiers → Services ID with *Sign in with Apple* enabled. Return URL: `https://bloodlinkbd.org/api/auth/social/apple/callback` |
+
+Flow: provider verifies the email → existing donor is logged in; a new visitor lands on
+`/register` with name + email pre-filled (no password, no Gmail OTP), fills phone / blood
+group / district and is logged in immediately. They can set a password later via *Forgot?*.
+
 ## Local development
 
 ```bash
