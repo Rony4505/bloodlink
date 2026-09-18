@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
+import { INTRO_BOOT_SCRIPT, IntroSplash } from "@/components/IntroSplash";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SoftSitePushAsk } from "@/components/SoftSitePushAsk";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
@@ -96,8 +97,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <meta name="theme-color" content="#1c0a0c" />
         <meta name="application-name" content="BloodLink BD" />
+        <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col antialiased">
+        <IntroSplash />
         <LocaleProvider>
           <SiteAppearanceProvider>
             <PwaRegister />

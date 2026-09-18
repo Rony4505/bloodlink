@@ -1,4 +1,6 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import { verifySocialProfileToken } from "@/lib/social-auth";
 import {
   createSession,
   hashCode,
@@ -24,6 +26,7 @@ import {
   registerConfirmSchema,
   registerResendSchema,
   registerSchema,
+  registerSocialSchema,
   coerceRegisterPayload,
   formatRegisterValidationError,
 } from "@/lib/validations";
@@ -46,6 +49,9 @@ export async function POST(request: Request) {
     }
     if (action === "resend") {
       return resendCodes(body);
+    }
+    if (action === "social") {
+      return socialRegistration(body, request);
     }
     return startRegistration(body, request);
   } catch {
@@ -163,6 +169,107 @@ async function startRegistration(body: unknown, request: Request) {
     expiresInMinutes: 15,
     emailDelivery: "email",
     note: "Enter the OTP sent to your Gmail to create your verified donor account.",
+  });
+}
+
+/** Google / Apple: provider already verified the email → create + log in at once. */
+async function socialRegistration(body: unknown, request: Request) {
+  const coerced = coerceRegisterPayload(body) as Record<string, unknown>;
+  const parsed = registerSocialSchema.safeParse({
+    ...coerced,
+    socialToken: (body as { socialToken?: unknown })?.socialToken,
+  });
+  if (!parsed.success) {
+    const formatted = formatRegisterValidationError(parsed.error);
+    return NextResponse.json(
+      { error: formatted.error, fieldErrors: formatted.fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const profile = await verifySocialProfileToken(parsed.data.socialToken);
+  if (!profile) {
+    return NextResponse.json(
+      { error: "Google/Apple sign-in expired. Please tap the button again." },
+      { status: 410 },
+    );
+  }
+
+  const volunteerLink = await resolveVolunteerToken(
+    (body as { volunteerToken?: string })?.volunteerToken,
+  );
+  if ("error" in volunteerLink && volunteerLink.error) {
+    return NextResponse.json({ error: volunteerLink.error }, { status: 400 });
+  }
+
+  const { socialToken: _socialToken, ...fields } = parsed.data;
+  void _socialToken;
+  const data = normalizeRegisterInput({
+    ...fields,
+    email: profile.email,
+    password: randomUUID(),
+  });
+
+  if (await findDonorByEmail(data.email)) {
+    return NextResponse.json(
+      { error: "An account with this email already exists" },
+      { status: 409 },
+    );
+  }
+  if (await findDonorByPhone(data.phone)) {
+    return NextResponse.json(
+      { error: "An account with this phone number already exists" },
+      { status: 409 },
+    );
+  }
+
+  const referralCode = String((body as { referralCode?: string })?.referralCode || "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 32);
+  const userAgent = (request.headers.get("user-agent") || "").slice(0, 500);
+
+  const donor = await createDonor({
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    passwordHash: await hashPassword(data.password),
+    gender: data.gender,
+    bloodGroup: data.bloodGroup,
+    district: data.district,
+    area: data.area,
+    lastDonationDate: data.lastDonationDate,
+    donationCount:
+      data.donationCount != null ? data.donationCount : data.lastDonationDate ? 1 : 0,
+    bloodIssue: data.bloodIssue,
+    emailVerified: true,
+    phoneVerified: false,
+    pendingEmailCodeHash: null,
+    pendingPhoneCodeHash: null,
+    pendingResetCodeHash: null,
+    pendingResetChannel: null,
+    pendingResetExpiresAt: null,
+    createdByVolunteerId: volunteerLink.volunteerId,
+    volunteerSource: volunteerLink.volunteerId ? "link" : null,
+    volunteerApproved: true,
+  });
+
+  await createSession(donor.id);
+
+  void recordReferralAttemptOnRegister({
+    referrerCode: referralCode || null,
+    newDonor: donor,
+    userAgent: userAgent || null,
+    inAppBrowser: isInAppBrowser(userAgent),
+  }).catch((err) => {
+    console.error("[bloodlink] referral attempt failed:", err);
+  });
+
+  return NextResponse.json({
+    ok: true,
+    step: "done",
+    provider: profile.provider,
+    donor: await toSafeDonor(donor),
   });
 }
 

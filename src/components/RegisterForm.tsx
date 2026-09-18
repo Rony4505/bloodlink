@@ -15,7 +15,21 @@ import { normalizeOtpCode } from "@/lib/otp-code";
 
 type Step = "form" | "otp";
 
-export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
+export type SocialPrefill = {
+  token: string;
+  provider: "google" | "apple";
+  name: string;
+  email: string;
+};
+
+export function RegisterForm({
+  volunteerToken,
+  social,
+}: {
+  volunteerToken?: string;
+  /** Verified Google/Apple profile → no password, no OTP. */
+  social?: SocialPrefill | null;
+}) {
   const { t } = useLocale();
   const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState("");
@@ -42,8 +56,8 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
     }
   });
   const [form, setForm] = useState({
-    name: "",
-    email: "",
+    name: social?.name || "",
+    email: social?.email || "",
     phone: "",
     password: "",
     gender: "male",
@@ -73,11 +87,12 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
     setHint("");
     try {
       const payload: Record<string, unknown> = {
-        action: "start",
+        action: social ? "social" : "start",
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
         password: form.password,
+        ...(social ? { socialToken: social.token } : {}),
         gender: form.gender,
         bloodGroup: form.bloodGroup,
         district: form.district,
@@ -106,6 +121,11 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
             .flat()
             .filter(Boolean)[0];
         setError(String(fieldMsg || data.error || t.errorGeneric));
+        return;
+      }
+      if (social) {
+        markDonorSessionActive();
+        setSuccessDonor(data.donor as RegisteredDonorSummary);
         return;
       }
       setPendingId(data.pendingId);
@@ -249,9 +269,16 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
   return (
     <>
       <form onSubmit={sendOtps} className="space-y-5 rounded-2xl bg-white/80 p-6">
-        <p className="rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
-          {t.otpRegisterNotice}
-        </p>
+        {social ? (
+          <p className="flex items-center gap-2 rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
+            <span className="inline-block h-2 w-2 rounded-full bg-[#2f6b4f]" />
+            {social.provider === "google" ? "Google" : "Apple"} · {social.email}
+          </p>
+        ) : (
+          <p className="rounded-xl border border-[color-mix(in_oklab,#2f6b4f_30%,white)] bg-[color-mix(in_oklab,#2f6b4f_8%,white)] px-3 py-2 text-xs text-[#245a40]">
+            {t.otpRegisterNotice}
+          </p>
+        )}
         <section className="space-y-3">
           <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
             {t.personalInfo}
@@ -266,17 +293,19 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
               required
             />
           </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">{t.email}</span>
-            <input
-              className="field"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              required
-              autoComplete="email"
-            />
-          </label>
+          {social ? null : (
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">{t.email}</span>
+              <input
+                className="field"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                required
+                autoComplete="email"
+              />
+            </label>
+          )}
           <label className="block text-sm">
             <span className="mb-1 block font-medium">{t.phone}</span>
             <input
@@ -288,15 +317,17 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
               required
             />
           </label>
-          <PasswordField
-            id="register-password"
-            label={t.password}
-            value={form.password}
-            onChange={(value) => setForm((f) => ({ ...f, password: value }))}
-            required
-            autoComplete="new-password"
-            hint={t.passwordHint}
-          />
+          {social ? null : (
+            <PasswordField
+              id="register-password"
+              label={t.password}
+              value={form.password}
+              onChange={(value) => setForm((f) => ({ ...f, password: value }))}
+              required
+              autoComplete="new-password"
+              hint={t.passwordHint}
+            />
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-medium">{t.gender}</span>
@@ -436,7 +467,7 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
           className="inline-flex w-full items-center justify-center rounded-full bg-[#2f6b4f] px-5 py-3 font-semibold text-white transition hover:bg-[#265a42] disabled:opacity-55"
           disabled={loading}
         >
-          {loading ? t.loading : t.otpSendCodes}
+          {loading ? t.loading : social ? t.socialCreateAccount : t.otpSendCodes}
         </button>
         <p className="text-center text-sm">
           {t.alreadyDonor}{" "}
@@ -445,6 +476,15 @@ export function RegisterForm({ volunteerToken }: { volunteerToken?: string }) {
           </Link>
         </p>
       </form>
+      {successDonor ? (
+        <RegisterSuccessModal
+          donor={successDonor}
+          onContinue={() => {
+            markDonorSessionActive();
+            window.location.assign("/dashboard");
+          }}
+        />
+      ) : null}
     </>
   );
 }

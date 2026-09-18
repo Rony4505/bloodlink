@@ -1,16 +1,26 @@
-"use client";
+import { RegisterPageClient } from "@/components/RegisterPageClient";
+import type { SocialPrefill } from "@/components/RegisterForm";
+import { verifySocialProfileToken } from "@/lib/social-auth";
 
-import { PageShell } from "@/components/PageShell";
-import { RegisterForm } from "@/components/RegisterForm";
-import { useLocale } from "@/lib/i18n/locale-context";
+export const dynamic = "force-dynamic";
 
-export default function RegisterPage() {
-  const { t } = useLocale();
-  return (
-    <PageShell title={t.registerTitle} subtitle={t.registerSubtitle}>
-      <div className="mx-auto max-w-xl">
-        <RegisterForm />
-      </div>
-    </PageShell>
-  );
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ social?: string }>;
+}) {
+  const { social } = await searchParams;
+  let prefill: SocialPrefill | null = null;
+  if (social) {
+    const profile = await verifySocialProfileToken(social);
+    if (profile) {
+      prefill = {
+        token: social,
+        provider: profile.provider,
+        name: profile.name,
+        email: profile.email,
+      };
+    }
+  }
+  return <RegisterPageClient social={prefill} expired={Boolean(social) && !prefill} />;
 }
