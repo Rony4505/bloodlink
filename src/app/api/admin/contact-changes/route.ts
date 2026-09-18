@@ -63,6 +63,12 @@ export async function PATCH(request: Request) {
         { status: 409 },
       );
     }
+    if (err instanceof Error && err.message === "PHONE_TAKEN") {
+      return NextResponse.json(
+        { error: "That phone number is already used by another account" },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

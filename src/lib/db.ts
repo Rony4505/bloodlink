@@ -2482,7 +2482,7 @@ export async function createContactChangeRequest(input: {
     bodyEn: `${request.currentEmail || "Donor"} requested email/phone change${request.requestedPhone ? ` → ${request.requestedPhone}` : ""}${request.requestedEmail ? ` / ${request.requestedEmail}` : ""}. Review Contact changes.`,
     bodyBn: `Donor যোগাযোগ পরিবর্তন চেয়েছে${request.requestedPhone ? ` → ${request.requestedPhone}` : ""}${request.requestedEmail ? ` / ${request.requestedEmail}` : ""}। Contact changes দেখুন।`,
     type: "contact_change",
-    href: `${BLOODLINK_OWNER_PATH}?tab=contacts`,
+    href: `${BLOODLINK_OWNER_PATH}?tab=donors&focus=contact-changes`,
     tag: `contact-change-${request.id}`,
   }).catch((err) => {
     console.error("[bloodlink] admin contact-change notify failed:", err);
@@ -2512,6 +2512,12 @@ export async function resolveContactChangeRequest(
             d.email.toLowerCase() === request.requestedEmail!.toLowerCase(),
         );
         if (taken) throw new Error("EMAIL_TAKEN");
+      }
+      if (request.requestedPhone) {
+        const phoneTaken = db.donors.some(
+          (d) => d.id !== request.donorId && d.phone === request.requestedPhone,
+        );
+        if (phoneTaken) throw new Error("PHONE_TAKEN");
       }
       db.donors[index] = normalizeDonor({
         ...db.donors[index],
