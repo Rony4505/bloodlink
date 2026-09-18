@@ -2459,6 +2459,12 @@ export async function createContactChangeRequest(input: {
       );
       if (taken) throw new Error("EMAIL_TAKEN");
     }
+    if (input.requestedPhone) {
+      const phoneTaken = db.donors.some(
+        (d) => d.id !== input.donorId && d.phone === input.requestedPhone,
+      );
+      if (phoneTaken) throw new Error("PHONE_TAKEN");
+    }
     const next: ContactChangeRequest = {
       id: randomUUID(),
       donorId: input.donorId,
