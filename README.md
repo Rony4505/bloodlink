@@ -30,3 +30,15 @@ Copy `.env.example` to `.env` and set a strong `AUTH_SECRET` before deploying.
 - Donor phones stay masked in public search
 - Contact reveal requires seeker name, phone, and hospital/place
 - Local donor data is stored in `/data` (gitignored)
+
+## Also in this repo
+
+**LOOM POS** (`supershop-pos/`) — supershop & clothing shop point-of-sale app.
+
+```bash
+cd supershop-pos
+npm install
+npm run dev
+```
+
+Demo PIN: `1234`. See `supershop-pos/README.md`.
