@@ -1516,6 +1516,12 @@ html[data-intro="1"] {
     0 6px 16px -8px rgba(0, 0, 0, 0.6);
 }
 
+/* Footer "Get it on Google Play" link — explicit colour because the global
+   unlayered `a { color: inherit }` wins over Tailwind's layered text utilities. */
+.bl-play-link {
+  color: #fff;
+}
+
 @keyframes bl-app-bar-in {
   from {
     opacity: 0;
