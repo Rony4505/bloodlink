@@ -10,6 +10,7 @@ import { z } from "zod";
 const decisionSchema = z.object({
   id: z.string().uuid(),
   decision: z.enum(["approved", "rejected"]),
+  reason: z.string().trim().max(300).optional().default(""),
 });
 
 export async function GET() {
@@ -27,7 +28,7 @@ export async function GET() {
   return NextResponse.json({
     requests: requests.map((r) => ({
       ...r,
-      donorName: donorMap.get(r.donorId)?.name || "Unknown",
+      donorName: donorMap.get(r.donorId)?.name || r.donorName || "Unknown",
     })),
   });
 }
@@ -48,6 +49,7 @@ export async function PATCH(request: Request) {
     const resolved = await resolveContactChangeRequest(
       parsed.data.id,
       parsed.data.decision,
+      parsed.data.reason,
     );
     if (!resolved) {
       return NextResponse.json(

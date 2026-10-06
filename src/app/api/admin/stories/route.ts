@@ -4,6 +4,7 @@ import {
   approvePendingSuccessStory,
   deletePublishedSuccessStory,
   listPendingSuccessStories,
+  listSuccessStoryDecisions,
   rejectPendingSuccessStory,
 } from "@/lib/db";
 
@@ -12,8 +13,11 @@ export async function GET() {
   if (!ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const stories = await listPendingSuccessStories();
-  return NextResponse.json({ stories });
+  const [stories, decisions] = await Promise.all([
+    listPendingSuccessStories(),
+    listSuccessStoryDecisions(),
+  ]);
+  return NextResponse.json({ stories, decisions });
 }
 
 export async function POST(request: Request) {
@@ -39,7 +43,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "reject") {
-      const removed = await rejectPendingSuccessStory(id);
+      const reason = String(body?.reason || "").slice(0, 300);
+      const removed = await rejectPendingSuccessStory(id, reason);
       if (!removed) {
         return NextResponse.json({ error: "Story not found" }, { status: 404 });
       }
