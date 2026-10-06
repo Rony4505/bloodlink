@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_Bengali, Syne } from "next/font/google";
 import { INTRO_BOOT_SCRIPT, IntroSplash } from "@/components/IntroSplash";
 import { AppInstallBanner } from "@/components/AppInstallBanner";
+import { AppInstallTracker } from "@/components/AppInstallTracker";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SoftSitePushAsk } from "@/components/SoftSitePushAsk";
 import { SiteAppearanceProvider } from "@/components/SiteAppearanceProvider";
@@ -107,6 +108,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <PwaRegister />
             <SoftSitePushAsk />
             <AppInstallBanner />
+            <AppInstallTracker />
             {children}
           </SiteAppearanceProvider>
         </LocaleProvider>
