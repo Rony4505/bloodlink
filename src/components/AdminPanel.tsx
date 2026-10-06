@@ -634,6 +634,10 @@ export function AdminPanel() {
     } else {
       setTab("home");
     }
+    if (typeof window !== "undefined" && query) {
+      // Keep the address bar in sync so a refresh lands on the same place.
+      window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
+    }
     if (focus) scrollToFocus(focus, panel ? 500 : 250);
   }
 
