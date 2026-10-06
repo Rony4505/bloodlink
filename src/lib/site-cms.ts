@@ -20,17 +20,21 @@ export const PLAY_STORE_PACKAGE = "org.bloodlinkbd.android";
 /** Live Google Play listing (published Oct 2026). */
 export const DEFAULT_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
 
+/** Admin values that switch the install bar off. */
+const PLAY_STORE_OFF_RE = /^(off|none|hide|hidden|disabled|no)$/i;
+
 /**
- * Accept a full Play URL or a bare package id; empty/"off" hides the banner.
- * Records saved before this field existed (undefined) get the live listing.
- * Anything that is not a Google Play link is rejected so the banner can never
+ * Accept a full Play URL or a bare package id. Empty / missing values mean
+ * "use the official listing" so the bar is on by default — only an explicit
+ * `off` (or similar) hides it. Anything that is not a Google Play link is
+ * rejected (falls back to the official listing) so the banner can never
  * point at another site.
  */
 export function normalizePlayStoreUrl(raw: unknown): string {
   if (raw === undefined || raw === null) return DEFAULT_PLAY_STORE_URL;
   const value = String(raw).trim();
-  if (!value) return "";
-  if (/^(off|none|hide|disabled)$/i.test(value)) return "";
+  if (!value) return DEFAULT_PLAY_STORE_URL;
+  if (PLAY_STORE_OFF_RE.test(value)) return "";
   if (/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(value)) {
     return `https://play.google.com/store/apps/details?id=${value}`;
   }
@@ -46,7 +50,7 @@ export function normalizePlayStoreUrl(raw: unknown): string {
   } catch {
     /* fall through */
   }
-  return "";
+  return DEFAULT_PLAY_STORE_URL;
 }
 
 export function defaultSuccessStories(): SuccessStory[] {
