@@ -64,7 +64,9 @@ import {
   normalizeSiteAppearance,
 } from "./site-cms";
 import type {
+  AdminAlertKind,
   AdminSettings,
+  AppInstall,
   AppNotification,
   BloodPost,
   ContactChangeRequest,
@@ -82,6 +84,7 @@ import type {
   ReferralMissReason,
   ReferralSettings,
   ReferralWithdrawRequest,
+  SuccessStoryDecision,
   VerifyChannel,
   Volunteer,
   VolunteerActivity,
@@ -550,6 +553,10 @@ function shapeFromParsed(parsed: Partial<DatabaseShape>, admin: AdminSettings): 
     referralWithdrawals: (parsed.referralWithdrawals ?? [])
       .map((w) => normalizeReferralWithdraw(w))
       .filter(Boolean) as ReferralWithdrawRequest[],
+    successStoryDecisions: Array.isArray(parsed.successStoryDecisions)
+      ? parsed.successStoryDecisions
+      : [],
+    appInstalls: Array.isArray(parsed.appInstalls) ? parsed.appInstalls : [],
     admin,
   };
 }
@@ -631,6 +638,8 @@ async function createEmptyDb(): Promise<DatabaseShape> {
     volunteerActivities: [],
     referralEvents: [],
     referralWithdrawals: [],
+    successStoryDecisions: [],
+    appInstalls: [],
     admin: await defaultAdmin(),
   };
 }
@@ -654,6 +663,14 @@ function applySchemaMigrations(db: DatabaseShape): boolean {
   }
   if (!Array.isArray(db.referralWithdrawals)) {
     db.referralWithdrawals = [];
+    changed = true;
+  }
+  if (!Array.isArray(db.successStoryDecisions)) {
+    db.successStoryDecisions = [];
+    changed = true;
+  }
+  if (!Array.isArray(db.appInstalls)) {
+    db.appInstalls = [];
     changed = true;
   }
   db.volunteers = (db.volunteers || []).map((v, i) => {
@@ -1151,7 +1168,8 @@ export async function createPendingSuccessStory(
     bodyEn: `${story.name} submitted a story. Review it in Admin.`,
     bodyBn: `${story.name} একটি success story পাঠিয়েছেন। Admin থেকে Approve করুন।`,
     type: "system",
-    href: BLOODLINK_OWNER_PATH,
+    kind: "story",
+    href: `${BLOODLINK_OWNER_PATH}?tab=settings&panel=stories&focus=story-${story.id}`,
     tag: `story-${story.id}`,
   }).catch((err) => {
     console.error("[bloodlink] admin story notify failed:", err);
@@ -1182,21 +1200,127 @@ export async function approvePendingSuccessStory(
     ];
     db.admin = { ...db.admin, siteAppearance: appearance };
     db.pendingSuccessStories = list.filter((s) => s.id !== id);
+    db.successStoryDecisions = db.successStoryDecisions || [];
+    db.successStoryDecisions.push(storyDecision(pending, "approved", ""));
     await persist(db);
     return { ok: true };
   });
 }
 
-export async function rejectPendingSuccessStory(id: string): Promise<boolean> {
+export async function rejectPendingSuccessStory(id: string, reason = ""): Promise<boolean> {
   return withWrite(async (db) => {
-    const before = (db.pendingSuccessStories || []).length;
-    db.pendingSuccessStories = (db.pendingSuccessStories || []).filter(
-      (s) => s.id !== id,
-    );
-    if ((db.pendingSuccessStories || []).length === before) return false;
+    const list = db.pendingSuccessStories || [];
+    const pending = list.find((s) => s.id === id);
+    if (!pending) return false;
+    db.pendingSuccessStories = list.filter((s) => s.id !== id);
+    db.successStoryDecisions = db.successStoryDecisions || [];
+    db.successStoryDecisions.push(storyDecision(pending, "rejected", reason));
     await persist(db);
     return true;
   });
+}
+
+function storyDecision(
+  story: PendingSuccessStory,
+  decision: SuccessStoryDecision["decision"],
+  reason: string,
+): SuccessStoryDecision {
+  return {
+    id: story.id,
+    name: story.name,
+    handle: story.handle,
+    quoteEn: story.quoteEn,
+    quoteBn: story.quoteBn,
+    submittedAt: story.createdAt,
+    decision,
+    decidedAt: new Date().toISOString(),
+    reason: reason.trim().slice(0, 300),
+  };
+}
+
+export async function listSuccessStoryDecisions(): Promise<SuccessStoryDecision[]> {
+  const db = await ensureDb();
+  return [...(db.successStoryDecisions || [])].sort(
+    (a, b) => new Date(b.decidedAt).getTime() - new Date(a.decidedAt).getTime(),
+  );
+}
+
+/* ---------- App installs (Play Store TWA / PWA) ---------- */
+
+const APP_INSTALL_MAX = 5000;
+
+export async function recordAppInstall(input: {
+  id: string;
+  donorId: string | null;
+  source: AppInstall["source"];
+  device: string;
+  userAgent: string;
+}): Promise<{ install: AppInstall; isNew: boolean; linkedDonor: boolean }> {
+  const result = await withWrite(async (db) => {
+    db.appInstalls = db.appInstalls || [];
+    const now = new Date().toISOString();
+    const donor = input.donorId ? db.donors.find((d) => d.id === input.donorId) : undefined;
+    const existing = db.appInstalls.find((i) => i.id === input.id);
+    if (existing) {
+      const linkedDonor = Boolean(donor) && existing.donorId !== donor!.id;
+      existing.lastSeenAt = now;
+      existing.opens = (existing.opens || 0) + 1;
+      existing.source = input.source;
+      existing.device = input.device || existing.device;
+      existing.userAgent = input.userAgent || existing.userAgent;
+      if (donor) {
+        existing.donorId = donor.id;
+        existing.donorName = donor.name;
+      }
+      await persist(db);
+      return { install: existing, isNew: false, linkedDonor };
+    }
+    const install: AppInstall = {
+      id: input.id,
+      donorId: donor?.id ?? null,
+      donorName: donor?.name ?? null,
+      source: input.source,
+      device: input.device,
+      userAgent: input.userAgent.slice(0, 300),
+      firstSeenAt: now,
+      lastSeenAt: now,
+      opens: 1,
+    };
+    db.appInstalls.push(install);
+    if (db.appInstalls.length > APP_INSTALL_MAX) {
+      db.appInstalls.sort((a, b) => a.lastSeenAt.localeCompare(b.lastSeenAt));
+      db.appInstalls = db.appInstalls.slice(db.appInstalls.length - APP_INSTALL_MAX);
+    }
+    await persist(db);
+    return { install, isNew: true, linkedDonor: Boolean(donor) };
+  });
+
+  if (result.isNew || result.linkedDonor) {
+    const who = result.install.donorName || "A visitor";
+    const whoBn = result.install.donorName || "একজন ভিজিটর";
+    const via = result.install.source === "play" ? "Play Store" : "PWA";
+    void notifyAdminAlert({
+      titleEn: result.isNew ? "App installed" : "App user signed in",
+      titleBn: result.isNew ? "অ্যাপ ইনস্টল হয়েছে" : "অ্যাপ ইউজার লগইন করেছে",
+      bodyEn: `${who} opened BloodLink as an app (${via}, ${result.install.device}).`,
+      bodyBn: `${whoBn} BloodLink অ্যাপ খুলেছে (${via}, ${result.install.device})।`,
+      type: "system",
+      kind: "app_install",
+      href: `${BLOODLINK_OWNER_PATH}?tab=settings&panel=installs`,
+      tag: `app-install-${result.install.id}`,
+    }).catch((err) => {
+      console.error("[bloodlink] admin app-install notify failed:", err);
+    });
+  }
+
+  return result;
+}
+
+export async function listAppInstalls(): Promise<AppInstall[]> {
+  const db = await ensureDb();
+  return [...(db.appInstalls || [])].sort(
+    (a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime(),
+  );
 }
 
 export async function deletePublishedSuccessStory(id: string): Promise<boolean> {
@@ -1343,7 +1467,7 @@ export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<voi
     donor.volunteerSource === "manual" && donor.volunteerApproved === false;
   const href = pendingManual
     ? `${BLOODLINK_OWNER_PATH}?tab=volunteers`
-    : BLOODLINK_OWNER_PATH;
+    : `${BLOODLINK_OWNER_PATH}?tab=registered&focus=donor-${donor.id}`;
 
   await notifyAdminAlert({
     titleEn: texts.titleEn || texts.title,
@@ -1351,6 +1475,7 @@ export async function notifyAdminNewDonorRegistration(donor: Donor): Promise<voi
     bodyEn: texts.bodyEn || texts.body,
     bodyBn: texts.bodyBn || texts.body,
     type: "new_donor",
+    kind: pendingManual ? "volunteer_donor" : "new_donor",
     href,
     tag: `new-donor-${donor.id}`,
   });
@@ -1371,6 +1496,7 @@ export async function notifyAdminAlert(input: {
     | "new_donor";
   href?: string;
   tag?: string;
+  kind?: AdminAlertKind;
 }): Promise<{ pushSent: number; pushFailed: number }> {
   const texts = withBilingual({
     titleEn: input.titleEn,
@@ -1388,6 +1514,7 @@ export async function notifyAdminAlert(input: {
       ...texts,
       type,
       href,
+      kind: input.kind,
       read: false,
       createdAt: new Date().toISOString(),
     });
@@ -1593,6 +1720,7 @@ export async function createContactRequest(
     bodyEn: `${request.seekerName} viewed ${request.targetName || "a contact"} (${request.kind}). Check Contact log.`,
     bodyBn: `${request.seekerName} → ${request.targetName || "contact"} (${request.kind})। Contact log দেখুন।`,
     type: "system",
+    kind: "contact_reveal",
     href: `${BLOODLINK_OWNER_PATH}?tab=contacts`,
     tag: `contact-${request.id}`,
   }).catch((err) => {
@@ -1672,7 +1800,8 @@ export async function createRating(
     bodyEn: `${rating.seekerName} rated ${donorName} ${rating.stars}/5 ${stars}${rating.comment ? ` — "${rating.comment.slice(0, 120)}"` : ""}.`,
     bodyBn: `${rating.seekerName} ${donorName}-কে ${rating.stars}/5 ${stars} দিয়েছেন${rating.comment ? ` — "${rating.comment.slice(0, 120)}"` : ""}।`,
     type: "system",
-    href: `${BLOODLINK_OWNER_PATH}?tab=donors`,
+    kind: "rating",
+    href: `${BLOODLINK_OWNER_PATH}?tab=registered&focus=donor-${rating.donorId}`,
     tag: `rating-${rating.id}`,
   }).catch((err) => {
     console.error("[bloodlink] admin rating notify failed:", err);
@@ -1706,7 +1835,8 @@ export async function notifyAdminDonorDonationUpdate(input: {
     bodyEn: `${input.donor.name} (${input.donor.bloodGroup}, ${input.donor.district}): ${bits.join(", ")}.`,
     bodyBn: `${input.donor.name} (${input.donor.bloodGroup}, ${input.donor.district}): ${bitsBn.join(", ")}।`,
     type: "system",
-    href: `${BLOODLINK_OWNER_PATH}?tab=donors`,
+    kind: "donation_update",
+    href: `${BLOODLINK_OWNER_PATH}?tab=registered&focus=donor-${input.donor.id}`,
     tag: `donor-update-${input.donor.id}-${Date.now()}`,
   });
 }
@@ -1721,7 +1851,8 @@ export async function notifyAdminDonorPushEnabled(
     bodyEn: `${donor.name} (${donor.bloodGroup}, ${donor.district}) allowed phone alerts.`,
     bodyBn: `${donor.name} (${donor.bloodGroup}, ${donor.district}) ফোন অ্যালার্ট Allow করেছে।`,
     type: "system",
-    href: `${BLOODLINK_OWNER_PATH}?tab=notifications`,
+    kind: "push_enabled",
+    href: `${BLOODLINK_OWNER_PATH}?tab=registered&focus=donor-${donor.id}`,
     tag: `donor-push-on-${donor.id}`,
   });
 }
@@ -2468,6 +2599,7 @@ export async function createContactChangeRequest(input: {
     const next: ContactChangeRequest = {
       id: randomUUID(),
       donorId: input.donorId,
+      donorName: db.donors.find((d) => d.id === input.donorId)?.name || "",
       currentEmail: input.currentEmail,
       currentPhone: input.currentPhone,
       requestedEmail: input.requestedEmail,
@@ -2488,7 +2620,8 @@ export async function createContactChangeRequest(input: {
     bodyEn: `${request.currentEmail || "Donor"} requested email/phone change${request.requestedPhone ? ` → ${request.requestedPhone}` : ""}${request.requestedEmail ? ` / ${request.requestedEmail}` : ""}. Review Contact changes.`,
     bodyBn: `Donor যোগাযোগ পরিবর্তন চেয়েছে${request.requestedPhone ? ` → ${request.requestedPhone}` : ""}${request.requestedEmail ? ` / ${request.requestedEmail}` : ""}। Contact changes দেখুন।`,
     type: "contact_change",
-    href: `${BLOODLINK_OWNER_PATH}?tab=donors&focus=contact-changes`,
+    kind: "contact_change",
+    href: `${BLOODLINK_OWNER_PATH}?tab=home&focus=contact-changes`,
     tag: `contact-change-${request.id}`,
   }).catch((err) => {
     console.error("[bloodlink] admin contact-change notify failed:", err);
@@ -2500,13 +2633,19 @@ export async function createContactChangeRequest(input: {
 export async function resolveContactChangeRequest(
   id: string,
   decision: "approved" | "rejected",
+  reason = "",
 ): Promise<ContactChangeRequest | null> {
+  const note = reason.trim().slice(0, 300);
   const outcome = await withWrite(async (db) => {
     const request = db.contactChangeRequests.find((r) => r.id === id);
     if (!request || request.status !== "pending") return null;
 
     request.status = decision;
     request.resolvedAt = new Date().toISOString();
+    request.decisionNote = note;
+    if (!request.donorName) {
+      request.donorName = db.donors.find((d) => d.id === request.donorId)?.name || "";
+    }
 
     if (decision === "approved") {
       const index = db.donors.findIndex((d) => d.id === request.donorId);
@@ -2533,7 +2672,7 @@ export async function resolveContactChangeRequest(
       });
     }
 
-    const texts = withBilingual(contactChangeResultTexts(decision === "approved"));
+    const texts = withBilingual(contactChangeResultTexts(decision === "approved", note));
     const notifySettings = normalizeNotificationSettings(
       db.admin.notificationSettings,
     );
@@ -2996,6 +3135,7 @@ export async function updateVolunteerActivity(
       bodyEn: `${outcome.volunteerName}: "${a.title}" → ${statusEn}${a.volunteerNote ? ` — ${a.volunteerNote.slice(0, 140)}` : ""}.`,
       bodyBn: `${outcome.volunteerName}: "${a.title}" → ${statusBn}${a.volunteerNote ? ` — ${a.volunteerNote.slice(0, 140)}` : ""}।`,
       type: "system",
+      kind: "volunteer_task",
       href: `${BLOODLINK_OWNER_PATH}?tab=volunteers`,
       tag: `volunteer-task-${a.id}-${Date.now()}`,
     }).catch((err) => {
@@ -3267,7 +3407,8 @@ export async function recordReferralAttemptOnRegister(input: {
       bodyEn: `A referrer earned their first credited referral (+${creditedEvent.rewardBdt} BDT).`,
       bodyBn: `একজন রেফারার প্রথম সফল ক্রেডিট পেয়েছেন (+${creditedEvent.rewardBdt} টাকা)।`,
       type: "system",
-      href: BLOODLINK_OWNER_PATH,
+      kind: "referral",
+      href: `${BLOODLINK_OWNER_PATH}?tab=settings&panel=referral`,
       tag: `referral-first-${creditedEvent.referrerId}`,
     }).catch((err) => {
       console.error("[bloodlink] referral first-credit notify failed:", err);
@@ -3282,7 +3423,8 @@ export async function recordReferralAttemptOnRegister(input: {
       bodyEn: `${miss.referredName}: ${miss.missReason || "missed"}`,
       bodyBn: `${miss.referredName}: ${miss.missReason || "missed"}`,
       type: "system",
-      href: BLOODLINK_OWNER_PATH,
+      kind: "referral",
+      href: `${BLOODLINK_OWNER_PATH}?tab=settings&panel=referral`,
       tag: `referral-miss-${miss.id}`,
     }).catch((err) => {
       console.error("[bloodlink] referral miss notify failed:", err);
@@ -3383,7 +3525,8 @@ export async function finalizeReferralAfterPush(
       bodyEn: `A referrer earned their first credited referral (+${creditedEvent.rewardBdt} BDT) after push Allow.`,
       bodyBn: `পুশ Allow-এর পর একজন রেফারার প্রথম সফল ক্রেডিট পেয়েছেন (+${creditedEvent.rewardBdt} টাকা)।`,
       type: "system",
-      href: BLOODLINK_OWNER_PATH,
+      kind: "referral",
+      href: `${BLOODLINK_OWNER_PATH}?tab=settings&panel=referral`,
       tag: `referral-first-${creditedEvent.referrerId}`,
     }).catch((err) => {
       console.error("[bloodlink] referral finalize notify failed:", err);
@@ -3615,7 +3758,8 @@ export async function requestReferralWithdraw(
     bodyEn: `${outcome.request.donorName} requested ${outcome.request.amountBdt} BDT via ${outcome.request.method}. Pay within 48h.`,
     bodyBn: `${outcome.request.donorName} ${outcome.request.amountBdt} টাকা ${outcome.request.method}-এ চেয়েছেন। ৪৮ ঘণ্টার মধ্যে পে করুন।`,
     type: "system",
-    href: BLOODLINK_OWNER_PATH,
+    kind: "referral_withdraw",
+    href: `${BLOODLINK_OWNER_PATH}?tab=settings&panel=referral`,
     tag: `referral-withdraw-${outcome.request.id}`,
   }).catch((err) => {
     console.error("[bloodlink] referral withdraw notify failed:", err);

@@ -20,6 +20,8 @@ import {
   DEFAULT_PLAY_STORE_URL,
 } from "@/lib/site-cms";
 import type {
+  AdminAlertKind,
+  AppInstall,
   BannerPage,
   BannerPlacement,
   BannerSize,
@@ -27,9 +29,75 @@ import type {
   OrgBanner,
   ReferralSettings,
   SiteAppearance,
+  SuccessStoryDecision,
 } from "@/lib/types";
 import { defaultNotificationSettings } from "@/lib/notification-settings";
 import { defaultReferralSettings } from "@/lib/referral-settings";
+
+const ADMIN_TABS = [
+  "home",
+  "registered",
+  "posts",
+  "contacts",
+  "volunteers",
+  "healthcare",
+  "analytics",
+  "settings",
+] as const;
+type AdminTab = (typeof ADMIN_TABS)[number];
+function isAdminTab(value: string | null): value is AdminTab {
+  return Boolean(value) && (ADMIN_TABS as readonly string[]).includes(value as string);
+}
+
+const SETTINGS_PANELS = [
+  "storage",
+  "backup",
+  "notifications",
+  "referral",
+  "features",
+  "appearance",
+  "stories",
+  "contactHistory",
+  "installs",
+  "ads",
+  "privacy",
+  "security",
+] as const;
+type AdminSettingsPanelId = (typeof SETTINGS_PANELS)[number];
+function isSettingsPanel(value: string | null): value is AdminSettingsPanelId {
+  return Boolean(value) && (SETTINGS_PANELS as readonly string[]).includes(value as string);
+}
+
+type AdminAlertItem = {
+  id: string;
+  title: string;
+  body: string;
+  titleBn?: string;
+  bodyBn?: string;
+  href?: string;
+  kind?: AdminAlertKind;
+  read: boolean;
+  createdAt: string;
+};
+
+/** Older alerts have no `kind`; infer one from the link / title so the bell can label them. */
+function alertKindOf(n: AdminAlertItem): AdminAlertKind | "system" {
+  if (n.kind) return n.kind;
+  const href = n.href || "";
+  const title = `${n.title} ${n.titleBn || ""}`.toLowerCase();
+  if (href.includes("contact-changes") || title.includes("contact change")) return "contact_change";
+  if (href.includes("tab=contacts")) return "contact_reveal";
+  if (title.includes("rating")) return "rating";
+  if (title.includes("donation info")) return "donation_update";
+  if (title.includes("turned on notifications")) return "push_enabled";
+  if (title.includes("story")) return "story";
+  if (title.includes("withdrawal")) return "referral_withdraw";
+  if (title.includes("referral")) return "referral";
+  if (title.includes("volunteer updated donor")) return "volunteer_contact";
+  if (href.includes("tab=volunteers") || title.includes("volunteer")) return "volunteer_task";
+  if (title.includes("registered") || title.includes("new donor") || title.includes("registration")) return "new_donor";
+  return "system";
+}
 
 type AdminDonor = {
   id: string;
@@ -100,6 +168,8 @@ type ContactChangeRequest = {
   note: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
+  resolvedAt?: string | null;
+  decisionNote?: string;
 };
 
 type ReferralAdminOverview = {
@@ -190,32 +260,32 @@ export function AdminPanel() {
     totalRequests: 0,
     totalPosts: 0,
   });
-  const [tab, setTab] = useState<
-    "donors" | "posts" | "contacts" | "volunteers" | "healthcare" | "analytics" | "settings"
-  >("donors");
+  const [tab, setTab] = useState<AdminTab>("home");
   const [pendingVolunteerDonors, setPendingVolunteerDonors] = useState(0);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [changeNotice, setChangeNotice] = useState<{ ok: boolean; text: string } | null>(null);
-  const pendingChangeCount = changeRequests.filter((r) => r.status === "pending").length;
-  const sortedChangeRequests = [...changeRequests].sort((a, b) => {
-    if (a.status === "pending" && b.status !== "pending") return -1;
-    if (a.status !== "pending" && b.status === "pending") return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const [rejectingChangeId, setRejectingChangeId] = useState<string | null>(null);
+  const [rejectChangeReason, setRejectChangeReason] = useState("");
+  const [rejectingStoryId, setRejectingStoryId] = useState<string | null>(null);
+  const [rejectStoryReason, setRejectStoryReason] = useState("");
+  const [bellOpen, setBellOpen] = useState(false);
+  const [alertFilter, setAlertFilter] = useState<"unread" | "all">("unread");
+  const [storyDecisions, setStoryDecisions] = useState<SuccessStoryDecision[]>([]);
+  const [appInstalls, setAppInstalls] = useState<AppInstall[]>([]);
+  const pendingChangeRequests = changeRequests
+    .filter((r) => r.status === "pending")
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const pendingChangeCount = pendingChangeRequests.length;
+  const decidedChangeRequests = changeRequests
+    .filter((r) => r.status !== "pending")
+    .sort(
+      (a, b) =>
+        new Date(b.resolvedAt || b.createdAt).getTime() -
+        new Date(a.resolvedAt || a.createdAt).getTime(),
+    );
   const [printFromDate, setPrintFromDate] = useState("");
   const [printToDate, setPrintToDate] = useState("");
-  const [settingsPanel, setSettingsPanel] = useState<
-    | null
-    | "storage"
-    | "backup"
-    | "features"
-    | "notifications"
-    | "referral"
-    | "appearance"
-    | "ads"
-    | "privacy"
-    | "security"
-  >(null);
+  const [settingsPanel, setSettingsPanel] = useState<AdminSettingsPanelId | null>(null);
   const [savePopup, setSavePopup] = useState(false);
 
   const [settingsUser, setSettingsUser] = useState("");
@@ -233,6 +303,39 @@ export function AdminPanel() {
   const [phoneCode, setPhoneCode] = useState("");
   const [tempCodes, setTempCodes] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
+  function alertKindLabel(kind: AdminAlertKind | "system"): string {
+    switch (kind) {
+      case "new_donor":
+        return t.alertKindNewDonor;
+      case "volunteer_donor":
+        return t.alertKindVolunteerDonor;
+      case "contact_change":
+        return t.alertKindContactChange;
+      case "contact_reveal":
+        return t.alertKindContactReveal;
+      case "rating":
+        return t.alertKindRating;
+      case "donation_update":
+        return t.alertKindDonationUpdate;
+      case "push_enabled":
+        return t.alertKindPushEnabled;
+      case "story":
+        return t.alertKindStory;
+      case "volunteer_task":
+        return t.alertKindVolunteerTask;
+      case "volunteer_contact":
+        return t.alertKindVolunteerContact;
+      case "referral":
+        return t.alertKindReferral;
+      case "referral_withdraw":
+        return t.alertKindReferralWithdraw;
+      case "app_install":
+        return t.alertKindAppInstall;
+      default:
+        return t.alertKindSystem;
+    }
+  }
+
   function flashSaved(message?: string) {
     setSettingsMsg(message || t.saved);
     setSavePopup(true);
@@ -289,18 +392,7 @@ export function AdminPanel() {
     deliverableSubscriptions: 0,
     donors: [],
   });
-  const [adminAlerts, setAdminAlerts] = useState<
-    Array<{
-      id: string;
-      title: string;
-      body: string;
-      titleBn?: string;
-      bodyBn?: string;
-      href?: string;
-      read: boolean;
-      createdAt: string;
-    }>
-  >([]);
+  const [adminAlerts, setAdminAlerts] = useState<AdminAlertItem[]>([]);
   const [adminAlertsUnread, setAdminAlertsUnread] = useState(0);
   const [notifSaving, setNotifSaving] = useState(false);
   const [broadcastDraft, setBroadcastDraft] = useState({
@@ -347,19 +439,33 @@ export function AdminPanel() {
     if (!res.ok) return;
     const data = await res.json();
     setPendingStories(Array.isArray(data.stories) ? data.stories : []);
+    setStoryDecisions(Array.isArray(data.decisions) ? data.decisions : []);
   }
 
-  async function decideStory(id: string, action: "approve" | "reject") {
+  async function loadAppInstalls() {
+    try {
+      const res = await fetch("/api/admin/app-installs", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setAppInstalls(Array.isArray(data.installs) ? data.installs : []);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function decideStory(id: string, action: "approve" | "reject", reason = "") {
     const res = await fetch("/api/admin/stories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action }),
+      body: JSON.stringify({ id, action, reason }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       window.alert(data.error || t.errorGeneric);
       return;
     }
+    setRejectingStoryId(null);
+    setRejectStoryReason("");
     await loadPendingStories();
     if (action === "approve") {
       await loadSettings();
@@ -457,14 +563,14 @@ export function AdminPanel() {
     await loadAdminAlerts();
   }
 
-  async function decideChange(id: string, decision: "approved" | "rejected") {
+  async function decideChange(id: string, decision: "approved" | "rejected", reason = "") {
     setDecidingId(id);
     setChangeNotice(null);
     try {
       const res = await fetch("/api/admin/contact-changes", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, decision }),
+        body: JSON.stringify({ id, decision, reason }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -472,6 +578,8 @@ export function AdminPanel() {
           ok: true,
           text: decision === "approved" ? t.contactChangeApprovedNotice : t.contactChangeRejectedNotice,
         });
+        setRejectingChangeId(null);
+        setRejectChangeReason("");
         await loadData();
         return;
       }
@@ -483,11 +591,67 @@ export function AdminPanel() {
     }
   }
 
-  function focusContactChanges() {
-    setTab("donors");
+  function scrollToFocus(id: string, delay = 250) {
     window.setTimeout(() => {
-      document.getElementById("contact-changes")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150);
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("admin-focus-flash");
+      window.setTimeout(() => el.classList.remove("admin-focus-flash"), 2600);
+    }, delay);
+  }
+
+  function focusContactChanges() {
+    setTab("home");
+    scrollToFocus("contact-changes");
+  }
+
+  /** Jump to the place where the alert can be acted on, derived from its href. */
+  function goToAlertTarget(href: string | undefined) {
+    const query = (href || "").split("?")[1] || "";
+    const params = new URLSearchParams(query);
+    const wantedTab = params.get("tab");
+    const panel = params.get("panel");
+    const focus = params.get("focus");
+    const tabTarget: AdminTab | null = isAdminTab(wantedTab)
+      ? wantedTab
+      : wantedTab === "donors"
+        ? "home"
+        : wantedTab === "notifications"
+          ? "settings"
+          : null;
+    setBellOpen(false);
+    if (panel && isSettingsPanel(panel)) {
+      setTab("settings");
+      setSettingsPanel(panel);
+      if (panel === "installs") void loadAppInstalls();
+      if (panel === "stories") void loadPendingStories();
+    } else if (tabTarget) {
+      setTab(tabTarget);
+      if (tabTarget === "settings" && wantedTab === "notifications") {
+        setSettingsPanel("notifications");
+      }
+    } else {
+      setTab("home");
+    }
+    if (typeof window !== "undefined" && query) {
+      // Keep the address bar in sync so a refresh lands on the same place.
+      window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
+    }
+    if (focus) scrollToFocus(focus, panel ? 500 : 250);
+  }
+
+  async function openAlert(n: { id: string; href?: string; read: boolean }) {
+    goToAlertTarget(n.href);
+    if (!n.read) {
+      setAdminAlerts((prev) => prev.map((a) => (a.id === n.id ? { ...a, read: true } : a)));
+      setAdminAlertsUnread((u) => Math.max(0, u - 1));
+      await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: n.id }),
+      }).catch(() => undefined);
+    }
   }
 
   async function loadSettings() {
@@ -1222,22 +1386,20 @@ export function AdminPanel() {
     const params = new URLSearchParams(window.location.search);
     const wanted = params.get("tab");
     if (
-      wanted === "donors" ||
-      wanted === "posts" ||
-      wanted === "contacts" ||
-      wanted === "volunteers" ||
-      wanted === "healthcare" ||
-      wanted === "analytics" ||
-      wanted === "settings"
+      isAdminTab(wanted)
     ) {
       setTab(wanted);
+    } else if (wanted === "donors") {
+      setTab("home");
     }
-    if (params.get("focus") === "contact-changes") {
-      setTab("donors");
-      window.setTimeout(() => {
-        document.getElementById("contact-changes")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 900);
+    const panel = params.get("panel");
+    if (panel && isSettingsPanel(panel)) {
+      setTab("settings");
+      setSettingsPanel(panel);
     }
+    const focus = params.get("focus");
+    if (focus) scrollToFocus(focus, 1100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1733,64 +1895,29 @@ export function AdminPanel() {
     <div className="admin-desk-body">
       <AdminPushEnableGate />
 
-      {adminAlertsUnread > 0 ? (
-        <div className="overflow-hidden rounded-[1.25rem] border border-[color-mix(in_oklab,var(--blood)_28%,transparent)] bg-[linear-gradient(160deg,#fff4f1,#ffffff)] px-5 py-4 shadow-[0_14px_34px_rgba(0,0,0,0.16)]">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold text-[var(--blood-deep)]">
-                {t.adminNewDonorAlerts} ({adminAlertsUnread})
-              </p>
-              <ul className="mt-2 space-y-2 text-sm">
-                {adminAlerts
-                  .filter((n) => !n.read)
-                  .slice(0, 5)
-                  .map((n) => (
-                    <li key={n.id} className="text-[color-mix(in_oklab,var(--ink)_84%,white)]">
-                      <button
-                        type="button"
-                        className="w-full text-left"
-                        onClick={() => {
-                          if (String(n.href || "").includes("contact-changes")) {
-                            focusContactChanges();
-                            return;
-                          }
-                          if (
-                            String(n.href || "").includes("tab=volunteers") ||
-                            String(n.titleBn || n.title || "")
-                              .toLowerCase()
-                              .includes("volunteer")
-                          ) {
-                            setTab("volunteers");
-                          }
-                        }}
-                      >
-                        <strong>{n.titleBn || n.title}</strong>
-                        <span className="block text-xs">{n.bodyBn || n.body}</span>
-                      </button>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-            <button type="button" className="btn-ghost shrink-0" onClick={() => void markAdminAlertsRead()}>
-              {t.adminMarkAllRead}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <nav className="admin-nav" aria-label="Admin sections">
         <div className="admin-nav__tabs">
           <button
             type="button"
-            className={tab === "donors" ? "admin-tab admin-tab-active" : "admin-tab"}
-            onClick={() => setTab("donors")}
+            className={tab === "home" ? "admin-tab admin-tab-active" : "admin-tab"}
+            onClick={() => setTab("home")}
           >
-            {t.adminDonors}
+            {t.adminHome}
             {pendingChangeCount ? (
               <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--blood)] px-1.5 text-[10px] font-bold text-white">
                 {pendingChangeCount}
               </span>
             ) : null}
+          </button>
+          <button
+            type="button"
+            className={tab === "registered" ? "admin-tab admin-tab-active" : "admin-tab"}
+            onClick={() => setTab("registered")}
+          >
+            {t.adminRegisteredDonors}
+            <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-[10px] font-bold text-white">
+              {stats.totalDonors}
+            </span>
           </button>
           <button
             type="button"
@@ -1840,9 +1967,108 @@ export function AdminPanel() {
             {t.adminSettings}
           </button>
         </div>
-        <button type="button" className="admin-nav__logout" onClick={logout}>
-          {t.logout}
-        </button>
+        <div className="admin-nav__right">
+          <div className="admin-bell">
+            <button
+              type="button"
+              className={`admin-bell__btn${adminAlertsUnread ? " admin-bell__btn--live" : ""}`}
+              aria-label={`${t.adminAlertsTitle} (${adminAlertsUnread})`}
+              aria-expanded={bellOpen}
+              onClick={() => setBellOpen((v) => !v)}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.9]" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" />
+                <path strokeLinecap="round" d="M10 20a2 2 0 0 0 4 0" />
+              </svg>
+              {adminAlertsUnread ? (
+                <span className="admin-bell__badge">{adminAlertsUnread > 99 ? "99+" : adminAlertsUnread}</span>
+              ) : null}
+            </button>
+            {bellOpen ? (
+              <>
+                <button
+                  type="button"
+                  className="admin-bell__scrim"
+                  aria-label="Close"
+                  onClick={() => setBellOpen(false)}
+                />
+                <div className="admin-bell__panel" role="dialog" aria-label={t.adminAlertsTitle}>
+                  <div className="admin-bell__head">
+                    <p className="font-[family-name:var(--font-display)] text-base font-bold text-[var(--blood-deep)]">
+                      {t.adminAlertsTitle}
+                      {adminAlertsUnread ? (
+                        <span className="ml-2 rounded-full bg-[var(--blood)] px-2 py-0.5 text-[11px] font-bold text-white">
+                          {adminAlertsUnread}
+                        </span>
+                      ) : null}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs">
+                      <button
+                        type="button"
+                        className={`admin-bell__filter${alertFilter === "unread" ? " admin-bell__filter--on" : ""}`}
+                        onClick={() => setAlertFilter("unread")}
+                      >
+                        {t.adminAlertsUnreadOnly}
+                      </button>
+                      <button
+                        type="button"
+                        className={`admin-bell__filter${alertFilter === "all" ? " admin-bell__filter--on" : ""}`}
+                        onClick={() => setAlertFilter("all")}
+                      >
+                        {t.adminAlertsAll}
+                      </button>
+                    </div>
+                  </div>
+                  <ul className="admin-bell__list">
+                    {adminAlerts
+                      .filter((n) => alertFilter === "all" || !n.read)
+                      .slice(0, 60)
+                      .map((n) => {
+                        const kind = alertKindOf(n);
+                        return (
+                          <li key={n.id}>
+                            <button
+                              type="button"
+                              className={`admin-bell__item${n.read ? "" : " admin-bell__item--unread"}`}
+                              onClick={() => void openAlert(n)}
+                            >
+                              <span className={`admin-bell__kind admin-bell__kind--${kind}`}>
+                                {alertKindLabel(kind)}
+                              </span>
+                              <span className="block text-sm font-semibold leading-snug text-[var(--ink)]">
+                                {locale === "bn" ? n.titleBn || n.title : n.title}
+                              </span>
+                              <span className="block text-xs leading-snug text-[color-mix(in_oklab,var(--ink)_70%,white)]">
+                                {locale === "bn" ? n.bodyBn || n.body : n.body}
+                              </span>
+                              <span className="mt-1 block text-[10px] uppercase tracking-wide text-[color-mix(in_oklab,var(--ink)_50%,white)]">
+                                {formatAddedAt(n.createdAt)}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    {!adminAlerts.some((n) => alertFilter === "all" || !n.read) ? (
+                      <li className="px-4 py-6 text-center text-sm text-[color-mix(in_oklab,var(--ink)_65%,white)]">
+                        {t.adminNoAlerts}
+                      </li>
+                    ) : null}
+                  </ul>
+                  {adminAlertsUnread ? (
+                    <div className="admin-bell__foot">
+                      <button type="button" className="btn-ghost w-full" onClick={() => void markAdminAlertsRead()}>
+                        {t.adminMarkAllRead}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </div>
+          <button type="button" className="admin-nav__logout" onClick={logout}>
+            {t.logout}
+          </button>
+        </div>
       </nav>
 
       {tab === "volunteers" ? <AdminVolunteersPanel /> : null}
@@ -2045,7 +2271,175 @@ export function AdminPanel() {
         </section>
       ) : null}
 
-      {tab === "donors" ? (
+      {tab === "home" ? (
+        <>
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
+            <span>
+              {t.totalDonors}: <strong>{stats.totalDonors}</strong>
+            </span>
+            <span>
+              {t.availableNow}: <strong>{stats.availableNow}</strong>
+            </span>
+            <span>
+              {t.totalBloodPosts}: <strong>{stats.totalPosts}</strong>
+            </span>
+            <span>
+              {t.adminRequests}: <strong>{stats.totalRequests}</strong>
+            </span>
+            <button type="button" className="btn-ghost ml-auto" onClick={() => setTab("registered")}>
+              {t.adminViewAllDonors} →
+            </button>
+          </div>
+
+          <section
+            id="contact-changes"
+            className={`rounded-2xl p-5 ${
+              pendingChangeCount
+                ? "border-2 border-[color-mix(in_oklab,var(--blood)_45%,white)] bg-[color-mix(in_oklab,var(--blood)_6%,white)]"
+                : "bg-white/80"
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+                {t.adminPendingContactChanges}
+                {pendingChangeCount ? (
+                  <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
+                    {pendingChangeCount}
+                  </span>
+                ) : null}
+              </h2>
+              <div className="flex flex-wrap items-center gap-3">
+                {changeNotice ? (
+                  <p
+                    className={`text-sm font-semibold ${
+                      changeNotice.ok ? "text-[#2f6b4f]" : "text-[var(--blood)]"
+                    }`}
+                  >
+                    {changeNotice.text}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-[var(--blood-deep)] underline"
+                  onClick={() => {
+                    setTab("settings");
+                    setSettingsPanel("contactHistory");
+                  }}
+                >
+                  {t.adminContactHistory} ({decidedChangeRequests.length})
+                </button>
+              </div>
+            </div>
+            {!pendingChangeRequests.length ? (
+              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+                {t.adminNoPendingContactChanges}
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {pendingChangeRequests.map((r) => (
+                  <li
+                    key={r.id}
+                    id={`change-${r.id}`}
+                    className="rounded-xl border-b border-[var(--line)] px-2 pb-3 pt-2 text-sm"
+                  >
+                    <p className="font-semibold">{r.donorName}</p>
+                    <p className="mt-1">
+                      {t.email}: {r.currentEmail}
+                      {r.requestedEmail ? ` → ${r.requestedEmail}` : ""}
+                    </p>
+                    <p className="mt-1">
+                      {t.phone}: {r.currentPhone}
+                      {r.requestedPhone ? ` → ${r.requestedPhone}` : ""}
+                    </p>
+                    {r.note ? <p className="mt-1 italic">“{r.note}”</p> : null}
+                    <p className="mt-1 text-xs opacity-70">
+                      {t.adminRequestedAt}: {formatAddedAt(r.createdAt)}
+                    </p>
+                    {rejectingChangeId === r.id ? (
+                      <div className="mt-3 space-y-2 rounded-xl bg-[color-mix(in_oklab,var(--blood)_8%,white)] p-3">
+                        <label className="block text-xs font-semibold">
+                          {t.adminRejectReason}
+                          <textarea
+                            className="field mt-1 min-h-16 text-sm"
+                            maxLength={300}
+                            value={rejectChangeReason}
+                            onChange={(e) => setRejectChangeReason(e.target.value)}
+                            autoFocus
+                          />
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="rounded-full bg-[var(--blood)] px-4 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                            disabled={decidingId === r.id}
+                            onClick={() => void decideChange(r.id, "rejected", rejectChangeReason)}
+                          >
+                            {decidingId === r.id ? t.loading : t.adminRejectConfirm}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-ghost text-xs"
+                            onClick={() => {
+                              setRejectingChangeId(null);
+                              setRejectChangeReason("");
+                            }}
+                          >
+                            {t.cancel}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          disabled={decidingId === r.id}
+                          onClick={() => void decideChange(r.id, "approved")}
+                        >
+                          {decidingId === r.id ? t.loading : t.accept}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost text-[var(--blood)]"
+                          disabled={decidingId === r.id}
+                          onClick={() => {
+                            setRejectingChangeId(r.id);
+                            setRejectChangeReason("");
+                          }}
+                        >
+                          {t.reject}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-2xl bg-white/80 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+                  {t.adminContactLog}
+                </h2>
+                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
+                  {t.adminContactLogHint}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setTab("contacts")}
+              >
+                {t.adminContactLog} ({stats.totalRequests})
+              </button>
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {tab === "registered" ? (
         <>
           <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/80 px-5 py-4 text-sm">
             <span>
@@ -2087,85 +2481,6 @@ export function AdminPanel() {
             </button>
           </div>
 
-          <section
-            id="contact-changes"
-            className={`rounded-2xl p-5 ${
-              pendingChangeCount
-                ? "border-2 border-[color-mix(in_oklab,var(--blood)_45%,white)] bg-[color-mix(in_oklab,var(--blood)_6%,white)]"
-                : "bg-white/80"
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-                {t.adminContactChanges}
-                {pendingChangeCount ? (
-                  <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
-                    {pendingChangeCount}
-                  </span>
-                ) : null}
-              </h2>
-              {changeNotice ? (
-                <p
-                  className={`text-sm font-semibold ${
-                    changeNotice.ok ? "text-[#2f6b4f]" : "text-[var(--blood)]"
-                  }`}
-                >
-                  {changeNotice.text}
-                </p>
-              ) : null}
-            </div>
-            {!changeRequests.length ? (
-              <p className="mt-3 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
-                {t.noChangeRequests}
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {sortedChangeRequests.map((r) => (
-                  <li
-                    key={r.id}
-                    className="border-b border-[var(--line)] pb-3 text-sm"
-                  >
-                    <p className="font-semibold">
-                      {r.donorName} · {r.status}
-                    </p>
-                    <p className="mt-1">
-                      {t.email}: {r.currentEmail}
-                      {r.requestedEmail ? ` → ${r.requestedEmail}` : ""}
-                    </p>
-                    <p className="mt-1">
-                      {t.phone}: {r.currentPhone}
-                      {r.requestedPhone ? ` → ${r.requestedPhone}` : ""}
-                    </p>
-                    {r.note ? <p className="mt-1">{r.note}</p> : null}
-                    <p className="mt-1 text-xs opacity-70">
-                      {new Date(r.createdAt).toLocaleString()}
-                    </p>
-                    {r.status === "pending" ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          disabled={decidingId === r.id}
-                          onClick={() => void decideChange(r.id, "approved")}
-                        >
-                          {decidingId === r.id ? t.loading : t.accept}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-ghost text-[var(--blood)]"
-                          disabled={decidingId === r.id}
-                          onClick={() => void decideChange(r.id, "rejected")}
-                        >
-                          {t.reject}
-                        </button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
           <section className="rounded-2xl bg-white/80 p-5 print:shadow-none">
             <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
               {t.adminDonors}
@@ -2174,7 +2489,8 @@ export function AdminPanel() {
               {donors.map((d) => (
                 <li
                   key={d.id}
-                  className="flex flex-col gap-2 border-b border-[var(--line)] pb-3 sm:flex-row sm:items-center sm:justify-between"
+                  id={`donor-${d.id}`}
+                  className="flex flex-col gap-2 rounded-xl border-b border-[var(--line)] px-2 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="text-sm">
                     <p className="flex flex-wrap items-center gap-2 font-semibold">
@@ -2215,25 +2531,6 @@ export function AdminPanel() {
           </section>
 
 
-          <section className="rounded-2xl bg-white/80 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-                  {t.adminContactLog}
-                </h2>
-                <p className="mt-1 text-sm text-[color-mix(in_oklab,var(--ink)_78%,white)]">
-                  {t.adminContactLogHint}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => setTab("contacts")}
-              >
-                {t.adminContactLog} ({stats.totalRequests})
-              </button>
-            </div>
-          </section>
         </>
       ) : null}
 
@@ -2248,6 +2545,9 @@ export function AdminPanel() {
               ["referral", t.referralSettings],
               ["features", t.futureFeatures],
               ["appearance", t.siteAppearance],
+              ["stories", t.adminStories],
+              ["contactHistory", t.adminContactHistory],
+              ["installs", t.adminAppInstalls],
               ["ads", t.orgBanners],
               ["privacy", t.adminPrivacy],
               ["security", "Security"],
@@ -2255,11 +2555,30 @@ export function AdminPanel() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setSettingsPanel(id)}
+                onClick={() => {
+                  setSettingsPanel(id);
+                  if (id === "installs") void loadAppInstalls();
+                  if (id === "stories") void loadPendingStories();
+                }}
                 className="group rounded-[1.1rem] border border-[rgba(155,27,46,0.12)] bg-white/95 px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[rgba(155,27,46,0.28)] hover:shadow-[0_12px_28px_rgba(155,27,46,0.12)]"
               >
                 <p className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--blood-deep)]">
                   {label}
+                  {id === "stories" && pendingStories.length ? (
+                    <span className="ml-2 rounded-full bg-[var(--blood)] px-2 py-0.5 text-xs font-bold text-white">
+                      {pendingStories.length}
+                    </span>
+                  ) : null}
+                  {id === "contactHistory" && decidedChangeRequests.length ? (
+                    <span className="ml-2 rounded-full bg-[color-mix(in_oklab,var(--ink)_10%,white)] px-2 py-0.5 text-xs font-bold text-[var(--ink)]">
+                      {decidedChangeRequests.length}
+                    </span>
+                  ) : null}
+                  {id === "installs" && appInstalls.length ? (
+                    <span className="ml-2 rounded-full bg-[color-mix(in_oklab,var(--sage)_18%,white)] px-2 py-0.5 text-xs font-bold text-[var(--sage)]">
+                      {appInstalls.length}
+                    </span>
+                  ) : null}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-[var(--sage)] transition group-hover:text-[var(--blood)]">
                   {t.openSettings} →
@@ -3466,7 +3785,22 @@ export function AdminPanel() {
               </button>
             </form>
 
-            <div className="mt-8 space-y-3 border-t border-[var(--line)] pt-6">
+          </div>
+
+          </AdminSettingsPanel>
+
+
+          <AdminSettingsPanel
+            open={settingsPanel === "stories"}
+            title={t.adminStories}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-6">
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
+                {t.adminStoriesHint}
+              </p>
+            <div className="space-y-3 border-t border-[var(--line)] pt-6 first:border-t-0 first:pt-0">
               <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
                 {t.adminPendingStories}
               </h3>
@@ -3480,6 +3814,7 @@ export function AdminPanel() {
                   {pendingStories.map((s) => (
                     <li
                       key={s.id}
+                      id={`story-${s.id}`}
                       className="rounded-xl border border-[var(--line)] bg-white/80 p-3 text-sm"
                     >
                       <p className="font-semibold">
@@ -3496,29 +3831,66 @@ export function AdminPanel() {
                       <p className="mt-1 text-xs opacity-60">
                         {new Date(s.createdAt).toLocaleString()}
                       </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="rounded-full bg-[#2f6b4f] px-3 py-1.5 text-xs font-semibold text-white"
-                          onClick={() => void decideStory(s.id, "approve")}
-                        >
-                          {t.adminApproveStory}
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-semibold"
-                          onClick={() => void decideStory(s.id, "reject")}
-                        >
-                          {t.adminRejectStory}
-                        </button>
-                      </div>
+                      {rejectingStoryId === s.id ? (
+                        <div className="mt-3 space-y-2 rounded-xl bg-[color-mix(in_oklab,var(--blood)_8%,white)] p-3">
+                          <label className="block text-xs font-semibold">
+                            {t.adminRejectReason}
+                            <textarea
+                              className="field mt-1 min-h-16 text-sm"
+                              maxLength={300}
+                              value={rejectStoryReason}
+                              onChange={(e) => setRejectStoryReason(e.target.value)}
+                              autoFocus
+                            />
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="rounded-full bg-[var(--blood)] px-4 py-1.5 text-xs font-bold text-white"
+                              onClick={() => void decideStory(s.id, "reject", rejectStoryReason)}
+                            >
+                              {t.adminRejectConfirm}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost text-xs"
+                              onClick={() => {
+                                setRejectingStoryId(null);
+                                setRejectStoryReason("");
+                              }}
+                            >
+                              {t.cancel}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="rounded-full bg-[#2f6b4f] px-3 py-1.5 text-xs font-semibold text-white"
+                            onClick={() => void decideStory(s.id, "approve")}
+                          >
+                            {t.adminApproveStory}
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-semibold"
+                            onClick={() => {
+                              setRejectingStoryId(s.id);
+                              setRejectStoryReason("");
+                            }}
+                          >
+                            {t.adminRejectStory}
+                          </button>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
 
-            <div className="mt-8 space-y-3 border-t border-[var(--line)] pt-6">
+            <div className="space-y-3 border-t border-[var(--line)] pt-6 first:border-t-0 first:pt-0">
               <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
                 {t.adminPublishedStories}
               </h3>
@@ -3562,9 +3934,168 @@ export function AdminPanel() {
                 </ul>
               )}
             </div>
-          </div>
 
-          
+              <div className="space-y-3 border-t border-[var(--line)] pt-6">
+                <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">
+                  {t.adminStoryHistory}
+                </h3>
+                {storyDecisions.length === 0 ? (
+                  <p className="text-sm opacity-70">{t.adminNoStoryHistory}</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {storyDecisions.map((d) => (
+                      <li
+                        key={`${d.id}-${d.decidedAt}`}
+                        id={`story-${d.id}`}
+                        className="rounded-xl border border-[var(--line)] bg-white/80 p-3 text-sm"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white ${
+                              d.decision === "approved" ? "bg-[#2f6b4f]" : "bg-[var(--blood)]"
+                            }`}
+                          >
+                            {d.decision === "approved" ? t.accept : t.reject}
+                          </span>
+                          <span className="font-semibold">{d.name}</span>
+                          {d.handle ? <span className="opacity-70">{d.handle}</span> : null}
+                        </div>
+                        <p className="mt-2 leading-relaxed">{d.quoteBn || d.quoteEn}</p>
+                        <p className="mt-2 text-xs opacity-70">
+                          {t.adminRequestedAt}: {formatAddedAt(d.submittedAt)} · {t.adminDecidedAt}:{" "}
+                          {formatAddedAt(d.decidedAt)}
+                        </p>
+                        {d.reason ? (
+                          <p className="mt-1 text-xs font-medium text-[var(--blood-deep)]">
+                            {t.adminReason}: {d.reason}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "contactHistory"}
+            title={t.adminContactHistory}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
+                {t.adminContactHistoryHint}
+              </p>
+              {pendingChangeCount ? (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    setSettingsPanel(null);
+                    focusContactChanges();
+                  }}
+                >
+                  {t.adminPendingContactChanges} ({pendingChangeCount})
+                </button>
+              ) : null}
+              {decidedChangeRequests.length === 0 ? (
+                <p className="text-sm opacity-70">{t.adminNoContactHistory}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {decidedChangeRequests.map((r) => (
+                    <li
+                      key={r.id}
+                      id={`change-${r.id}`}
+                      className="rounded-xl border border-[var(--line)] bg-white/80 p-3 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white ${
+                            r.status === "approved" ? "bg-[#2f6b4f]" : "bg-[var(--blood)]"
+                          }`}
+                        >
+                          {r.status === "approved" ? t.accept : t.reject}
+                        </span>
+                        <span className="font-semibold">{r.donorName}</span>
+                      </div>
+                      <p className="mt-2">
+                        {t.email}: {r.currentEmail}
+                        {r.requestedEmail ? ` → ${r.requestedEmail}` : ""}
+                      </p>
+                      <p className="mt-1">
+                        {t.phone}: {r.currentPhone}
+                        {r.requestedPhone ? ` → ${r.requestedPhone}` : ""}
+                      </p>
+                      {r.note ? <p className="mt-1 italic">“{r.note}”</p> : null}
+                      <p className="mt-2 text-xs opacity-70">
+                        {t.adminRequestedAt}: {formatAddedAt(r.createdAt)}
+                        {r.resolvedAt ? ` · ${t.adminDecidedAt}: ${formatAddedAt(r.resolvedAt)}` : ""}
+                      </p>
+                      {r.decisionNote ? (
+                        <p className="mt-1 text-xs font-medium text-[var(--blood-deep)]">
+                          {t.adminReason}: {r.decisionNote}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </AdminSettingsPanel>
+
+          <AdminSettingsPanel
+            open={settingsPanel === "installs"}
+            title={t.adminAppInstalls}
+            onClose={() => setSettingsPanel(null)}
+            wide
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-[color-mix(in_oklab,var(--ink)_82%,white)]">
+                {t.adminAppInstallsHint}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {[
+                  [t.adminInstallTotal, appInstalls.length],
+                  [t.adminInstallPlay, appInstalls.filter((i) => i.source === "play").length],
+                  [t.adminInstallPwa, appInstalls.filter((i) => i.source === "pwa").length],
+                  [t.adminInstallLinked, appInstalls.filter((i) => i.donorId).length],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="rounded-xl bg-white/90 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide opacity-60">{label}</p>
+                    <p className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--blood-deep)]">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {appInstalls.length === 0 ? (
+                <p className="text-sm opacity-70">{t.adminNoAppInstalls}</p>
+              ) : (
+                <ul className="divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-white/90 text-sm">
+                  {appInstalls.map((i) => (
+                    <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white ${
+                          i.source === "play" ? "bg-[#2f6b4f]" : "bg-[var(--blood-deep)]"
+                        }`}
+                      >
+                        {i.source === "play" ? t.adminInstallPlay : t.adminInstallPwa}
+                      </span>
+                      <span className="font-semibold">
+                        {i.donorName || <span className="font-normal opacity-70">{t.adminInstallGuest}</span>}
+                      </span>
+                      <span className="opacity-70">{i.device}</span>
+                      <span className="ml-auto text-xs opacity-70">
+                        {t.adminInstallFirstSeen}: {formatAddedAt(i.firstSeenAt)} · {t.adminInstallLastSeen}:{" "}
+                        {formatAddedAt(i.lastSeenAt)} · {t.adminInstallOpens}: {i.opens}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </AdminSettingsPanel>
 
           <AdminSettingsPanel

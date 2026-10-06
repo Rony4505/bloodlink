@@ -55,7 +55,8 @@ export function dailyReminderTexts() {
   };
 }
 
-export function contactChangeResultTexts(approved: boolean) {
+export function contactChangeResultTexts(approved: boolean, reason = "") {
+  const note = reason.trim();
   if (approved) {
     return {
       titleEn: "Contact change approved",
@@ -68,9 +69,12 @@ export function contactChangeResultTexts(approved: boolean) {
   return {
     titleEn: "Contact change declined",
     titleBn: "যোগাযোগ তথ্য পরিবর্তন প্রত্যাখ্যাত",
-    bodyEn: "The admin declined your email/phone change request. Contact the admin if you need help.",
-    bodyBn:
-      "অ্যাডমিন আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ প্রত্যাখ্যান করেছেন। সাহায্য লাগলে অ্যাডমিনের সাথে যোগাযোগ করুন।",
+    bodyEn: note
+      ? `The admin declined your email/phone change request. Reason: ${note}`
+      : "The admin declined your email/phone change request. Contact the admin if you need help.",
+    bodyBn: note
+      ? `অ্যাডমিন আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ প্রত্যাখ্যান করেছেন। কারণ: ${note}`
+      : "অ্যাডমিন আপনার ইমেইল/ফোন পরিবর্তনের অনুরোধ প্রত্যাখ্যান করেছেন। সাহায্য লাগলে অ্যাডমিনের সাথে যোগাযোগ করুন।",
   };
 }
 

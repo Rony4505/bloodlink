@@ -88,7 +88,9 @@ export function IntroSplash() {
               className={`bl-intro__ch ${i < 5 ? "bl-intro__ch--blood" : "bl-intro__ch--link"}`}
               style={{ animationDelay: `${1.15 + i * 0.07}s` }}
             >
-              {ch}
+              {/* Gradient fill lives on a child: filter + background-clip:text on one
+                  animated element makes the glyphs vanish on some desktop GPUs. */}
+              <span className="bl-intro__fill">{ch}</span>
             </span>
           ))}
           <span className="bl-intro__bd" style={{ animationDelay: "1.85s" }}>
@@ -102,7 +104,7 @@ export function IntroSplash() {
               className={`bl-intro__ch ${i < 5 ? "bl-intro__ch--blood" : "bl-intro__ch--link"}`}
               style={{ animationDelay: `${1.15 + i * 0.07}s` }}
             >
-              {ch}
+              <span className="bl-intro__fill">{ch}</span>
             </span>
           ))}
         </div>

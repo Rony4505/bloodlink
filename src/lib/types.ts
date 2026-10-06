@@ -207,9 +207,26 @@ export type AppNotification = {
     | "new_donor";
   href: string;
   postId?: string | null;
+  /** Admin-only: which event produced the alert (drives the bell label + target). */
+  kind?: AdminAlertKind;
   read: boolean;
   createdAt: string;
 };
+
+export type AdminAlertKind =
+  | "new_donor"
+  | "volunteer_donor"
+  | "contact_change"
+  | "contact_reveal"
+  | "rating"
+  | "donation_update"
+  | "push_enabled"
+  | "story"
+  | "volunteer_task"
+  | "volunteer_contact"
+  | "referral"
+  | "referral_withdraw"
+  | "app_install";
 
 export type ContactChangeRequest = {
   id: string;
@@ -222,6 +239,38 @@ export type ContactChangeRequest = {
   status: "pending" | "approved" | "rejected";
   createdAt: string;
   resolvedAt: string | null;
+  /** Donor name snapshot so the archive stays readable if the donor is deleted. */
+  donorName?: string;
+  /** Admin's reason, mainly for rejections. */
+  decisionNote?: string;
+};
+
+/** Archive entry written when the admin approves or rejects a submitted story. */
+export type SuccessStoryDecision = {
+  id: string;
+  name: string;
+  handle: string;
+  quoteEn: string;
+  quoteBn: string;
+  submittedAt: string;
+  decision: "approved" | "rejected";
+  decidedAt: string;
+  reason: string;
+};
+
+/** One device that opened BloodLink as an installed app (Play Store TWA or PWA). */
+export type AppInstall = {
+  /** Stable per-device id generated in the browser. */
+  id: string;
+  donorId: string | null;
+  donorName: string | null;
+  source: "play" | "pwa";
+  /** Short device summary derived from the user agent (e.g. "Android 13 · Chrome 120"). */
+  device: string;
+  userAgent: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  opens: number;
 };
 
 export type PlatformFeatureOption = {
@@ -310,7 +359,7 @@ export type SiteAppearance = {
   founderPhotoUrl: string;
   /** Official Facebook page URL shown in footer and About. */
   facebookUrl: string;
-  /** Google Play listing for the Android app; empty (default) hides the install banner. */
+  /** Google Play listing for the Android app; empty string hides the install banner. */
   playStoreUrl: string;
   /** Public impact / success stories shown on the homepage. */
   successStories: SuccessStory[];
@@ -426,6 +475,8 @@ export type DatabaseShape = {
   volunteerActivities: VolunteerActivity[];
   referralEvents: ReferralEvent[];
   referralWithdrawals: ReferralWithdrawRequest[];
+  successStoryDecisions: SuccessStoryDecision[];
+  appInstalls: AppInstall[];
   admin: AdminSettings;
 };
 
