@@ -15,6 +15,39 @@ export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
 /** Official BloodLink BD Facebook page (admin can override in site appearance). */
 export const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/bloodlinkbd.org";
 
+/** Android package published on Google Play (matches twa/twa-manifest.json). */
+export const PLAY_STORE_PACKAGE = "org.bloodlinkbd.android";
+export const DEFAULT_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+
+/**
+ * Accept a full Play URL, a bare package id, or "off"/empty to hide the banner.
+ * Anything that is not a Google Play link is rejected so the banner can never
+ * send visitors to an arbitrary site.
+ */
+export function normalizePlayStoreUrl(raw: unknown): string {
+  // Records saved before this field existed keep the default listing.
+  if (raw === undefined || raw === null) return DEFAULT_PLAY_STORE_URL;
+  const value = String(raw).trim();
+  if (!value) return "";
+  if (/^(off|none|hide|disabled)$/i.test(value)) return "";
+  if (/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(value)) {
+    return `https://play.google.com/store/apps/details?id=${value}`;
+  }
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === "https:" &&
+      (url.hostname === "play.google.com" || url.hostname === "play.app.goo.gl") &&
+      (url.hostname !== "play.google.com" || url.searchParams.get("id"))
+    ) {
+      return url.toString();
+    }
+  } catch {
+    /* fall through */
+  }
+  return DEFAULT_PLAY_STORE_URL;
+}
+
 export function defaultSuccessStories(): SuccessStory[] {
   return [
     {
@@ -112,6 +145,7 @@ export function defaultSiteAppearance(): SiteAppearance {
     aboutBodyBn: "",
     founderPhotoUrl: "",
     facebookUrl: DEFAULT_FACEBOOK_URL,
+    playStoreUrl: DEFAULT_PLAY_STORE_URL,
     successStories: defaultSuccessStories(),
   };
 }
@@ -158,6 +192,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
     aboutBodyBn: String(raw.aboutBodyBn || "").trim(),
     founderPhotoUrl: String(raw.founderPhotoUrl || "").trim(),
     facebookUrl: String(raw.facebookUrl || base.facebookUrl).trim() || base.facebookUrl,
+    playStoreUrl: normalizePlayStoreUrl(raw.playStoreUrl),
     successStories: normalizeSuccessStories(raw.successStories),
   };
 }

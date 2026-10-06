@@ -1284,3 +1284,35 @@ html[data-intro="1"] {
   font-size: 22px;
   font-weight: 700;
 }
+
+/* ---- Play Store install bar (top of site) ---- */
+.bl-app-bar {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(90deg, #3a0a12 0%, #5a1020 100%);
+  animation: bl-app-bar-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bl-app-bar-cta {
+  color: #3a0a12;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 6px 16px -8px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes bl-app-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-app-bar {
+    animation: none;
+  }
+}

@@ -310,6 +310,8 @@ export type SiteAppearance = {
   founderPhotoUrl: string;
   /** Official Facebook page URL shown in footer and About. */
   facebookUrl: string;
+  /** Google Play listing for the Android app; empty string hides the install banner. */
+  playStoreUrl: string;
   /** Public impact / success stories shown on the homepage. */
   successStories: SuccessStory[];
 };

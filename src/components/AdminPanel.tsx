@@ -3443,6 +3443,23 @@ export function AdminPanel() {
                   }))
                 }
               />
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-1 block font-medium">{t.playStoreUrlLabel}</span>
+                <input
+                  className="field"
+                  placeholder="https://play.google.com/store/apps/details?id=org.bloodlinkbd.android"
+                  value={siteAppearance.playStoreUrl}
+                  onChange={(e) =>
+                    setSiteAppearance((s) => ({
+                      ...s,
+                      playStoreUrl: e.target.value,
+                    }))
+                  }
+                />
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                  {t.playStoreUrlHint}
+                </span>
+              </label>
               <button type="submit" className="btn-primary md:col-span-2">
                 {t.saveAppearance}
               </button>
