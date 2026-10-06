@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { markAppInstalled } from "@/lib/app-install-state";
 import { isLaunchedFromPlayApp, isStandaloneDisplay } from "@/lib/browser-env";
 import { subscribeSessionMe } from "@/lib/session-me-client";
 
@@ -32,6 +33,8 @@ function installSource(): "play" | "pwa" | null {
 }
 
 function ping(source: "play" | "pwa", force = false) {
+  // Running as the app means this device has it — stop the install bar here too.
+  markAppInstalled();
   const id = installId();
   if (!id) return;
   try {

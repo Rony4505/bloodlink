@@ -1502,18 +1502,40 @@ html[data-intro="1"] {
 }
 
 /* ---- Play Store install bar (top of site) ---- */
+/* Soft, light install bar: pale rose on white so it reads as a gentle hint,
+   not a heavy header. Colours are explicit because the global unlayered
+   `a { color: inherit }` can override Tailwind's layered text utilities. */
 .bl-app-bar {
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%),
-    linear-gradient(90deg, #3a0a12 0%, #5a1020 100%);
+  color: #3a0a12;
+  background: linear-gradient(90deg, #fff8f6 0%, #fff 55%, #fff4f1 100%);
+  border-bottom: 1px solid rgba(155, 27, 46, 0.12);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
   animation: bl-app-bar-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.bl-app-bar-cta {
+.bl-app-bar-title {
   color: #3a0a12;
+}
+
+.bl-app-bar-body {
+  color: rgba(58, 10, 18, 0.62);
+}
+
+.bl-app-bar-cta {
+  color: #fff;
+  background: linear-gradient(135deg, #d94a3d, #9b1b2e);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 6px 16px -8px rgba(0, 0, 0, 0.6);
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 6px 14px -6px rgba(155, 27, 46, 0.55);
+}
+
+.bl-app-bar-close {
+  color: rgba(58, 10, 18, 0.55);
+}
+
+.bl-app-bar-close:hover {
+  color: #3a0a12;
+  background: rgba(155, 27, 46, 0.08);
 }
 
 /* Footer "Get it on Google Play" link — explicit colour because the global

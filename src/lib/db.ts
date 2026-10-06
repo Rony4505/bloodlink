@@ -1323,6 +1323,12 @@ export async function listAppInstalls(): Promise<AppInstall[]> {
   );
 }
 
+/** True once any installed app (Play / PWA) has been opened while this donor was logged in. */
+export async function donorHasAppInstall(donorId: string): Promise<boolean> {
+  const db = await ensureDb();
+  return (db.appInstalls || []).some((i) => i.donorId === donorId);
+}
+
 export async function deletePublishedSuccessStory(id: string): Promise<boolean> {
   return withWrite(async (db) => {
     const appearance = normalizeSiteAppearance(db.admin.siteAppearance);
