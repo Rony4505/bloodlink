@@ -1,3 +1,4 @@
+import { markAppInstalled } from "@/lib/app-install-state";
 import { resetPushPromptAfterAuth } from "@/lib/push-prompt-state";
 
 type SessionListener = (loggedIn: boolean) => void;
@@ -56,6 +57,7 @@ export function loadLoggedIn(options?: { force?: boolean }): Promise<boolean> {
       .then((r) => r.json())
       .then((data) => {
         const ok = Boolean(data.donor);
+        if (data.appInstalled) markAppInstalled();
         notify(ok);
         return ok;
       })
