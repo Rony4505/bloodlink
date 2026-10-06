@@ -17,6 +17,7 @@ import {
   BANNER_SLIDE_INTERVAL_OPTIONS,
   DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
   defaultSiteAppearance,
+  DEFAULT_PLAY_STORE_URL,
 } from "@/lib/site-cms";
 import type {
   BannerPage,
@@ -3447,7 +3448,7 @@ export function AdminPanel() {
                 <span className="mb-1 block font-medium">{t.playStoreUrlLabel}</span>
                 <input
                   className="field"
-                  placeholder="https://play.google.com/store/apps/details?id=org.bloodlinkbd.android"
+                  placeholder={DEFAULT_PLAY_STORE_URL}
                   value={siteAppearance.playStoreUrl}
                   onChange={(e) =>
                     setSiteAppearance((s) => ({

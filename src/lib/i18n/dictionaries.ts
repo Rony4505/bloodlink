@@ -883,7 +883,7 @@ export const dictionaries = {
     facebookUrlLabel: "Facebook page URL",
     playStoreUrlLabel: "Google Play app link",
     playStoreUrlHint:
-      "Shown as a slim install bar at the top of the website for Android visitors. Paste the Play Store link or the package id. Leave empty to hide the bar.",
+      "Paste the Play Store link or package id once the app is live; a slim install bar then appears at the top of the website for Android visitors. Empty = bar hidden.",
     appInstallTitle: "BloodLink BD app",
     appInstallBody: "Install from Google Play — faster alerts, one tap to find donors.",
     appInstallCta: "Install",
@@ -1878,7 +1878,7 @@ export const dictionaries = {
     facebookUrlLabel: "Facebook পেজ URL",
     playStoreUrlLabel: "Google Play অ্যাপ লিংক",
     playStoreUrlHint:
-      "Android ভিজিটরদের জন্য ওয়েবসাইটের একদম উপরে হালকা ইনস্টল বার দেখায়। Play Store লিংক বা package id দিন। খালি রাখলে বার দেখাবে না।",
+      "অ্যাপ live হলে Play Store লিংক বা package id এখানে দিন — তখন Android ভিজিটরদের জন্য সাইটের উপরে হালকা ইনস্টল বার দেখাবে। খালি = বার বন্ধ।",
     appInstallTitle: "BloodLink BD অ্যাপ",
     appInstallBody: "Google Play থেকে ইনস্টল করুন — দ্রুত নোটিফিকেশন, এক ট্যাপে ডোনার।",
     appInstallCta: "ইনস্টল",
