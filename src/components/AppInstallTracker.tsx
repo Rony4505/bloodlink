@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isLaunchedFromPlayApp, isStandaloneDisplay } from "@/lib/browser-env";
 import { subscribeSessionMe } from "@/lib/session-me-client";
 
 const ID_KEY = "bloodlink_install_id";
@@ -22,12 +23,8 @@ function installId(): string | null {
 
 /** "play" when launched from the Play Store TWA, "pwa" when running standalone from the browser. */
 function installSource(): "play" | "pwa" | null {
-  if (document.referrer.startsWith("android-app://")) return "play";
-  const standalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.matchMedia("(display-mode: minimal-ui)").matches ||
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-  if (!standalone) return null;
+  if (isLaunchedFromPlayApp()) return "play";
+  if (!isStandaloneDisplay()) return null;
   // Android standalone without a browser UA hint is almost always the Play TWA.
   return /android/i.test(navigator.userAgent) && !/wv\)/i.test(navigator.userAgent)
     ? "play"

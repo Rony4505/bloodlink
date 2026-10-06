@@ -3,13 +3,18 @@
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { useSiteAppearance } from "@/components/SiteAppearanceProvider";
+import { isInstalledApp } from "@/lib/browser-env";
 import { useLocale } from "@/lib/i18n/locale-context";
 
-const DISMISS_KEY = "bloodlink_app_banner_dismissed_until";
+// v2: the v1 key was also written by the Install button itself, which hid the
+// bar for a week from anyone who merely opened the listing (including the
+// owner while testing). Start fresh and drop the stale v1 entry.
+const DISMISS_KEY = "bloodlink_app_banner_dismissed_until_v2";
+const LEGACY_DISMISS_KEY = "bloodlink_app_banner_dismissed_until";
 const DISMISS_DAYS = 7;
 
 /** Paths where the public install bar must never appear (staff / app-only surfaces). */
-const HIDDEN_PREFIXES = ["/admin", "/volunteer", "/api", "/bloodlinkbd.admin"];
+const HIDDEN_PREFIXES = ["/admin", "/volunteer", "/work/", "/api", "/bloodlinkbd.admin"];
 
 function PlayIcon() {
   return (
@@ -30,17 +35,9 @@ function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
-/** Already inside the installed app (TWA / PWA) — no point asking to install. */
-function isInstalledShell(): boolean {
-  if (document.referrer.startsWith("android-app://")) return true;
-  if (window.matchMedia("(display-mode: standalone)").matches) return true;
-  if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
-  if ((navigator as Navigator & { standalone?: boolean }).standalone) return true;
-  return false;
-}
-
 function isDismissed(): boolean {
   try {
+    localStorage.removeItem(LEGACY_DISMISS_KEY);
     const until = localStorage.getItem(DISMISS_KEY);
     if (!until) return false;
     const ts = Date.parse(until);
@@ -75,8 +72,13 @@ function subscribe(cb: () => void) {
   };
 }
 
+function hideForThisPage() {
+  closedThisPage = true;
+  listeners.forEach((cb) => cb());
+}
+
 function getSnapshot(): boolean {
-  if (closedThisPage || isIos() || isInstalledShell() || isDismissed()) return false;
+  if (closedThisPage || isIos() || isInstalledApp() || isDismissed()) return false;
   // Desktop visitors can still open the listing and remote-install to their phone.
   return isAndroid() || !/mobile/i.test(navigator.userAgent);
 }
@@ -102,8 +104,7 @@ export function AppInstallBanner() {
 
   function dismiss() {
     dismissFor(DISMISS_DAYS);
-    closedThisPage = true;
-    listeners.forEach((cb) => cb());
+    hideForThisPage();
   }
 
   return (
@@ -136,7 +137,10 @@ export function AppInstallBanner() {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => dismissFor(DISMISS_DAYS)}
+          // Opening the listing only hides the bar for this page view; a visitor
+          // who did not finish installing should see it again on the next visit.
+          // Deferred so the anchor is still in the DOM when the browser follows it.
+          onClick={() => setTimeout(hideForThisPage, 0)}
           className="bl-app-bar-cta inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#3a0a12] shadow-sm transition hover:bg-white/90 active:scale-[0.97] sm:px-4 sm:text-sm"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current stroke-[2.2]" aria-hidden>
