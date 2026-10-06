@@ -17,6 +17,7 @@ import {
   BANNER_SLIDE_INTERVAL_OPTIONS,
   DEFAULT_BANNER_SLIDE_INTERVAL_SEC,
   defaultSiteAppearance,
+  DEFAULT_PLAY_STORE_URL,
 } from "@/lib/site-cms";
 import type {
   BannerPage,
@@ -3443,6 +3444,23 @@ export function AdminPanel() {
                   }))
                 }
               />
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-1 block font-medium">{t.playStoreUrlLabel}</span>
+                <input
+                  className="field"
+                  placeholder={DEFAULT_PLAY_STORE_URL}
+                  value={siteAppearance.playStoreUrl}
+                  onChange={(e) =>
+                    setSiteAppearance((s) => ({
+                      ...s,
+                      playStoreUrl: e.target.value,
+                    }))
+                  }
+                />
+                <span className="mt-1 block text-xs text-[color-mix(in_oklab,var(--ink)_60%,white)]">
+                  {t.playStoreUrlHint}
+                </span>
+              </label>
               <button type="submit" className="btn-primary md:col-span-2">
                 {t.saveAppearance}
               </button>

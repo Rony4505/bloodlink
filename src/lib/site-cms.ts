@@ -15,6 +15,39 @@ export const DEFAULT_LOGO_URL = "/bloodlink-logo.png";
 /** Official BloodLink BD Facebook page (admin can override in site appearance). */
 export const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/bloodlinkbd.org";
 
+/** Android package published on Google Play (matches twa/twa-manifest.json). */
+export const PLAY_STORE_PACKAGE = "org.bloodlinkbd.android";
+/** Listing URL for the package above — used as the admin placeholder only. */
+export const DEFAULT_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+
+/**
+ * Accept a full Play URL or a bare package id; empty/"off" hides the banner.
+ * The bar stays hidden until the admin pastes the live listing, so visitors are
+ * never sent to a 404 while the app is still in review. Anything that is not a
+ * Google Play link is rejected so the banner can never point at another site.
+ */
+export function normalizePlayStoreUrl(raw: unknown): string {
+  const value = String(raw ?? "").trim();
+  if (!value) return "";
+  if (/^(off|none|hide|disabled)$/i.test(value)) return "";
+  if (/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(value)) {
+    return `https://play.google.com/store/apps/details?id=${value}`;
+  }
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === "https:" &&
+      (url.hostname === "play.google.com" || url.hostname === "play.app.goo.gl") &&
+      (url.hostname !== "play.google.com" || url.searchParams.get("id"))
+    ) {
+      return url.toString();
+    }
+  } catch {
+    /* fall through */
+  }
+  return "";
+}
+
 export function defaultSuccessStories(): SuccessStory[] {
   return [
     {
@@ -112,6 +145,7 @@ export function defaultSiteAppearance(): SiteAppearance {
     aboutBodyBn: "",
     founderPhotoUrl: "",
     facebookUrl: DEFAULT_FACEBOOK_URL,
+    playStoreUrl: "",
     successStories: defaultSuccessStories(),
   };
 }
@@ -158,6 +192,7 @@ export function normalizeSiteAppearance(raw?: Partial<SiteAppearance> | null): S
     aboutBodyBn: String(raw.aboutBodyBn || "").trim(),
     founderPhotoUrl: String(raw.founderPhotoUrl || "").trim(),
     facebookUrl: String(raw.facebookUrl || base.facebookUrl).trim() || base.facebookUrl,
+    playStoreUrl: normalizePlayStoreUrl(raw.playStoreUrl),
     successStories: normalizeSuccessStories(raw.successStories),
   };
 }
