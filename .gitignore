@@ -43,3 +43,8 @@ next-env.d.ts
 
 # local donor database (contains personal data)
 /data/
+
+# supershop POS local data / deps
+/supershop-pos/data/
+/supershop-pos/node_modules/
+/supershop-pos/.next/
