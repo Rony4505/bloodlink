@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   compress: true,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   serverExternalPackages: ["pg"],
